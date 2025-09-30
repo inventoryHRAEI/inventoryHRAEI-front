@@ -1,0 +1,22 @@
+{
+  "name": "inventario-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@vitejs/plugin-vue": "^4.5.0",
+    "gsap": "^3.13.0",
+    "liquid-glass-vue": "^0.0.1",
+    "vue": "^3.4.0",
+    "vue-liquid-glass": "^1.0.0",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.4",
+    "vite": "^5.0.0"
+  }
+}
