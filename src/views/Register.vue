@@ -37,10 +37,18 @@ const register = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre: nombre.value, email: email.value, password: password.value })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.msg);
+    let data;
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch (parseErr) {
+      console.error('Respuesta no JSON en /register:', text);
+      throw new Error('Respuesta inválida del servidor');
+    }
+    if (!res.ok) throw new Error(data.msg || 'Error en registro');
     router.push('/login');
   } catch (e) {
+    console.error('register', e);
     error.value = e.message;
   }
 };
