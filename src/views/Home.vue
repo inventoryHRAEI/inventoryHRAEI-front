@@ -1,23 +1,24 @@
 <template>
-  <div class="home-container">
-    <div class="glass">
-      <h2>Bienvenido al Inventario</h2>
-      <router-link to="/login">
-        <button class="btn">Iniciar Sesión</button>
-      </router-link>
-    <br />
-      <router-link to="/register">
-        <br></br>
-        <button class="btn">Registrarse</button>
-      </router-link>
+  <div class="form-wrap">
+    <div class="form-col center">
+      <div class="glass">
+        <h2>Bienvenido al Inventario</h2>
+        <p class="small-msg">Accede con tu cuenta o crea una nueva.</p>
+        <div style="margin-top:16px; display:flex; gap:12px;">
+          <router-link to="/login" class="btn">Iniciar Sesión</router-link>
+          <router-link to="/register" class="btn">Registrarse</router-link>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-// Home view usa clases globales desde src/styles.css
+// Home sencillo que usa estilos globales
 </script>
 
 <style scoped>
-.home-container { display:flex; justify-content:center; align-items:center; min-height:100vh }
+.form-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh }
+.form-col{ width:100%; max-width:600px }
+.small-msg{ color: var(--muted); margin-top:8px }
 </style>

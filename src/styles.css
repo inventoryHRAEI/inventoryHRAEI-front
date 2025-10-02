@@ -1,160 +1,125 @@
 :root{
-  --bg-overlay: rgba(10,14,29,0.45);
-  --glass-bg: rgba(255,255,255,0.06);
-  --glass-border: rgba(255,255,255,0.12);
-  --accent: #6dd3ff;
-  --accent-2: #7b61ff;
-  --text: rgba(255,255,255,0.95);
+  --bg-1: #0b1220;
+  --bg-2: #0f1724;
+  --card-bg: rgba(255,255,255,0.04);
+  --card-border: rgba(255,255,255,0.06);
+  --accent: #065034;
+  --accent-2: #1a3834;
+  --text: #000000;
+  --muted: rgb(0, 0, 0);
 }
 
-html,body,#app{
-  height:100%;
-  margin:0;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  color:var(--text);
-}
+*{ box-sizing: border-box }
+html,body,#app{ height:100%; margin:0; font-family: Inter, 'Segoe UI', Roboto, Arial, sans-serif; color:var(--text); background: linear-gradient(180deg,var(--bg-1),var(--bg-2)); }
 
-/* fondo global similar a bits.dev */
-.app-bg{
-  min-height:100vh;
-  /* keep decorative radial accents, but the photograph is now an element (.bg-media) so we don't set url here */
-  background-image: radial-gradient(circle at 10% 10%, rgba(123,97,255,0.12), transparent 15%), radial-gradient(circle at 90% 90%, rgba(109,211,255,0.12), transparent 20%);
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden; /* ensure bg-img doesn't cause scrollbars */
-}
-.app-bg::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  background: linear-gradient(180deg, rgba(7,10,20,0.15), rgba(7,10,20,0.25));
-  pointer-events:none;
-}
+/* Background media kept as element in App.vue */
+.bg-media{ position:fixed; inset:0; z-index:0 }
+.bg-img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02); }
 
-/* container for the responsive <picture> background - placed behind content */
-.bg-media{ position:absolute; inset:0; z-index:0; display:block; overflow:hidden }
-.bg-media picture, .bg-media img{ width:100%; height:100%; display:block }
-.bg-img{ width:100%; height:100%; object-fit:cover; display:block; filter: contrast(1.02) saturate(1.05); transform-origin:center }
+.container{ position:relative; z-index:2; max-width:920px; width:92%; margin:80px auto; }
 
-.container{
-  position:relative;
-  z-index:2;
-  max-width:720px; /* aumentar tamaño de las cards */
-  width:92%;
-  margin:32px auto;
-}
-
-.container{
-  position:relative;
-  z-index:2;
-  max-width:720px; /* aumentar tamaño de las cards */
-  width:92%;
-  margin:32px auto;
-}
-
-.glass{
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 18px;
-  padding: 28px;
-  /* reducir el blur para ver mejor el fondo */
-  backdrop-filter: blur(4px) saturate(150%);
-  -webkit-backdrop-filter: blur(4px) saturate(150%);
-  box-shadow: 0 18px 50px rgba(2,6,23,0.45);
-}
-
-/* clase .card para uso general */
-.card{
-  background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.08);
-  padding: 22px;
-  backdrop-filter: blur(4px) saturate(150%);
-}
-
-h2{ margin: 0 0 12px 0; font-size:1.4rem }
-
-.input{
-  width:100%;
-  padding:12px 14px;
-  border-radius:10px;
-  border:1px solid rgba(255,255,255,0.08);
-  background: rgba(255,255,255,0.03);
-  color:var(--text);
-  margin-bottom:12px;
-  outline:none;
-}
-.input:focus{ box-shadow: 0 0 0 4px rgba(109,211,255,0.08); border-color:var(--accent)}
-
-.btn{
-  display:inline-block;
-  width:100%;
-  padding:14px 18px;
-  border-radius:14px;
-  border:none;
-  background: linear-gradient(90deg,var(--accent),var(--accent-2));
-  color:#022;
-  font-weight:800;
-  cursor:pointer;
-  box-shadow: 0 12px 28px rgba(123,97,255,0.16);
-}
-.btn:active{ transform:translateY(1px) }
-
-.link-row{ display:flex; justify-content:space-between; gap:12px; margin-top:8px }
-.link-row a{ color:var(--accent-2); font-size:0.95rem }
-
-.small-msg{ font-size:0.95rem; margin-top:10px }
-
-/* utilidades */
-.center-abs{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center }
-
-/* topbar: fixed at top center with glassmorphism */
+/* Topbar compacto: altura típica ~48px */
 .topbar{
   position:fixed;
   top:12px;
   left:50%;
   transform:translateX(-50%);
-  height:64px;
-  z-index:5;
+  width:calc(100% - 40px);
+  max-width:1000px;
+  z-index:80;
+  height:60px;
   display:flex;
   align-items:center;
-  width:calc(100% - 48px);
-  max-width:1100px;
   border-radius:14px;
-  padding:8px 16px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  border: 1px solid rgba(255,255,255,0.12);
+  padding:0 16px;
+  background:var(--card-bg);
+  border:1px solid var(--card-border);
+  box-shadow: 0 14px 40px rgba(2,6,23,0.28);
   backdrop-filter: blur(6px) saturate(140%);
-  -webkit-backdrop-filter: blur(6px) saturate(140%);
-  box-shadow: 0 8px 30px rgba(2,6,23,0.45);
-}
-.topbar .small-text{ font-size:0.9rem; opacity:0.95 }
-.topbar strong{ font-size:1.1rem; margin-right:8px }
-
-.app-bg{ padding-top:24px } /* dejar espacio visual superior para la topbar */
-
-/* logo en la topbar */
-.topbar-logo{
-  width:64px;
-  height:64px;
-  object-fit:contain;
-  /* no background/padding/border so the PNG's alpha is shown directly */
-  background: none;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  /* use drop-shadow so only non-transparent pixels cast shadow (no translucent box) */
-  filter: drop-shadow(0 6px 14px rgba(0,0,0,0.45));
 }
 
-@media (max-width:720px){
-  .topbar{ height:60px; padding:6px 12px }
-  .topbar-logo{ width:52px; height:52px }
+.topbar-inner{ display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px }
+.brand{ display:flex; gap:12px; align-items:center }
+.topbar-logo{ width:36px; height:36px; object-fit:contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.24)) }
+.brand-text{ display:flex; flex-direction:column }
+.brand-title{ font-weight:700; font-size:0.94rem }
+.brand-sub{ font-size:0.72rem; color:var(--muted); line-height:1 }
+
+.topbar-actions{ display:flex; align-items:center; gap:12px }
+.site-title{ font-size:0.82rem; color:var(--muted); margin-right:8px }
+.actions{ display:flex; gap:8px; align-items:center }
+.top-action{ display:inline-block; padding:4px 6px; border-radius:4px; background:transparent; color:var(--accent); text-decoration:none; font-weight:600; font-size:0.92rem }
+.top-action:hover{ text-decoration:underline }
+
+
+.glass{ background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:18px; box-shadow: 0 12px 30px rgba(2,6,23,0.40); backdrop-filter: blur(6px) saturate(140%); }
+.card{ background:transparent; padding:0 }
+
+h2{ margin:0 0 12px 0; font-size:1.4rem }
+
+.form-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh }
+.form-col{ width:100%; max-width:520px }
+
+.input{ width:100%; padding:14px 12px; border-radius:10px; border:1px solid rgba(255, 255, 255, 0.527); background: rgba(167, 165, 165, 0.473); color:var(--text); margin-bottom:12px; font-size:1rem }
+.input:focus{ outline:none; box-shadow: 0 6px 20px rgba(45,140,240,0.08); border-color:var(--accent) }
+/* Placeholder más oscuro para mejor lectura */
+.input::placeholder{ color: rgba(0, 0, 0, 0.45); }
+.input:-ms-input-placeholder{ color: rgba(0, 0, 0, 0.74); }
+.input::-ms-input-placeholder{ color: rgba(0, 0, 0, 0.849); }
+.input::-webkit-input-placeholder{ color: rgba(61, 61, 61, 0.89); }
+
+.btn{ display:inline-block; padding:12px 20px; border-radius:10px; background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:white; font-weight:600; border:none; cursor:pointer; transition: transform .12s ease, box-shadow .18s ease }
+.btn:hover{ transform:translateY(-1px); box-shadow: 0 6px 18px rgba(45,140,240,0.08) }
+
+.link-row{ display:flex; justify-content:space-between; gap:10px; margin-top:12px }
+.link-row a{ color:var(--accent-2); text-decoration:none }
+
+.error{ color:#ff8b8b; margin-top:10px }
+.msg{ color:#9ef1a6; margin-top:10px }
+
+.center{ display:flex; align-items:center; justify-content:center }
+
+
+@media (max-width:920px){
+  .container{ margin:48px auto }
+  .topbar-logo{ width:32px; height:32px }
+  .brand-sub{ display:none }
+  .site-title{ display:none }
 }
 
-@media (max-width:420px){
-  .topbar{ height:56px; padding:6px 10px }
-  .topbar-logo{ width:40px; height:40px }
+@media (max-width:560px){
+  .topbar{ padding:4px 8px }
+  .topbar-logo{ width:24px; height:24px }
+  .top-action{ padding:6px 8px; font-size:0.9rem }
 }
+
+/* Password field with eye toggle */
+.password-field{ position:relative; overflow:hidden; border-radius:10px; height:44px }
+.password-field .input{ padding-right:52px; height:44px; box-sizing:border-box; padding-top:8px; padding-bottom:8px }
+.password-field{ margin-bottom:12px }
+
+/* Extra space when two password fields are stacked (registro) */
+.password-field + .password-field{ margin-top:10px; margin-bottom:14px }
+.toggle-eye{ position:absolute; right:6px; top:50%; transform:translateY(-50%); z-index:3; background:transparent; border:none; color:rgb(14, 153, 141); cursor:pointer; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center; width:32px; height:32px }
+.toggle-eye svg{ width:18px; height:18px; color:inherit; transform:none !important; backface-visibility:hidden; transform-style:preserve-3d }
+.toggle-eye:focus{ outline:none; box-shadow:none }
+.toggle-eye[aria-pressed="true"] svg{ color:var(--accent-2); transform:none !important; transform-origin:center center }
+
+/* Ensure icon visibility and no movement: change color when active */
+.toggle-eye[aria-pressed="true"]{ color:var(--accent-2) }
+.toggle-eye{ transition: none }
+.eye-icon{ color: inherit; opacity:1 }
+
+/* Forzar tamaño/visibilidad de icon components (Heroicons) */
+.eye-icon{ width:18px; height:18px; display:block; color:inherit }
+
+/* Transition for eye open/close: subtle scale + fade only */
+.eye-enter-active, .eye-leave-active { transition: opacity .12s ease, transform .12s ease }
+.eye-enter-from, .eye-leave-to { opacity: 0; transform: scale(0.88) }
+.eye-enter-to, .eye-leave-from { opacity: 1; transform: scale(1) }
+
+@media (prefers-reduced-motion: reduce){
+  .btn, .toggle-eye, .eye-icon { transition: none !important }
+}
+.toggle-eye:hover .eye-icon{ transform:none }
+

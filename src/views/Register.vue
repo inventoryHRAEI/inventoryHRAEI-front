@@ -1,90 +1,128 @@
 <template>
-  <div class="register-container">
-  <div class="glass card">
-      <h2>Registro</h2>
-      <form @submit.prevent="register">
-        <input v-model="nombre" placeholder="Nombre" required class="input" />
-        <input v-model="email" placeholder="Email" type="email" required class="input" />
-        <input v-model="password" placeholder="Contraseña" type="password" required class="input" />
-        <button class="btn" type="submit">Registrarse</button>
-      </form>
-      <router-link to="/login">¿Ya tienes cuenta? Inicia sesión</router-link>
-      <div v-if="error" class="error">{{ error }}</div>
+  <div class="form-wrap">
+    <div class="form-col">
+      <div class="glass">
+        <h3>Registro</h3>
+
+        <form v-if="!tokenSent" @submit.prevent="sendToken">
+          <input v-model="nombre" placeholder="Nombre" required class="input" />
+          <input v-model="email" placeholder="Email" type="email" required class="input" />
+          <div style="margin-top:12px">
+            <button class="btn" type="submit">Enviar Token</button>
+          </div>
+        </form>
+
+        <form v-else @submit.prevent="validateToken">
+          <input v-model="token" placeholder="Token (6 dígitos)" type="text" maxlength="6" required class="input" />
+          <div class="password-field">
+            <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="Contraseña" required class="input" />
+            <button type="button" class="toggle-eye" @click="showPassword = !showPassword" :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'" :aria-pressed="showPassword">
+              <transition name="eye" mode="out-in">
+                <component :is="showPassword ? EyeSlashIcon : EyeIcon" class="eye-icon" :key="showPassword ? 'off' : 'on'" aria-hidden="true" />
+              </transition>
+            </button>
+          </div>
+          <div class="password-field">
+            <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña" required class="input" />
+              <button type="button" class="toggle-eye" @click="showConfirm = !showConfirm" :aria-label="showConfirm ? 'Ocultar contraseña' : 'Mostrar contraseña'" :aria-pressed="showConfirm">
+                <transition name="eye" mode="out-in">
+                  <component :is="showConfirm ? EyeSlashIcon : EyeIcon" class="eye-icon" :key="showConfirm ? 'off' : 'on'" aria-hidden="true" />
+                </transition>
+              </button>
+          </div>
+          <div style="margin-top:20px">
+            <button class="btn" type="submit">Validar y Registrarse</button>
+          </div>
+        </form>
+
+        <div class="link-row" style="margin-top:12px">
+          <router-link to="/login">¿Ya tienes cuenta? Inicia sesión</router-link>
+        </div>
+
+        <div v-if="error" class="error">{{ error }}</div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import gsap from 'gsap';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { toast } from 'vue3-toastify'
+import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 
-const nombre = ref('');
-const email = ref('');
-const password = ref('');
-const error = ref('');
-const router = useRouter();
+const nombre = ref('')
+const email = ref('')
+const token = ref('')
+const password = ref('')
+const confirmPassword = ref('')
+const error = ref('')
+const tokenSent = ref(false)
+const router = useRouter()
+const showPassword = ref(false)
+const showConfirm = ref(false)
 
-onMounted(() => {
-  gsap.to('.glass', { boxShadow: '0 0 40px #2d8cf0', duration: 2, repeat: -1, yoyo: true });
-});
-
-const register = async () => {
-  error.value = '';
+const sendToken = async () => {
+  error.value = ''
+  if (!nombre.value || !email.value) {
+    toast.error('Nombre y email son obligatorios')
+    return
+  }
   try {
     const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre: nombre.value, email: email.value, password: password.value })
-    });
-    let data;
-    const text = await res.text();
+      body: JSON.stringify({ nombre: nombre.value, email: email.value })
+    })
+    let data
     try {
-      data = JSON.parse(text);
-    } catch (parseErr) {
-      console.error('Respuesta no JSON en /register:', text);
-      throw new Error('Respuesta inválida del servidor');
+      data = await res.json()
+    } catch (_) {
+      data = { msg: res.statusText || 'Respuesta vacía' }
     }
-    if (!res.ok) throw new Error(data.msg || 'Error en registro');
-    router.push('/login');
+    if (!res.ok) throw new Error(data.msg || 'Error al enviar token')
+    toast.success('Token enviado. Revisa tu correo (simulado)')
+    tokenSent.value = true
   } catch (e) {
-    console.error('register', e);
-    error.value = e.message;
+    error.value = e.message
+    toast.error(e.message)
   }
-};
+}
+
+const validateToken = async () => {
+  error.value = ''
+  if (!token.value || !password.value || !confirmPassword.value) {
+    toast.error('Todos los campos son obligatorios')
+    return
+  }
+  if (password.value !== confirmPassword.value) {
+    toast.error('Las contraseñas no coinciden')
+    return
+  }
+  try {
+    const res = await fetch('/api/auth/validate-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.value, token: token.value, password: password.value })
+    })
+    let data
+    try {
+      data = await res.json()
+    } catch (_) {
+      data = { msg: res.statusText || 'Respuesta vacía' }
+    }
+    if (!res.ok) throw new Error(data.msg || 'Error al validar token')
+    toast.success('Cuenta creada exitosamente')
+    router.push({ name: 'login' })
+  } catch (e) {
+    error.value = e.message
+    toast.error(e.message)
+  }
+}
 </script>
 
 <style scoped>
-.register-container { display:flex; justify-content:center; align-items:center; min-height:100vh }
-.glass {
-  background: rgba(255,255,255,0.15);
-  border-radius: 24px;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.2);
-  backdrop-filter: blur(12px) saturate(180%);
-  padding: 2rem 3rem;
-  text-align: center;
-}
-.input {
-  display: block;
-  width: 100%;
-  margin-bottom: 10px;
-  padding: 8px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-.btn {
-  margin: 8px 0;
-  padding: 10px 24px;
-  border-radius: 8px;
-  border: none;
-  background: #2d8cf0;
-  color: #fff;
-  font-weight: bold;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.btn:hover {
-  background: #1a73e8;
-}
-.error { color: red; margin-top: 10px; }
+.form-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh }
+.form-col{ width:100%; max-width:520px }
 </style>
+*** End Patch
