@@ -15,7 +15,9 @@
           </div>
 
           <div style="margin-top:16px">
+            <center>
             <button class="btn" type="submit">Entrar</button>
+            </center>
           </div>
         </form>
 

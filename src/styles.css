@@ -3,8 +3,8 @@
   --bg-2: #0f1724;
   --card-bg: rgba(255,255,255,0.04);
   --card-border: rgba(255,255,255,0.06);
-  --accent: #065034;
-  --accent-2: #1a3834;
+  --accent: #2edd5a;
+  --accent-2: #193b08;
   --text: #000000;
   --muted: rgb(0, 0, 0);
 }
@@ -100,7 +100,7 @@ h2{ margin:0 0 12px 0; font-size:1.4rem }
 
 /* Extra space when two password fields are stacked (registro) */
 .password-field + .password-field{ margin-top:10px; margin-bottom:14px }
-.toggle-eye{ position:absolute; right:6px; top:50%; transform:translateY(-50%); z-index:3; background:transparent; border:none; color:rgb(14, 153, 141); cursor:pointer; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center; width:32px; height:32px }
+.toggle-eye{ position:absolute; right:6px; top:50%; transform:translateY(-50%); z-index:3; background:transparent; border:none; color:rgb(25, 0, 255); cursor:pointer; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center; width:32px; height:32px }
 .toggle-eye svg{ width:18px; height:18px; color:inherit; transform:none !important; backface-visibility:hidden; transform-style:preserve-3d }
 .toggle-eye:focus{ outline:none; box-shadow:none }
 .toggle-eye[aria-pressed="true"] svg{ color:var(--accent-2); transform:none !important; transform-origin:center center }
@@ -122,4 +122,10 @@ h2{ margin:0 0 12px 0; font-size:1.4rem }
   .btn, .toggle-eye, .eye-icon { transition: none !important }
 }
 .toggle-eye:hover .eye-icon{ transform:none }
+
+/* Center links and buttons inside form areas */
+.link-row{ display:flex; justify-content:center; gap:12px; margin-top:12px }
+.link-row a{ color:var(--accent-2); text-decoration:none; text-align:center }
+.glass form{ text-align:center }
+.glass form .btn{ display:block; margin:12px auto 0 }
 

@@ -5,7 +5,9 @@
         <h2>Recuperar Contraseña</h2>
         <form @submit.prevent="forgot">
           <input v-model="email" placeholder="Email" type="email" required class="input" />
-          <div style="margin-top:12px"><button class="btn" type="submit">Enviar token</button></div>
+          <div style="margin-top:12px">
+            <button class="btn" type="submit">Enviar token</button>
+          </div>
         </form>
         <div class="link-row" style="margin-top:12px"><router-link to="/login">Volver a login</router-link></div>
         <div v-if="msg" class="msg">{{ msg }}</div>
