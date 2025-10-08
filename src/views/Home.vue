@@ -38,10 +38,10 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 
 const slides = ref([
-  { img: '/carrusel/inventario_hospitaal.jpg', title: 'Gestión de Equipos', desc: 'Altas, ubicación, historial y trazabilidad.' },
-  { img: '/carrusel/reparacion_equipo.jpg', title: 'Reparaciones y Mantenimiento', desc: 'Servicios, órdenes y seguimiento técnico.' },
-  { img: '/carrusel/insumos_consumibles.jpg', title: 'Comodatos (Proveedor)', desc: 'Equipos en préstamo/comodato de proveedores.' },
-  { img: '/carrusel/donaciones.jpeg', title: 'Donaciones', desc: 'Registro, validación y control de altas.' }
+  { img: '/carrusel/equipos.jpg', title: 'Gestión de Equipos', desc: 'Altas, ubicación, historial y trazabilidad.' },
+  { img: '/carrusel/reparacion.jpg', title: 'Reparaciones y Mantenimiento', desc: 'Servicios, órdenes y seguimiento técnico.' },
+  { img: '/carrusel/comodato.jpg', title: 'Comodatos (Proveedor)', desc: 'Equipos en préstamo/comodato de proveedores.' },
+  { img: '/carrusel/donacion.jpg', title: 'Donaciones', desc: 'Registro, validación y control de altas.' }
 ])
 const idx = ref(0)
 let timer

@@ -94,6 +94,16 @@ const photoMsg = ref('')
 
 const remainingResends = computed(() => Math.max(0, maxResends - resendCount.value))
 
+async function parseJsonSafe(res){
+  try{
+    const text = await res.text()
+    if(!text) return {}
+    return JSON.parse(text)
+  }catch{
+    return {}
+  }
+}
+
 const sendToken = async () => {
   error.value = ''
   if (!nombre.value || !email.value) {
@@ -106,8 +116,8 @@ const sendToken = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ nombre: nombre.value, email: email.value })
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.msg || 'Error al enviar token')
+    const data = await parseJsonSafe(res)
+    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (request-token)')
     toast.success('Token enviado. Revisa tu correo.')
     step.value = 2
   } catch (e) {
@@ -128,8 +138,8 @@ const verifyToken = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value, token: token.value })
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.msg || 'Error al verificar token')
+    const data = await parseJsonSafe(res)
+    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (verify-token)')
     toast.success('Email verificado. Completa tu cuenta.')
     step.value = 3
   } catch (e) {
@@ -146,8 +156,8 @@ const resendToken = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value })
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.msg || 'Error al reenviar token')
+    const data = await parseJsonSafe(res)
+    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (resend-token)')
     resendCount.value += 1
     toast.success(data.msg || 'Token reenviado')
   } catch (e) {
@@ -204,8 +214,8 @@ const completeRegistration = async () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: email.value, nombre: nombre.value, password: password.value, foto: fotoUrl })
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.msg || 'Error al completar registro')
+    const data = await parseJsonSafe(res)
+    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (complete-registration)')
     toast.success('Registro completado. Ya puedes iniciar sesión.')
     router.push({ name: 'login' })
   } catch (e) {
