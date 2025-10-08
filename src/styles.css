@@ -7,6 +7,9 @@
   --accent-2: #193b08;
   --text: #000000;
   --muted: rgb(0, 0, 0);
+  /* Topbar metrics for positioning fixed dropdown */
+  --topbar-top: 12px;
+  --topbar-height: 60px;
 }
 
 *{ box-sizing: border-box }
@@ -17,6 +20,7 @@ html,body,#app{ height:100%; margin:0; font-family: Inter, 'Segoe UI', Roboto, A
 .bg-img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02); }
 
 .container{ position:relative; z-index:2; max-width:920px; width:92%; margin:80px auto; }
+.container{ transition: none }
 
 /* Topbar compacto: altura típica ~48px */
 .topbar{
@@ -50,6 +54,73 @@ html,body,#app{ height:100%; margin:0; font-family: Inter, 'Segoe UI', Roboto, A
 .actions{ display:flex; gap:8px; align-items:center }
 .top-action{ display:inline-block; padding:4px 6px; border-radius:4px; background:transparent; color:var(--accent); text-decoration:none; font-weight:600; font-size:0.92rem }
 .top-action:hover{ text-decoration:underline }
+
+/* Welcome block in topbar */
+.welcome{ display:flex; align-items:center; gap:8px; margin-right:8px }
+.avatar{ width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.06); }
+.welcome-text{ font-weight:600 }
+
+.top-avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover }
+
+/* User menu dropdown */
+.user-menu{ position:relative }
+.user-btn{ display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(46,221,90,0.22), rgba(25,59,8,0.18)); border:1px solid rgba(46,221,90,0.55); padding:6px 10px; border-radius:10px; cursor:pointer; color:var(--text) }
+.user-btn .avatar{ width:24px; height:24px; font-size:13px }
+.user-btn{ transition: box-shadow .12s ease, filter .12s ease }
+.user-btn:hover{ filter: saturate(1.1) }
+.user-btn.open{ box-shadow: 0 10px 26px rgba(2,6,23,0.22) }
+.user-btn .chev{ display:inline-block; width:12px; height:12px; border-right:2px solid rgba(0,0,0,0.35); border-bottom:2px solid rgba(0,0,0,0.35); transform:rotate(-45deg); margin-left:6px; transition: transform .18s ease, border-color .18s }
+.user-btn.open .chev{ transform: rotate(45deg) translateY(-1px); border-color:rgba(255,255,255,0.9) }
+
+.dropdown{ position:fixed; right:24px; top:calc(var(--topbar-top) + var(--topbar-height) + 8px); background:rgba(255,255,255,0.92); border:1px solid rgba(0,0,0,0.08); padding:12px; border-radius:14px; min-width:260px; max-width:400px; box-shadow: 0 18px 48px rgba(2,6,23,0.28); z-index:140; overflow:auto; backdrop-filter: blur(3px) saturate(120%) }
+.dropdown-item{ display:block; width:100%; text-align:left; padding:10px 12px; background:transparent; border:none; color:rgba(10,10,10,0.95); cursor:pointer; font-weight:700; border-radius:8px; font-size:0.96rem }
+.dropdown-item:hover{ background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:white }
+
+/* Expanded dropdown style when pushing content */
+.dropdown.expanded{ min-width:300px; max-width:380px; padding:12px 14px; border-radius:14px }
+.dropdown.expanded .dropdown-item{ font-size:0.98rem; padding:12px 14px }
+
+/* Slide down transition */
+.slide-down-enter-from{ transform: translateY(-8px); opacity:0 }
+.slide-down-enter-active{ transition: all .22s cubic-bezier(.2,.9,.2,1) }
+.slide-down-enter-to{ transform: translateY(0); opacity:1 }
+.slide-down-leave-from{ transform: translateY(0); opacity:1 }
+.slide-down-leave-active{ transition: all .18s cubic-bezier(.2,.9,.2,1) }
+.slide-down-leave-to{ transform: translateY(-6px); opacity:0 }
+
+/* When menu is open, compress only the dashboard area slightly (no big slide of the whole container) */
+/* Suavizado general al abrir menú: nada debería moverse salvo la rejilla que reacomoda columnas */
+body.menu-open .dash-grid{ transition: grid-template-columns .22s ease, gap .18s ease }
+body.menu-open .dash-btn{ transition: padding .18s, font-size .18s }
+
+/* Ensure dropdown stays visible above content */
+body.menu-open .user-menu .dropdown{ z-index:140 }
+
+/* Grid behavior: when the user menu is open, switch from 3 cols to 2 cols on wider screens */
+.dash-grid{ transition: transform .22s cubic-bezier(.2,.9,.2,1), gap .18s ease, margin-top .18s ease }
+@media (min-width: 861px){ body.menu-open .dash-grid{ grid-template-columns: repeat(2,1fr) !important; gap: 20px } }
+@media (max-width: 860px){
+  /* En pantallas medianas ya suele ser 2 columnas, mantenemos */
+  body.menu-open .dash-grid{ grid-template-columns: repeat(2,1fr) !important }
+}
+@media (max-width: 640px){
+  /* En móviles, cuando se abre el menú, apilamos en 1 columna */
+  body.menu-open .dash-grid{ grid-template-columns: 1fr !important }
+}
+
+/* Panel de acciones: layout fijo (no cambia por abrir el menú) */
+.reactive-panel{ display:grid; grid-template-columns: repeat(3,1fr); gap:16px }
+@media (max-width: 960px){ .reactive-panel{ grid-template-columns: repeat(2,1fr) } }
+@media (max-width: 560px){ .reactive-panel{ grid-template-columns: 1fr } }
+.dropdown-item.admin{ margin-top:8px; border-top:1px dashed rgba(255,255,255,0.04); padding-top:10px }
+/* Si hay muchos items, hacer scroll dentro del dropdown para no superponer toda la pantalla */
+.dropdown{ max-height:320px; overflow:auto }
+.dropdown::-webkit-scrollbar{ width:8px; height:8px }
+.dropdown::-webkit-scrollbar-thumb{ background:rgba(0,0,0,0.25); border-radius:8px }
+
+/* Ajustes visuales para items: más separación y subtítulos */
+.dropdown-item{ display:flex; align-items:center; justify-content:space-between }
+.dropdown-item .small{ font-weight:600; opacity:0.8; font-size:0.86rem }
 
 
 .glass{ background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:18px; box-shadow: 0 12px 30px rgba(2,6,23,0.40); backdrop-filter: blur(6px) saturate(140%); }
@@ -91,6 +162,11 @@ h2{ margin:0 0 12px 0; font-size:1.4rem }
   .topbar{ padding:4px 8px }
   .topbar-logo{ width:24px; height:24px }
   .top-action{ padding:6px 8px; font-size:0.9rem }
+}
+
+@media (max-width:720px){
+  /* Mover dropdown hacia la izquierda un poco para que no quede fuera de la pantalla */
+  .user-menu .dropdown{ right:8px; left:auto; transform: translateX(-10px) }
 }
 
 /* Password field with eye toggle */

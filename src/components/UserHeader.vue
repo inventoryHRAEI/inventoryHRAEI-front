@@ -1,0 +1,35 @@
+<template>
+  <div class="user-header">
+    <img v-if="user && user.foto" :src="user.foto" class="avatar" alt="avatar" />
+    <div v-else class="avatar placeholder">{{ initials }}</div>
+    <div class="info">
+      <div class="name">{{ user?.nombre || 'Usuario' }}</div>
+      <div class="role">{{ user?.role || 'user' }}</div>
+    </div>
+    <div class="actions" v-if="isDashboard">
+      <button v-if="isAdmin" class="btn small" @click="$emit('manage-users')">Gestionar usuarios</button>
+      <button v-else class="btn small" @click="$emit('requests')">Solicitar permisos</button>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed, ref } from 'vue'
+const props = defineProps({ user: Object, isDashboard: { type: Boolean, default: true } })
+const emit = defineEmits(['manage-users', 'requests'])
+const isAdmin = computed(() => (props.user && props.user.role === 'admin'))
+const initials = computed(() => {
+  if (!props.user || !props.user.nombre) return 'U'
+  return props.user.nombre.split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()
+})
+</script>
+
+<style scoped>
+.user-header{ display:flex; align-items:center; gap:12px; padding:8px }
+.avatar{ width:48px; height:48px; border-radius:50%; object-fit:cover }
+.avatar.placeholder{ display:flex; align-items:center; justify-content:center; background:#ddd; color:#333 }
+.info .name{ font-weight:700 }
+.role{ font-size:12px; color:#666 }
+.actions{ margin-left:auto }
+.btn.small{ padding:6px 10px; font-size:13px }
+</style>
