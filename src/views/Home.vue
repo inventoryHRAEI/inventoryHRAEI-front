@@ -40,7 +40,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 const slides = ref([
   { img: '/carrusel/inventario_hospitaal.jpg', title: 'Gestión de Equipos', desc: 'Altas, ubicación, historial y trazabilidad.' },
   { img: '/carrusel/reparacion_equipo.jpg', title: 'Reparaciones y Mantenimiento', desc: 'Servicios, órdenes y seguimiento técnico.' },
-  { img: '/carrusel/insumos_consumbibles.jpg', title: 'Comodatos (Proveedor)', desc: 'Equipos en préstamo/comodato de proveedores.' },
+  { img: '/carrusel/insumos_consumibles.jpg', title: 'Comodatos (Proveedor)', desc: 'Equipos en préstamo/comodato de proveedores.' },
   { img: '/carrusel/donaciones.jpeg', title: 'Donaciones', desc: 'Registro, validación y control de altas.' }
 ])
 const idx = ref(0)
