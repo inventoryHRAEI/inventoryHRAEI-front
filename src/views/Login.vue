@@ -15,7 +15,7 @@
           </div>
 
           <div style="margin-top:16px" class="center">
-            <button class="btn" type="submit">Entrar</button>
+            <button class="btn secondary" type="submit">Entrar</button>
           </div>
         </form>
 

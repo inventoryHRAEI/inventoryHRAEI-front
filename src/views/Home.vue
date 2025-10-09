@@ -7,11 +7,11 @@
         <div class="cta-row">
           <div class="cta-block">
             <div class="q">¿Ya tienes una cuenta?</div>
-            <router-link to="/login" class="btn">Inicia sesión</router-link>
+          <router-link to="/login"><button class="btn secondary">Inicia sesión</button></router-link>
           </div>
           <div class="cta-block">
             <div class="q">¿Para crear cuenta?</div>
-            <router-link to="/register" class="btn">¡Únete aquí!</router-link>
+          <router-link to="/register"><button class="btn primary" style="margin-left:12px">¡Únete aquí!</button></router-link>
           </div>
         </div>
       </div>
@@ -57,15 +57,15 @@ onBeforeUnmount(() => { try{ clearInterval(timer) }catch{} })
 .cta-row{ display:flex; gap:12px }
 .hero-right{ position:relative }
 .carousel{ position:relative; overflow:hidden; border-radius:12px; border:1px solid var(--card-border); background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)); height:260px; min-height:220px; max-height:320px }
-.slide{ position:absolute; inset:0; opacity:0; transition: opacity .35s ease; display:grid; place-items:center }
+.slide{ position:absolute; inset:0; opacity:0; transition: opacity .7s cubic-bezier(.2,.9,.2,1); display:grid; place-items:center }
 .slide.active{ opacity:1 }
 .slide img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02) }
 .caption{ position:absolute; left:12px; right:12px; bottom:12px; background: rgba(0,0,0,.50); color:#fff; padding:10px 12px; border-radius:10px; font-size:.95rem; backdrop-filter: blur(3px) }
 .caption .title{ font-weight:800; margin-bottom:2px }
 .caption .sub{ font-size:.86rem; opacity:.9; margin-top:2px }
 .dots{ position:absolute; right:8px; bottom:8px; display:flex; gap:6px }
-.dot{ width:8px; height:8px; border-radius:50%; border:1px solid rgba(255,255,255,.8); background:transparent; cursor:pointer }
-.dot.on{ background:#fff }
+.dot{ width:10px; height:10px; border-radius:50%; border:1px solid rgba(255,255,255,.8); background:transparent; cursor:pointer; transition: transform .28s cubic-bezier(.2,.9,.2,1), background .18s ease }
+.dot.on{ background:#fff; transform: scale(1.25) }
 
 @media (max-width: 820px){
   .hero{ grid-template-columns: 1fr }

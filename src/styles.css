@@ -4,9 +4,13 @@
   --card-bg: rgba(255,255,255,0.04);
   --card-border: rgba(255,255,255,0.06);
   --accent: #2edd5a;
-  --accent-2: #193b08;
+  --accent-2: #299deb;
   --text: #000000;
   --muted: rgb(0, 0, 0);
+  --btn-green: #0bb828;
+  --link-green-light: #0ccf6a;  
+  --btn-text-dark: #0b6b4a;
+  --bg-img-brightness: 0.6;
   /* Topbar metrics for positioning fixed dropdown */
   --topbar-top: 12px;
   --topbar-height: 60px;
@@ -18,6 +22,7 @@ html,body,#app{ height:100%; margin:0; font-family: Inter, 'Segoe UI', Roboto, A
 /* Background media kept as element in App.vue */
 .bg-media{ position:fixed; inset:0; z-index:0 }
 .bg-img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02); }
+.bg-img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02) brightness(var(--bg-img-brightness)); }
 
 .container{ position:relative; z-index:2; max-width:920px; width:92%; margin:80px auto; }
 .container{ transition: none }
@@ -41,7 +46,6 @@ html,body,#app{ height:100%; margin:0; font-family: Inter, 'Segoe UI', Roboto, A
   box-shadow: 0 14px 40px rgba(2,6,23,0.28);
   backdrop-filter: blur(6px) saturate(140%);
 }
-
 .topbar-inner{ display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px }
 .brand{ display:flex; gap:12px; align-items:center }
 .topbar-logo{ width:36px; height:36px; object-fit:contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.24)) }
@@ -139,11 +143,50 @@ h2{ margin:0 0 12px 0; font-size:1.4rem }
 .input::-ms-input-placeholder{ color: rgba(0, 0, 0, 0.849); }
 .input::-webkit-input-placeholder{ color: rgba(61, 61, 61, 0.89); }
 
-.btn{ display:inline-block; padding:12px 20px; border-radius:10px; background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:white; font-weight:600; border:none; cursor:pointer; transition: transform .12s ease, box-shadow .18s ease }
-.btn:hover{ transform:translateY(-1px); box-shadow: 0 6px 18px rgba(45,140,240,0.08) }
+/* Disabled / readonly inputs: visually distinguish and show not-allowed cursor
+   This makes the email field (locked after step 1) clearly non-editable while
+   keeping the same shape/spacing as other inputs. */
+.input:disabled,
+.input[disabled],
+.input[readonly] {
+  background: rgba(255,255,255,0.06); /* slightly dimmer over the backdrop */
+  border: 1px dashed rgba(255,255,255,0.32);
+  color: rgba(0,0,0,0.58);
+  cursor: not-allowed;
+  opacity: 0.98;
+  box-shadow: none;
+}
+.input:disabled:focus, .input[disabled]:focus, .input[readonly]:focus{ outline:none; box-shadow:none; border-color: rgba(255,255,255,0.32) }
+.input:disabled::placeholder, .input[disabled]::placeholder, .input[readonly]::placeholder{ color: rgba(0,0,0,0.32) }
+
+/* Ensure inputs inside .glass forms keep the same consistent border style */
+.glass form .input{ border:1px solid rgba(255, 255, 255, 0.527); background: rgba(167, 165, 165, 0.473); }
+
+.btn{ display:inline-block; padding:12px 20px; border-radius:10px; background:#ffffff; color:var(--btn-green); font-weight:600; border:1px solid rgba(0,0,0,0.06); cursor:pointer; transition: transform .12s ease, box-shadow .18s ease }
+.btn:hover{ transform:translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.06); background:#ffffff }
+
+/* Variant buttons: primary (green filled) and secondary (white with green text) */
+.btn.primary{ background: linear-gradient(180deg,var(--btn-green),#00be2c); color:#fff; border:none }
+.btn.primary:hover{ filter:brightness(0.98); box-shadow: 0 8px 22px rgba(11, 172, 65, 0.14) }
+.btn.secondary{ background:#ffffff; color:var(--btn-green); border:1px solid rgba(0,0,0,0.06) }
+
+/* Backwards compatibility for .btn.resend used in some components */
+.btn.resend{ background:#ffffff; color:var(--btn-green); border:1px solid rgba(0,0,0,0.06) }
 
 .link-row{ display:flex; justify-content:space-between; gap:10px; margin-top:12px }
-.link-row a{ color:var(--accent-2); text-decoration:none }
+.link-row a{ color: rgba(10,10,10,0.78); text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1px }
+
+/* Also style links that appear inside forms (e.g., 'Volver a login') to be more visible but subtle */
+.glass form a{ color: rgba(10,10,10,0.78); text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1px }
+.glass form a:hover{ color: var(--btn-green); text-decoration-color: var(--btn-green) }
+
+/* Stronger highlighting for links inside cards to avoid blending with background imagery */
+.glass a{ display:inline-block; padding:4px 6px; border-radius:6px; background: transparent; color: var(--link-green-light); text-decoration:none; text-underline-offset:3px; text-decoration-thickness:1px; transition: color .12s ease, background .12s ease }
+.glass a:hover{ background: rgba(46,221,90,0.08); color: var(--accent-2); text-decoration:underline; text-decoration-color:var(--accent-2) }
+
+/* Ensure topbar links which may also use .glass or .link-row are not overridden incorrectly */
+.topbar a, .topbar .top-action{ background: transparent; color: var(--accent); }
+.topbar a:hover, .topbar .top-action:hover{ background: rgba(46,221,90,0.06); text-decoration: underline; text-decoration-color: var(--accent); }
 
 .error{ color:#ff8b8b; margin-top:10px }
 .msg{ color:#9ef1a6; margin-top:10px }
@@ -204,4 +247,26 @@ h2{ margin:0 0 12px 0; font-size:1.4rem }
 .link-row a{ color:var(--accent-2); text-decoration:none; text-align:center }
 .glass form{ text-align:center }
 .glass form .btn{ display:block; margin:12px auto 0 }
+
+/* Strong global overrides to enforce the Reset 'reenviar' button styles app-wide */
+.btn, button.btn, a.btn, .btn[role="button"] {
+  background: #ffffff !important;
+  color: var(--btn-text-dark) !important;
+  border: 1px solid rgba(0,0,0,0.06) !important;
+  box-shadow: none !important;
+}
+.btn:hover, button.btn:hover, a.btn:hover {
+  background: #ffffff !important;
+  color: var(--btn-text-dark) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06) !important;
+  transform: translateY(-1px) !important;
+}
+/* Primary variant remains filled green */
+.btn.primary, button.btn.primary, a.btn.primary {
+  background: linear-gradient(180deg,var(--btn-green),#00701a) !important;
+  color: #fff !important;
+  border: none !important;
+}
+/* Keep small/ghost variants intact if explicitly defined */
+.btn.ghost, button.btn.ghost, a.btn.ghost { background: transparent !important; color: var(--btn-text-dark) !important; border:1px solid rgba(0,0,0,0.06) !important }
 

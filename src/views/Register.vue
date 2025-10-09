@@ -9,7 +9,7 @@
           <input v-model="nombre" placeholder="Nombre" required class="input" />
           <input v-model="email" placeholder="Email" type="email" required class="input" />
           <div style="margin-top:12px">
-            <button class="btn" type="submit">Enviar Token</button>
+            <button class="btn secondary" type="submit">Enviar Token</button>
           </div>
         </form>
 
@@ -17,7 +17,7 @@
           <h4>Paso 2 — Verifica tu email</h4>
           <input v-model="token" placeholder="Token (6 dígitos)" type="text" maxlength="6" required class="input" />
           <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
-            <button class="btn" type="submit">Verificar</button>
+            <button class="btn secondary" type="submit">Verificar</button>
             <button class="btn secondary" type="button" :disabled="resendCount >= maxResends" @click="resendToken">Reenviar token ({{ remainingResends }})</button>
           </div>
           <div style="margin-top:8px; font-size:12px; color:#666">Si no recibes el token, puedes reenviarlo hasta 4 veces.</div>
@@ -55,7 +55,7 @@
             <div v-if="photoErr" class="error">{{ photoErr }}</div>
           </div>
           <div style="margin-top:20px">
-            <button class="btn" type="submit">Crear cuenta</button>
+            <button class="btn secondary" type="submit">Crear cuenta</button>
           </div>
         </form>
 

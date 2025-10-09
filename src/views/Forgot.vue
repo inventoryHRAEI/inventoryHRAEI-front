@@ -6,7 +6,7 @@
         <form @submit.prevent="forgot">
           <input v-model="email" placeholder="Email" type="email" required class="input" />
           <div style="margin-top:12px">
-            <button class="btn" type="submit">Enviar token</button>
+            <button class="btn secondary" type="submit">Enviar token</button>
           </div>
         </form>
         <div class="link-row" style="margin-top:12px"><router-link to="/login">Volver a login</router-link></div>
@@ -25,6 +25,9 @@ const email = ref('')
 const msg = ref('')
 const error = ref('')
 
+import { useRouter } from 'vue-router'
+const router = useRouter()
+
 const forgot = async () => {
   msg.value = ''
   error.value = ''
@@ -38,6 +41,19 @@ const forgot = async () => {
     if (!res.ok) throw new Error(data.msg || 'Error al solicitar token')
     msg.value = 'Revisa tu correo para el token (simulado)'
     toast.success(msg.value)
+    // Siempre redirigir a la vista de reset con el email pre-llenado.
+    // Si el backend devuelve token o resetUrl (modo dev), preferirlos para auto-login al paso 2.
+    try {
+      const q = new URLSearchParams({ email: email.value })
+      if (data && data.token) q.set('token', data.token)
+      if (data && data.resetUrl) {
+        window.location.href = data.resetUrl
+      } else {
+        router.push({ path: '/reset', query: Object.fromEntries(q) })
+      }
+    } catch (e) {
+      console.error('Redirección a reset falló:', e)
+    }
   } catch (e) {
     error.value = e.message
     toast.error(e.message)
