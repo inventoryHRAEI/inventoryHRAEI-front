@@ -72,7 +72,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { toast } from 'vue3-toastify'
+import notifier from '@/utils/notifier'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 
 const nombre = ref('')
@@ -107,7 +107,7 @@ async function parseJsonSafe(res){
 const sendToken = async () => {
   error.value = ''
   if (!nombre.value || !email.value) {
-    toast.error('Nombre y email son obligatorios')
+  notifier.error('Nombre y email son obligatorios')
     return
   }
   try {
@@ -118,18 +118,18 @@ const sendToken = async () => {
     })
     const data = await parseJsonSafe(res)
     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (request-token)')
-    toast.success('Token enviado. Revisa tu correo.')
+  notifier.success('Token enviado. Revisa tu correo.')
     step.value = 2
   } catch (e) {
     error.value = e.message
-    toast.error(e.message)
+  notifier.error(e.message)
   }
 }
 
 const verifyToken = async () => {
   error.value = ''
   if (!token.value) {
-    toast.error('Ingresa el token')
+  notifier.error('Ingresa el token')
     return
   }
   try {
@@ -140,11 +140,11 @@ const verifyToken = async () => {
     })
     const data = await parseJsonSafe(res)
     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (verify-token)')
-    toast.success('Email verificado. Completa tu cuenta.')
+  notifier.success('Email verificado. Completa tu cuenta.')
     step.value = 3
   } catch (e) {
     error.value = e.message
-    toast.error(e.message)
+  notifier.error(e.message)
   }
 }
 
@@ -159,10 +159,10 @@ const resendToken = async () => {
     const data = await parseJsonSafe(res)
     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (resend-token)')
     resendCount.value += 1
-    toast.success(data.msg || 'Token reenviado')
+  notifier.success(data.msg || 'Token reenviado')
   } catch (e) {
     error.value = e.message
-    toast.error(e.message)
+  notifier.error(e.message)
   }
 }
 
@@ -187,17 +187,17 @@ const onFileChange = async (e) => {
 const completeRegistration = async () => {
   error.value = ''
   if (!password.value || !confirmPassword.value) {
-    toast.error('Completa las contraseñas')
+  notifier.error('Completa las contraseñas')
     return
   }
   if (password.value !== confirmPassword.value) {
-    toast.error('Las contraseñas no coinciden')
+  notifier.error('Las contraseñas no coinciden')
     return
   }
   // Validación de contraseña en frontend
   const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
   if (!strong.test(password.value)) {
-    toast.error('Contraseña débil. Debe tener al menos 8 caracteres, mayúscula, minúscula, número y símbolo.')
+  notifier.error('Contraseña débil. Debe tener al menos 8 caracteres, mayúscula, minúscula, número y símbolo.')
     return
   }
 
@@ -216,11 +216,11 @@ const completeRegistration = async () => {
     })
     const data = await parseJsonSafe(res)
     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (complete-registration)')
-    toast.success('Registro completado. Ya puedes iniciar sesión.')
+  notifier.success('Registro completado. Ya puedes iniciar sesión.')
     router.push({ name: 'login' })
   } catch (e) {
     error.value = e.message
-    toast.error(e.message)
+  notifier.error(e.message)
   }
 }
 

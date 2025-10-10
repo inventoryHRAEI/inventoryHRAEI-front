@@ -24,7 +24,7 @@
 <script setup>
 import ActionPanel from '@/components/ActionPanel.vue'
 import { ref, onMounted } from 'vue'
-import { toast } from 'vue3-toastify'
+import notifier from '@/utils/notifier'
 
 const user = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre'), role: localStorage.getItem('role'), email: localStorage.getItem('email') }
 const showRequests = ref(false)
@@ -58,10 +58,10 @@ const requestPermission = async (area) => {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: user.email, area })
     })
     if (!res || !res.ok) throw new Error((data && data.msg) || `Error del servidor (${res ? res.status : 'sin respuesta'})`)
-    toast.success('Solicitud enviada')
+  notifier.success('Solicitud enviada')
     await loadMyRequests()
     showRequests.value = true
-  } catch (e) { toast.error(e.message || 'No se pudo enviar la solicitud') }
+  } catch (e) { notifier.error(e.message || 'No se pudo enviar la solicitud') }
 }
 
 const loadMyRequests = async () => {

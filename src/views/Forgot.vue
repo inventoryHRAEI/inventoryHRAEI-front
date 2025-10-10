@@ -19,7 +19,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import { toast } from 'vue3-toastify'
+import notifier from '@/utils/notifier'
 
 const email = ref('')
 const msg = ref('')
@@ -31,7 +31,7 @@ const router = useRouter()
 const forgot = async () => {
   msg.value = ''
   error.value = ''
-  if (!email.value) { toast.error('Email requerido'); return }
+  if (!email.value) { notifier.error('Email requerido'); return }
   try {
     const res = await fetch('/api/auth/forgot', {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.value })
@@ -39,8 +39,8 @@ const forgot = async () => {
     let data
     try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Respuesta vacía' } }
     if (!res.ok) throw new Error(data.msg || 'Error al solicitar token')
-    msg.value = 'Revisa tu correo para el token (simulado)'
-    toast.success(msg.value)
+    msg.value = 'Revisa tu correo porfavor, ahi deberia estar tu codigo de verificacion :)'
+  notifier.success(msg.value)
     // Siempre redirigir a la vista de reset con el email pre-llenado.
     // Si el backend devuelve token o resetUrl (modo dev), preferirlos para auto-login al paso 2.
     try {
@@ -56,7 +56,7 @@ const forgot = async () => {
     }
   } catch (e) {
     error.value = e.message
-    toast.error(e.message)
+  notifier.error(e.message)
   }
 }
 </script>

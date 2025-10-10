@@ -47,7 +47,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { toast } from 'vue3-toastify'
+import notifier from '@/utils/notifier'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 
 const email = ref('')
@@ -74,10 +74,10 @@ const resendCode = async () => {
     if (!res.ok) throw new Error(data.msg || 'Error reenviando código')
     if (data && data.token) token.value = data.token
     msg.value = (data && data.msg) || 'Código reenviado. Revisa tu correo.'
-    toast.success(msg.value)
+  notifier.success(msg.value)
   } catch (e) {
     error.value = e.message
-    toast.error(e.message)
+  notifier.error(e.message)
   } finally {
     sendingResend.value = false
   }
@@ -94,19 +94,19 @@ onMounted(() => {
 const reset = async () => {
   msg.value = ''
   error.value = ''
-  if (!email.value || !token.value || !password.value) { toast.error('Todos los campos son obligatorios'); return }
+  if (!email.value || !token.value || !password.value) { notifier.error('Todos los campos son obligatorios'); return }
   try {
     const res = await fetch('/api/auth/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.value, token: token.value, password: password.value }) })
     let data
     try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Respuesta vacía' } }
     if (!res.ok) throw new Error(data.msg || 'Error al restablecer contraseña')
     msg.value = 'Contraseña actualizada, inicia sesión.'
-    toast.success(msg.value)
+  notifier.success(msg.value)
     // Redirigir al login
     router.push({ path: '/login' })
   } catch (e) {
     error.value = e.message
-    toast.error(e.message)
+  notifier.error(e.message)
   }
 }
 </script>

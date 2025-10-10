@@ -33,7 +33,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { toast } from 'vue3-toastify'
+import notifier from '@/utils/notifier'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 
 const email = ref('')
@@ -62,11 +62,11 @@ const login = async () => {
   // Guardar objeto usuario sencillo
   const usuario = { nombre: data.nombre, role: data.role, email: data.email, foto: data.foto }
   localStorage.setItem('user', JSON.stringify(usuario))
-  toast.success('Sesión iniciada')
+  notifier.success('Sesión iniciada')
   router.push({ name: 'dashboard' })
   } catch (e) {
     error.value = e.message
-    toast.error(e.message)
+  notifier.error(e.message)
   }
 }
 </script>

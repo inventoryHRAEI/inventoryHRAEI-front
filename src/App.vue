@@ -51,11 +51,14 @@
     <main class="container">
       <router-view />
     </main>
+      <!-- Mobile notifications modal (rendered globally) -->
+      <MobileModal />
   </div>
 </template>
 
 <script setup>
   import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
+  import MobileModal from '@/components/MobileModal.vue'
   import { useRouter, useRoute } from 'vue-router'
 
     // Estado de sesión reactivo (alimentado desde localStorage via refreshSession)
@@ -262,6 +265,8 @@
     try { window.removeEventListener('session:updated', refreshSession) } catch {}
     try { window.removeEventListener('storage', refreshSession) } catch {}
   })
+
+  
 
   </script>
 
