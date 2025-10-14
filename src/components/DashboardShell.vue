@@ -4,7 +4,7 @@
       <div class="dash-header-left">
         <slot name="icon"></slot>
         <h2 class="dash-title">
-          <slot name="title">Dashboard</slot>
+          <slot name="title">Inicio</slot>
         </h2>
       </div>
       <div class="dash-header-right">

@@ -11,10 +11,10 @@
               <input v-model="email" placeholder="Email" type="email" required class="input" :disabled="true" />
             </div>
 
-            <label class="field-label">Token</label>
-            <div>
-              <input v-model="token" placeholder="Token" required class="input" />
-            </div>
+      <label class="field-label">Código</label>
+      <div>
+        <input v-model="token" placeholder="Código" required class="input" />
+      </div>
 
           <div>
             <label class="field-label">Nueva contraseña</label>
@@ -36,7 +36,7 @@
             <button class="btn primary" style="flex:1" type="submit">Restablecer</button>
           </div>
         </form>
-        <div class="link-row" style="margin-top:12px"><router-link to="/login">Volver a login</router-link></div>
+  <div class="link-row" style="margin-top:12px"><router-link to="/login">Volver a iniciar sesión</router-link></div>
         <div v-if="msg" class="msg">{{ msg }}</div>
         <div v-if="error" class="error">{{ error }}</div>
       </div>

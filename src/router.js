@@ -6,6 +6,8 @@ const Register = () => import('./views/Register.vue')
 const Forgot = () => import('./views/Forgot.vue')
 const Reset = () => import('./views/Reset.vue')
 const Dashboard = () => import('./views/Dashboard.vue')
+  const AdminUsers = () => import('./views/AdminUsers.vue')
+  const AdminUserDetail = () => import('./views/AdminUserDetail.vue')
 const AddAccount = () => import('./views/Login.vue')
 
 const routes = [
@@ -15,6 +17,8 @@ const routes = [
   { path: '/forgot', name: 'forgot', component: Forgot },
   { path: '/reset', name: 'reset', component: Reset },
   { path: '/dashboard', name: 'dashboard', component: Dashboard, meta: { requiresAuth: true } },
+  { path: '/admin/users', name: 'admin-users', component: AdminUsers, meta: { requiresAuth: true } },
+  { path: '/admin/users/:id', name: 'admin-user-detail', component: AdminUserDetail, meta: { requiresAuth: true } },
   { path: '/add-account', name: 'add-account', component: AddAccount, meta: { addAccount: true } }
 ]
 

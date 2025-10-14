@@ -38,8 +38,11 @@
                 <button class="dropdown-item" @click="goToProfile">Cerrar Sesión</button>
                 <button class="dropdown-item" @click="switchAccount">Añadir otra cuenta</button>
                 <button class="dropdown-item" @click="resetPassword">Reestablecer Contraseña</button>
-                <button class="dropdown-item" @click="goHome">Ir al Dashboard</button>
-                <button v-if="isAdmin" class="dropdown-item admin" @click="manageUsers">Gestionar Usuarios</button>
+                <button class="dropdown-item" @click="goHome">Ir al inicio</button>
+                <button v-if="isAdmin" class="dropdown-item admin" @click="manageUsers">
+                  Gestionar Usuarios
+                  <span v-if="pendingCount > 0" class="badge">{{ pendingCount }}</span>
+                </button>
                 </div>
               </transition>
             </div>
@@ -59,7 +62,9 @@
 <script setup>
   import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
   import MobileModal from '@/components/MobileModal.vue'
+  import Swal from 'sweetalert2'
   import { useRouter, useRoute } from 'vue-router'
+  import pendingRequestsStore from '@/stores/pendingRequestsStore'
 
     // Estado de sesión reactivo (alimentado desde localStorage via refreshSession)
     const nombre = ref(null)
@@ -189,24 +194,41 @@
       menuOpen.value = false
     }
 
-    function goToProfile() {
-      // Confirmación de logout real
-      const ok = window.confirm('¿Cerrar sesión? Se cerrará tu sesión actual y regresarás al acceso.')
-      if (!ok) return
-      localStorage.removeItem('token')
-      localStorage.removeItem('role')
-      localStorage.removeItem('nombre')
-      localStorage.removeItem('user')
-      closeMenu()
-      try { window.dispatchEvent(new Event('session:updated')) } catch {}
-      router.push({ name: 'login' })
+    async function goToProfile() {
+      try {
+        const res = await Swal.fire({
+          title: 'Cerrar sesión',
+          text: '¿Cerrar sesión? Se cerrará tu sesión actual y volverás al acceso.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: 'Cerrar sesión',
+          cancelButtonText: 'Cancelar'
+        })
+        if (!res.isConfirmed) return
+        localStorage.removeItem('token')
+        localStorage.removeItem('role')
+        localStorage.removeItem('nombre')
+        localStorage.removeItem('user')
+        closeMenu()
+        try { window.dispatchEvent(new Event('session:updated')) } catch {}
+        router.push({ name: 'login' })
+      } catch (e) { console.error(e) }
     }
 
-    function switchAccount() {
-      closeMenu()
-      const ok = window.confirm('Añadir otra cuenta reemplazará tu sesión actual. ¿Continuar?')
-      if (!ok) return
-      router.push({ name: 'add-account' })
+    async function switchAccount() {
+      try {
+        closeMenu()
+        const res = await Swal.fire({
+          title: 'Añadir otra cuenta',
+          text: 'Añadir otra cuenta reemplazará tu sesión actual. ¿Continuar?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Continuar',
+          cancelButtonText: 'Cancelar'
+        })
+        if (!res.isConfirmed) return
+        router.push({ name: 'add-account' })
+      } catch (e) { console.error(e) }
     }
 
     function resetPassword() {
@@ -214,17 +236,36 @@
       router.push({ name: 'forgot' })
     }
 
-    function goHome() {
-      closeMenu()
-      const ok = window.confirm('¿Ir al Dashboard? Se cerrará este panel y volverás a tu inicio.')
-      if (!ok) return
-      router.push({ name: 'dashboard' })
+    async function goHome() {
+      try {
+        closeMenu()
+        const res = await Swal.fire({
+            title: 'Ir al inicio',
+            text: '¿Ir al inicio? Se cerrará este panel y volverás a tu inicio.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ir al inicio',
+            cancelButtonText: 'Cancelar'
+          })
+        if (!res.isConfirmed) return
+        router.push({ name: 'dashboard' })
+      } catch (e) { console.error(e) }
     }
 
     function manageUsers() {
       closeMenu()
       router.push({ name: 'admin-users' })
     }
+
+    const pendingCount = computed(() => pendingRequestsStore.totalPending.value || 0)
+
+    // refrescar conteo al montar y cada vez que la sesión cambia
+    onMounted(() => {
+    try { pendingRequestsStore.refresh() } catch {}
+    const onSessionEvt = () => { try { pendingRequestsStore.refresh() } catch {} }
+    try { window.addEventListener('session:updated', onSessionEvt) } catch {}
+    try { window.addEventListener('storage', onSessionEvt) } catch {}
+  })
 
     // Cerramos el menú cuando cambia la ruta; también refrescamos la sesión
     watch(() => route.fullPath, () => {

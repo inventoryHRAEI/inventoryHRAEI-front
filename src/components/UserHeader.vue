@@ -7,7 +7,10 @@
       <div class="role">{{ user?.role || 'user' }}</div>
     </div>
     <div class="actions" v-if="isDashboard">
-      <button v-if="isAdmin" class="btn small" @click="$emit('manage-users')">Gestionar usuarios</button>
+      <button v-if="isAdmin" class="btn small" @click="$emit('manage-users')">
+        Gestionar usuarios
+        <span v-if="pendingForMe > 0" class="badge">{{ pendingForMe }}</span>
+      </button>
       <button v-else class="btn small" @click="$emit('requests')">Solicitar permisos</button>
     </div>
   </div>
@@ -17,7 +20,14 @@
 import { computed, ref } from 'vue'
 const props = defineProps({ user: Object, isDashboard: { type: Boolean, default: true } })
 const emit = defineEmits(['manage-users', 'requests'])
+import pendingRequestsStore from '@/stores/pendingRequestsStore'
 const isAdmin = computed(() => (props.user && props.user.role === 'admin'))
+const pendingForMe = computed(() => {
+  try {
+    const email = props.user && props.user.email ? props.user.email : localStorage.getItem('email')
+    return pendingRequestsStore.byEmail.value[email] || 0
+  } catch { return 0 }
+})
 const initials = computed(() => {
   if (!props.user || !props.user.nombre) return 'U'
   return props.user.nombre.split(' ').map(s=>s[0]).slice(0,2).join('').toUpperCase()

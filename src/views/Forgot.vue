@@ -6,10 +6,10 @@
         <form @submit.prevent="forgot">
           <input v-model="email" placeholder="Email" type="email" required class="input" />
           <div style="margin-top:12px">
-            <button class="btn secondary" type="submit">Enviar token</button>
+            <button class="btn secondary" type="submit">Enviar código</button>
           </div>
         </form>
-        <div class="link-row" style="margin-top:12px"><router-link to="/login">Volver a login</router-link></div>
+        <div class="link-row" style="margin-top:12px"><router-link to="/login">Volver a iniciar sesión</router-link></div>
         <div v-if="msg" class="msg">{{ msg }}</div>
         <div v-if="error" class="error">{{ error }}</div>
       </div>
