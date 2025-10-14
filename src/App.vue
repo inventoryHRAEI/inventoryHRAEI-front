@@ -178,8 +178,10 @@
     // Si cambia la fuente, reseteamos el estado de error para re-intentar cargar
     watch(() => user.value && user.value.foto, () => { avatarError.value = false })
 
-    // Rutas que consideramos parte del dashboard (asegurar nombres coinciden con router.js)
-    const dashboardRoutes = ['dashboard', 'admin-dashboard', 'admin-users', 'user-dashboard']
+  // Rutas que consideramos parte del dashboard (asegurar nombres coinciden con router.js)
+  // Incluir 'forgot' y 'reset' para que la topbar global se muestre cuando
+  // el flujo de recuperación de contraseña se use desde el dashboard.
+  const dashboardRoutes = ['dashboard', 'admin-dashboard', 'admin-users', 'user-dashboard', 'forgot', 'reset']
     function isOnDashboard() {
       // route.name puede ser undefined al inicio; convertir a string seguro
       const name = route && route.name ? String(route.name) : ''

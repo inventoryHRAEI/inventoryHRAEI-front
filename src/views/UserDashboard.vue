@@ -1,6 +1,7 @@
 <template>
   <ActionPanel>
-    <template #title>Usuario — Accesos</template>
+    <template #title>Hola, {{ user?.nombre }}</template>
+    <h5>¿Qué deseas gestionar?</h5>
 
     <div class="cards-panel">
       <div class="area-grid">

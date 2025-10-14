@@ -5,7 +5,7 @@
         <h3>Registro</h3>
 
         <form v-if="step === 1" @submit.prevent="sendToken">
-          <h4>Paso 1 — Ingresa nombre y email</h4>
+          <h4>Ingresa nombre y un correo electrónico</h4>
           <input v-model="nombre" placeholder="Nombre" required class="input" />
           <input v-model="email" placeholder="Email" type="email" required class="input" />
           <div style="margin-top:12px">
@@ -14,17 +14,18 @@
         </form>
 
         <form v-else-if="step === 2" @submit.prevent="verifyToken">
-          <h4>Paso 2 — Verifica tu email</h4>
+          <h4> Valida tu correo electronico</h4>
+          <h6>ahi deberia haber un codigo para validar tu correo...</h6>
           <input v-model="token" placeholder="Código (6 dígitos)" type="text" maxlength="6" required class="input" />
           <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
             <button class="btn secondary" type="submit">Verificar</button>
             <button class="btn secondary" type="button" :disabled="resendCount >= maxResends" @click="resendToken">Reenviar código ({{ remainingResends }})</button>
           </div>
-          <div style="margin-top:8px; font-size:12px; color:#666">Si no recibes el token, puedes reenviarlo hasta 4 veces.</div>
+          <div style="margin-top:8px; font-size:12px; color:#78FFF1">Si no recibes el token, puedes reenviarlo hasta 4 veces.</div>
         </form>
 
         <form v-else-if="step === 3" @submit.prevent="completeRegistration">
-          <h4>Paso 3 — Completa tu cuenta</h4>
+          <h4> Completa tu perfil!</h4>
           <div class="password-field">
             <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="Contraseña (mín. 8, mayúscula, minúscula, número y símbolo)" required class="input" />
             <button type="button" class="toggle-eye" @click="showPassword = !showPassword">
@@ -60,7 +61,7 @@
         </form>
 
         <div class="link-row" style="margin-top:12px">
-          <router-link to="/login">¿Ya tienes cuenta? Inicia sesión</router-link>
+          <router-link to="/login">¿Ya tienes una cuenta? Inicia sesión</router-link>
         </div>
 
         <div v-if="error" class="error">{{ error }}</div>

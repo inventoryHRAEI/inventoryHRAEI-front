@@ -2,16 +2,16 @@
   <div class="home-wrap">
     <div class="hero glass">
       <div class="hero-left">
-        <h2>Bienvenido al Inventario</h2>
-        <p class="small-msg">Gestiona equipos médicos, comodatos, donaciones y más — Subdirección de Ingeniería Biomédica.</p>
+        <h2>Bienvenido al sistema de Gestion de inventarios de Ingeniería Biomédica HRAEI</h2>
+        <p class="small-msg">Puedes gestionar: Todos los equipos médicos, equipos a comodatos, donaciones hechas al hospital, moniliario clinico/medico de la ubdirección de Ingeniería Biomédica.</p>
         <div class="cta-row">
           <div class="cta-block">
-            <div class="q">¿Ya tienes una cuenta?</div>
+            <div class="q">¿Ya tienes una cuenta creada?</div>
           <router-link to="/login"><button class="btn secondary">Inicia sesión</button></router-link>
           </div>
           <div class="cta-block">
-            <div class="q">¿Para crear cuenta?</div>
-          <router-link to="/register"><button class="btn primary" style="margin-left:12px">¡Únete aquí!</button></router-link>
+            <div class="q">¿Deseas crear una cuenta?</div>
+          <router-link to="/register"><button class="btn primary" style="margin-left:12px">Registrarse</button></router-link>
           </div>
         </div>
       </div>

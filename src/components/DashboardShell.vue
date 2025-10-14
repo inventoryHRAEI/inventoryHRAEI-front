@@ -1,6 +1,6 @@
 <template>
   <div class="dash-shell">
-    <header class="dash-header glass">
+    <header v-if="!hideHeader" class="dash-header glass">
       <div class="dash-header-left">
         <slot name="icon"></slot>
         <h2 class="dash-title">
@@ -19,7 +19,11 @@
 </template>
 
 <script setup>
-// Componente contenedor para dashboards, sin lógica, solo layout y estilos
+import { defineProps } from 'vue'
+
+defineProps({
+  hideHeader: { type: Boolean, default: false }
+})
 </script>
 
 <style scoped>
