@@ -47,6 +47,8 @@ const router = useRouter()
 const user = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre'), role: localStorage.getItem('role'), email: localStorage.getItem('email') }
 const showRequests = ref(false)
 const myRequests = ref([])
+// Permisos por área del usuario (desde backend)
+const allowedAreas = ref(new Set())
 
 async function fetchPermission(endpoint, options = {}){
   // intenta primero /api/auth, si 404 prueba /api
@@ -107,7 +109,23 @@ const loadMyRequests = async () => {
   } catch (e) { console.error('Error cargando solicitudes:', e); myRequests.value = [] }
 }
 
-onMounted(loadMyRequests)
+async function loadAllowedAreas(){
+  try {
+    const { res, data } = await fetchPermission(`/user-permissions?email=${encodeURIComponent(user.email)}`)
+    if (res && res.ok && Array.isArray(data)) {
+      allowedAreas.value = new Set(data)
+    } else {
+      allowedAreas.value = new Set()
+    }
+  } catch (e) {
+    console.warn('No se pudieron cargar permisos por área:', e)
+    allowedAreas.value = new Set()
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([loadMyRequests(), loadAllowedAreas()])
+})
 
 // refrescar conteos en background para mostrar badges por área
 onMounted(async () => { try { await pendingStore.refresh() } catch {} })
@@ -134,10 +152,11 @@ const areas = [
 ]
 
 function userHasAccess(areaKey){
-  // simple rule: admins and privileged users have access to everything
   if (!user) return false
   const role = (user.role || localStorage.getItem('role') || '').toLowerCase()
-  return role === 'admin' || role === 'privileged'
+  if (role === 'admin') return true // admin ve todo
+  // Para usuarios y "privileged", aplicar permisos por área
+  try { return allowedAreas.value.has(areaKey) } catch { return false }
 }
 
 function areaHasPending(areaKey){
@@ -174,7 +193,7 @@ async function onAreaClick(areaKey){
 .area-card .card-media{ height:120px; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden }
 .area-card .card-media img{ width:100%; height:100%; object-fit:cover; display:block }
 .area-card .card-media img{ border-top-left-radius:12px; border-top-right-radius:12px }
-.area-card.disabled{ opacity:0.64; filter:grayscale(.08) }
+.area-card.disabled{ opacity:0.7; filter: grayscale(100%); }
 .area-card .card-body{ padding:12px 14px; display:flex; flex-direction:column; gap:6px }
 .area-card .card-title{ font-weight:800; font-size:15px; color: #0b2540 }
 .area-card .card-sub.small{ font-size:13px; color:#52607a }

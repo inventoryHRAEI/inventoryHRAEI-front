@@ -29,6 +29,7 @@
             </div>
             <div class="card-actions">
               <button class="btn small" @click.prevent="$router.push({ name: 'admin-user-detail', params: { id: u.id } })">Detalle</button>
+              <button class="btn small" @click.prevent="openModifyPermissions(u)">Permisos</button>
               <button class="btn primary" @click.prevent="changeRole(u, u.role === 'admin' ? 'user' : 'admin')">{{ actionLabelFor(u.role) }}</button>
             </div>
           </div>
@@ -103,6 +104,9 @@ const users = ref([])
 // Áreas fijas (ordenadas según negocio) — ajusta según necesites
 const areasList = ['EQUIPO MEDICO I.P','EQUIPOS DE ADQUISICIÓN','COMODATOS','MOBILIARIO CLÍNICO/MÉDICO','DONACIÓN','MICROPIPETAS Y PIPETAS']
 
+// Mapa email -> Set(areas) con permisos actuales
+const userAreas = ref({})
+
 // Modal de modificar permisos
 const showModifyModal = ref(false)
 const modifyingUser = ref(null)
@@ -111,8 +115,8 @@ const modPermissions = ref({})
 function userHasArea(email, area){
   const u = users.value.find(x => x.email === email)
   if (!u) return false
-  if (u.role === 'admin' || u.role === 'privileged') return true
-  return false
+  if (u.role === 'admin') return true
+  try { return !!(userAreas.value[email] && userAreas.value[email].has(area)) } catch { return false }
 }
 
 function openModifyPermissions(user){
@@ -126,8 +130,17 @@ function openModifyPermissions(user){
 function closeModify(){ showModifyModal.value = false; modifyingUser.value = null }
 
 async function savePermissions(){
-  notifier.success('Cambios guardados (simulado). Implementar endpoint para persistir permisos si es necesario.')
-  closeModify()
+  try {
+    if (!modifyingUser.value) return
+    const email = modifyingUser.value.email
+    const areas = Object.entries(modPermissions.value).filter(([,v]) => v).map(([k]) => k)
+    const res = await fetch('/api/auth/user-permissions', { method: 'PUT', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ email, areas }) })
+    if (!res.ok) throw new Error('No se pudo guardar permisos')
+    notifier.success('Permisos actualizados')
+    // refrescar cache local
+    userAreas.value[email] = new Set(areas)
+    closeModify()
+  } catch (e) { notifier.error(e.message || 'Error actualizando permisos') }
 }
 
 async function loadUsers(){
@@ -135,6 +148,19 @@ async function loadUsers(){
     const res = await fetch('/api/auth/users')
     if (!res.ok) { users.value = []; return }
     users.value = await res.json()
+    // Cargar permisos por usuario
+    try {
+      const pres = await fetch('/api/auth/user-permissions/all')
+      if (pres.ok) {
+        const rows = await pres.json()
+        const map = {}
+        for (const r of rows){
+          if (!map[r.email]) map[r.email] = new Set()
+          map[r.email].add(r.area)
+        }
+        userAreas.value = map
+      }
+    } catch {}
   } catch (e) { console.error('Error cargando usuarios:', e); users.value = [] }
 }
 

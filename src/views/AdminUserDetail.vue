@@ -58,6 +58,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import notifier from '@/utils/notifier'
 import { formatRole } from '@/utils/roles'
+import { authedFetch } from '@/utils/api'
+import pendingRequestsStore from '@/stores/pendingRequestsStore'
 
 const route = useRoute()
 const router = useRouter()
@@ -100,11 +102,22 @@ async function load(){
       return
     }
 
-    // init permissions (falso por ahora)
-    for (const a of areasList) permissions.value[a] = (user.value && (user.value.role==='admin' || user.value.role==='privileged'))
+    // Cargar áreas reales asignadas al usuario por email
+    try {
+      const email = user.value && user.value.email
+      const ares = await authedFetch(`/api/auth/user-permissions?email=${encodeURIComponent(email)}`)
+      if (ares.ok) {
+        const areas = await ares.json()
+        for (const a of areasList) permissions.value[a] = Array.isArray(areas) ? areas.includes(a) : false
+      } else {
+        for (const a of areasList) permissions.value[a] = false
+      }
+    } catch (e) {
+      for (const a of areasList) permissions.value[a] = false
+    }
 
     try {
-      const rres = await fetch('/api/auth/permission-requests')
+      const rres = await authedFetch('/api/auth/permission-requests')
       if (rres.ok) {
         const rows = await rres.json()
         requests.value = rows.filter(r => r.email === (user.value && user.value.email))
@@ -121,23 +134,35 @@ async function load(){
 
 async function approveRequest(id){
   try {
-    const res = await fetch(`/api/auth/permission-requests/${id}/approve`, { method: 'POST' })
+  const res = await authedFetch(`/api/auth/permission-requests/${id}/approve`, { method: 'POST' })
     if (!res.ok) throw new Error('Error')
     notifier.success('Aprobada')
-    await load()
+  try { await pendingRequestsStore.refresh() } catch {}
+  await load()
   } catch (e) { notifier.error('No se pudo aprobar') }
 }
 async function rejectRequest(id){
   try {
-    const res = await fetch(`/api/auth/permission-requests/${id}/reject`, { method: 'POST' })
+  const res = await authedFetch(`/api/auth/permission-requests/${id}/reject`, { method: 'POST' })
     if (!res.ok) throw new Error('Error')
     notifier.success('Rechazada')
-    await load()
+  try { await pendingRequestsStore.refresh() } catch {}
+  await load()
   } catch (e) { notifier.error('No se pudo rechazar') }
 }
 
 async function save(){
-  notifier.success('Guardado (simulado)')
+  try {
+  const selected = Object.keys(permissions.value).filter(k => permissions.value[k])
+  const email = user.value && user.value.email
+  const res = await authedFetch(`/api/auth/user-permissions`, { method: 'PUT', body: JSON.stringify({ email, areas: selected }) })
+    if (!res.ok) throw new Error('No se pudieron guardar las áreas')
+    notifier.success('Áreas guardadas')
+    try { await pendingRequestsStore.refresh() } catch {}
+    await load()
+  } catch (e) {
+    notifier.error(e.message || 'Error guardando')
+  }
 }
 
 onMounted(load)
