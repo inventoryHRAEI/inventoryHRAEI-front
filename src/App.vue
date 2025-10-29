@@ -56,6 +56,13 @@
     </main>
       <!-- Mobile notifications modal (rendered globally) -->
       <MobileModal />
+      
+      <!-- Notivue: contenedor global de notificaciones elegantes -->
+      <Notivue v-slot="item">
+        <NotivueSwipe :item="item" :touch-only="true" :threshold="0.35" exclude="a, button">
+          <Notification :item="item" :theme="nvTheme" />
+        </NotivueSwipe>
+      </Notivue>
   </div>
 </template>
 
@@ -65,6 +72,31 @@
   import Swal from 'sweetalert2'
   import { useRouter, useRoute } from 'vue-router'
   import pendingRequestsStore from '@/stores/pendingRequestsStore'
+  import { getAuthToken, clearAuthToken } from '@/utils/auth'
+  // Notivue components
+  import { Notivue, Notification, NotivueSwipe, slateTheme } from 'notivue'
+  
+  // Tema elegante y compacto para Notivue
+  const nvTheme = {
+    ...slateTheme,
+    '--nv-width': '360px',
+    '--nv-min-width': 'auto',
+    '--nv-spacing': '10px',
+    '--nv-y-align': 'center',
+    '--nv-y-align-has-title': 'center',
+    '--nv-radius': '10px',
+    '--nv-border-width': '1px',
+    '--nv-icon-size': '18px',
+    '--nv-title-size': '0.95rem',
+    '--nv-message-size': '0.95rem',
+    '--nv-shadow': '0 8px 20px rgba(2,6,23,0.14)',
+    '--nv-tip-width': '0px',
+    '--nv-progress-height': '2px',
+    '--nv-global-bg': 'rgba(255,255,255,0.95)',
+    '--nv-global-fg': '#0b2540',
+    '--nv-global-accent': '#2edd5a',
+    '--nv-global-border': 'rgba(0,0,0,0.06)'
+  }
 
     // Estado de sesión reactivo (alimentado desde localStorage via refreshSession)
     const nombre = ref(null)
@@ -82,7 +114,8 @@
       try {
         nombre.value = localStorage.getItem('nombre') || null
         role.value = localStorage.getItem('role') || null
-        logged.value = !!localStorage.getItem('token')
+        // Basar el estado de login en el token (memoria o persistente)
+        logged.value = !!getAuthToken()
         const u = JSON.parse(localStorage.getItem('user') || 'null')
         user.value = u || null
         isAdmin.value = (role.value === 'admin')
@@ -181,7 +214,11 @@
   // Rutas que consideramos parte del dashboard (asegurar nombres coinciden con router.js)
   // Incluir 'forgot' y 'reset' para que la topbar global se muestre cuando
   // el flujo de recuperación de contraseña se use desde el dashboard.
-  const dashboardRoutes = ['dashboard', 'admin-dashboard', 'admin-users', 'user-dashboard', 'forgot', 'reset']
+  const dashboardRoutes = [
+    'dashboard', 'admin-dashboard', 'admin-users', 'user-dashboard', 'forgot', 'reset',
+    // Operaciones
+    'op-entrada','op-salida','op-resguardo','op-servicio','op-inventario-biomedica','op-insumos-consumibles'
+  ]
     function isOnDashboard() {
       // route.name puede ser undefined al inicio; convertir a string seguro
       const name = route && route.name ? String(route.name) : ''
@@ -207,7 +244,7 @@
           cancelButtonText: 'Cancelar'
         })
         if (!res.isConfirmed) return
-        localStorage.removeItem('token')
+  clearAuthToken()
         localStorage.removeItem('role')
         localStorage.removeItem('nombre')
         localStorage.removeItem('user')

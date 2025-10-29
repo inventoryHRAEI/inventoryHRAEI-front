@@ -4,16 +4,14 @@
 
     <div class="cards-panel">
       <div class="area-grid">
-        <div class="area-card" v-for="area in areas" :key="area.key" role="button" @click.prevent="openArea(area)">
+        <div class="area-card" v-for="op in operations" :key="op.name" role="button" @click.prevent="go(op.name)">
           <div class="card-media">
-            <img class="card-img" :src="area.img" :alt="area.label" />
+            <img class="card-img" :src="op.img" :alt="op.label" />
           </div>
           <div class="card-body">
-            <div class="card-title">{{ area.label }}</div>
-            <div v-if="byArea[area.key]" class="pending-badge" style="margin-top:6px">{{ byArea[area.key] }} solicitudes pendientes</div>
-            <div class="card-sub small">{{ area.hint }}</div>
-            <div class="card-desc">{{ area.desc || area.hint }}</div>
-            <div class="card-actions"><button class="btn ghost" @click.stop.prevent="openArea(area)">Ver</button></div>
+            <div class="card-title">{{ op.label }}</div>
+            <div class="card-sub small">{{ op.desc }}</div>
+            <div class="card-actions"><button class="btn ghost" @click.stop.prevent="go(op.name)">Ir</button></div>
           </div>
         </div>
       </div>
@@ -30,29 +28,29 @@
 import ActionPanel from '@/components/ActionPanel.vue'
 import { ref, onMounted } from 'vue'
 import pendingStore from '@/stores/pendingRequestsStore'
-import imgDonaciones from '@/images/donaciones.png'
-import imgEquipo from '@/images/equipo_medico.png'
-import imgComodatos from '@/images/equipos_comodatos.png'
-import imgMobiliario from '@/images/mobiliario_clinico.png'
-import imgPipetas from '@/images/pipetas.png'
-import imgPropiedad from '@/images/propiedad_hospital.png'
 import notifier from '@/utils/notifier'
 import Swal from 'sweetalert2'
 import { useRouter } from 'vue-router'
+// Imágenes para operaciones
+import imgEntrada from '@/images/entrada_equips.png'
+import imgSalida from '@/images/salida_equipo.png'
+import imgResguardo from '@/images/Resguardo_imagen.png'
+import imgServicio from '@/images/Servicio_equipo.png'
+import imgInventario from '@/images/Inventario.png'
+import imgConsumibles from '@/images/Consumibles_bajo_pedido.png'
 
 const router = useRouter()
 
-// Modal removed for admin: click navigates to area directly
-const openArea = (area) => { try { router.push({ name: 'dashboard', query: { area: area.key } }) } catch {} }
-
-const areas = [
-  { key: 'EQUIPO MEDICO I.P', label: 'Equipo médico (IP)', img: imgEquipo, hint: 'Equipos y dispositivos médicos críticos', desc: 'Instrumental y máquinas médicas de uso hospitalario: monitores, ventiladores, bombas de infusión y similares.' },
-  { key: 'EQUIPOS DE ADQUISICIÓN', label: 'Equipos de adquisición', img: imgPropiedad, hint: 'Equipos de adquisición y periféricos', desc: 'Equipos y accesorios utilizados en adquisición de datos y conexión de dispositivos.' },
-  { key: 'COMODATOS', label: 'Comodatos', img: imgComodatos, hint: 'Préstamos y comodatos', desc: 'Listado y condiciones de comodatos y préstamos de equipos entre instituciones.' },
-  { key: 'MOBILIARIO CLÍNICO/MÉDICO', label: 'Mobiliario clínico', img: imgMobiliario, hint: 'Mobiliario empleado en áreas clínicas', desc: 'Camas, mesas, sillas y muebles especializados para uso clínico.' },
-  { key: 'DONACIÓN', label: 'Donación', img: imgDonaciones, hint: 'Gestión de equipos donados', desc: 'Gestión y seguimiento de equipos recibidos por donación.' },
-  { key: 'MICROPIPETAS Y PIPETAS', label: 'Micropipetas y pipetas', img: imgPipetas, hint: 'Pequeños consumibles de laboratorio', desc: 'Consumibles de laboratorio como puntas, pipetas y micropipetas.' }
+const operations = [
+  { name: 'op-entrada', label: 'Órdenes de Entrada', desc: 'Captura de entradas de equipo/material.', img: imgEntrada },
+  { name: 'op-salida', label: 'Órdenes de Salida', desc: 'Registro de salidas y egresos.', img: imgSalida },
+  { name: 'op-resguardo', label: 'Resguardo', desc: 'Asignaciones y resguardos.', img: imgResguardo },
+  { name: 'op-servicio', label: 'Servicio', desc: 'Órdenes de servicio y mantenimiento.', img: imgServicio },
+  { name: 'op-inventario-biomedica', label: 'Inventario Biomédica', desc: 'Inventario y conteos.', img: imgInventario },
+  { name: 'op-insumos-consumibles', label: 'Insumos y Consumibles', desc: 'Gestión de insumos.', img: imgConsumibles }
 ]
+
+function go(name){ try { router.push({ name }) } catch {} }
 
 onMounted(async () => {
   try { await pendingStore.refresh() } catch {}
@@ -160,11 +158,13 @@ async function rejectRequest(id){
 /* Card and modal enhancements */
 .cards-panel{ margin-top:20px }
 .area-card{ width:100%; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; background:#fff; border:1px solid rgba(16,24,40,0.06); box-shadow:0 6px 18px rgba(11,37,64,0.04); transition: transform .18s ease, box-shadow .18s ease }
-.area-card .card-media{ height:120px; position:relative; overflow:hidden }
-.area-card .card-media img{ width:100%; height:100%; object-fit:cover }
+.area-card .card-media{ height:120px; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden }
+.area-card .card-media img{ width:100%; height:100%; object-fit:cover; display:block }
 .area-card .card-media img{ border-top-left-radius:12px; border-top-right-radius:12px }
 .pending-badge{ position:absolute; top:10px; right:10px; background:var(--btn-green,#0a8b5b); color:#fff; padding:6px 8px; border-radius:999px; font-weight:700; font-size:12px; box-shadow:0 6px 14px rgba(11,37,64,0.12) }
-.area-card .card-body{ padding:12px; display:flex; flex-direction:column }
+.area-card .card-body{ padding:12px 14px; display:flex; flex-direction:column; gap:6px }
+.area-card .card-title{ font-weight:800; font-size:15px; color:#0b2540 }
+.area-card .card-sub.small{ font-size:13px; color:#52607a }
 .card-desc{ margin-top:8px; color:#44566b; font-size:13px }
 .card-actions{ margin-top:12px; display:flex; justify-content:flex-end }
 .area-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:22px }

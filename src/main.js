@@ -1,18 +1,35 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import Toast from 'vue3-toastify'
-import 'vue3-toastify/dist/index.css'
 import './styles.css'
+// Notivue (notificaciones elegantes)
+import { createNotivue } from 'notivue'
+import 'notivue/notification.css'
 
 const app = createApp(App)
 
+// Configuración de Notivue: posición, límite y animaciones fade ultra rápidas
+const notivue = createNotivue({
+	position: 'bottom-left',
+	limit: 3,
+	enqueue: false,
+			transition: 'transform .22s cubic-bezier(.2,.9,.2,1)',
+	pauseOnHover: false,
+	pauseOnTouch: false,
+	notifications: {
+		global: { duration: 1160 }
+	},
+		animations: {
+			enter: 'nvSoftEnter',
+			leave: 'nvSoftLeave',
+			clearAll: 'Notivue__clearAll'
+		}
+})
+
 app.use(router)
-app.use(Toast, { position: 'bottom-left', pauseOnHover: true })
+app.use(notivue)
 
 app.mount('#app')
-
-// Nota: `toast` se puede importar desde 'vue3-toastify' en componentes cuando se necesite.
 
 // Ajuste dinámico de variables CSS relacionadas con la topbar.
 function updateTopbarCSSVars(){
