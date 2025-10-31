@@ -6,14 +6,14 @@
       :class="['scroll-to-top', { expanded: isHovered }]"
       @mouseenter="handleMouseEnter"
       @mouseleave="handleMouseLeave"
-      aria-label="Regresar al inicio"
+      aria-label="volver al inicio de la pagina"
     >
       <span class="icon">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 6L8 10H11V18H13V10H16L12 6Z" fill="currentColor"/>
         </svg>
       </span>
-      <span class="text">Volver arriba</span>
+      <span class="text">volver al inicio de la pagina</span>
     </button>
   </teleport>
 </template>
@@ -194,11 +194,15 @@ onBeforeUnmount(() => {
 }
 
 .scroll-to-top.expanded {
-  width: 160px;
+  width: 200px;
+  height: 50px;
   border-radius: 25px;
   padding: 0 12px;
   box-shadow: 0 8px 25px rgba(99, 99, 237, 0.4), 0 0 20px rgba(99, 99, 237, 0.2);
   transform: scale(1.05);
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
 }
 
 .scroll-to-top:hover {
@@ -213,8 +217,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
@@ -238,12 +242,15 @@ onBeforeUnmount(() => {
   width: 0;
   transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, transform 0.25s ease;
   white-space: nowrap;
-  margin-left: 8px;
+  margin-left: 0;
+  margin-top: 0;
   transform: translateX(-10px);
+  text-align: left;
+  line-height: 1.2;
 }
 
 .scroll-to-top.expanded .text {
-  width: 100px;
+  width: 140px;
   opacity: 1;
   transform: translateX(0);
 }
