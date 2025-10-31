@@ -3,7 +3,7 @@
     <template #title>Insumos y Consumibles</template>
 
     <template #body>
-      <div class="op-card insumos">
+  <div class="op-card insumos" ref="rootRef">
         <form @submit.prevent="onSubmit" class="form-grid" novalidate>
           <div class="section-card combined-card">
             <div class="section-head">
@@ -134,6 +134,7 @@
             </button>
           </div>
         </form>
+        <ScrollToTop />
       </div>
     </template>
   </FormShell>
@@ -142,6 +143,7 @@
 <script setup>
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import FormShell from '@/components/FormShell.vue'
+import ScrollToTop from '@/components/ScrollToTop.vue'
 import notifier from '@/utils/notifier'
 
 const LOCAL_KEY = 'op-insumos-consumibles'
@@ -329,7 +331,7 @@ watch(
   }
 )
 
-onMounted(() => {
+onMounted(async () => {
   try {
     const raw = localStorage.getItem(LOCAL_KEY)
     if (raw) {
@@ -401,6 +403,7 @@ onBeforeUnmount(() => {
   background: transparent;
   padding: 0;
   color: #e6ebf5;
+  position: relative;
 }
 
 .form-grid {
