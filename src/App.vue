@@ -25,14 +25,16 @@
 
             <!-- Mostrar menú de usuario SOLO en el dashboard -->
             <div v-if="logged && isOnDashboard()" class="user-menu" ref="userMenu" @keyup.esc="closeMenu">
-              <button :class="['user-btn', menuOpen ? 'open' : '']" @click="toggleMenu" :aria-expanded="menuOpen" aria-haspopup="true">
-                <span class="avatar">
-                  <img v-if="avatarUrl && !avatarError" :src="avatarUrl" alt="avatar" class="top-avatar" @error="onAvatarError" />
-                  <span v-else>👤</span>
-                </span>
-                <span class="welcome-text">{{ (user && user.nombre) || nombre || 'Usuario' }}</span>
-                <span class="chev" aria-hidden="true"></span>
-              </button>
+              <transition name="btn-float">
+                <button :class="['user-btn', menuOpen ? 'open' : '']" @click="toggleMenu" :aria-expanded="menuOpen" aria-haspopup="true">
+                  <span class="avatar">
+                    <img v-if="avatarUrl && !avatarError" :src="avatarUrl" alt="avatar" class="top-avatar" @error="onAvatarError" />
+                    <span v-else>👤</span>
+                  </span>
+                  <span class="welcome-text">{{ (user && user.nombre) || nombre || 'Usuario' }}</span>
+                  <span class="chev" aria-hidden="true"></span>
+                </button>
+              </transition>
               <transition name="slide-down">
                 <div v-if="menuOpen" class="dropdown expanded" role="menu">
                 <button class="dropdown-item" @click="goToProfile">Cerrar Sesión</button>

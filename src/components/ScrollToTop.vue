@@ -31,21 +31,25 @@ const SCROLL_THRESHOLD = 50
 let ticking = false
 
 function handleClick() {
-  // Animación de feedback al hacer click
+  // Scroll inmediato con Lenis + feedback visual simultáneo
+  if (window.lenis) {
+    window.lenis.scrollTo(0, { duration: 0.8, easing: (t) => 1 - Math.pow(1 - t, 3) })
+  } else {
+    // Fallback a GSAP si Lenis no está disponible
+    gsap.to(window, {
+      duration: 0.8,
+      scrollTo: { y: 0 },
+      ease: 'power2.out'
+    })
+  }
+
+  // Feedback visual del botón
   gsap.to(scrollTopBtn.value, {
-    scale: 0.9,
-    duration: 0.1,
+    scale: 0.95,
+    duration: 0.08,
     ease: 'power2.out',
     yoyo: true,
-    repeat: 1,
-    onComplete: () => {
-      // Scroll suave después del feedback
-      gsap.to(window, {
-        duration: 1.2,
-        scrollTo: { y: 0 },
-        ease: 'power3.inOut'
-      })
-    }
+    repeat: 1
   })
 }
 
@@ -64,12 +68,7 @@ function showButton() {
     scale: 1,
     rotation: 0,
     ease: 'elastic.out(1, 0.8)',
-    onComplete: () => {
-      // Solo iniciar pulso si no está en hover
-      if (!isHovered.value) {
-        setTimeout(startPulseAnimation, 500)
-      }
-    }
+    onComplete: startFloatingAnimation
   })
 }
 
@@ -78,8 +77,13 @@ function hideButton() {
   // Resetear estado hover al desaparecer
   isHovered.value = false
   scrollTopBtn.value.style.pointerEvents = 'none'
+
+  // Detener animación de flotación antes de ocultar
+  stopFloatingAnimation()
+
+  // Matar todas las animaciones antes de ocultar
   gsap.killTweensOf(scrollTopBtn.value)
-  gsap.killTweensOf(scrollTopBtn.value, 'scale')
+
   gsap.to(scrollTopBtn.value, {
     duration: 0.5,
     opacity: 0,
@@ -89,46 +93,96 @@ function hideButton() {
   })
 }
 
-function startPulseAnimation() {
-  // Solo iniciar pulso si el botón no está expandido y está visible
-  if (isHovered.value || scrollTopBtn.value.style.pointerEvents === 'none') return
-
-  gsap.to(scrollTopBtn.value, {
-    scale: 1.03,
-    duration: 2.5,
-    ease: 'power2.inOut',
-    yoyo: true,
-    repeat: -1,
-    delay: 1.5
-  })
-}
-
 function handleMouseEnter() {
   if (scrollTopBtn.value.style.pointerEvents === 'none') return
+
+  // No detener flotación, solo cambiar estado
+
   // Pequeño delay para evitar activación inmediata al aparecer
   setTimeout(() => {
     if (scrollTopBtn.value.style.pointerEvents === 'auto') {
       isHovered.value = true
-      // Detener animación de pulso inmediatamente
-      gsap.killTweensOf(scrollTopBtn.value, 'scale')
+      // Reiniciar flotación con nuevos valores
+      startFloatingAnimation()
     }
   }, 50)
 }
 
 function handleMouseLeave() {
   if (scrollTopBtn.value.style.pointerEvents === 'none') return
+
   // Pequeño delay para evitar flickering
   setTimeout(() => {
     if (scrollTopBtn.value.style.pointerEvents === 'auto') {
       isHovered.value = false
-      // Reiniciar animación de pulso después de un breve delay
+      // Reiniciar flotación después de que termine la transición CSS
       setTimeout(() => {
         if (!isHovered.value && scrollTopBtn.value.style.pointerEvents === 'auto') {
-          startPulseAnimation()
+          startFloatingAnimation()
         }
-      }, 100)
+      }, 300) // Dar tiempo a la transición CSS de 0.25s
     }
   }, 50)
+}
+
+function startFloatingAnimation() {
+  // Solo iniciar flotación si el botón está visible
+  if (scrollTopBtn.value.style.pointerEvents === 'none') return
+
+  // Ajustar intensidad según si está expandido (hovered)
+  const intensity = isHovered.value ? 0.5 : 1
+  const yValue = -10 * intensity
+  const xValue = 4 * intensity
+  const rotationValue = 2 * intensity
+  const scaleValue = 1 + (0.07 * intensity)
+
+  // Crear efecto de flotación sutil como si estuviera sobre agua
+  // Movimiento vertical principal (arriba-abajo)
+  gsap.to(scrollTopBtn.value, {
+    y: yValue,
+    duration: 3.5,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1,
+    delay: 0.8 // Delay antes de empezar a flotar
+  })
+
+  // Movimiento lateral sutil (izquierda-derecha) con timing diferente
+  gsap.to(scrollTopBtn.value, {
+    x: xValue,
+    duration: 3.2,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1,
+    delay: 1.2 // Delay ligeramente diferente para movimiento más orgánico
+  })
+
+  // Rotación muy sutil para simular movimiento del agua
+  gsap.to(scrollTopBtn.value, {
+    rotation: rotationValue,
+    duration: 4.2,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1,
+    delay: 0.5 // Delay diferente para rotación
+  })
+
+  // Efecto de escala sutil para simular "respiración" del agua
+  gsap.to(scrollTopBtn.value, {
+    scale: scaleValue,
+    duration: 4.0,
+    ease: 'sine.inOut',
+    yoyo: true,
+    repeat: -1,
+    delay: 1.5
+  })
+}
+
+function stopFloatingAnimation() {
+  // Detener todas las animaciones de flotación suavemente
+  gsap.killTweensOf(scrollTopBtn.value, 'y,x,rotation,scale')
+  // Resetear posición, rotación y escala a valores base
+  gsap.set(scrollTopBtn.value, { y: 0, x: 0, rotation: 0, scale: 1 })
 }
 
 function handleScroll() {
@@ -161,7 +215,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', handleScroll)
   gsap.killTweensOf(scrollTopBtn.value)
-  gsap.killTweensOf(scrollTopBtn.value, 'scale')
   gsap.killTweensOf(window)
 })
 </script>

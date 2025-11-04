@@ -5,6 +5,8 @@ import './styles.css'
 // Notivue (notificaciones elegantes)
 import { createNotivue } from 'notivue'
 import 'notivue/notification.css'
+// Lenis para smooth scrolling
+import Lenis from 'lenis'
 
 const app = createApp(App)
 
@@ -13,23 +15,46 @@ const notivue = createNotivue({
 	position: 'bottom-left',
 	limit: 3,
 	enqueue: false,
-			transition: 'transform .22s cubic-bezier(.2,.9,.2,1)',
+	transition: 'transform .22s cubic-bezier(.2,.9,.2,1)',
 	pauseOnHover: false,
 	pauseOnTouch: false,
 	notifications: {
 		global: { duration: 1160 }
 	},
-		animations: {
-			enter: 'nvSoftEnter',
-			leave: 'nvSoftLeave',
-			clearAll: 'Notivue__clearAll'
-		}
+	animations: {
+		enter: 'nvSoftEnter',
+		leave: 'nvSoftLeave',
+		clearAll: 'Notivue__clearAll'
+	}
 })
 
 app.use(router)
 app.use(notivue)
 
 app.mount('#app')
+
+// Inicializar Lenis para smooth scrolling
+const lenis = new Lenis({
+  duration: 1.2,
+  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+  direction: 'vertical',
+  gestureDirection: 'vertical',
+  smooth: true,
+  mouseMultiplier: 1,
+  smoothTouch: false,
+  touchMultiplier: 2,
+  infinite: false,
+})
+
+// Exponer Lenis globalmente para usarlo en componentes
+window.lenis = lenis
+
+function raf(time) {
+  lenis.raf(time)
+  requestAnimationFrame(raf)
+}
+
+requestAnimationFrame(raf)
 
 // Ajuste dinámico de variables CSS relacionadas con la topbar.
 function updateTopbarCSSVars(){

@@ -97,6 +97,20 @@ html,body,#app{ height:100%; margin:0; font-family: 'Source Sans 3', 'Segoe UI',
 
 .top-avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  25% { transform: translateY(-10px); }
+  50% { transform: translateY(-25px); }
+  75% { transform: translateY(-10px); }
+}
+
+/* Transición para el botón de usuario */
+.btn-float-enter-active, .btn-float-leave-active { transition: all 0.5s ease; }
+.btn-float-enter-from { opacity: 0; transform: translateY(10px) scale(0.9); }
+.btn-float-enter-to { opacity: 1; transform: translateY(0) scale(1); }
+.btn-float-leave-from { opacity: 1; transform: translateY(0) scale(1); }
+.btn-float-leave-to { opacity: 0; transform: translateY(-10px) scale(0.9); }
+
 /* Dropdown del menú de usuario */
 .user-menu{ position:relative }
 .user-btn{ display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(46,221,90,0.22), rgba(25,59,8,0.18)); border:1px solid rgba(46,221,90,0.55); padding:6px 10px; border-radius:10px; cursor:pointer; color:var(--text) }
