@@ -2,6 +2,7 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
 import './styles.css'
+import './styles/operations-global.css'
 // Notivue (notificaciones elegantes)
 import { createNotivue } from 'notivue'
 import 'notivue/notification.css'
