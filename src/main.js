@@ -5,9 +5,6 @@ import './styles.css'
 // Notivue (notificaciones elegantes)
 import { createNotivue } from 'notivue'
 import 'notivue/notification.css'
-// Lenis para smooth scrolling
-import Lenis from 'lenis'
-
 const app = createApp(App)
 
 // Configuración de Notivue: posición, límite y animaciones fade ultra rápidas
@@ -32,29 +29,6 @@ app.use(router)
 app.use(notivue)
 
 app.mount('#app')
-
-// Inicializar Lenis para smooth scrolling
-const lenis = new Lenis({
-  duration: 1.2,
-  easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-  direction: 'vertical',
-  gestureDirection: 'vertical',
-  smooth: true,
-  mouseMultiplier: 1,
-  smoothTouch: false,
-  touchMultiplier: 2,
-  infinite: false,
-})
-
-// Exponer Lenis globalmente para usarlo en componentes
-window.lenis = lenis
-
-function raf(time) {
-  lenis.raf(time)
-  requestAnimationFrame(raf)
-}
-
-requestAnimationFrame(raf)
 
 // Ajuste dinámico de variables CSS relacionadas con la topbar.
 function updateTopbarCSSVars(){
