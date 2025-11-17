@@ -1,18 +1,17 @@
 <template>
   <ActionPanel>
     <template #title>Hola, {{ user?.nombre }}</template>
-    <h5>¿Qué deseas gestionar?</h5>
+    <h5>Selecciona el tipo de operación</h5>
 
     <div class="cards-panel">
       <div class="area-grid">
-        <div class="area-card compact" v-for="area in areas" :key="area.key" :class="{ disabled: !userHasAccess(area.key) }" role="button" tabindex="0" @click.prevent="onAreaClick(area.key)" @keyup.enter="onAreaClick(area.key)" :aria-label="`Ver ${area.label}`">
+        <div class="area-card compact" v-for="op in operations" :key="op.name" role="button" tabindex="0" @click.prevent="go(op.name)" @keyup.enter="go(op.name)" :aria-label="`Ir a ${op.label}`">
           <div class="card-media">
-            <img class="card-img" :src="area.img" :alt="area.label" @error="onImgError" />
+            <img class="card-img" :src="op.img" :alt="op.label" />
           </div>
           <div class="card-body">
-            <div class="card-title">{{ area.label }}</div>
-            <div class="card-desc">{{ area.desc || area.hint }}</div>
-            <div v-if="byArea[area.key]" class="pending-line">{{ byArea[area.key] }} solicitud(es) pendiente(s)</div>
+            <div class="card-title">{{ op.label }}</div>
+            <div class="card-desc">{{ op.desc }}</div>
           </div>
         </div>
       </div>
@@ -33,144 +32,28 @@
 <script setup>
 import ActionPanel from '@/components/ActionPanel.vue'
 import { ref, onMounted } from 'vue'
-import pendingStore from '@/stores/pendingRequestsStore'
-import notifier from '@/utils/notifier'
-import imgDonaciones from '@/images/donaciones.png'
-import imgEquipo from '@/images/equipo_medico.png'
-import imgComodatos from '@/images/equipos_comodatos.png'
-import imgMobiliario from '@/images/mobiliario_clinico.png'
-import imgPipetas from '@/images/pipetas.png'
-import imgPropiedad from '@/images/propiedad_hospital.png'
-
 import { useRouter } from 'vue-router'
 const router = useRouter()
-const user = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre'), role: localStorage.getItem('role'), email: localStorage.getItem('email') }
-const showRequests = ref(false)
-const myRequests = ref([])
-// Permisos por área del usuario (desde backend)
-const allowedAreas = ref(new Set())
+const user = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre') }
 
-async function fetchPermission(endpoint, options = {}){
-  // intenta primero /api/auth, si 404 prueba /api
-  const bases = ['/api/auth', '/api']
-  let lastRes = null, lastData = null
-  for (const base of bases){
-    const url = `${base}${endpoint}`
-    try {
-      const res = await fetch(url, options)
-      lastRes = res
-      try { lastData = await res.clone().json() } catch { lastData = null }
-      if (res.ok) return { res, data: lastData }
-      if (res.status === 404) continue
-      // Si otro error, devolvemos
-      return { res, data: lastData }
-    } catch (e) {
-      // network error => probar siguiente base
-      continue
-    }
-  }
-  return { res: lastRes, data: lastData }
-}
+// Imágenes para operaciones (proporcionadas en src/images)
+import imgEntrada from '@/images/entrada_equips.png'
+import imgSalida from '@/images/salida_equipo.png'
+import imgResguardo from '@/images/Resguardo_imagen.png'
+import imgServicio from '@/images/Servicio_equipo.png'
+import imgInventario from '@/images/Inventario.png'
+import imgConsumibles from '@/images/Consumibles_bajo_pedido.png'
 
-import Swal from 'sweetalert2'
-
-const requestPermission = async (area) => {
-  try {
-    const result = await Swal.fire({
-      title: 'Enviar solicitud de permiso',
-      text: `No tienes acceso al área “${area}”. ¿Deseas enviar una solicitud al administrador para que te otorgue acceso?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Sí, enviar solicitud',
-      cancelButtonText: 'No, cancelar'
-    })
-    if (!result.isConfirmed) return
-
-    // mostrar loading
-    Swal.fire({ title: 'Enviando solicitud...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, showConfirmButton: false })
-
-    const { res, data } = await fetchPermission('/permission-requests', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: user.email, area })
-    })
-    Swal.close()
-    if (!res || !res.ok) throw new Error((data && data.msg) || `Error del servidor (${res ? res.status : 'sin respuesta'})`)
-    notifier.success('Solicitud enviada')
-    await loadMyRequests()
-    showRequests.value = true
-  } catch (e) { Swal.close(); notifier.error(e.message || 'No se pudo enviar la solicitud') }
-}
-
-const loadMyRequests = async () => {
-  try {
-    const { res, data } = await fetchPermission('/permission-requests')
-    if (!res || !res.ok) { console.warn('Servidor no disponible:', res ? res.status : 'sin respuesta'); myRequests.value = []; return }
-    const rows = data || []
-    myRequests.value = Array.isArray(rows) ? rows.filter(r => r.email === user.email) : []
-  } catch (e) { console.error('Error cargando solicitudes:', e); myRequests.value = [] }
-}
-
-async function loadAllowedAreas(){
-  try {
-    const { res, data } = await fetchPermission(`/user-permissions?email=${encodeURIComponent(user.email)}`)
-    if (res && res.ok && Array.isArray(data)) {
-      allowedAreas.value = new Set(data)
-    } else {
-      allowedAreas.value = new Set()
-    }
-  } catch (e) {
-    console.warn('No se pudieron cargar permisos por área:', e)
-    allowedAreas.value = new Set()
-  }
-}
-
-onMounted(async () => {
-  await Promise.all([loadMyRequests(), loadAllowedAreas()])
-})
-
-// refrescar conteos en background para mostrar badges por área
-onMounted(async () => { try { await pendingStore.refresh() } catch {} })
-
-// exponer byArea para plantilla
-const { byArea } = pendingStore
-
-function onImgError(e){
-  // fallback to a neutral Unsplash image when the image fails to load
-  try { e.target.src = 'https://images.unsplash.com/photo-1517511620798-cec17d428bc0?q=80&w=1200&auto=format&fit=crop&ixlib=rb-4.0.3&s=7' } catch {}
-}
-
-// Modal & selection
-// modal removed: confirmation handled inline via requestPermission
-
-// Areas configuration: label + key + image + description
-const areas = [
-  { key: 'EQUIPO MEDICO I.P', label: 'Equipo médico (IP)', img: imgEquipo, icon: '🩺', hint: 'Equipos críticos', desc: 'Instrumental y máquinas médicas de uso hospitalario: monitores, ventiladores, bombas de infusión y similares.' },
-  { key: 'EQUIPOS DE ADQUISICIÓN', label: 'Equipos de adquisición', img: imgPropiedad, icon: '🧰', hint: 'Periféricos y accesorios', desc: 'Equipos y accesorios utilizados en adquisición de datos y conexión de dispositivos.' },
-  { key: 'COMODATOS', label: 'Comodatos', img: imgComodatos, icon: '🔁', hint: 'Préstamos', desc: 'Listado y condiciones de comodatos y préstamos de equipos entre instituciones.' },
-  { key: 'MOBILIARIO CLÍNICO/MÉDICO', label: 'Mobiliario clínico', img: imgMobiliario, icon: '🛏️', hint: 'Mobiliario', desc: 'Camas, mesas, sillas y muebles especializados para uso clínico.' },
-  { key: 'DONACIÓN', label: 'Donación', img: imgDonaciones, icon: '🎁', hint: 'Donaciones', desc: 'Gestión y seguimiento de equipos recibidos por donación.' },
-  { key: 'MICROPIPETAS Y PIPETAS', label: 'Micropipetas y pipetas', img: imgPipetas, icon: '🔬', hint: 'Consumibles', desc: 'Consumibles de laboratorio como puntas, pipetas y micropipetas.' }
+const operations = [
+  { name: 'op-entrada', label: 'Órdenes de Entrada', desc: 'Captura de entradas de equipo/material.', img: imgEntrada },
+  { name: 'op-salida', label: 'Órdenes de Salida', desc: 'Registro de salidas y egresos.', img: imgSalida },
+  { name: 'op-resguardo', label: 'Resguardo', desc: 'Asignaciones y resguardos.', img: imgResguardo },
+  { name: 'op-servicio', label: 'Servicio', desc: 'Órdenes de servicio y mantenimiento.', img: imgServicio },
+  { name: 'op-inventario-biomedica', label: 'Inventario Biomédica', desc: 'Inventario y conteos.', img: imgInventario },
+  { name: 'op-insumos-consumibles', label: 'Insumos y Consumibles', desc: 'Gestión de insumos.', img: imgConsumibles }
 ]
 
-function userHasAccess(areaKey){
-  if (!user) return false
-  const role = (user.role || localStorage.getItem('role') || '').toLowerCase()
-  if (role === 'admin') return true // admin ve todo
-  // Para usuarios y "privileged", aplicar permisos por área
-  try { return allowedAreas.value.has(areaKey) } catch { return false }
-}
-
-function areaHasPending(areaKey){
-  return myRequests.value.some(r => r.area === areaKey && r.status === 'pending')
-}
-
-async function onAreaClick(areaKey){
-  if (userHasAccess(areaKey)){
-    try { await router.push({ name: 'dashboard', query: { area: areaKey } }) } catch {}
-  } else {
-    // pedir confirmación y enviar solicitud si confirma
-    await requestPermission(areaKey)
-  }
-}
+function go(name){ router.push({ name }).catch(()=>{}) }
 </script>
 
 <style scoped>

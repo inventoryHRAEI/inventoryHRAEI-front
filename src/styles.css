@@ -11,17 +11,17 @@
   --link-green-light: #0ccf6a;  
   --btn-text-dark: #0b6b4a;
   --bg-img-brightness: 0.6;
-  /* Topbar metrics for positioning fixed dropdown */
+  /* Métricas del topbar para posicionar correctamente el dropdown fijo */
   --topbar-top: 12px;
   --topbar-height: 60px;
-  /* Dynamic container padding to avoid overlap with fixed topbar; can be reduced on very small screens */
+  /* Padding superior dinámico para evitar traslape con el topbar fijo; en pantallas muy pequeñas puede reducirse */
   --container-toppad: calc(var(--topbar-top) + var(--topbar-height) + 12px);
 }
 
 *{ box-sizing: border-box }
 html,body,#app{ height:100%; margin:0; font-family: 'Source Sans 3', 'Segoe UI', Roboto, Arial, sans-serif; color:var(--text); background: linear-gradient(180deg,var(--bg-1),var(--bg-2)); }
 
-/* Background media kept as element in App.vue */
+/* El fondo (imagen/video) se mantiene como elemento en App.vue */
 .bg-media{ position:fixed; inset:0; z-index:0 }
 .bg-img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02); }
 .bg-img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02) brightness(var(--bg-img-brightness)); }
@@ -29,7 +29,7 @@ html,body,#app{ height:100%; margin:0; font-family: 'Source Sans 3', 'Segoe UI',
 .container{ position:relative; z-index:2; max-width:920px; width:92%; margin:0 auto; padding-top: var(--container-toppad); }
 .container{ transition: none }
 
-/* When the topbar becomes taller (e.g., on mobile with wrapped title), ensure extra spacing */
+/* Cuando el topbar crece (por ejemplo, en móvil con título en dos líneas), agregar más espacio superior */
 @media (max-width:560px){
   :root{ --container-toppad: calc(var(--topbar-top) + var(--topbar-height) + 18px) }
 }
@@ -42,7 +42,7 @@ html,body,#app{ height:100%; margin:0; font-family: 'Source Sans 3', 'Segoe UI',
   transform:translateX(-50%);
   width:calc(100% - 40px);
   max-width:1000px;
-  z-index:220; /* ensure topbar stays above floating cards/panels on small screens */
+  z-index:220; /* Mantener el topbar por encima de tarjetas o paneles flotantes en pantallas pequeñas */
   height:60px;
   display:flex;
   align-items:center;
@@ -54,17 +54,17 @@ html,body,#app{ height:100%; margin:0; font-family: 'Source Sans 3', 'Segoe UI',
   backdrop-filter: blur(6px) saturate(140%);
 }
 .topbar-inner{ display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px; flex-wrap:nowrap }
-/* Force topbar to hide overflow and make children truncate instead of enlarging the bar */
+/* Control del overflow en el topbar: truncar hijos para evitar que aumente la altura */
 .topbar{ overflow: visible }
 .brand{ display:flex; gap:12px; align-items:center; flex: 0 1 auto; min-width:0 }
 .brand-text{ flex: 0 1 auto; min-width:0; overflow:hidden }
 .brand-title, .brand-sub{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-/* site title uses remaining space but will truncate when necessary */
+/* El título del sitio usa el espacio restante y se trunca cuando es necesario */
 .site-title{ flex: 1 1 40%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center }
 .topbar-actions{ display:flex; align-items:center; gap:12px; flex: 0 0 auto }
 .actions{ display:flex; gap:8px; align-items:center; flex: 0 0 auto }
 .top-action{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-/* user button shouldn't grow; cap its size and allow truncation */
+/* El botón de usuario no debe crecer; limitar su tamaño y permitir truncar texto */
 .user-btn{ max-width:220px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; flex:0 0 auto }
 .user-btn .welcome-text{ display:inline-block; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
 .brand{ display:flex; gap:12px; align-items:center }
@@ -79,25 +79,39 @@ html,body,#app{ height:100%; margin:0; font-family: 'Source Sans 3', 'Segoe UI',
 .top-action{ display:inline-block; padding:4px 6px; border-radius:4px; background:transparent; color:var(--accent); text-decoration:none; font-weight:600; font-size:0.92rem }
 .top-action:hover{ text-decoration:underline }
 
-/* Ensure the .container used inside the topbar doesn't add extra width or padding that forces overflow. 
-  The header uses the generic `.container` elsewhere, so we override it only when it's a direct child of .topbar. */
+/* Asegurar que el .container dentro del topbar no agregue ancho/padding extra que provoque overflow.
+   El encabezado usa .container en otros lugares; por eso lo sobreescribimos sólo cuando es hijo directo de .topbar. */
 .topbar > .container{ width:100%; max-width:1000px; padding:0; margin:0; box-sizing:border-box }
 .topbar-inner{ padding:6px 12px; box-sizing:border-box }
 .topbar{ width: calc(100% - 32px); left:50%; transform:translateX(-50%); }
 
-/* Make sure actions area doesn't overflow; truncate long text and allow the actions to stay visible */
+/* Evitar overflow en el área de acciones; truncar texto largo y mantener visibles las acciones */
 .topbar-actions{ min-width:0 }
 .topbar-actions .actions{ min-width:0; display:flex; gap:8px; align-items:center }
 .topbar .top-action{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 
-/* Welcome block in topbar */
+/* Bloque de bienvenida dentro del topbar */
 .welcome{ display:flex; align-items:center; gap:8px; margin-right:8px }
 .avatar{ width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.06); }
 .welcome-text{ font-weight:600 }
 
 .top-avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover }
 
-/* User menu dropdown */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  25% { transform: translateY(-10px); }
+  50% { transform: translateY(-25px); }
+  75% { transform: translateY(-10px); }
+}
+
+/* Transición para el botón de usuario */
+.btn-float-enter-active, .btn-float-leave-active { transition: all 0.5s ease; }
+.btn-float-enter-from { opacity: 0; transform: translateY(10px) scale(0.9); }
+.btn-float-enter-to { opacity: 1; transform: translateY(0) scale(1); }
+.btn-float-leave-from { opacity: 1; transform: translateY(0) scale(1); }
+.btn-float-leave-to { opacity: 0; transform: translateY(-10px) scale(0.9); }
+
+/* Dropdown del menú de usuario */
 .user-menu{ position:relative }
 .user-btn{ display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(46,221,90,0.22), rgba(25,59,8,0.18)); border:1px solid rgba(46,221,90,0.55); padding:6px 10px; border-radius:10px; cursor:pointer; color:var(--text) }
 .user-btn .avatar{ width:24px; height:24px; font-size:13px }
@@ -329,6 +343,21 @@ h1,h2,h3,h4,h5{ font-family: 'Poppins', 'Source Sans 3', sans-serif }
 
 /* Additional responsive fixes to avoid visual overlaps on mobile */
 @media (max-width:560px){
+  /* Aumentar ligeramente el tamaño base en móviles para mejor legibilidad */
+  html{ font-size: 17px }
+
+  /* Botones e inputs con altura táctil cómoda (>=44px) */
+  .btn{ font-size: 1rem; padding: 14px 18px; min-height: 44px }
+  .btn.small{ font-size: 0.98rem; padding: 12px 14px; min-height: 42px }
+  .input{ font-size: 1rem; min-height: 44px }
+
+  /* Titulares y textos en tarjetas un poco más grandes */
+  .area-card .card-title{ font-size: 1.05rem }
+  .area-card .card-sub.small{ font-size: 0.95rem }
+
+  /* Ítems del dropdown más legibles al tacto */
+  .dropdown-item{ font-size: 1rem; padding: 12px 14px }
+
   /* keep a reasonable top padding for the main container (fallback while JS calculates) */
   .container{ padding-top: calc(var(--topbar-height) + 20px) }
   .topbar{ padding:6px 10px; height:auto; align-items:center; max-height:84px }
@@ -349,4 +378,136 @@ h1,h2,h3,h4,h5{ font-family: 'Poppins', 'Source Sans 3', sans-serif }
 
 /* Long titles in cards should wrap cleanly rather than overflow */
 .area-card .card-title{ word-break:break-word; overflow-wrap:anywhere; max-width:100% }
+
+/* Toast minimal y discreto (vue3-toastify) */
+.toast-minimal{
+  background: rgba(255,255,255,0.95) !important;
+  color:#0b2540 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 20px rgba(2,6,23,0.14) !important;
+  padding: 5px 9px !important;
+  font-weight: 600 !important;
+  min-height: auto !important;
+}
+.toast-minimal .Toastify__toast-body{ margin:0 !important; font-size: 0.95rem !important; line-height: 1.2 !important }
+.toast-minimal .Toastify__close-button{ display:none !important }
+/* Barra de progreso delgada como contador de ~1s */
+.toast-minimal .Toastify__progress-bar{
+  display:block !important;
+  height: 2px !important;
+  top: auto !important;
+  bottom: 0 !important;
+  background: linear-gradient(90deg, var(--btn-green), #00a5ff) !important;
+  opacity: 0.9 !important;
+}
+
+/* Afinar animaciones y separación para apilado suave */
+.Toastify__toast-container{ will-change: transform }
+.Toastify__toast{ margin-bottom: 1px !important; will-change: transform, opacity; backface-visibility: hidden; transform: translateZ(0); }
+/* Animaciones fade-only, entrada 80ms y salida 40ms */
+@keyframes toast-fade-in-bottom{ from{ opacity:0; transform: translateY(2px) } to{ opacity:1; transform: translateY(0) } }
+@keyframes toast-fade-out-bottom{ from{ opacity:1; transform: translateY(0) } to{ opacity:0; transform: translateY(2px) } }
+@keyframes toast-fade-in-top{ from{ opacity:0; transform: translateY(-2px) } to{ opacity:1; transform: translateY(0) } }
+@keyframes toast-fade-out-top{ from{ opacity:1; transform: translateY(0) } to{ opacity:0; transform: translateY(-2px) } }
+
+.Toastify__slide-enter--bottom-left,
+.Toastify__slide-enter--bottom-center,
+.Toastify__slide-enter--bottom-right{
+  animation-name: toast-fade-in-bottom !important;
+  animation-duration: .08s !important;
+  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+}
+.Toastify__slide-exit--bottom-left,
+.Toastify__slide-exit--bottom-center,
+.Toastify__slide-exit--bottom-right{
+  animation-name: toast-fade-out-bottom !important;
+  animation-duration: .04s !important;
+  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+}
+
+/* Cubrir posiciones top también */
+.Toastify__slide-enter--top-left,
+.Toastify__slide-enter--top-center,
+.Toastify__slide-enter--top-right{
+  animation-name: toast-fade-in-top !important;
+  animation-duration: .08s !important;
+  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+}
+.Toastify__slide-exit--top-left,
+.Toastify__slide-exit--top-center,
+.Toastify__slide-exit--top-right{
+  animation-name: toast-fade-out-top !important;
+  animation-duration: .04s !important;
+  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+}
+
+/* Forzar todas las variantes (bounce/zoom/flip/slide) a usar fade compacto */
+[class*="Toastify__bounce-enter"],
+[class*="Toastify__zoom-enter"],
+[class*="Toastify__flip-enter"],
+[class*="Toastify__slide-enter"]{
+  animation-name: toast-fade-in-bottom !important;
+  animation-duration: .08s !important;
+  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+}
+[class*="Toastify__bounce-exit"],
+[class*="Toastify__zoom-exit"],
+[class*="Toastify__flip-exit"],
+[class*="Toastify__slide-exit"]{
+  animation-name: toast-fade-out-bottom !important;
+  animation-duration: .04s !important;
+  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+}
+
+/* Bajón instantáneo del stack: el que sale se posiciona absoluto y libera layout */
+/* Sin posicionamiento absoluto: mantenemos comportamiento estable anterior */
+
+/* Reducir duración genérica interna de Toastify para evitar sorpresas */
+/* Nota: no forzamos duración genérica para no sobreescribir enter/exit específicos */
+
+/* SweetAlert2: animaciones horizontales rápidas en modo toast */
+@keyframes swal-toast-fade-in{ from{ opacity:0; transform: translateX(-10px) } to{ opacity:1; transform: translateX(0) } }
+@keyframes swal-toast-fade-out{ from{ opacity:1; transform: translateX(0) } to{ opacity:0; transform: translateX(-8px) } }
+.swal2-toast-fade-in{ animation: swal-toast-fade-in .08s cubic-bezier(.4,0,.2,1) both !important; }
+.swal2-toast-fade-out{ animation: swal-toast-fade-out .04s cubic-bezier(.4,0,.2,1) both !important; }
+
+/* Accesibilidad: respeta reduced-motion */
+/* (Opcional) Si se requiere, podemos reactivar reduced-motion específico para toasts */
+
+/* Notivue: overrides para acercarlo al estilo minimalista */
+:root{
+  /* Gap entre notificaciones (1px como en Toastify) */
+  --nv-gap: 1px;
+  /* Prioridad del stream de Notivue */
+  --nv-z: 600;
+}
+
+/* Animaciones suaves para Notivue: entrada con leve translate+scale+fade, salida suave */
+/* Horizontal suave: entrada izquierda→derecha; salida derecha→izquierda */
+@keyframes nv-soft-in{
+  0%{ opacity:0; transform: translateX(-14px) scale(0.98) }
+  100%{ opacity:1; transform: translateX(0) scale(1) }
+}
+@keyframes nv-soft-out{
+  0%{ opacity:1; transform: translateX(0) scale(1) }
+  100%{ opacity:0; transform: translateX(-10px) scale(0.99) }
+}
+
+.nvSoftEnter{ animation: nv-soft-in .22s cubic-bezier(.2,.9,.2,1) both }
+.nvSoftLeave{ animation: nv-soft-out .12s cubic-bezier(.4,0,.2,1) both }
+
+/* Suavidad adicional y rendimiento: avisar al motor de composición */
+.Notivue__notification{ will-change: transform, opacity; backface-visibility: hidden; transform-origin: center left }
+
+/* Stagger sutil sólo en la animación de entrada (máx. 3) */
+.nvSoftEnter:nth-child(2){ animation-delay: .02s }
+.nvSoftEnter:nth-child(3){ animation-delay: .035s }
+
+/* Hover polish sin interferir con transform del layout */
+.Notivue__notification{ transition: box-shadow .18s ease }
+.Notivue__notification:hover{ box-shadow: 0 10px 26px rgba(2,6,23,0.22) }
+
+@media (prefers-reduced-motion: reduce){
+  .nvSoftEnter, .nvSoftLeave{ animation: none !important }
+}
 

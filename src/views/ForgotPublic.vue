@@ -8,7 +8,7 @@
       <form @submit.prevent="forgot">
         <input v-model="email" placeholder="Email" type="email" required class="input" />
         <div style="margin-top:12px">
-          <button class="btn secondary" type="submit">Enviar código</button>
+          <button class="btn secondary ui-btn ui-btn--md" type="submit">Enviar código</button>
         </div>
       </form>
     </template>
