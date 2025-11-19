@@ -150,180 +150,140 @@
                     @enter="onEnterCantidad"
                     @leave="onLeaveCantidad"
                   >
-                    <div class="field" v-if="newItem.tipo" style="width: 120px;">
+                    <div class="field" v-if="newItem.tipo" style="width: 160px;">
                       <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9); text-align: center; display: block;">CANTIDAD</label>
-                      <input class="control" v-model.number="newItem.cantidad" type="number" min="1" placeholder="1" @input="ajustarUnidadesEquipo" style="text-align: center; font-weight: 600;" />
+                      <div class="counter" style="justify-content: center;">
+                        <button class="ctr-btn wide" type="button" @click="decNewBy(5)" aria-label="Disminuir cinco">-5</button>
+                        <button class="ctr-btn" type="button" @click="decNew" aria-label="Disminuir uno">-</button>
+                            <input
+                              class="control ctr-input"
+                              v-model.number="newItem.cantidad"
+                              type="number"
+                              min="0"
+                              step="1"
+                              inputmode="numeric"
+                              @input="ajustarUnidadesEquipo"
+                            />
+                        <button class="ctr-btn" type="button" @click="incNew" aria-label="Aumentar uno">+</button>
+                        <button class="ctr-btn wide" type="button" @click="incNewBy(5)" aria-label="Aumentar cinco">+5</button>
+                      </div>
                     </div>
                   </transition>
                 </div>
                 
                 <!-- Campos para Equipo Médico o Mobiliario -->
-                <div v-if="newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario'" style="display: flex; flex-direction: column; gap: 20px;">
-                  <!-- Campos comunes -->
-                  <div style="display: grid; grid-template-columns: 1fr 200px 180px; gap: 16px; align-items: end;">
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">{{ getNombreLabel() }}</label>
-                      <input class="control" v-model.trim="newItem.descripcion" :placeholder="getNombrePlaceholder()" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">MARCA</label>
-                      <input class="control" v-model.trim="newItem.marca" placeholder="Ej. Philips" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">UBICACIÓN</label>
-                      <input class="control" v-model.trim="newItem.ubicacion" placeholder="Ej. UCIA" />
-                    </div>
+                <div v-if="newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario'" class="section-card items-card">
+                  <div class="section-head">
+                    <h4>{{ getTipoLabel(newItem.tipo) }} (unidades) - {{ newItem.unidades.length }}</h4>
+                    <small class="hint">Completa la información individual de cada unidad</small>
                   </div>
-                  
-                  <!-- Campos individuales por unidad -->
-                  <div v-if="newItem.cantidad > 0" style="background: rgba(255, 255, 255, 0.6); padding: 18px; border-radius: 12px; border: 1px dashed rgba(100, 116, 139, 0.3);">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px;">
-                      <div style="width: 4px; height: 20px; background: linear-gradient(to bottom, rgb(59, 130, 246), rgb(147, 197, 253)); border-radius: 2px;"></div>
-                      <h6 style="margin: 0; color: rgba(15, 23, 42, 0.9); font-size: 0.95rem; font-weight: 700;">Información individual de cada equipo</h6>
-                    </div>
+                  <div class="section-list">
+                    <p v-if="!newItem.unidades.length" class="empty-hint">
+                      Ajusta la cantidad para generar las unidades necesarias.
+                    </p>
                     <div 
                       v-for="(unidad, idx) in newItem.unidades" 
                       :key="idx"
-                      style="background: white; padding: 16px; border-radius: 10px; margin-bottom: 10px; border: 1px solid rgba(203, 213, 225, 0.6); box-shadow: 0 1px 3px rgba(0,0,0,0.05);"
+                      class="item-row unidades-grid-row"
                     >
-                      <div style="display: inline-block; background: linear-gradient(135deg, rgb(59, 130, 246), rgb(147, 197, 253)); color: white; padding: 4px 12px; border-radius: 12px; font-weight: 700; margin-bottom: 12px; font-size: 0.85rem;">
-                        #{{ idx + 1 }}
+                      <div class="item-head">
+                        <span class="badge">#{{ idx + 1 }}</span>
+                        {{ getTipoLabel(newItem.tipo) }}
                       </div>
-                      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px;">
-                        <div class="field">
+                      <div class="item-grid unidades-grid">
+                        <!-- Fila 1: Nombre (a lo ancho) -->
+                        <div class="field field-wide">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">{{ getNombreLabel() }}</label>
+                          <input class="control" v-model.trim="unidad.nombre" :placeholder="getNombrePlaceholder()" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+                        <!-- Fila 2: Marca y Ubicación -->
+                        <div class="field field-medium">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Marca</label>
+                          <input class="control" v-model.trim="unidad.marca" placeholder="Ej. Philips" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+                        <div class="field field-medium">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Ubicación</label>
+                          <input class="control" v-model.trim="unidad.ubicacion" placeholder="Ej. UCIA" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+                        <!-- Fila 3: Modelo y No. Serie -->
+                        <div class="field field-compact">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Modelo</label>
                           <input class="control" v-model.trim="unidad.modelo" placeholder="ej. MX40" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
-                        <div class="field">
+                        <div class="field field-compact">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">No. Serie</label>
                           <input class="control" v-model.trim="unidad.serie" placeholder="ej. 3500" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
-                        <div class="field">
+                        <!-- Fila 4: Referencia y Clave HRAEI -->
+                        <div class="field field-compact">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Referencia</label>
                           <input class="control" v-model.trim="unidad.referencia" placeholder="ej. 9K9162" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
-                        <div class="field">
+                        <div class="field field-compact">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Clave HRAEI</label>
-                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="ej. COMODATO" style="font-size: 0.9rem; padding: 10px 14px;" />
+                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="ej. COMODATO" style="font-size: 0.9rem; padding: 10px 14px; width: 100%;" />
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
                 
-                <!-- Campos para Accesorio -->
-                <div v-if="newItem.tipo === 'accesorio'" style="display: flex; flex-direction: column; gap: 16px;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: end;">
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">{{ getNombreLabel() }}</label>
-                      <input class="control" v-model.trim="newItem.descripcion" :placeholder="getNombrePlaceholder()" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">MARCA</label>
-                      <input class="control" v-model.trim="newItem.marca" placeholder="Marca" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">MODELO</label>
-                      <input class="control" v-model.trim="newItem.modelo" placeholder="Modelo" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">LOTE</label>
-                      <input class="control" v-model.trim="newItem.lote" placeholder="Lote" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">REFERENCIA</label>
-                      <input class="control" v-model.trim="newItem.referencia" placeholder="Referencia" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">CLAVE HRAEI</label>
-                      <input class="control" v-model.trim="newItem.claveHRAEI" placeholder="Clave HRAEI" />
-                    </div>
+                <!-- Campos para Accesorio / Consumible / Refacción: usar estilo tipo 'Equipo Médico' -->
+                <div v-if="['accesorio','consumible','refaccion'].includes(newItem.tipo)" class="section-card items-card">
+                  <div class="section-head">
+                    <h4>{{ getTipoLabel(newItem.tipo) }} - {{ newItem.cantidad }}</h4>
+                    <small class="hint">Completa la información individual de cada unidad</small>
                   </div>
-                  <div v-if="newItem.cantidad > 1" style="background: rgba(255, 193, 7, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 193, 7, 0.3);">
-                    <p style="margin: 0; font-size: 0.9rem; color: rgba(15, 23, 42, 0.85);">
-                      <strong>Nota:</strong> Se agregarán {{ newItem.cantidad }} unidades con la misma información.
-                    </p>
-                  </div>
-                </div>
-                
-                <!-- Campos para Consumible -->
-                <div v-if="newItem.tipo === 'consumible'" style="display: flex; flex-direction: column; gap: 16px;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: end;">
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">{{ getNombreLabel() }}</label>
-                      <input class="control" v-model.trim="newItem.descripcion" :placeholder="getNombrePlaceholder()" />
+                  <div class="section-list">
+                    <p v-if="!newItem.unidades.length" class="empty-hint">Ajusta la cantidad para generar las unidades necesarias.</p>
+                    <div v-for="(unidad, idx) in newItem.unidades" :key="idx" class="item-row unidades-grid-row">
+                      <div class="item-head">
+                        <span class="badge">#{{ idx + 1 }}</span>
+                        {{ getTipoLabel(newItem.tipo) }}
+                      </div>
+
+                      <div class="item-grid unidades-grid">
+                        <div class="field field-wide">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">{{ getNombreLabel() }}</label>
+                          <input class="control" v-model.trim="unidad.nombre" :placeholder="getNombrePlaceholder()" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+
+                        <div class="field field-medium">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Marca</label>
+                          <input class="control" v-model.trim="unidad.marca" placeholder="Marca" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+
+                        <div class="field field-medium">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Modelo</label>
+                          <input class="control" v-model.trim="unidad.modelo" placeholder="Modelo" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+
+                        <div class="field field-compact">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Lote</label>
+                          <input class="control" v-model.trim="unidad.lote" placeholder="Lote" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+
+                        <div class="field field-compact">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Referencia</label>
+                          <input class="control" v-model.trim="unidad.referencia" placeholder="Referencia" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+
+                        <div class="field field-compact">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Clave HRAEI</label>
+                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="Clave HRAEI" style="font-size: 0.9rem; padding: 10px 14px; width: 100%;" />
+                        </div>
+                      </div>
                     </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">MARCA</label>
-                      <input class="control" v-model.trim="newItem.marca" placeholder="Marca" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">MODELO</label>
-                      <input class="control" v-model.trim="newItem.modelo" placeholder="Modelo" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">LOTE</label>
-                      <input class="control" v-model.trim="newItem.lote" placeholder="Lote" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">REFERENCIA</label>
-                      <input class="control" v-model.trim="newItem.referencia" placeholder="Referencia" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">CLAVE HRAEI</label>
-                      <input class="control" v-model.trim="newItem.claveHRAEI" placeholder="Clave HRAEI" />
-                    </div>
-                  </div>
-                  <div v-if="newItem.cantidad > 1" style="background: rgba(255, 193, 7, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 193, 7, 0.3);">
-                    <p style="margin: 0; font-size: 0.9rem; color: rgba(15, 23, 42, 0.85);">
-                      <strong>Nota:</strong> Se agregarán {{ newItem.cantidad }} unidades con la misma información.
-                    </p>
-                  </div>
-                </div>
-                
-                <!-- Campos para Refacción -->
-                <div v-if="newItem.tipo === 'refaccion'" style="display: flex; flex-direction: column; gap: 16px;">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; align-items: end;">
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">{{ getNombreLabel() }}</label>
-                      <input class="control" v-model.trim="newItem.descripcion" :placeholder="getNombrePlaceholder()" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">MARCA</label>
-                      <input class="control" v-model.trim="newItem.marca" placeholder="Marca" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">MODELO</label>
-                      <input class="control" v-model.trim="newItem.modelo" placeholder="Modelo" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">LOTE</label>
-                      <input class="control" v-model.trim="newItem.lote" placeholder="Lote" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">REFERENCIA</label>
-                      <input class="control" v-model.trim="newItem.referencia" placeholder="Referencia" />
-                    </div>
-                    <div class="field">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9);">CLAVE HRAEI</label>
-                      <input class="control" v-model.trim="newItem.claveHRAEI" placeholder="Clave HRAEI" />
-                    </div>
-                  </div>
-                  <div v-if="newItem.cantidad > 1" style="background: rgba(255, 193, 7, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 193, 7, 0.3);">
-                    <p style="margin: 0; font-size: 0.9rem; color: rgba(15, 23, 42, 0.85);">
-                      <strong>Nota:</strong> Se agregarán {{ newItem.cantidad }} unidades con la misma información.
-                    </p>
                   </div>
                 </div>
                 
                 <!-- Botón agregar -->
                 <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
-                  <button 
-                    type="button" 
-                    class="btn primary" 
+                  <button
+                    type="button"
+                    class="btn primary"
                     @click="agregarItem"
-                    :disabled="!newItem.tipo || !newItem.descripcion"
-                    style="padding: 12px 28px; border-radius: 24px; font-weight: 600; font-size: 0.95rem; background: linear-gradient(135deg, rgb(59, 130, 246), rgb(37, 99, 235)); border: none; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3); transition: all 0.2s ease;"
+                    :disabled="!canAddItem"
                   >
                     <span style="font-size: 1.1rem; margin-right: 6px;">+</span> Agregar Item
                   </button>
@@ -342,53 +302,78 @@
                 <div style="flex: 1; height: 2px; background: linear-gradient(to left, rgb(59, 130, 246), transparent);"></div>
               </div>
               
-              <div 
-                v-for="(item, index) in form.equiposEntrada" 
-                :key="index"
-                class="item-card"
-                style="background: rgba(255,255,255,0.7); padding: 16px; border-radius: 12px; border: 1px solid rgba(148, 163, 184, 0.2);"
-              >
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
-                  <div>
-                    <span style="font-weight: 700; color: rgba(15, 23, 42, 0.9);">{{ getTipoLabel(item.tipo) }}</span>
-                    <span style="margin-left: 10px; color: rgba(71, 85, 105, 0.8);">x{{ item.cantidad }}</span>
+              <div v-for="(item, index) in form.equiposEntrada" :key="index" class="item-row">
+                <div class="item-head">
+                  <span class="badge">#{{ index + 1 }}</span>
+                  <span style="font-weight: 700; color: rgba(15, 23, 42, 0.9);">{{ getTipoLabel(item.tipo) }}</span>
+                  <span style="margin-left: 10px; color: rgba(71, 85, 105, 0.8);">x{{ item.cantidad }}</span>
+                  <div style="margin-left: auto;">
+                    <button
+                      type="button"
+                      @click="eliminarItem(index)"
+                      class="btn secondary"
+                      style="padding: 6px 12px; border-radius: 8px; font-size: 0.85rem;"
+                    >Eliminar</button>
                   </div>
-                  <button 
-                    type="button"
-                    @click="eliminarItem(index)"
-                    style="background: rgba(239, 68, 68, 0.1); color: rgb(239, 68, 68); border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.85rem;"
-                  >
-                    Eliminar
-                  </button>
                 </div>
-                
-                <!-- Info general -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; font-size: 0.9rem; color: rgba(71, 85, 105, 0.9); margin-bottom: 12px;">
-                  <div v-if="item.descripcion"><strong>Descripción:</strong> {{ item.descripcion }}</div>
-                  <div v-if="item.marca"><strong>Marca:</strong> {{ item.marca }}</div>
-                  <div v-if="item.ubicacion"><strong>Ubicación:</strong> {{ item.ubicacion }}</div>
-                  <!-- Para accesorios/consumibles/refacciones -->
-                  <div v-if="item.modelo && !item.unidades"><strong>Modelo:</strong> {{ item.modelo }}</div>
-                  <div v-if="item.serie && !item.unidades"><strong>Serie:</strong> {{ item.serie }}</div>
-                  <div v-if="item.lote"><strong>Lote:</strong> {{ item.lote }}</div>
-                  <div v-if="item.referencia && !item.unidades"><strong>Referencia:</strong> {{ item.referencia }}</div>
-                  <div v-if="item.claveHRAEI && !item.unidades"><strong>Clave HRAEI:</strong> {{ item.claveHRAEI }}</div>
+
+                <div class="item-grid">
+                  <div class="field" v-if="item.descripcion">
+                    <label>Descripción</label>
+                    <div>{{ item.descripcion }}</div>
+                  </div>
+                  <div class="field" v-if="item.marca">
+                    <label>Marca</label>
+                    <div>{{ item.marca }}</div>
+                  </div>
+                  <div class="field" v-if="item.modelo && !item.unidades">
+                    <label>Modelo</label>
+                    <div>{{ item.modelo }}</div>
+                  </div>
+                  <div class="field" v-if="item.ubicacion">
+                    <label>Ubicación</label>
+                    <div>{{ item.ubicacion }}</div>
+                  </div>
+                  <div class="field" v-if="item.claveHRAEI && !item.unidades">
+                    <label>Clave HRAEI</label>
+                    <div>{{ item.claveHRAEI }}</div>
+                  </div>
+                  <div class="field" v-if="item.cantidad != null">
+                    <label>Cantidad</label>
+                    <div>{{ item.cantidad }}</div>
+                  </div>
                 </div>
                 
                 <!-- Unidades individuales (para equipos médicos/mobiliario) -->
-                <div v-if="item.unidades && item.unidades.length > 0" style="background: rgba(241, 245, 249, 0.5); padding: 12px; border-radius: 8px;">
-                  <div style="font-weight: 600; font-size: 0.85rem; color: rgba(71, 85, 105, 0.9); margin-bottom: 8px;">Detalles individuales:</div>
-                  <div 
-                    v-for="(unidad, uIdx) in item.unidades" 
-                    :key="uIdx"
-                    style="background: white; padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 0.85rem;"
-                  >
-                    <div style="font-weight: 600; color: rgba(15, 23, 42, 0.8); margin-bottom: 4px;">Unidad #{{ uIdx + 1 }}</div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; color: rgba(71, 85, 105, 0.85);">
-                      <div v-if="unidad.modelo"><strong>Modelo:</strong> {{ unidad.modelo }}</div>
-                      <div v-if="unidad.serie"><strong>Serie:</strong> {{ unidad.serie }}</div>
-                      <div v-if="unidad.referencia"><strong>Ref:</strong> {{ unidad.referencia }}</div>
-                      <div v-if="unidad.claveHRAEI"><strong>Clave:</strong> {{ unidad.claveHRAEI }}</div>
+                <div v-if="item.unidades && item.unidades.length > 0" class="section-card items-card">
+                  <div class="section-head">
+                    <h4>Detalles individuales</h4>
+                    <small class="hint">Completa la información individual de cada unidad</small>
+                  </div>
+                  <div class="section-list">
+                    <div v-for="(unidad, uIdx) in item.unidades" :key="uIdx" class="item-row">
+                      <div class="item-head">
+                        <span class="badge">#{{ uIdx + 1 }}</span>
+                        Unidad
+                      </div>
+                      <div class="item-grid">
+                        <div class="field">
+                          <label>Modelo</label>
+                          <div style="color: rgba(71, 85, 105, 0.9);">{{ unidad.modelo || '-' }}</div>
+                        </div>
+                        <div class="field">
+                          <label>No. Serie</label>
+                          <div style="color: rgba(71, 85, 105, 0.9);">{{ unidad.serie || '-' }}</div>
+                        </div>
+                        <div class="field">
+                          <label>Referencia</label>
+                          <div style="color: rgba(71, 85, 105, 0.9);">{{ unidad.referencia || '-' }}</div>
+                        </div>
+                        <div class="field">
+                          <label>Clave HRAEI</label>
+                          <div style="color: rgba(71, 85, 105, 0.9);">{{ unidad.claveHRAEI || '-' }}</div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -497,7 +482,7 @@ const form = reactive({
 // Estado para nuevo item
 const newItem = reactive({
   tipo: '',
-  cantidad: 1,
+  cantidad: 0,
   descripcion: '',
   marca: '',
   modelo: '',
@@ -511,7 +496,7 @@ const newItem = reactive({
 
 const resetNewItem = () => {
   newItem.tipo = ''
-  newItem.cantidad = 1
+  newItem.cantidad = 0
   newItem.descripcion = ''
   newItem.marca = ''
   newItem.modelo = ''
@@ -525,13 +510,16 @@ const resetNewItem = () => {
 
 // Ajustar array de unidades cuando cambia la cantidad (para equipos médicos)
 const ajustarUnidadesEquipo = () => {
-  const cantidad = Number(newItem.cantidad) || 1
+  const cantidad = normalizedCount(newItem.cantidad)
   const currentLength = newItem.unidades.length
-  
+
   if (cantidad > currentLength) {
     // Agregar más unidades
     for (let i = currentLength; i < cantidad; i++) {
       newItem.unidades.push({
+        nombre: '',
+        marca: '',
+        ubicacion: '',
         modelo: '',
         serie: '',
         referencia: '',
@@ -544,34 +532,78 @@ const ajustarUnidadesEquipo = () => {
   }
 }
 
+// Helpers para el contador de newItem.cantidad (copiado del patrón de insumos)
+function adjustNew(delta) {
+  const current = Number(newItem.cantidad || 0)
+  // permitir que newItem.cantidad sea 0
+  newItem.cantidad = Math.max(0, normalizedCount(current + delta))
+  ajustarUnidadesEquipo()
+}
+
+function incNew() {
+  adjustNew(1)
+}
+
+function decNew() {
+  adjustNew(-1)
+}
+
+function incNewBy(amount) {
+  adjustNew(amount)
+}
+
+function decNewBy(amount) {
+  adjustNew(-amount)
+}
+
+// Validación para habilitar el botón de agregar según tipo
+const canAddItem = computed(() => {
+  if (!newItem.tipo) return false
+
+  // Para estos tipos requerimos que exista al menos una unidad (permitir editar cada unidad)
+  if (['equipo-medico','mobiliario','accesorio','consumible','refaccion'].includes(newItem.tipo)) {
+    return Array.isArray(newItem.unidades) && newItem.unidades.length > 0
+  }
+
+  // Fallback: descripción obligatoria
+  return (newItem.descripcion || '').trim().length > 0
+})
+
 const agregarItem = () => {
-  if (!newItem.tipo || !newItem.descripcion) {
-    notifier.error('Debes seleccionar un tipo y agregar una descripción')
+  if (!canAddItem.value) {
+    notifier.error('Completa la información requerida antes de agregar el item')
     return
   }
-  
+
   const itemData = {
     tipo: newItem.tipo,
     cantidad: newItem.cantidad || 1,
-    descripcion: newItem.descripcion,
+    descripcion: newItem.descripcion || '',
     marca: newItem.marca,
     ubicacion: newItem.ubicacion
   }
-  
+
   // Para equipos médicos/mobiliario, guardar las unidades individuales
   if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
     itemData.unidades = [...newItem.unidades]
+    if (!itemData.descripcion && itemData.unidades.length && itemData.unidades[0].nombre) {
+      itemData.descripcion = itemData.unidades[0].nombre
+    }
+    form.equiposEntrada.push(itemData)
   } else {
-    // Para accesorios/consumibles/refacciones, campos simples
+    // Para accesorios/consumibles/refacciones: guardar como un solo item con array de unidades
     itemData.modelo = newItem.modelo
     itemData.serie = newItem.serie
     itemData.lote = newItem.lote
     itemData.referencia = newItem.referencia
     itemData.claveHRAEI = newItem.claveHRAEI
+
+    // Mantener las unidades generadas en el formulario para editar cada una
+    itemData.unidades = Array.isArray(newItem.unidades) ? [...newItem.unidades] : []
+    itemData.cantidad = Number(newItem.cantidad) || (itemData.unidades.length || 1)
+    form.equiposEntrada.push(itemData)
   }
-  
-  form.equiposEntrada.push(itemData)
-  
+
   notifier.success('Item agregado correctamente')
   resetNewItem()
 }
@@ -903,6 +935,98 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.item-unidades-card {
+  background: linear-gradient(135deg, rgba(148, 163, 184, 0.18), rgba(191, 219, 254, 0.2));
+  border-radius: 16px;
+  padding: 18px 18px 4px 18px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
+}
+
+.item-unidades-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.item-unidades-head .badge {
+  align-self: flex-start;
+  background: linear-gradient(135deg, #0ea5e9, #22c55e);
+  color: #0f172a;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.item-unidades-head .hint {
+  font-size: 0.82rem;
+  color: rgba(15, 23, 42, 0.85);
+}
+
+.item-unidad-row {
+  background: rgba(15, 23, 42, 0.78);
+  border-radius: 14px;
+  padding: 14px 16px 16px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.5);
+}
+
+.item-unidad-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.item-unidad-head .badge {
+  background: #22c55e;
+  color: #022c22;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.item-unidad-head .tipo-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: rgba(226, 232, 240, 0.98);
+}
+
+.item-unidad-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px 14px;
+}
+
+.item-unidad-grid .field label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.95);
+}
+
+.item-unidad-grid .control {
+  background: rgba(15, 23, 42, 0.95);
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  color: #e5e7eb;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.item-unidad-grid .control::placeholder {
+  color: rgba(148, 163, 184, 0.9);
+}
+
+.item-unidad-grid .control:focus {
+  border-color: rgba(56, 189, 248, 0.9);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.7), 0 0 0 6px rgba(56, 189, 248, 0.15);
+}
+
 :deep(.form-wrap) {
   align-items: flex-start;
   justify-content: center;
@@ -1492,6 +1616,170 @@ input[type="text"],
   align-items: center;
 }
 
+/* Grid específico para unidades de equipo médico/mobiliario */
+.unidades-grid {
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  column-gap: 18px;
+  row-gap: 12px;
+}
+
+.unidades-grid .field-wide {
+  grid-column: 1 / -1;
+}
+
+.unidades-grid .field-medium {
+  min-width: 0;
+}
+
+.unidades-grid .field-compact .control {
+  max-width: 100%;
+}
+
+/* Asegurar que campos compactos dentro de unidades ocupen toda la columna
+   para que 'Clave HRAEI' tenga el mismo largo visual que el resto */
+.unidades-grid .field-compact .control,
+.unidades-grid .field-medium .control,
+.unidades-grid .field .control {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  display: block !important;
+}
+
+/* Forzar el tamaño del ctr-input dentro del add-item-form (evitar regla global input[v-model*="cantidad"]) */
+.add-item-form .counter .ctr-input {
+  width: 70px !important;
+  min-width: 70px !important;
+  max-width: 70px !important;
+}
+
+/* Copiar apariencia y animación del contador del componente de insumos */
+/* Copiado desde .quantity-field-centered para que el contador y botones sean idénticos */
+.add-item-form .counter {
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 1.3rem;
+  padding: 3px;
+  gap: 0;
+  width: fit-content;
+  margin: 0 auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+.add-item-form .counter:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12), inset 0 1px 3px rgba(255, 255, 255, 0.6);
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.add-item-form .ctr-btn {
+  height: 2rem !important;
+  padding: 0.3rem 0.5rem !important;
+  font-size: 0.85rem !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+  color: rgba(15, 23, 42, 0.8) !important;
+  transition: all 0.15s ease !important;
+  cursor: pointer;
+}
+
+.add-item-form .ctr-btn.wide {
+  width: 32px !important;
+  min-width: 32px !important;
+  font-size: 0.8rem !important;
+}
+
+.add-item-form .ctr-btn:hover {
+  background: rgba(255, 255, 255, 0.4) !important;
+  color: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: none !important;
+  border-radius: 0.4rem !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.add-item-form .ctr-btn:first-child:hover {
+  border-radius: 1rem 0.4rem 0.4rem 1rem !important;
+  margin-left: -3px !important;
+  padding-left: 6px !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.add-item-form .ctr-btn:last-child:hover {
+  border-radius: 0.4rem 1rem 1rem 0.4rem !important;
+  margin-right: -3px !important;
+  padding-right: 6px !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3) !important;
+}
+
+.add-item-form .ctr-btn:active {
+  transform: scale(0.96) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-radius: 0.4rem !important;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.4) !important;
+}
+
+.add-item-form .ctr-btn:first-child:active {
+  border-radius: 1rem 0.2rem 0.2rem 1rem !important;
+  margin-left: -6px !important;
+  width: 38px !important;
+}
+
+.add-item-form .ctr-btn:last-child:active {
+  border-radius: 0.2rem 1rem 1rem 0.2rem !important;
+  margin-right: -6px !important;
+  width: 38px !important;
+}
+
+.add-item-form .ctr-btn + .ctr-btn {
+  border-left: 1px solid rgba(15, 23, 42, 0.15) !important;
+}
+
+.add-item-form .ctr-input + .ctr-btn {
+  border-left: 1px solid rgba(15, 23, 42, 0.15) !important;
+}
+
+.add-item-form .ctr-input {
+  height: 2rem !important;
+  padding: 0.3rem 0.4rem !important;
+  width: 50px !important;
+  min-width: 50px !important;
+  max-width: 50px !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  border-left: 1px solid rgba(15, 23, 42, 0.15) !important;
+  color: rgba(15, 23, 42, 0.9) !important;
+  transition: all 0.15s ease !important;
+}
+
+@media (max-width: 860px) {
+  .unidades-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .unidades-grid .field-wide {
+    grid-column: 1 / -1;
+  }
+
+  .unidades-grid .field-compact .control {
+    max-width: 100%;
+  }
+}
+
 .form-footer {
   flex-direction: row;
   align-items: center;
@@ -1964,9 +2252,9 @@ select {
 }
 
 /* Inputs de cantidad más compactos en renglones */
-.item-grid .field:last-child .control,
-.item-grid input[type="number"],
-.item-row input[type="number"] {
+.item-row:not(.unidades-grid-row) .item-grid .field:last-child .control,
+.item-row:not(.unidades-grid-row) .item-grid input[type="number"],
+.item-row:not(.unidades-grid-row) input[type="number"] {
   width: 80px !important;
   min-width: 80px !important;
   max-width: 80px !important;
