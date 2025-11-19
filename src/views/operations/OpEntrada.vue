@@ -86,8 +86,8 @@
               <h4>Motivo y Descripción de Entrada</h4>
             </div>
             
-            <div style="display: grid; grid-template-columns: 285px 1fr; gap: 20px; width: 100%; align-items: start;">
-              <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="motivo-descripcion-grid">
+              <div class="motivo-section">
                 <div class="field">
                   <label>Motivo de Entrada</label>
                   <CustomSelect 
@@ -107,13 +107,12 @@
                 </div>
               </div>
               
-              <div class="field">
+              <div class="field descripcion-textarea-field">
                 <label>Descripción</label>
                 <textarea
                   class="control"
                   v-model.trim="form.descripcion"
                   placeholder="Ej. El equipo cuenta con una fuga en una toma de vacío"
-                  style="width: 100%; height: 200px; resize: vertical;"
                 ></textarea>
               </div>
             </div>
@@ -127,17 +126,11 @@
             </div>
             
             <!-- Formulario para agregar nuevo item -->
-            <div class="add-item-form" style="background: linear-gradient(135deg, rgba(147, 197, 253, 0.15), rgba(167, 243, 208, 0.15)); padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1.5px solid rgba(59, 130, 246, 0.2); overflow: visible;">
-              <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="add-item-form">
+              <div class="add-item-content">
                 <!-- Selector de tipo y cantidad -->
-                <div style="display: flex; justify-content: center; align-items: end; gap: 16px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; z-index: 1000;">
-                  <div class="field" :style="{ 
-                    width: newItem.tipo ? '280px' : '280px',
-                    transform: newItem.tipo ? 'translateX(-70px)' : 'translateX(0)',
-                    transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    zIndex: 1001
-                  }">
+                <div class="tipo-cantidad-container">
+                  <div class="field tipo-field">
                     <label style="font-weight: 700; color: rgba(15, 23, 42, 0.95); font-size: 0.95rem; text-align: center; display: block;">¿Qué entra?</label>
                     <CustomSelect 
                       v-model="newItem.tipo" 
@@ -150,9 +143,9 @@
                     @enter="onEnterCantidad"
                     @leave="onLeaveCantidad"
                   >
-                    <div class="field" v-if="newItem.tipo" style="width: 160px;">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9); text-align: center; display: block;">CANTIDAD</label>
-                      <div class="counter" style="justify-content: center;">
+                    <div class="field cantidad-field" v-if="newItem.tipo">
+                      <label>CANTIDAD</label>
+                      <div class="counter">
                         <button class="ctr-btn wide" type="button" @click="decNewBy(5)" aria-label="Disminuir cinco">-5</button>
                         <button class="ctr-btn" type="button" @click="decNew" aria-label="Disminuir uno">-</button>
                             <input
@@ -2262,6 +2255,244 @@ select {
   padding: 0.55rem 0.5rem !important;
 }
 
+/* Estilos para motivo y descripción grid */
+.motivo-descripcion-grid {
+  display: grid;
+  grid-template-columns: 285px 1fr;
+  gap: 20px;
+  width: 100%;
+  align-items: start;
+}
+
+.motivo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.descripcion-textarea-field textarea {
+  width: 100%;
+  height: 200px;
+  resize: vertical;
+}
+
+/* Add item form styles */
+.add-item-form {
+  background: linear-gradient(135deg, rgba(147, 197, 253, 0.15), rgba(167, 243, 208, 0.15));
+  padding: 24px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  border: 1.5px solid rgba(59, 130, 246, 0.2);
+  overflow: visible;
+}
+
+.add-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tipo-cantidad-container {
+  display: flex;
+  justify-content: center;
+  align-items: end;
+  gap: 16px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1000;
+}
+
+.tipo-field {
+  width: 280px;
+  transform: translateX(0);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1001;
+}
+
+.tipo-field.has-cantidad {
+  transform: translateX(-70px);
+}
+
+.cantidad-field {
+  width: 160px;
+}
+
+.cantidad-field label {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: rgba(15, 23, 42, 0.9);
+  text-align: center;
+  display: block;
+}
+
+.cantidad-field .counter {
+  justify-content: center;
+}
+
+/* Media Queries para Responsive Design */
+
+/* Tablets grandes y pantallas medianas (hasta 1024px) */
+@media (max-width: 1024px) {
+  :deep(.auth-card.glass) {
+    padding: 28px 32px;
+  }
+
+  .form-grid {
+    gap: 22px;
+  }
+
+  .section-card {
+    padding: 22px;
+  }
+}
+
+/* Tablets (hasta 768px) */
+@media (max-width: 768px) {
+  :deep(.auth-card.glass) {
+    padding: 24px;
+  }
+
+  .form-grid {
+    gap: 20px;
+  }
+
+  .section-card {
+    padding: 20px;
+  }
+
+  .section-grid.combined .field:nth-child(-n+4) {
+    grid-column: span 12;
+  }
+
+  .section-grid.combined .field:nth-last-child(-n+3) {
+    grid-column: span 12;
+  }
+
+  /* Motivo y descripción en columna */
+  .motivo-descripcion-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  /* Add item form responsive */
+  .tipo-cantidad-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tipo-field {
+    width: 100%;
+    transform: translateX(0) !important;
+  }
+
+  .cantidad-field {
+    width: 100%;
+  }
+
+  .item-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .unidades-grid-row .item-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Botones de acción */
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Móviles grandes (hasta 640px) */
+@media (max-width: 640px) {
+  :deep(.auth-card.glass) {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .form-grid {
+    gap: 18px;
+  }
+
+  .section-card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .section-head h4 {
+    font-size: 1rem;
+  }
+
+  .section-head .hint {
+    font-size: 0.78rem;
+  }
+
+  .field label {
+    font-size: 0.7rem;
+  }
+
+  .control {
+    height: 2.5rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+    min-width: 0;
+  }
+
+  .add-item-form {
+    padding: 18px;
+  }
+
+  /* Contador más compacto */
+  .counter {
+    gap: 0.3rem;
+  }
+
+  .ctr-btn {
+    height: 2rem;
+    width: 36px;
+    min-width: 36px;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.4rem;
+  }
+
+  .ctr-btn.wide {
+    width: 42px;
+    min-width: 42px;
+  }
+
+  .ctr-input {
+    height: 2rem;
+    width: 60px;
+    font-size: 0.85rem;
+  }
+
+  /* Scroll to top más pequeño */
+  .scroll-to-top-btn {
+    width: 48px;
+    height: 48px;
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .scroll-to-top-btn:hover {
+    width: 160px;
+  }
+
+  .scroll-icon {
+    font-size: 18px;
+  }
+
+  .scroll-text {
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 520px) {
   .section-card,
   .form-footer {
@@ -2274,6 +2505,80 @@ select {
 
   .item-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  :deep(.auth-card.glass) {
+    padding: 18px;
+  }
+
+  .btn.primary,
+  .btn.secondary {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    min-height: 44px;
+  }
+
+  /* Inputs de cantidad en item rows - stack verticalmente */
+  .item-row:not(.unidades-grid-row) .item-grid .field:last-child .control {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Móviles pequeños (hasta 400px) */
+@media (max-width: 400px) {
+  :deep(.auth-card.glass) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .section-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .section-head h4 {
+    font-size: 0.95rem;
+  }
+
+  .control {
+    height: 2.4rem;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .btn.primary,
+  .btn.secondary {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    min-height: 42px;
+  }
+
+  .scroll-to-top-btn {
+    width: 44px;
+    height: 44px;
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .scroll-to-top-btn:hover {
+    width: 140px;
+  }
+
+  .ctr-btn {
+    width: 32px;
+    min-width: 32px;
+    font-size: 0.8rem;
+  }
+
+  .ctr-btn.wide {
+    width: 36px;
+    min-width: 36px;
+  }
+
+  .ctr-input {
+    width: 50px;
+    font-size: 0.8rem;
   }
 }
 

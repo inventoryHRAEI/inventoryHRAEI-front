@@ -376,6 +376,248 @@ h1,h2,h3,h4,h5{ font-family: 'Poppins', 'Source Sans 3', sans-serif }
   .brand-text, .site-title, .user-btn .welcome-text { white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
 }
 
+/* Responsive breakpoints adicionales */
+
+/* Tablets medianas (hasta 768px) */
+@media (max-width: 768px) {
+  .container {
+    width: 95%;
+    padding-top: calc(var(--topbar-top) + var(--topbar-height) + 14px);
+  }
+
+  .topbar {
+    width: calc(100% - 24px);
+    padding: 8px 12px;
+  }
+
+  .brand-title {
+    font-size: 0.9rem;
+  }
+
+  .glass {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .btn {
+    padding: 12px 18px;
+    font-size: 0.95rem;
+  }
+
+  .input {
+    padding: 12px 10px;
+    font-size: 0.95rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+}
+
+/* Móviles grandes (hasta 640px) */
+@media (max-width: 640px) {
+  .container {
+    width: 96%;
+  }
+
+  .topbar {
+    width: calc(100% - 20px);
+    top: 8px;
+  }
+
+  :root {
+    --topbar-top: 8px;
+  }
+
+  .glass {
+    padding: 14px;
+    border-radius: 10px;
+  }
+
+  .form-col {
+    max-width: 100%;
+  }
+
+  .btn {
+    width: 100%;
+    display: block;
+  }
+
+  .link-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .link-row a {
+    text-align: center;
+    padding: 8px;
+  }
+}
+
+/* Móviles pequeños (hasta 480px) */
+@media (max-width: 480px) {
+  html {
+    font-size: 16px;
+  }
+
+  .container {
+    width: 98%;
+    padding-top: calc(var(--topbar-top) + var(--topbar-height) + 16px);
+  }
+
+  .topbar {
+    width: calc(100% - 16px);
+    padding: 6px 8px;
+    top: 6px;
+  }
+
+  :root {
+    --topbar-top: 6px;
+    --topbar-height: 52px;
+  }
+
+  .brand-title {
+    font-size: 0.85rem;
+  }
+
+  .topbar-logo {
+    width: 20px;
+    height: 20px;
+  }
+
+  .glass {
+    padding: 12px;
+    border-radius: 8px;
+    width: calc(100% - 16px);
+  }
+
+  .btn {
+    padding: 11px 16px;
+    font-size: 0.9rem;
+    min-height: 42px;
+  }
+
+  .input {
+    padding: 10px 9px;
+    font-size: 0.9rem;
+    min-height: 42px;
+  }
+
+  h2 {
+    font-size: 1.15rem;
+    margin-bottom: 10px;
+  }
+
+  .dropdown {
+    right: 8px;
+    left: 8px;
+    max-width: calc(100% - 24px);
+    padding: 10px;
+  }
+
+  .dropdown-item {
+    font-size: 0.95rem;
+    padding: 10px 12px;
+  }
+}
+
+/* Móviles muy pequeños (hasta 375px) */
+@media (max-width: 375px) {
+  html {
+    font-size: 15px;
+  }
+
+  .container {
+    width: 100%;
+    padding: calc(var(--topbar-top) + var(--topbar-height) + 12px) 8px 12px;
+  }
+
+  .topbar {
+    width: calc(100% - 12px);
+    padding: 5px 6px;
+    top: 4px;
+  }
+
+  :root {
+    --topbar-top: 4px;
+    --topbar-height: 48px;
+  }
+
+  .brand-title {
+    font-size: 0.8rem;
+  }
+
+  .topbar-logo {
+    width: 18px;
+    height: 18px;
+  }
+
+  .glass {
+    padding: 10px;
+    border-radius: 6px;
+    width: calc(100% - 12px);
+  }
+
+  .btn {
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    min-height: 40px;
+  }
+
+  .input {
+    padding: 9px 8px;
+    font-size: 0.85rem;
+    min-height: 40px;
+  }
+
+  h2 {
+    font-size: 1.05rem;
+  }
+
+  .dropdown {
+    padding: 8px;
+  }
+
+  .dropdown-item {
+    font-size: 0.9rem;
+    padding: 9px 10px;
+  }
+
+  .user-btn {
+    max-width: 120px;
+    padding: 5px 6px;
+  }
+
+  .user-btn .welcome-text {
+    max-width: 70px;
+  }
+
+  .user-btn .avatar {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* Landscape mode para móviles */
+@media (max-height: 500px) and (orientation: landscape) {
+  .form-wrap {
+    min-height: auto;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .glass {
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+
+  .topbar {
+    height: auto;
+    min-height: 44px;
+  }
+}
+
+
 /* Long titles in cards should wrap cleanly rather than overflow */
 .area-card .card-title{ word-break:break-word; overflow-wrap:anywhere; max-width:100% }
 

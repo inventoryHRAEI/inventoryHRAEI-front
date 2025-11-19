@@ -1487,6 +1487,202 @@ select {
   padding: 0.55rem 0.5rem !important;
 }
 
+/* Media Queries para Responsive Design */
+
+/* Tablets grandes y pantallas medianas (hasta 1024px) */
+@media (max-width: 1024px) {
+  :deep(.auth-card.glass) {
+    padding: 28px 32px;
+  }
+
+  .form-grid {
+    gap: 22px;
+  }
+
+  .section-card {
+    padding: 22px;
+  }
+}
+
+/* Tablets (hasta 768px) */
+@media (max-width: 768px) {
+  :deep(.auth-card.glass) {
+    padding: 24px;
+  }
+
+  .form-grid {
+    gap: 20px;
+  }
+
+  .section-card {
+    padding: 20px;
+  }
+
+  /* Main form grid responsive */
+  .section-grid.main-form {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .descripcion-field,
+  .fecha-field {
+    grid-column: 1;
+  }
+
+  .fecha-field .control {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Solicitante form responsive */
+  .section-grid.solicitante-form {
+    grid-template-columns: 1fr;
+  }
+
+  .section-grid.solicitante-form .field .control {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Item grid responsive */
+  .item-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .item-grid .field .control {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .item-grid .field:last-child .control {
+    text-align: left !important;
+  }
+
+  /* Botones de acción */
+  .form-actions {
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .form-actions .btn {
+    width: 100%;
+  }
+
+  .section-grid.combined .field:nth-child(-n+4) {
+    grid-column: span 12;
+  }
+
+  .section-grid.combined .field:nth-last-child(-n+3) {
+    grid-column: span 12;
+  }
+}
+
+/* Móviles grandes (hasta 640px) */
+@media (max-width: 640px) {
+  :deep(.auth-card.glass) {
+    padding: 20px;
+    border-radius: 20px;
+  }
+
+  .form-grid {
+    gap: 18px;
+  }
+
+  .section-card {
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .section-head h4 {
+    font-size: 1rem;
+  }
+
+  .section-head .hint {
+    font-size: 0.78rem;
+  }
+
+  .field label {
+    font-size: 0.7rem;
+  }
+
+  .control {
+    height: 2.5rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+    min-width: 0;
+  }
+
+  /* Contador más compacto */
+  .counter {
+    gap: 0.3rem;
+  }
+
+  .ctr-btn {
+    height: 2rem;
+    width: 36px;
+    min-width: 36px;
+    font-size: 0.85rem;
+    padding: 0.3rem 0.4rem;
+  }
+
+  .ctr-btn.wide {
+    width: 42px;
+    min-width: 42px;
+  }
+
+  .ctr-input {
+    height: 2rem;
+    width: 60px;
+    font-size: 0.85rem;
+  }
+
+  /* Ajustar contador centrado */
+  .quantity-field-centered .ctr-btn {
+    height: 1.9rem !important;
+    width: 30px !important;
+    min-width: 30px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .quantity-field-centered .ctr-btn.wide {
+    width: 30px !important;
+    min-width: 30px !important;
+  }
+
+  .quantity-field-centered .ctr-input {
+    height: 1.9rem !important;
+    width: 56px !important;
+    min-width: 56px !important;
+    max-width: 56px !important;
+    font-size: 0.85rem !important;
+  }
+
+  .quantity-field-centered .counter {
+    padding: 2px;
+  }
+
+  /* Scroll to top más pequeño */
+  .scroll-to-top-btn {
+    width: 48px;
+    height: 48px;
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .scroll-to-top-btn:hover {
+    width: 160px;
+  }
+
+  .scroll-icon {
+    font-size: 18px;
+  }
+
+  .scroll-text {
+    font-size: 13px;
+  }
+}
+
 @media (max-width: 520px) {
   .section-card,
   .form-footer {
@@ -1499,6 +1695,108 @@ select {
 
   .item-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  :deep(.auth-card.glass) {
+    padding: 18px;
+  }
+
+  .btn.primary,
+  .btn.secondary {
+    padding: 12px 24px;
+    font-size: 0.95rem;
+    min-height: 44px;
+  }
+
+  .form-actions {
+    padding: 18px;
+    margin-top: 24px;
+  }
+
+  /* Item row más compacto */
+  .item-row {
+    padding: 16px 18px;
+  }
+
+  .badge {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+  }
+
+  .item-head {
+    font-size: 0.9rem;
+  }
+}
+
+/* Móviles pequeños (hasta 400px) */
+@media (max-width: 400px) {
+  :deep(.auth-card.glass) {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .section-card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .section-head h4 {
+    font-size: 0.95rem;
+  }
+
+  .control {
+    height: 2.4rem;
+    padding: 0.45rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .btn.primary,
+  .btn.secondary {
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    min-height: 42px;
+  }
+
+  .scroll-to-top-btn {
+    width: 44px;
+    height: 44px;
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .scroll-to-top-btn:hover {
+    width: 140px;
+  }
+
+  .quantity-field-centered .ctr-btn {
+    height: 1.8rem !important;
+    width: 28px !important;
+    min-width: 28px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .quantity-field-centered .ctr-btn.wide {
+    width: 28px !important;
+    min-width: 28px !important;
+  }
+
+  .quantity-field-centered .ctr-input {
+    height: 1.8rem !important;
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .form-actions {
+    gap: 12px;
+    padding: 16px;
+    margin-top: 20px;
+  }
+
+  .item-row {
+    padding: 14px 16px;
   }
 }
 

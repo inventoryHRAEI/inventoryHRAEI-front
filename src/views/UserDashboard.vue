@@ -96,6 +96,126 @@ function go(name){ router.push({ name }).catch(()=>{}) }
   .area-card .pending-badge{ position:relative; margin:8px 12px 0 auto }
 }
 
+/* Responsive breakpoints adicionales */
+
+/* Tablets (hasta 768px) */
+@media (max-width: 768px) {
+  .area-grid {
+    gap: 18px;
+  }
+
+  .area-card .card-body {
+    padding: 10px 12px;
+  }
+
+  .area-card .card-title {
+    font-size: 14px;
+  }
+
+  .card-desc {
+    font-size: 12px;
+  }
+
+  .area-card .card-media {
+    height: 110px;
+  }
+}
+
+/* Móviles grandes (hasta 640px) */
+@media (max-width: 640px) {
+  .area-grid {
+    gap: 16px;
+  }
+
+  .area-card {
+    border-radius: 10px;
+  }
+
+  .area-card .card-media {
+    height: 100px;
+  }
+
+  .area-card .card-body {
+    padding: 10px;
+    gap: 5px;
+  }
+
+  .area-card .card-title {
+    font-size: 13px;
+  }
+
+  .card-desc {
+    font-size: 11px;
+    margin-top: 6px;
+  }
+}
+
+/* Móviles pequeños (hasta 480px) */
+@media (max-width: 480px) {
+  .cards-panel {
+    margin-top: 16px;
+  }
+
+  .area-grid {
+    gap: 14px;
+  }
+
+  .area-card {
+    border-radius: 8px;
+  }
+
+  .area-card .card-media {
+    height: 90px;
+  }
+
+  .area-card .card-media img {
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+
+  .area-card .card-body {
+    padding: 9px;
+  }
+
+  .area-card .card-title {
+    font-size: 12px;
+  }
+
+  .card-desc {
+    font-size: 10px;
+    margin-top: 5px;
+  }
+
+  .pending-badge {
+    padding: 5px 7px;
+    font-size: 11px;
+  }
+}
+
+/* Móviles muy pequeños (hasta 375px) */
+@media (max-width: 375px) {
+  .area-grid {
+    gap: 12px;
+  }
+
+  .area-card .card-media {
+    height: 80px;
+  }
+
+  .area-card .card-body {
+    padding: 8px;
+  }
+
+  .area-card .card-title {
+    font-size: 11px;
+  }
+
+  .card-desc {
+    font-size: 9.5px;
+  }
+}
+
+
 /* Modal / catalog styles */
 .modal-backdrop{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.48); z-index:1400; padding:20px }
 .modal-card{ width:min(920px,100%); max-width:920px; background:var(--card-bg,#fff); border-radius:12px; overflow:hidden; box-shadow:0 30px 80px rgba(2,6,23,0.48); display:flex; gap:0 }

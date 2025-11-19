@@ -67,4 +67,139 @@
   :deep(.auth-card-body) form.form-grid { grid-template-columns: 1fr; }
   .form-wrap { align-items:flex-start; }
 }
+
+/* Tablets (hasta 768px) */
+@media (max-width: 768px) {
+  .form-wrap {
+    padding: 10px;
+  }
+
+  .auth-card-header {
+    padding: 12px 16px;
+  }
+
+  .auth-card-header h2 {
+    font-size: 1.2rem;
+  }
+
+  .auth-card-body {
+    padding: 18px;
+  }
+
+  :deep(.auth-card-body) form.form-grid {
+    gap: 16px;
+  }
+}
+
+/* Móviles grandes (hasta 640px) */
+@media (max-width: 640px) {
+  .form-wrap {
+    padding: 8px;
+    min-height: auto;
+  }
+
+  .form-col {
+    max-width: 100%;
+  }
+
+  .auth-card-header {
+    padding: 10px 14px;
+  }
+
+  .auth-card-header h2 {
+    font-size: 1.1rem;
+  }
+
+  .auth-card-body {
+    padding: 16px;
+  }
+
+  :deep(.auth-card-body) form.form-grid {
+    gap: 14px;
+  }
+
+  :deep(.auth-card-body) form.form-grid .control,
+  :deep(.auth-card-body) form.form-grid .input,
+  :deep(.auth-card-body) form.form-grid input,
+  :deep(.auth-card-body) form.form-grid select,
+  :deep(.auth-card-body) form.form-grid textarea {
+    min-height: 46px;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+
+  :deep(.auth-card-body) form.form-grid .btn {
+    padding: 11px 20px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Móviles pequeños (hasta 480px) */
+@media (max-width: 480px) {
+  .form-wrap {
+    padding: 6px;
+  }
+
+  .auth-card-header {
+    padding: 8px 12px;
+  }
+
+  .auth-card-header h2 {
+    font-size: 1rem;
+  }
+
+  .auth-card-body {
+    padding: 14px;
+  }
+
+  :deep(.auth-card-body) form.form-grid {
+    gap: 12px;
+  }
+
+  :deep(.auth-card-body) form.form-grid .control,
+  :deep(.auth-card-body) form.form-grid .input,
+  :deep(.auth-card-body) form.form-grid input,
+  :deep(.auth-card-body) form.form-grid select,
+  :deep(.auth-card-body) form.form-grid textarea {
+    min-height: 44px;
+    padding: 9px 12px;
+    font-size: 0.85rem;
+  }
+
+  :deep(.auth-card-body) form.form-grid .btn {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Móviles muy pequeños (hasta 375px) */
+@media (max-width: 375px) {
+  .auth-card-header h2 {
+    font-size: 0.95rem;
+  }
+
+  .auth-card-body {
+    padding: 12px;
+  }
+
+  :deep(.auth-card-body) form.form-grid {
+    gap: 10px;
+  }
+
+  :deep(.auth-card-body) form.form-grid .control,
+  :deep(.auth-card-body) form.form-grid .input,
+  :deep(.auth-card-body) form.form-grid input,
+  :deep(.auth-card-body) form.form-grid select,
+  :deep(.auth-card-body) form.form-grid textarea {
+    min-height: 42px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+  }
+
+  :deep(.auth-card-body) form.form-grid .btn {
+    padding: 9px 16px;
+    font-size: 0.85rem;
+  }
+}
+
 </style>
