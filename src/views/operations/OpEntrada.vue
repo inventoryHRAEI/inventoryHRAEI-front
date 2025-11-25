@@ -83,45 +83,6 @@
           <!-- Motivo y Descripción de Entrada -->
           <div class="section-card combined-card">
             <div class="section-head">
-              <h4>Motivo y Descripción de Entrada</h4>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 285px 1fr; gap: 20px; width: 100%; align-items: start;">
-              <div style="display: flex; flex-direction: column; gap: 20px;">
-                <div class="field">
-                  <label>Motivo de Entrada</label>
-                  <CustomSelect 
-                    v-model="form.motivoEntrada" 
-                    :options="motivoEntradaOptions"
-                    placeholder="Seleccionar motivo de entrada"
-                  />
-                </div>
-                
-                <div class="field" v-if="form.motivoEntrada === 'otro'">
-                  <label>Especificar otro motivo</label>
-                  <input
-                    class="control"
-                    v-model.trim="form.otroMotivo"
-                    placeholder="Especifique el motivo de entrada"
-                  />
-                </div>
-              </div>
-              
-              <div class="field">
-                <label>Descripción</label>
-                <textarea
-                  class="control"
-                  v-model.trim="form.descripcion"
-                  placeholder="Ej. El equipo cuenta con una fuga en una toma de vacío"
-                  style="width: 100%; height: 200px; resize: vertical;"
-                ></textarea>
-              </div>
-            </div>
-          </div>
-
-          <!-- Equipo Médico, Accesorio o Consumible que Entra -->
-          <div class="section-card combined-card">
-            <div class="section-head">
               <h4>Equipo Médico, Accesorio o Consumible que Entra</h4>
               <small class="hint">Agrega uno o más elementos que ingresan</small>
             </div>
@@ -191,10 +152,15 @@
                         {{ getTipoLabel(newItem.tipo) }}
                       </div>
                       <div class="item-grid unidades-grid">
-                        <!-- Fila 1: Nombre (a lo ancho) -->
-                        <div class="field field-wide">
+                        <!-- Fila 1: Nombre y Cantidad (dos columnas) -->
+                        <div class="field field-compact">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">{{ getNombreLabel() }}</label>
                           <input class="control" v-model.trim="unidad.nombre" :placeholder="getNombrePlaceholder()" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+                        <!-- colocar cantidad a la derecha del nombre -->
+                        <div class="field field-medium unit-qty-field">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Cantidad</label>
+                          <input class="control unit-qty-input" v-model.number="unidad.cantidad" type="number" min="1" step="1" />
                         </div>
                         <!-- Fila 2: Marca y Ubicación -->
                         <div class="field field-medium">
@@ -215,14 +181,15 @@
                           <input class="control" v-model.trim="unidad.serie" placeholder="ej. 3500" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
                         <!-- Fila 4: Referencia y Clave HRAEI -->
-                        <div class="field field-compact">
+                        <div class="field field-medium">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Referencia</label>
                           <input class="control" v-model.trim="unidad.referencia" placeholder="ej. 9K9162" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
-                        <div class="field field-compact">
+                        <div class="field field-medium">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Clave HRAEI</label>
-                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="ej. COMODATO" style="font-size: 0.9rem; padding: 10px 14px; width: 100%;" />
+                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="ej. COMODATO" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
+                        
                       </div>
                     </div>
                   </div>
@@ -243,9 +210,14 @@
                       </div>
 
                       <div class="item-grid unidades-grid">
-                        <div class="field field-wide">
+                        <div class="field field-medium">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">{{ getNombreLabel() }}</label>
                           <input class="control" v-model.trim="unidad.nombre" :placeholder="getNombrePlaceholder()" style="font-size: 0.9rem; padding: 10px 14px;" />
+                        </div>
+                        <!-- cantidad al lado del nombre para mantener layout de 2 columnas -->
+                        <div class="field field-medium unit-qty-field">
+                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Cantidad</label>
+                          <input class="control unit-qty-input" v-model.number="unidad.cantidad" type="number" min="1" step="1" />
                         </div>
 
                         <div class="field field-medium">
@@ -258,20 +230,21 @@
                           <input class="control" v-model.trim="unidad.modelo" placeholder="Modelo" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
 
-                        <div class="field field-compact">
+                        <div class="field field-medium">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Lote</label>
                           <input class="control" v-model.trim="unidad.lote" placeholder="Lote" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
 
-                        <div class="field field-compact">
+                        <div class="field field-medium">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Referencia</label>
                           <input class="control" v-model.trim="unidad.referencia" placeholder="Referencia" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
 
-                        <div class="field field-compact">
+                        <div class="field field-wide">
                           <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Clave HRAEI</label>
-                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="Clave HRAEI" style="font-size: 0.9rem; padding: 10px 14px; width: 100%;" />
+                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="Clave HRAEI" style="font-size: 0.9rem; padding: 10px 14px;" />
                         </div>
+                        
                       </div>
                     </div>
                   </div>
@@ -302,19 +275,11 @@
                 <div style="flex: 1; height: 2px; background: linear-gradient(to left, rgb(59, 130, 246), transparent);"></div>
               </div>
               
-              <div v-for="(item, index) in form.equiposEntrada" :key="index" class="item-row">
+              <div v-for="(item, index) in form.equiposEntrada" :key="index" :class="['item-row', { 'item-row-exit': exitingItems.includes(item) }]">
                 <div class="item-head">
                   <span class="badge">#{{ index + 1 }}</span>
                   <span style="font-weight: 700; color: rgba(15, 23, 42, 0.9);">{{ getTipoLabel(item.tipo) }}</span>
                   <span style="margin-left: 10px; color: rgba(71, 85, 105, 0.8);">x{{ item.cantidad }}</span>
-                  <div style="margin-left: auto;">
-                    <button
-                      type="button"
-                      @click="eliminarItem(index)"
-                      class="btn secondary"
-                      style="padding: 6px 12px; border-radius: 8px; font-size: 0.85rem;"
-                    >Eliminar</button>
-                  </div>
                 </div>
 
                 <div class="item-grid">
@@ -342,6 +307,14 @@
                     <label>Cantidad</label>
                     <div>{{ item.cantidad }}</div>
                   </div>
+                  <div class="field" v-if="item.unidades && item.unidades.length">
+                    <label>Desglose por unidad</label>
+                    <div>
+                      <ul style="margin:0; padding-left: 18px; font-weight:600; color: rgba(15,23,42,0.78);">
+                        <li v-for="(u, ui) in item.unidades" :key="ui">{{ (u.nombre || 'Unidad ' + (ui+1)) }} — x{{ u.cantidad || 1 }}</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
                 
                 <!-- Unidades individuales (para equipos médicos/mobiliario) -->
@@ -351,33 +324,98 @@
                     <small class="hint">Información completa de cada unidad</small>
                   </div>
                   <div class="section-list">
-                    <div v-for="(unidad, uIdx) in item.unidades" :key="uIdx" class="item-unidades-card">
-                      <div class="list-group-item" style="background: rgba(255,255,255,0.18); border-radius: 18px; box-shadow: 0 8px 32px rgba(15,23,42,0.12); border: 1px solid rgba(71,85,105,0.10); margin-bottom: 12px; padding: 1.2rem 1.6rem; min-height: 100px; display: flex; align-items: center; gap: 18px; backdrop-filter: blur(16px);">
-                        <div style="display: flex; align-items: center; justify-content: center; min-width: 60px;">
-                          <span class="badge" style="background: linear-gradient(135deg, #e5e7eb, #cbd5e1); color: #222; font-size: 1rem; padding: 10px 18px; border-radius: 999px; box-shadow: 0 2px 8px rgba(71,85,105,0.10);">#{{ uIdx + 1 }}</span>
-                        </div>
-                        <div style="flex: 1;">
-                          <div class="d-flex w-100 justify-content-between" style="align-items: center; margin-bottom: 6px;">
-                            <h5 class="mb-1" style="font-size: 1.08rem; font-weight: 700; color: #222; margin: 0;">{{ getTipoLabel(item.tipo) }}</h5>
+                    <div v-for="(unidad, uIdx) in item.unidades" :key="uIdx" :class="['item-unidades-card', { 'unit-exit': exitingUnits.includes(unidad) }]">
+                      <article class="detalle-card detalle-card--compact">
+                        <div class="detalle-card__glow"></div>
+                        <div class="detalle-card__inner">
+                          <header class="detalle-card__header">
+                            <span class="detalle-card__badge">#{{ uIdx + 1 }}</span>
+                            <div>
+                              <p class="detalle-card__title">{{ getTipoLabel(item.tipo) }}</p>
+                              <small class="detalle-card__subtitle">Detalle rápido</small>
+                            </div>
+                            <span class="detalle-card__icon" aria-hidden="true">🧾</span>
+                            <TrashButton
+                              class="detalle-card__trash"
+                              :duration="trashAnimationDuration"
+                              @done="onUnitTrashDone(item, unidad)"
+                            />
+                          </header>
+                          <div class="detalle-card__grid">
+                            <div class="detalle-card__pair" style="--pair-hue: 210">
+                              <span class="detalle-card__chip" aria-hidden="true">
+                                <IdentificationIcon class="detalle-card__chip-icon" />
+                              </span>
+                              <div class="detalle-card__pair-body">
+                                <span class="detalle-card__label">Nombre</span>
+                                <span class="detalle-card__value">{{ unidad.nombre || '-' }}</span>
+                              </div>
+                            </div>
+                            <div class="detalle-card__pair" style="--pair-hue: 150">
+                              <span class="detalle-card__chip" aria-hidden="true">
+                                <TagIcon class="detalle-card__chip-icon" />
+                              </span>
+                              <div class="detalle-card__pair-body">
+                                <span class="detalle-card__label">Marca</span>
+                                <span class="detalle-card__value">{{ unidad.marca || '-' }}</span>
+                              </div>
+                            </div>
+                            <div class="detalle-card__pair" style="--pair-hue: 75">
+                              <span class="detalle-card__chip" aria-hidden="true">
+                                <MapPinIcon class="detalle-card__chip-icon" />
+                              </span>
+                              <div class="detalle-card__pair-body">
+                                <span class="detalle-card__label">Ubicación</span>
+                                <span class="detalle-card__value">{{ unidad.ubicacion || '-' }}</span>
+                              </div>
+                            </div>
+                            <div class="detalle-card__pair" style="--pair-hue: 340">
+                              <span class="detalle-card__chip" aria-hidden="true">
+                                <DevicePhoneMobileIcon class="detalle-card__chip-icon" />
+                              </span>
+                              <div class="detalle-card__pair-body">
+                                <span class="detalle-card__label">Modelo</span>
+                                <span class="detalle-card__value">{{ unidad.modelo || '-' }}</span>
+                              </div>
+                            </div>
+                            <div class="detalle-card__pair" style="--pair-hue: 20">
+                              <span class="detalle-card__chip" aria-hidden="true">
+                                <FingerPrintIcon class="detalle-card__chip-icon" />
+                              </span>
+                              <div class="detalle-card__pair-body">
+                                <span class="detalle-card__label">No. Serie</span>
+                                <span class="detalle-card__value">{{ unidad.serie || '-' }}</span>
+                              </div>
+                            </div>
+                            <div class="detalle-card__pair" style="--pair-hue: 280">
+                              <span class="detalle-card__chip" aria-hidden="true">
+                                <DocumentTextIcon class="detalle-card__chip-icon" />
+                              </span>
+                              <div class="detalle-card__pair-body">
+                                <span class="detalle-card__label">Referencia</span>
+                                <span class="detalle-card__value">{{ unidad.referencia || '-' }}</span>
+                              </div>
+                            </div>
+                            <div class="detalle-card__pair" style="--pair-hue: 110">
+                              <span class="detalle-card__chip" aria-hidden="true">
+                                <KeyIcon class="detalle-card__chip-icon" />
+                              </span>
+                              <div class="detalle-card__pair-body">
+                                <span class="detalle-card__label">Clave HRAEI</span>
+                                <span class="detalle-card__value">{{ unidad.claveHRAEI || '-' }}</span>
+                              </div>
+                            </div>
+                            <div class="detalle-card__pair detalle-card__pair--qty" style="--pair-hue: 200">
+                              <span class="detalle-card__chip" aria-hidden="true">Q</span>
+                              <div class="detalle-card__pair-body">
+                                <span class="detalle-card__label">Cantidad</span>
+                                <input class="detalle-card__value detalle-card__qty-input" type="number" min="1" v-model.number="unidad.cantidad" disabled aria-disabled="true" style="width:72px; padding:6px 8px; border-radius:8px; border:1px solid rgba(15,23,42,0.08); background: transparent; color: rgba(15,23,42,0.85);" />
+                              </div>
+                            </div>
                           </div>
-                          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 0.98rem;">
-                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Nombre</div>
-                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.nombre || '-' }}</div>
-                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Marca</div>
-                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.marca || '-' }}</div>
-                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Ubicación</div>
-                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.ubicacion || '-' }}</div>
-                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Modelo</div>
-                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.modelo || '-' }}</div>
-                            <div style="color: #6b7280; font-weight: 500; text-align: right;">No. Serie</div>
-                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.serie || '-' }}</div>
-                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Referencia</div>
-                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.referencia || '-' }}</div>
-                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Clave HRAEI</div>
-                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.claveHRAEI || '-' }}</div>
-                          </div>
                         </div>
-                      </div>
+                      </article>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -386,7 +424,6 @@
               No se han agregado equipos, accesorios, consumibles o refacciones
             </p>
           </div>
-        </div>
 
         </form>
         
@@ -427,6 +464,16 @@ import FormShell from '@/components/FormShell.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
 import notifier from '@/utils/notifier'
 import Swal from 'sweetalert2'
+import {
+  IdentificationIcon,
+  TagIcon,
+  MapPinIcon,
+  DevicePhoneMobileIcon,
+  FingerPrintIcon,
+  DocumentTextIcon,
+  KeyIcon
+} from '@heroicons/vue/24/outline'
+import TrashButton from '@/components/TrashButton.vue'
 
 const LOCAL_KEY = 'op-entrada'
 
@@ -526,7 +573,8 @@ const ajustarUnidadesEquipo = () => {
         modelo: '',
         serie: '',
         referencia: '',
-        claveHRAEI: ''
+        claveHRAEI: '',
+        cantidad: 1 // cantidad por unidad (desglose)
       })
     }
   } else if (cantidad < currentLength) {
@@ -611,10 +659,83 @@ const agregarItem = () => {
   resetNewItem()
 }
 
-const eliminarItem = (index) => {
-  form.equiposEntrada.splice(index, 1)
+const eliminarItem = (targetItem) => {
+  const targetIndex = form.equiposEntrada.findIndex((entry) => entry === targetItem)
+  if (targetIndex === -1) {
+    return
+  }
+  form.equiposEntrada.splice(targetIndex, 1)
   notifier.info('Item eliminado')
 }
+
+// animation duration (ms) - slightly longer so the can tilt + lid open look smooth
+// animation duration (ms) - match the paper animation length
+// animation duration (ms) used by TrashButton for can/lid/paper animation
+const trashAnimationDuration = 1000
+
+// Track units currently running exit animation (store object references)
+const exitingUnits = ref([])
+// Track item-rows (parent items) running exit animation
+const exitingItems = ref([])
+
+/**
+ * Called when a TrashButton finishes its animation for a unit (unidad)
+ * We add the unidad to exitingUnits (so template applies exit CSS) and
+ * remove it from the form after the small exit animation.
+ */
+const onUnitTrashDone = (itemObj, unidadObj) => {
+  try {
+    // Avoid double-removal
+    if (exitingUnits.value.includes(unidadObj)) return
+
+    // Mark for exit animation
+    exitingUnits.value.push(unidadObj)
+
+    // short exit animation after button animation completes
+    const exitMs = 320
+    setTimeout(() => {
+      // Find current item and the index of this unit by identity
+      const parentIndex = form.equiposEntrada.findIndex(e => e === itemObj)
+      if (parentIndex === -1) {
+        exitingUnits.value = exitingUnits.value.filter(u => u !== unidadObj)
+        return
+      }
+      const unitIndex = form.equiposEntrada[parentIndex].unidades.findIndex(u => u === unidadObj)
+      if (unitIndex === -1) {
+        exitingUnits.value = exitingUnits.value.filter(u => u !== unidadObj)
+        return
+      }
+
+      // perform removal
+      form.equiposEntrada[parentIndex].unidades.splice(unitIndex, 1)
+      notifier.info('Unidad eliminada')
+
+      // If after removing the unit the parent item has no unidades left, animate & remove the parent item too
+      if (!form.equiposEntrada[parentIndex].unidades || form.equiposEntrada[parentIndex].unidades.length === 0) {
+        // avoid duplicate entry
+        if (!exitingItems.value.includes(itemObj)) {
+          exitingItems.value.push(itemObj)
+          // small delay so parent exit animation is visible
+          const parentExitMs = 380
+          setTimeout(() => {
+            const idx = form.equiposEntrada.findIndex(e => e === itemObj)
+            if (idx !== -1) {
+              form.equiposEntrada.splice(idx, 1)
+              notifier.info('Item eliminado (sin unidades)')
+            }
+            exitingItems.value = exitingItems.value.filter(it => it !== itemObj)
+          }, parentExitMs)
+        }
+      }
+      // cleanup
+      exitingUnits.value = exitingUnits.value.filter(u => u !== unidadObj)
+    }, exitMs)
+  } catch (err) {
+    // swallow errors to avoid app failure
+    console.warn('onUnitTrashDone error', err)
+  }
+}
+// item-level trash buttons removed — deletions will be handled per-unidad via TrashButton component
 
 const getTipoLabel = (tipo) => {
   const option = tipoEntradaOptions.find(opt => opt.value === tipo)
@@ -939,11 +1060,33 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .item-unidades-card {
-  background: linear-gradient(135deg, rgba(148, 163, 184, 0.18), rgba(191, 219, 254, 0.2));
-  border-radius: 16px;
-  padding: 18px 18px 4px 18px;
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.25);
+  background: transparent;
+  padding: 0;
+  border: none;
+}
+
+/* Unit exit animation for fade + slide when deleted */
+.item-unidades-card.unit-exit {
+  transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.32s ease;
+  opacity: 0;
+  transform: translateX(18px) rotate(-2deg) scale(0.995);
+  pointer-events: none;
+}
+
+.item-unidades-card.unit-exit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  background: radial-gradient(circle at 50% 30%, rgba(59,130,246,0.14), transparent 40%);
+  z-index: 6;
+  pointer-events: none;
+  animation: rippleOut 0.44s cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+
+@keyframes rippleOut {
+  from { opacity: 0.8; transform: scale(0.6); }
+  to { opacity: 0; transform: scale(1.6); }
 }
 
 .item-unidades-head {
@@ -1028,6 +1171,182 @@ onBeforeUnmount(() => {
 .item-unidad-grid .control:focus {
   border-color: rgba(56, 189, 248, 0.9);
   box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.7), 0 0 0 6px rgba(56, 189, 248, 0.15);
+}
+
+.detalle-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  box-shadow: 0 25px 45px rgba(16, 24, 40, 0.18);
+}
+
+.detalle-card__glow {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(125deg, rgba(14, 165, 233, 0.12), rgba(255, 255, 255, 0.4));
+  filter: blur(28px);
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.detalle-card__inner {
+  position: relative;
+  z-index: 1;
+  backdrop-filter: blur(16px) saturate(140%);
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 9px 12px;
+}
+
+.detalle-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.detalle-card__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.15);
+  color: rgba(15, 23, 42, 0.9);
+  font-weight: 700;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.detalle-card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #0f172a;
+}
+
+.detalle-card__subtitle {
+  margin: 0;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: rgba(15, 23, 42, 0.5);
+}
+
+.detalle-card__icon {
+  margin-left: auto;
+  font-size: 1.1rem;
+}
+
+/* small positioning for TrashButton inside each detalle header */
+.detalle-card__trash {
+  margin-left: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detalle-card__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+}
+
+.detalle-card__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(15, 23, 42, 0.45);
+}
+
+.detalle-card__value {
+  font-size: 0.95rem;
+  color: rgba(15, 23, 42, 0.82);
+  font-weight: 600;
+}
+
+.detalle-card__pair {
+  display: flex;
+  justify-content: space-between;
+        gap: 12px;
+        padding: 3px 0;
+        border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+        position: relative;
+        padding-left: 38px;
+        --pair-hue: 210;
+}
+
+.detalle-card__pair:last-child {
+  border-bottom: none;
+}
+
+.detalle-card__chip {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, hsl(var(--pair-hue), 78%, 82%), hsl(var(--pair-hue), 72%, 55%));
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.22);
+  color: #0f172a;
+}
+
+.detalle-card__chip-icon {
+  width: 18px;
+  height: 18px;
+  stroke: rgba(15, 23, 42, 0.85);
+}
+
+.detalle-card__pair-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.detalle-card__pair::before {
+  content: attr(data-icon);
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, hsl(var(--pair-hue), 80%, 75%), hsl(var(--pair-hue), 70%, 55%));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+.detalle-card__pair::before {
+  content: attr(data-icon);
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+}
+
+.detalle-card--compact {
+  max-width: 520px;
+  margin: 0 auto;
+  padding-top: 4px;
 }
 
 :deep(.form-wrap) {
@@ -1590,6 +1909,29 @@ input[type="text"],
   gap: 16px;
 }
 
+/* item-row exit animation (fade + slide + subtle shrink) */
+.item-row-exit {
+  transition: transform 0.36s cubic-bezier(0.2, 0.9, 0.2, 1), opacity 0.36s ease, height 0.36s ease, margin 0.36s ease;
+  opacity: 0;
+  transform: translateX(26px) translateY(6px) rotate(-1.2deg) scale(0.996);
+  margin: 6px 0;
+  pointer-events: none;
+  height: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  overflow: hidden;
+}
+
+.item-row-exit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  background: radial-gradient(circle at 50% 30%, rgba(59,130,246,0.09), transparent 45%);
+  z-index: 4;
+  animation: rippleOut 0.44s ease-out;
+}
+
 .item-head {
   display: flex;
   align-items: center;
@@ -1598,6 +1940,12 @@ input[type="text"],
   font-size: 0.96rem;
   color: rgba(15, 23, 42, 0.9);
 }
+
+.item-actions {
+  margin-left: auto;
+}
+
+/* TrashButton CSS moved into reusable component */
 
 .badge {
   width: 28px;
@@ -1648,6 +1996,62 @@ input[type="text"],
   min-width: 0 !important;
   box-sizing: border-box !important;
   display: block !important;
+}
+
+/* Centered quantity input for unidad forms */
+.unit-qty-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.unit-qty-field label {
+  width: 100%;
+  text-align: center;
+}
+
+.unit-qty-input {
+  width: 82px !important;
+  min-width: 82px !important;
+  max-width: 100px !important;
+  text-align: center !important;
+  padding: 8px 10px !important;
+}
+
+/* Ensure unit qty input is centered inside fields (overrides .control width rules) */
+.unit-qty-field .control,
+.unit-qty-field .unit-qty-input {
+  width: 82px !important;
+  margin: 6px auto 0 auto !important;
+  display: inline-block !important;
+}
+
+/* Center quantity inside detalle-card pair for better visual alignment */
+.detalle-card__pair--qty .detalle-card__pair-body {
+  align-items: center;
+  justify-content: center;
+}
+
+.detalle-card__qty-input {
+  width: 84px !important;
+  text-align: center !important;
+  padding: 6px 8px !important;
+}
+
+/* Read-only appearance for disabled qty inputs inside saved items */
+.detalle-card__qty-input[disabled] {
+  opacity: 1 !important;
+  color: rgba(15,23,42,0.8) !important;
+  background: transparent !important;
+  border-color: rgba(15,23,42,0.05) !important;
+  box-shadow: none !important;
+}
+
+/* Also center the cantidad input in the detalle cards explicitly */
+.detalle-card__pair--qty .detalle-card__qty-input {
+  margin: 6px auto 0 auto !important;
+  display: inline-block !important;
 }
 
 /* Forzar el tamaño del ctr-input dentro del add-item-form (evitar regla global input[v-model*="cantidad"]) */
