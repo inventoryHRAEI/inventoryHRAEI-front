@@ -348,42 +348,45 @@
                 <div v-if="item.unidades && item.unidades.length > 0" class="section-card items-card">
                   <div class="section-head">
                     <h4>Detalles individuales</h4>
-                    <small class="hint">Completa la información individual de cada unidad</small>
+                    <small class="hint">Información completa de cada unidad</small>
                   </div>
                   <div class="section-list">
-                    <div v-for="(unidad, uIdx) in item.unidades" :key="uIdx" class="item-row">
-                      <div class="item-head">
-                        <span class="badge">#{{ uIdx + 1 }}</span>
-                        Unidad
+                    <div v-for="(unidad, uIdx) in item.unidades" :key="uIdx" class="item-unidades-card">
+                      <div class="list-group-item" style="background: rgba(255,255,255,0.18); border-radius: 18px; box-shadow: 0 8px 32px rgba(15,23,42,0.12); border: 1px solid rgba(71,85,105,0.10); margin-bottom: 12px; padding: 1.2rem 1.6rem; min-height: 100px; display: flex; align-items: center; gap: 18px; backdrop-filter: blur(16px);">
+                        <div style="display: flex; align-items: center; justify-content: center; min-width: 60px;">
+                          <span class="badge" style="background: linear-gradient(135deg, #e5e7eb, #cbd5e1); color: #222; font-size: 1rem; padding: 10px 18px; border-radius: 999px; box-shadow: 0 2px 8px rgba(71,85,105,0.10);">#{{ uIdx + 1 }}</span>
+                        </div>
+                        <div style="flex: 1;">
+                          <div class="d-flex w-100 justify-content-between" style="align-items: center; margin-bottom: 6px;">
+                            <h5 class="mb-1" style="font-size: 1.08rem; font-weight: 700; color: #222; margin: 0;">{{ getTipoLabel(item.tipo) }}</h5>
+                          </div>
+                          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; font-size: 0.98rem;">
+                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Nombre</div>
+                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.nombre || '-' }}</div>
+                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Marca</div>
+                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.marca || '-' }}</div>
+                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Ubicación</div>
+                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.ubicacion || '-' }}</div>
+                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Modelo</div>
+                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.modelo || '-' }}</div>
+                            <div style="color: #6b7280; font-weight: 500; text-align: right;">No. Serie</div>
+                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.serie || '-' }}</div>
+                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Referencia</div>
+                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.referencia || '-' }}</div>
+                            <div style="color: #6b7280; font-weight: 500; text-align: right;">Clave HRAEI</div>
+                            <div style="color: #222; font-weight: 600; text-align: left;">{{ unidad.claveHRAEI || '-' }}</div>
+                          </div>
+                        </div>
                       </div>
-                      <div class="item-grid">
-                        <div class="field">
-                          <label>Modelo</label>
-                          <div style="color: rgba(71, 85, 105, 0.9);">{{ unidad.modelo || '-' }}</div>
-                        </div>
-                        <div class="field">
-                          <label>No. Serie</label>
-                          <div style="color: rgba(71, 85, 105, 0.9);">{{ unidad.serie || '-' }}</div>
-                        </div>
-                        <div class="field">
-                          <label>Referencia</label>
-                          <div style="color: rgba(71, 85, 105, 0.9);">{{ unidad.referencia || '-' }}</div>
-                        </div>
-                        <div class="field">
-                          <label>Clave HRAEI</label>
-                          <div style="color: rgba(71, 85, 105, 0.9);">{{ unidad.claveHRAEI || '-' }}</div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            
-            <p v-else style="color: rgba(100, 116, 139, 0.7); font-style: italic; text-align: center; margin: 20px 0;">
+            <p v-if="form.equiposEntrada.length === 0" style="color: rgba(100, 116, 139, 0.7); font-style: italic; text-align: center; margin: 20px 0;">
               No se han agregado equipos, accesorios, consumibles o refacciones
             </p>
           </div>
+        </div>
 
         </form>
         
