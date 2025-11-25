@@ -35,3 +35,12 @@ export function clearAuthToken(){
   try { sessionStorage.removeItem('token') } catch {}
   try { window.dispatchEvent(new Event('session:updated')) } catch {}
 }
+
+export function clearStoredSessionData(){
+  // Limpia tokens y cualquier dato cacheado del usuario en storage
+  clearAuthToken()
+  try { localStorage.removeItem('user') } catch {}
+  try { localStorage.removeItem('nombre') } catch {}
+  try { localStorage.removeItem('role') } catch {}
+  try { localStorage.removeItem('email') } catch {}
+}

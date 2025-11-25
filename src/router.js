@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getAuthToken } from '@/utils/auth'
+import { getAuthToken, clearStoredSessionData } from '@/utils/auth'
+import { validateSession } from '@/utils/session'
 
 const Home = () => import('./views/Home.vue')
 const Login = () => import('./views/Login.vue')
@@ -44,21 +45,46 @@ const router = createRouter({
 })
 
 // Guard global de rutas: requiere token para rutas con meta.requiresAuth
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const token = getAuthToken()
-  if (to.meta && to.meta.requiresAuth && !token) {
-    return next({ name: 'login', query: { redirect: to.fullPath } })
+  let sessionResult = null
+  const ensureSession = async () => {
+    if (!sessionResult) sessionResult = await validateSession()
+    return sessionResult
   }
-  // Si ya hay token y va a login/register, mandarlo al dashboard (excepto add-account)
-  if ((to.name === 'login' || to.name === 'register') && token) {
-    return next({ name: 'dashboard' })
+
+  if (to.meta && to.meta.requiresAuth) {
+    if (!token) {
+      clearStoredSessionData()
+      return next({ name: 'login', query: { redirect: to.fullPath } })
+    }
+    const result = await ensureSession()
+    if (!result.valid) {
+      clearStoredSessionData()
+      return next({ name: 'login', query: { redirect: to.fullPath } })
+    }
   }
-  // Si está logueado y va al home, llevar al dashboard
-  if (to.name === 'home' && token) {
-    return next({ name: 'dashboard' })
+
+  if ((to.name === 'login' || to.name === 'register')) {
+    if (!token) return next()
+    const result = await ensureSession()
+    if (result.valid) return next({ name: 'dashboard' })
+    clearStoredSessionData()
+    // Token inválido: permitir que vaya a login/register (se limpiará en ensureSession)
+    return next()
   }
-  // Permitir /add-account incluso si está logueado
-  if (to.name === 'add-account' && token) return next()
+
+  if (to.name === 'home') {
+    if (!token) return next()
+    const result = await ensureSession()
+    if (result.valid) return next({ name: 'dashboard' })
+    clearStoredSessionData()
+    return next()
+  }
+
+  // Permitir /add-account incluso si hay sesión válida (flujo de cuenta adicional)
+  if (to.name === 'add-account') return next()
+
   next()
 })
 
