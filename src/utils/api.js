@@ -1,14 +1,17 @@
-// Utilitario para peticiones autenticadas con token almacenado en localStorage
+// Utilitario para peticiones autenticadas con cookies httpOnly
 
 export async function authedFetch(url, options = {}) {
-  const token = localStorage.getItem('token')
   const headers = new Headers(options.headers || {})
   // Añade Content-Type JSON si hay body string u objeto y no está definido
   const hasBody = options.body !== undefined && options.body !== null
   const contentTypeSet = [...headers.keys()].some(k => k.toLowerCase() === 'content-type')
   if (hasBody && !contentTypeSet) headers.set('Content-Type', 'application/json')
-  if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`)
-  const init = { ...options, headers }
+  
+  const init = {
+    ...options,
+    headers,
+    credentials: 'include' // IMPORTANTE: envía cookies en cada request
+  }
   return fetch(url, init)
 }
 

@@ -53,6 +53,9 @@ const operations = [
   { name: 'op-insumos-consumibles', label: 'Insumos y Consumibles', desc: 'Gestión de insumos.', img: imgConsumibles }
 ]
 
+const showRequests = ref(false)
+const myRequests = ref([])
+
 function go(name){ router.push({ name }).catch(()=>{}) }
 </script>
 

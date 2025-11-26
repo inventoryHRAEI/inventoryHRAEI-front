@@ -74,7 +74,7 @@
   import Swal from 'sweetalert2'
   import { useRouter, useRoute } from 'vue-router'
   import pendingRequestsStore from '@/stores/pendingRequestsStore'
-  import { getAuthToken, clearAuthToken } from '@/utils/auth'
+  import { validateSession, logout } from '@/utils/auth'
   // Notivue components
   import { Notivue, Notification, NotivueSwipe, slateTheme } from 'notivue'
   
@@ -112,16 +112,26 @@
     const router = useRouter()
     const menuOpen = ref(false)
 
-    function refreshSession(){
+    async function refreshSession(){
       try {
-        nombre.value = localStorage.getItem('nombre') || null
-        role.value = localStorage.getItem('role') || null
-        // Basar el estado de login en el token (memoria o persistente)
-        logged.value = !!getAuthToken()
-        const u = JSON.parse(localStorage.getItem('user') || 'null')
-        user.value = u || null
-        isAdmin.value = (role.value === 'admin')
-      } catch { /* ignore */ }
+        // Solo actualizar estado, NO redirigir
+        const result = await validateSession()
+        if (result.authenticated && result.user) {
+          logged.value = true
+          nombre.value = result.user.nombre || null
+          role.value = result.user.role || null
+          user.value = result.user
+          isAdmin.value = (role.value === 'admin')
+        } else {
+          logged.value = false
+          nombre.value = null
+          role.value = null
+          user.value = null
+          isAdmin.value = false
+        }
+      } catch { 
+        logged.value = false
+      }
     }
 
     // Intentar completar la foto del usuario consultando al backend si hace falta
@@ -246,13 +256,9 @@
           cancelButtonText: 'Cancelar'
         })
         if (!res.isConfirmed) return
-  clearAuthToken()
-        localStorage.removeItem('role')
-        localStorage.removeItem('nombre')
-        localStorage.removeItem('user')
         closeMenu()
-        try { window.dispatchEvent(new Event('session:updated')) } catch {}
-        router.push({ name: 'login' })
+        await logout()
+        router.push({ name: 'home' })
       } catch (e) { console.error(e) }
     }
 

@@ -1,6 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { getAuthToken, clearStoredSessionData } from '@/utils/auth'
-import { validateSession } from '@/utils/session'
+import { validateSession, clearStoredSessionData } from '@/utils/auth'
 
 const Home = () => import('./views/Home.vue')
 const Login = () => import('./views/Login.vue')
@@ -44,41 +43,21 @@ const router = createRouter({
   routes
 })
 
-// Guard global de rutas: requiere token para rutas con meta.requiresAuth
+// Guard global de rutas: valida sesión con el backend
 router.beforeEach(async (to, from, next) => {
-  const token = getAuthToken()
-  let sessionResult = null
-  const ensureSession = async () => {
-    if (!sessionResult) sessionResult = await validateSession()
-    return sessionResult
-  }
-
-  if (to.meta && to.meta.requiresAuth) {
-    if (!token) {
+  const needsAuth = to.matched.some(record => record.meta && record.meta.requiresAuth)
+  
+  if (needsAuth) {
+    const result = await validateSession()
+    if (!result.authenticated) {
       clearStoredSessionData()
-      return next({ name: 'login', query: { redirect: to.fullPath } })
+      return next({ path: '/login', replace: true })
     }
-    const result = await ensureSession()
-    if (!result.valid) {
-      clearStoredSessionData()
-      return next({ name: 'login', query: { redirect: to.fullPath } })
-    }
-  }
-
-  if ((to.name === 'login' || to.name === 'register')) {
-    if (!token) return next()
-    const result = await ensureSession()
-    if (result.valid) return next({ name: 'dashboard' })
-    clearStoredSessionData()
-    // Token inválido: permitir que vaya a login/register (se limpiará en ensureSession)
     return next()
   }
 
-  if (to.name === 'home') {
-    if (!token) return next()
-    const result = await ensureSession()
-    if (result.valid) return next({ name: 'dashboard' })
-    clearStoredSessionData()
+  if (to.name === 'login' || to.name === 'register' || to.name === 'home') {
+    // Permitir acceso a estas rutas públicas sin redirección automática
     return next()
   }
 

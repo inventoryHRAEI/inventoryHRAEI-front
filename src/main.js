@@ -29,8 +29,6 @@ const notivue = createNotivue({
 app.use(router)
 app.use(notivue)
 
-app.mount('#app')
-
 // Ajuste dinámico de variables CSS relacionadas con la topbar.
 function updateTopbarCSSVars(){
 	try{
@@ -47,8 +45,8 @@ function updateTopbarCSSVars(){
 	}catch(e){ /* no crítico */ }
 }
 
-// Ejecutar al inicio y en resize/ orientation change
-if (typeof window !== 'undefined'){
+function initTopbarObservers(){
+	if (typeof window === 'undefined') return
 	window.requestAnimationFrame(updateTopbarCSSVars)
 	window.addEventListener('resize', () => { window.requestAnimationFrame(updateTopbarCSSVars) })
 	window.addEventListener('orientationchange', () => { window.requestAnimationFrame(updateTopbarCSSVars) })
@@ -56,3 +54,8 @@ if (typeof window !== 'undefined'){
 	const obs = new MutationObserver(() => { window.requestAnimationFrame(updateTopbarCSSVars) })
 	obs.observe(document.body, { attributes: true, childList: true, subtree: true })
 }
+
+router.isReady().then(() => {
+	app.mount('#app')
+	initTopbarObservers()
+})

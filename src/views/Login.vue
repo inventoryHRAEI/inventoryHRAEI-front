@@ -40,7 +40,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import notifier from '@/utils/notifier'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
-import { setAuthToken } from '@/utils/auth'
 
 const email = ref('')
 const password = ref('')
@@ -64,29 +63,32 @@ const login = async () => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // IMPORTANTE: permite que el backend establezca la cookie
       body: JSON.stringify({ email: email.value, password: password.value })
     })
     let data
     try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Respuesta vacía' } }
-  if (!res.ok) throw new Error(data.msg || 'Credenciales inválidas')
-  // Guardar token con o sin persistencia según checkbox "Recordar usuario"
-  setAuthToken(data.token, { remember: remember.value })
-  if (data.role) localStorage.setItem('role', data.role)
-  if (data.nombre) localStorage.setItem('nombre', data.nombre)
-  if (data.email) localStorage.setItem('email', data.email)
-  // Guardar objeto usuario sencillo
-  const usuario = { nombre: data.nombre, role: data.role, email: data.email, foto: data.foto }
-  localStorage.setItem('user', JSON.stringify(usuario))
-  // Guardar o limpiar el email recordado
-  try {
-    if (remember.value) localStorage.setItem('rememberedEmail', email.value)
-    else localStorage.removeItem('rememberedEmail')
-  } catch {}
-  notifier.success('Sesión iniciada')
-  router.push({ name: 'dashboard' })
+    if (!res.ok) throw new Error(data.msg || 'Credenciales inválidas')
+    
+    // El token ya está en una cookie httpOnly, solo guardamos datos del usuario
+    if (data.role) localStorage.setItem('role', data.role)
+    if (data.nombre) localStorage.setItem('nombre', data.nombre)
+    if (data.email) localStorage.setItem('email', data.email)
+    const usuario = { nombre: data.nombre, role: data.role, email: data.email, foto: data.foto }
+    localStorage.setItem('user', JSON.stringify(usuario))
+    
+    // Guardar o limpiar el email recordado
+    try {
+      if (remember.value) localStorage.setItem('rememberedEmail', email.value)
+      else localStorage.removeItem('rememberedEmail')
+    } catch {}
+    
+    notifier.success('Sesión iniciada')
+    try { window.dispatchEvent(new Event('session:updated')) } catch {}
+    router.push({ name: 'dashboard' })
   } catch (e) {
     error.value = e.message
-  notifier.error(e.message)
+    notifier.error(e.message)
   }
 }
 </script>
