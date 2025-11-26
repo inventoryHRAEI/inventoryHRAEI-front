@@ -83,6 +83,43 @@
           <!-- Motivo y Descripción de Entrada -->
           <div class="section-card combined-card">
             <div class="section-head">
+              <h4>Motivo y Descripción de Entrada</h4>
+              <small class="hint">Especifica el motivo y una descripción de la entrada</small>
+            </div>
+            <div class="section-grid combined">
+              <div class="field" style="grid-column: span 6;">
+                <label>Motivo de Entrada</label>
+                <CustomSelect 
+                  v-model="form.motivoEntrada" 
+                  :options="motivoEntradaOptions"
+                  placeholder="Seleccionar motivo"
+                />
+              </div>
+              
+              <div v-if="form.motivoEntrada === 'otro'" class="field" style="grid-column: span 6;">
+                <label>Especifique Motivo de Entrada</label>
+                <input
+                  class="control"
+                  v-model.trim="form.otroMotivo"
+                  placeholder="Especifique el motivo"
+                />
+              </div>
+              
+              <div class="field" style="grid-column: 1 / -1;">
+                <label>Descripción de Entrada</label>
+                <textarea
+                  class="control"
+                  v-model.trim="form.descripcion"
+                  placeholder="Describe los detalles de la entrada"
+                  style="resize: vertical; min-height: 180px; padding: 12px 18px;"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Equipo Médico, Accesorio o Consumible que Entra -->
+          <div class="section-card combined-card">
+            <div class="section-head">
               <h4>Equipo Médico, Accesorio o Consumible que Entra</h4>
               <small class="hint">Agrega uno o más elementos que ingresan</small>
             </div>
@@ -479,15 +516,15 @@ const router = useRouter()
 
 // Opciones del select de motivo de entrada
 const motivoEntradaOptions = [
-  { value: '', label: 'Seleccionar' },
-  { value: 'mantenimiento-preventivo-externo', label: 'MANTENIMIENTO PREVENTIVO EXTERNO.' },
-  { value: 'mantenimiento-correctivo-externo', label: 'MANTENIMIENTO CORRECTIVO EXTERNO.' },
-  { value: 'calibracion-externa', label: 'CALIBRACIÓN EXTERNA.' },
-  { value: 'diagnostico', label: 'DIAGNOSTICO.' },
-  { value: 'inicio-contrato', label: 'INICIO DE CONTRATO.' },
-  { value: 'inicio-demostracion', label: 'INICIO DE DEMOSTRACIÓN.' },
-  { value: 'reemplazo-equipo', label: 'REEMPLAZO DE EQUIPO.' },
-  { value: 'otro', label: 'OTRO; ESPECIFICAR:' }
+  { value: '', label: 'Seleccionar motivo' },
+  { value: 'mantenimiento-preventivo-externo', label: 'MANTENIMIENTO PREVENTIVO EXTERNO' },
+  { value: 'mantenimiento-correctivo-externo', label: 'MANTENIMIENTO CORRECTIVO EXTERNO' },
+  { value: 'calibracion-externa', label: 'CALIBRACIÓN EXTERNA' },
+  { value: 'diagnostico', label: 'DIAGNOSTICO' },
+  { value: 'inicio-contrato', label: 'INICIO DE CONTRATO' },
+  { value: 'inicio-demostracion', label: 'INICIO DE DEMOSTRACIÓN' },
+  { value: 'reemplazo-equipo', label: 'REEMPLAZO DE EQUIPO' },
+  { value: 'otro', label: 'OTRO; ESPECIFICAR' }
 ]
 
 // Opciones del select de tipo de entrada
