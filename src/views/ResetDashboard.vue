@@ -23,12 +23,12 @@
             </div>
           </div>
 
-          <div style="margin-top:14px; display:flex; gap:12px; align-items:center">
-            <button type="button" class="btn secondary" style="flex:1" @click="resendCode" :disabled="sendingResend">Reenviar código</button>
-            <button class="btn primary" style="flex:1" type="submit">Restablecer</button>
-          </div>
+          <div class="row mt-14">
+                    <button type="button" class="btn secondary flex-1" @click="resendCode" :disabled="sendingResend">Reenviar código</button>
+                    <button class="btn primary flex-1" type="submit">Restablecer</button>
+                  </div>
         </form>
-  <div class="link-row" style="margin-top:12px"><router-link to="/dashboard">Volver a la página principal</router-link></div>
+  <div class="link-row mt-12"><router-link to="/dashboard">Volver a la página principal</router-link></div>
         <div v-if="msg" class="msg">{{ msg }}</div>
         <div v-if="error" class="error">{{ error }}</div>
       </div>

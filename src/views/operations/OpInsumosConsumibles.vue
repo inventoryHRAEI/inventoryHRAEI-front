@@ -202,8 +202,8 @@ const onCancel = async () => {
   })
 
   if (result.isConfirmed) {
-    // Regresar al inicio (dashboard)
-    router.push('/')
+    // Regresar al dashboard
+    try { router.push({ name: 'dashboard' }) } catch { router.push('/') }
   }
 }
 
@@ -490,6 +490,12 @@ onBeforeUnmount(() => {
   padding: 0;
   color: #e6ebf5;
   position: relative;
+}
+
+.op-card, .section-card, .item-row {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .form-grid {
@@ -900,7 +906,7 @@ onBeforeUnmount(() => {
   -moz-border-radius: 25px !important;
   font-size: 0.95rem;
   width: 100%;
-  min-width: 220px;
+  min-width: 220px; /* desktop default; overridden on small screens */
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(12px);
@@ -909,6 +915,19 @@ onBeforeUnmount(() => {
   font-weight: 600;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Responsive: allow inputs to shrink on smaller screens and become fluid */
+@media (max-width: 900px) {
+  .control { min-width: 0 !important; }
+  .control.w-38ch, .control.w-20ch, .control.w-12ch { width: 100% !important; min-width: 0 !important; }
+}
+
+/* Make grid more flexible on medium screens */
+@media (max-width: 1040px) {
+  .item-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 }
 
 .control::placeholder {
@@ -927,8 +946,6 @@ onBeforeUnmount(() => {
   -webkit-border-radius: 25px !important;
   -moz-border-radius: 25px !important;
 }
-
-
 
 /* Asegurar inputs text redondeados */
 input[type="text"].control,
@@ -1422,13 +1439,38 @@ input[type="text"],
     justify-content: center;
     width: 100%;
   }
+
+  /* Mantener contador en forma de cápsula sin flex-wrap */
+  .counter { display: flex !important; gap: 0 !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; border-radius: 1.3rem !important; padding: 3px !important; background: rgba(255, 255, 255, 0.25) !important; backdrop-filter: blur(12px) !important; border: 1px solid rgba(255,255,255,0.3) !important; width: fit-content !important; margin: 0 auto !important; box-sizing: border-box !important; overflow: hidden !important; }
+  .counter > * { flex-shrink: 0 !important; border-radius: 0 !important; }
+}
+
+@media (max-width: 720px) {
+  .section-card { padding: 16px }
+  .item-grid { grid-template-columns: 1fr; gap: 12px }
+  .item-grid .field { width: 100% !important }
+  .item-grid .field .control { width: 100% !important; min-width: 0 !important }
+  .op-card, .section-card, .item-row { overflow-x: hidden; box-sizing: border-box }
+  .item-grid .field { min-width: 0 }
+  .field { min-width: 0 }
+  .field .control { flex: 1 1 auto; min-width: 0; width: 100% !important }
+  /* Mantener contador como cápsula sin flex-wrap */
+  .counter { display: flex !important; gap: 0 !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; border-radius: 1.3rem !important; padding: 3px !important; background: rgba(255, 255, 255, 0.25) !important; backdrop-filter: blur(12px) !important; border: 1px solid rgba(255,255,255,0.3) !important; width: fit-content !important; margin: 0 auto !important; box-sizing: border-box !important; overflow: hidden !important; }
+  .counter > * { flex-shrink: 0 !important; border-radius: 0 !important; }
+  .ctr-btn { width: 28px !important; height: 28px !important; padding: 0 !important; font-size: 0.75rem !important; min-width: 28px !important; }
+  .ctr-btn.wide { width: 28px !important; min-width: 28px !important; }
+  .ctr-input { width: 50px !important; min-width: 50px !important; height: 28px !important; padding: 0.2rem 0.3rem !important; font-size: 0.8rem !important; }
+  .control.w-38ch, .control.w-20ch, .control.w-12ch { width: 100% !important; min-width: 0 !important; }
+  .form-actions { flex-direction: column; gap: 12px }
 }
 
 /* AJUSTAR TAMAÑOS DE INPUTS DE CANTIDAD */
 .control.w-12ch,
 input[type="number"].control,
-.field:has(label:contains("Cantidad")) .control,
-input[v-model*="cantidad"],
+.quantity-field .control,
+.quantity-field-centered .control,
+.unit-qty-field .control,
+.field input[type="number"].control,
 input[placeholder="0"] {
   width: 80px !important;
   min-width: 80px !important;
@@ -1502,6 +1544,23 @@ select {
   }
 }
 
+/* Very small screens: ensure comfortable touch sizes and avoid elements collapsing */
+@media (max-width: 420px) {
+  .control { min-width: 0 !important; width: 100% !important; font-size: 0.95rem !important; height: 44px !important; padding: 8px 12px !important; }
+  .item-grid { grid-template-columns: 1fr !important; }
+  .field { min-width: 0 !important; }
+  .section-card, .items-card { padding: 14px !important; }
+  .save-btn { width: 100% !important; display: block !important; }
+  .fecha-field .control { width: 100% !important; min-width: 0 !important; }
+  .control.w-12ch, .control.w-20ch, .control.w-38ch { width: 100% !important; min-width: 0 !important; }
+  /* Mantener contador en forma de cápsula sin flex-wrap */
+  .counter { display: flex !important; gap: 0 !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; border-radius: 1.3rem !important; padding: 3px !important; background: rgba(255, 255, 255, 0.25) !important; backdrop-filter: blur(12px) !important; border: 1px solid rgba(255,255,255,0.3) !important; width: fit-content !important; margin: 0 auto !important; box-sizing: border-box !important; overflow: hidden !important; }
+  .counter > * { flex-shrink: 0 !important; border-radius: 0 !important; }
+  .ctr-btn { width: 28px !important; height: 28px !important; padding: 0 !important; font-size: 0.75rem !important; min-width: 28px !important; }
+  .ctr-btn.wide { width: 28px !important; min-width: 28px !important; }
+  .ctr-input { width: 50px !important; min-width: 50px !important; height: 28px !important; padding: 0.2rem 0.3rem !important; font-size: 0.8rem !important; }
+  .quantity-field-centered { flex-wrap: nowrap; align-items: center; justify-content: center }
+}
 @supports not (backdrop-filter: blur(10px)) {
   :deep(.auth-card.glass) {
     backdrop-filter: none;

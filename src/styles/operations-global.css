@@ -645,7 +645,10 @@ input[type="text"],
 /* AJUSTAR TAMAÑOS DE INPUTS DE CANTIDAD */
 .control.w-12ch,
 input[type="number"].control,
-.field:has(label:contains("Cantidad")) .control,
+.quantity-field .control,
+.quantity-field-centered .control,
+.unit-qty-field .control,
+.field input[type="number"].control,
 input[v-model*="cantidad"],
 input[placeholder="0"] {
   width: 80px !important;
@@ -718,6 +721,46 @@ select {
   .item-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+@media (max-width: 720px) {
+  /* Make the overall form grid stack to single column in small screens */
+  .form-grid { grid-template-columns: 1fr !important; gap: 16px !important }
+  .section-grid { grid-template-columns: 1fr !important; gap: 12px !important }
+}
+
+@media (max-width: 420px) {
+  /* Keep "¿Qué entra?" and cantidad inline but shrink their width to preserve shape */
+  .add-item-controls { flex-direction: row !important; flex-wrap: nowrap !important; gap: 8px !important; align-items: center !important; justify-content: center !important }
+  .field.field--tipo { width: 200px !important }
+  .field.field--cantidad { width: 120px !important }
+  .item-grid { grid-template-columns: 1fr !important }
+  /* Transform shift amount reduced to prevent overflow on small screens */
+  .field.field--tipo.is-shifted { transform: translateX(-40px) !important }
+  /* Shrink counter sizes but keep shape */
+  .quantity-field-centered .ctr-btn, .add-item-form .ctr-btn { width: 28px !important; min-width: 28px !important; height: 28px !important; font-size: 0.85rem !important; }
+  .ctr-input, .add-item-form .ctr-input { width: 44px !important; min-width: 44px !important; height: 32px !important; font-size: 0.9rem !important }
+  .ctr-btn.wide { width: 36px !important; min-width: 36px !important }
+  /* For add-item form and main quantity counters, keep them inline (no wrap) but smaller */
+  .add-item-form .counter, .quantity-field-centered .counter { flex-wrap: nowrap !important }
+}
+
+/* Very small screens - consistent overrides for operations forms */
+@media (max-width: 420px) {
+  .control { min-width: 0 !important; width: 100% !important; font-size: 0.95rem !important; height: 44px !important; padding: 8px 12px !important; }
+  .item-grid { grid-template-columns: 1fr !important; }
+  .field { min-width: 0 !important; }
+  .ctr-btn { min-width: 36px !important; width: 36px !important; height: 36px !important; }
+  /* Further shrink for micro screens but keep the same layout */
+  .field.field--tipo { width: 180px !important }
+  .field.field--cantidad { width: 110px !important }
+  .field.field--tipo.is-shifted { transform: translateX(-30px) !important }
+  .quantity-field-centered .ctr-btn, .add-item-form .ctr-btn { width: 26px !important; min-width: 26px !important; height: 26px !important; }
+  .ctr-input, .add-item-form .ctr-input { width: 40px !important; min-width: 40px !important; }
+  .ctr-input { min-width: 48px !important; width: 56px !important; }
+  .counter { flex-wrap: wrap !important; gap: 8px !important; }
+  .section-card, .items-card { padding: 14px !important; }
+  .save-btn { width: 100% !important; display: block !important; }
 }
 
 @supports not (backdrop-filter: blur(10px)) {
@@ -1207,3 +1250,16 @@ select {
     padding: 24px;
   }
 }
+
+/* Form label common style */
+.form-label { font-weight: 600; color: rgba(71,85,105,0.95); font-size: 0.85rem; display:block }
+.form-label--small { font-size: 0.85rem }
+
+/* Generic plus icon style for buttons */
+.btn-icon-plus { font-size: 1.1rem; margin-right: 6px; display:inline-block }
+
+/* Default widths for some field modifiers used in operation forms */
+.field.field--tipo { width: 280px }
+.field.field--cantidad { width: 160px }
+.field.field--tipo { transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); }
+.field.field--tipo.is-shifted { transform: translateX(-70px); }

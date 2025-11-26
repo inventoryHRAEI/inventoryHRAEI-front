@@ -8,7 +8,7 @@
           <h4>Ingresa nombre y un correo electrónico</h4>
           <input v-model="nombre" placeholder="Nombre" required class="input" />
           <input v-model="email" placeholder="Email" type="email" required class="input" />
-          <div style="margin-top:12px">
+          <div class="mt-12">
             <button class="btn secondary" type="submit">Enviar código</button>
           </div>
         </form>
@@ -17,11 +17,11 @@
           <h4> Valida tu correo electronico</h4>
           <h6>ahi deberia haber un codigo para validar tu correo...</h6>
           <input v-model="token" placeholder="Código (6 dígitos)" type="text" maxlength="6" required class="input" />
-          <div style="margin-top:8px; display:flex; gap:8px; align-items:center">
+          <div class="row mt-8">
             <button class="btn secondary" type="submit">Verificar</button>
             <button class="btn secondary" type="button" :disabled="resendCount >= maxResends" @click="resendToken">Reenviar código ({{ remainingResends }})</button>
           </div>
-          <div style="margin-top:8px; font-size:12px; color:#78FFF1">Si no recibes el token, puedes reenviarlo hasta 4 veces.</div>
+          <div class="mt-8 small-info">Si no recibes el token, puedes reenviarlo hasta 4 veces.</div>
         </form>
 
         <form v-else-if="step === 3" @submit.prevent="completeRegistration">
@@ -41,9 +41,9 @@
           <div style="margin-top:8px">
             <label>Foto de perfil (opcional)</label>
             <input type="file" @change="onFileChange" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml" />
-            <div v-if="previewUrl || nombre" style="margin-top:10px">
-              <div style="font-size:12px; opacity:.8; margin-bottom:6px">Vista previa — así se verá en el encabezado</div>
-              <div class="user-btn" style="pointer-events:none; display:inline-flex">
+            <div v-if="previewUrl || nombre" class="mt-10">
+              <div class="small-info" style="opacity:.8; margin-bottom:6px">Vista previa — así se verá en el encabezado</div>
+              <div class="user-btn user-btn--preview">
                 <span class="avatar">
                   <img v-if="previewUrl" :src="previewUrl" alt="preview" class="top-avatar" />
                   <span v-else>👤</span>
@@ -55,12 +55,12 @@
             <div v-if="photoMsg" class="msg">{{ photoMsg }}</div>
             <div v-if="photoErr" class="error">{{ photoErr }}</div>
           </div>
-          <div style="margin-top:20px">
+          <div class="mt-20">
             <button class="btn secondary" type="submit">Crear cuenta</button>
           </div>
         </form>
 
-        <div class="link-row" style="margin-top:12px">
+        <div class="link-row mt-12">
           <router-link to="/login">¿Ya tienes una cuenta? Inicia sesión</router-link>
         </div>
 

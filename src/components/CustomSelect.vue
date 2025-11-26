@@ -175,6 +175,13 @@ onBeforeUnmount(() => {
   background: rgba(6, 182, 212, 0.85);
 }
 
+/* Small screens - ensure the select triggers and dropdown stay usable */
+@media (max-width: 420px) {
+  .select-trigger { font-size: 0.92rem !important; padding: 10px 12px !important; }
+  .dropdown-list { max-width: calc(100vw - 32px); left: 0; right: 0; }
+  .selected-text { white-space: normal; overflow: visible; text-overflow: clip; }
+}
+
 /* Scrollbar personalizado - solo aparece al hacer scroll */
 .dropdown-list {
   scrollbar-width: thin;

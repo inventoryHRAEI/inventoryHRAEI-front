@@ -88,18 +88,12 @@
             </div>
             
             <!-- Formulario para agregar nuevo item -->
-            <div class="add-item-form" style="background: linear-gradient(135deg, rgba(147, 197, 253, 0.15), rgba(167, 243, 208, 0.15)); padding: 24px; border-radius: 16px; margin-bottom: 24px; border: 1.5px solid rgba(59, 130, 246, 0.2); overflow: visible;">
-              <div style="display: flex; flex-direction: column; gap: 20px;">
+            <div class="add-item-form">
+              <div class="add-item-form__inner">
                 <!-- Selector de tipo y cantidad -->
-                <div style="display: flex; justify-content: center; align-items: end; gap: 16px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); position: relative; z-index: 1000;">
-                  <div class="field" :style="{ 
-                    width: newItem.tipo ? '280px' : '280px',
-                    transform: newItem.tipo ? 'translateX(-70px)' : 'translateX(0)',
-                    transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    zIndex: 1001
-                  }">
-                    <label style="font-weight: 700; color: rgba(15, 23, 42, 0.95); font-size: 0.95rem; text-align: center; display: block;">¿Qué entra?</label>
+                <div class="add-item-controls">
+                  <div class="field field--tipo" :class="{ 'is-shifted': newItem.tipo }" :style="{ position: 'relative', zIndex: 1001 }">
+                    <label class="form-label form-label--center">¿Qué entra?</label>
                     <CustomSelect 
                       v-model="newItem.tipo" 
                       :options="tipoEntradaOptions"
@@ -111,9 +105,9 @@
                     @enter="onEnterCantidad"
                     @leave="onLeaveCantidad"
                   >
-                    <div class="field" v-if="newItem.tipo" style="width: 160px;">
-                      <label style="font-weight: 600; font-size: 0.88rem; color: rgba(15, 23, 42, 0.9); text-align: center; display: block;">CANTIDAD</label>
-                      <div class="counter" style="justify-content: center;">
+                    <div class="field field--cantidad" v-if="newItem.tipo">
+                      <label class="form-label form-label--small form-label--center">CANTIDAD</label>
+                      <div class="counter">
                         <button class="ctr-btn wide" type="button" @click="decNewBy(5)" aria-label="Disminuir cinco">-5</button>
                         <button class="ctr-btn" type="button" @click="decNew" aria-label="Disminuir uno">-</button>
                             <input
@@ -159,35 +153,35 @@
                         </div>
                         <!-- colocar cantidad a la derecha del nombre -->
                         <div class="field field-medium unit-qty-field">
-                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Cantidad</label>
+                          <label class="form-label form-label--small">Cantidad</label>
                           <input class="control unit-qty-input" v-model.number="unidad.cantidad" type="number" min="1" step="1" />
                         </div>
                         <!-- Fila 2: Marca y Ubicación -->
                         <div class="field field-medium">
-                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Marca</label>
-                          <input class="control" v-model.trim="unidad.marca" placeholder="Ej. Philips" style="font-size: 0.9rem; padding: 10px 14px;" />
+                          <label class="form-label form-label--small">Marca</label>
+                          <input class="control" v-model.trim="unidad.marca" placeholder="Ej. Philips" />
                         </div>
                         <div class="field field-medium">
-                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Ubicación</label>
-                          <input class="control" v-model.trim="unidad.ubicacion" placeholder="Ej. UCIA" style="font-size: 0.9rem; padding: 10px 14px;" />
+                          <label class="form-label form-label--small">Ubicación</label>
+                          <input class="control" v-model.trim="unidad.ubicacion" placeholder="Ej. UCIA" />
                         </div>
                         <!-- Fila 3: Modelo y No. Serie -->
                         <div class="field field-compact">
-                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Modelo</label>
-                          <input class="control" v-model.trim="unidad.modelo" placeholder="ej. MX40" style="font-size: 0.9rem; padding: 10px 14px;" />
+                          <label class="form-label form-label--small">Modelo</label>
+                          <input class="control" v-model.trim="unidad.modelo" placeholder="ej. MX40" />
                         </div>
                         <div class="field field-compact">
-                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">No. Serie</label>
-                          <input class="control" v-model.trim="unidad.serie" placeholder="ej. 3500" style="font-size: 0.9rem; padding: 10px 14px;" />
+                          <label class="form-label form-label--small">No. Serie</label>
+                          <input class="control" v-model.trim="unidad.serie" placeholder="ej. 3500" />
                         </div>
                         <!-- Fila 4: Referencia y Clave HRAEI -->
                         <div class="field field-medium">
-                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Referencia</label>
-                          <input class="control" v-model.trim="unidad.referencia" placeholder="ej. 9K9162" style="font-size: 0.9rem; padding: 10px 14px;" />
+                          <label class="form-label form-label--small">Referencia</label>
+                          <input class="control" v-model.trim="unidad.referencia" placeholder="ej. 9K9162" />
                         </div>
                         <div class="field field-medium">
-                          <label style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Clave HRAEI</label>
-                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="ej. COMODATO" style="font-size: 0.9rem; padding: 10px 14px;" />
+                          <label class="form-label form-label--small">Clave HRAEI</label>
+                          <input class="control" v-model.trim="unidad.claveHRAEI" placeholder="ej. COMODATO" />
                         </div>
                         
                       </div>
@@ -258,7 +252,7 @@
                     @click="agregarItem"
                     :disabled="!canAddItem"
                   >
-                    <span style="font-size: 1.1rem; margin-right: 6px;">+</span> Agregar Item
+                    <span class="btn-icon-plus">+</span> Agregar Item
                   </button>
                 </div>
               </div>
@@ -406,7 +400,9 @@
                               </div>
                             </div>
                             <div class="detalle-card__pair detalle-card__pair--qty" style="--pair-hue: 200">
-                              <span class="detalle-card__chip" aria-hidden="true">Q</span>
+                              <span class="detalle-card__chip" aria-hidden="true">
+                                <HashtagIcon class="detalle-card__chip-icon" />
+                              </span>
                               <div class="detalle-card__pair-body">
                                 <span class="detalle-card__label">Cantidad</span>
                                 <input class="detalle-card__value detalle-card__qty-input" type="number" min="1" v-model.number="unidad.cantidad" disabled aria-disabled="true" style="width:72px; padding:6px 8px; border-radius:8px; border:1px solid rgba(15,23,42,0.08); background: transparent; color: rgba(15,23,42,0.85);" />
@@ -473,6 +469,7 @@ import {
   DocumentTextIcon,
   KeyIcon
 } from '@heroicons/vue/24/outline'
+import { HashtagIcon } from '@heroicons/vue/24/outline'
 import TrashButton from '@/components/TrashButton.vue'
 
 const LOCAL_KEY = 'op-entrada'
@@ -785,8 +782,8 @@ const onCancel = async () => {
   })
 
   if (result.isConfirmed) {
-    // Regresar al inicio (dashboard)
-    router.push('/')
+    // Regresar al dashboard
+    try { router.push({ name: 'dashboard' }) } catch { router.push('/') }
   }
 }
 
@@ -1260,7 +1257,8 @@ onBeforeUnmount(() => {
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(15, 23, 42, 0.45);
+  color: rgba(15, 23, 42, 0.65); /* slightly darker for better visibility */
+  font-weight: 700; /* increase boldness slightly */
 }
 
 .detalle-card__value {
@@ -1793,7 +1791,7 @@ onBeforeUnmount(() => {
   -moz-border-radius: 25px !important;
   font-size: 0.95rem;
   width: 100%;
-  min-width: 220px;
+  min-width: 220px; /* desktop default; overridden on small screens */
   box-sizing: border-box;
   background: rgba(255, 255, 255, 0.25);
   backdrop-filter: blur(12px);
@@ -1802,6 +1800,53 @@ onBeforeUnmount(() => {
   font-weight: 600;
   transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
   overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .control { min-width: 0 !important; }
+  .control.w-38ch, .control.w-20ch, .control.w-12ch { width: 100% !important; min-width: 0 !important; }
+}
+
+/* Very small screens (<= 420px) - ensure inputs and counters are readable and don't collapse */
+@media (max-width: 420px) {
+  .control { min-width: 0 !important; width: 100% !important; font-size: 0.95rem !important; height: 44px !important; padding: 8px 12px !important; }
+  .item-grid { grid-template-columns: 1fr !important; }
+  .unidades-grid { grid-template-columns: 1fr !important; }
+  .quantity-field-centered .ctr-input, .section-grid.combined .quantity-field .ctr-input { width: 56px !important; min-width: 48px !important; }
+  .quantity-field-centered .ctr-btn, .ctr-btn { flex-shrink: 0 !important; min-width: 36px !important; width: 36px !important; height: 36px !important; }
+  /* Mantener contador como cápsula sin flex-wrap */
+  .counter { display: flex !important; gap: 0 !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: center !important; border-radius: 1.3rem !important; padding: 3px !important; background: rgba(255, 255, 255, 0.25) !important; backdrop-filter: blur(12px) !important; border: 1px solid rgba(255,255,255,0.3) !important; width: fit-content !important; margin: 0 auto !important; box-sizing: border-box !important; overflow: hidden !important; }
+  .section-grid.combined .field { width: 100% !important; }
+  /* reduce heavy paddings on cards to fit small screens */
+  .section-card, .items-card { padding: 14px !important; }
+  .detalle-card--compact { max-width: 100% !important; padding-top: 0 !important; }
+  /* override inline width set on add-item-form field to prevent overflow */
+  .add-item-form .field { width: 100% !important; transform: none !important; }
+  .detalle-card__qty-input { width: 56px !important; min-width: 48px !important; }
+}
+
+@media (max-width: 1040px) {
+  .item-grid { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  /* En tablets, los campos pueden apilarse si no caben */
+  .add-item-controls { justify-content: center; }
+  .field.field--tipo { flex: 0 1 280px; }
+  .field.field--cantidad { flex: 0 1 160px; }
+}
+
+@media (max-width: 900px) {
+  /* Si no caben lado a lado, se apilan en columna */
+  .add-item-controls {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    justify-content: center;
+  }
+  .add-item-controls .field { width: 100%; text-align: center; }
+  .field.field--tipo { width: 100%; max-width: 320px; flex-basis: auto; z-index: 1005; margin: 0 auto; text-align: center; transform: none !important; }
+  .field.field--tipo label { text-align: center; width: 100%; }
+  .field.field--cantidad { width: 100%; max-width: 220px; flex-basis: auto; margin: 0 auto; text-align: center; }
+  .field.field--cantidad label { text-align: center; width: 100%; }
 }
 
 .control::placeholder {
@@ -2054,6 +2099,49 @@ input[type="text"],
   display: inline-block !important;
 }
 
+/* Add item form style moved from inline to CSS */
+.add-item-form {
+  background: linear-gradient(135deg, rgba(147, 197, 253, 0.15), rgba(167, 243, 208, 0.15));
+  padding: 24px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  border: 1.5px solid rgba(59, 130, 246, 0.2);
+  overflow: visible;
+}
+.add-item-form__inner { display:flex; flex-direction:column; gap:20px }
+.add-item-controls { display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap: wrap; transition: all 0.4s cubic-bezier(0.4,0,0.2,1); position: relative; z-index: 1000; width: 100%; box-sizing: border-box; }
+.add-item-controls .field { position: relative; z-index: 1001; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.field.field--tipo { width: 280px; flex-basis: 280px; margin: 0 auto; }
+.field.field--cantidad { width: 160px; flex-basis: 160px; margin: 0 auto; }
+.field.field--tipo.is-shifted { transform: none !important; }
+.form-label { font-weight: 600; color: rgba(15, 23, 42, 0.9); display:block; text-align: center; width: 100%; }
+.form-label--center { text-align:center; width: 100%; }
+.form-label--small { font-size: 0.88rem; font-weight: 600 }
+
+/* Estilos para CustomSelect dropdown - asegurar que aparezca por encima SIN TRANSPARENCIA */
+.field.field--tipo :deep(.custom-select),
+.field.field--tipo :deep(.select-dropdown) {
+  z-index: 9999 !important;
+  position: relative;
+}
+
+.field.field--tipo :deep(.select-menu),
+.field.field--tipo :deep(.dropdown),
+.field.field--tipo :deep([role="listbox"]),
+.field.field--tipo :deep(.vs__dropdown-menu) {
+  z-index: 9999 !important;
+  position: absolute;
+  background: rgba(255, 255, 255, 1) !important;
+  background-color: rgba(255, 255, 255, 1) !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+}
+
+/* Bajar z-index del contador cuando el dropdown está visible */
+.field.field--cantidad {
+  z-index: 1 !important;
+}
+
 /* Forzar el tamaño del ctr-input dentro del add-item-form (evitar regla global input[v-model*="cantidad"]) */
 .add-item-form .counter .ctr-input {
   width: 70px !important;
@@ -2186,6 +2274,46 @@ input[type="text"],
     max-width: 100%;
   }
 }
+
+/* Responsive fixes: ensure inputs and card grids don't overflow in small devices */
+@media (max-width: 860px) {
+  .item-grid { grid-template-columns: 1fr 120px 80px; gap: 10px; }
+  .section-card { padding: 20px; }
+}
+@media (max-width: 720px) {
+  .section-card { padding: 16px }
+  .item-grid { grid-template-columns: 1fr; gap: 12px }
+  .item-grid .field { width: 100% !important }
+  .item-grid .field .control { width: 100% !important; min-width: 0 !important }
+  /* Prevent overflow, allow wrap for counters and keep inputs flexible */
+  .op-card, .section-card, .item-row { overflow-x: hidden; box-sizing: border-box }
+  .item-grid .field { min-width: 0 }
+  .field { min-width: 0 }
+  .field .control { flex: 1 1 auto; min-width: 0; width: 100% !important }
+  /* Mantener contador en forma de cápsula sin quebrar */
+  .counter { display: flex; gap: 0; flex-wrap: nowrap; align-items: center; justify-content: center; border-radius: 1.3rem !important; padding: 3px; background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.3); width: fit-content; margin: 0 auto; box-sizing: border-box; overflow: hidden; }
+  .counter > * { flex-shrink: 0 !important; border-radius: 0 !important; }
+  .ctr-btn { width: 28px !important; height: 28px !important; padding: 0 !important; font-size: 0.75rem !important; min-width: 28px !important; }
+  .ctr-btn.wide { width: 28px !important; min-width: 28px !important; }
+  .ctr-input { width: 50px !important; min-width: 50px !important; height: 28px !important; padding: 0.2rem 0.3rem !important; font-size: 0.8rem !important; }
+  .control.w-38ch, .control.w-20ch, .control.w-12ch { width: 100% !important; min-width: 0 !important; }
+  .form-actions { flex-direction: column; gap: 12px }
+  /* Campos apilados verticalmente en pantallas pequeñas - CENTRADOS */
+  .add-item-controls { flex-direction: column; align-items: center; gap: 12px; padding: 0 16px; justify-content: center; }
+  .add-item-controls .field { width: 100%; text-align: center; }
+  .field.field--tipo { width: 100%; max-width: 300px; flex-basis: auto; z-index: 1005; margin: 0 auto; text-align: center; transform: none !important; }
+  .field.field--tipo label { text-align: center; width: 100%; }
+  .field.field--cantidad { width: 100%; max-width: 200px; flex-basis: auto; margin: 0 auto; text-align: center; }
+  .field.field--cantidad label { text-align: center; width: 100%; }
+}
+@media (max-width: 520px) {
+  .section-card { padding: 14px }
+  .item-row { padding: 12px }
+  .btn.primary, .btn.secondary { width: 100% }
+}
+
+.op-card, .section-card, .item-row { box-sizing: border-box; max-width: 100%; overflow-x: hidden }
+.control { overflow-wrap: anywhere; word-break: break-word }
 
 .form-footer {
   flex-direction: row;
@@ -2339,6 +2467,8 @@ input[type="text"],
   align-items: center;
   gap: 0;
 }
+
+.btn-icon-plus{ font-size: 1.1rem; margin-right: 6px; display:inline-block }
 
 /* Scroll to top button - Reescrito simple */
 .scroll-to-top-btn {
