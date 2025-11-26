@@ -3,6 +3,22 @@ import App from './App.vue'
 import router from './router'
 import './styles.css'
 import './styles/operations-global.css'
+// Inicializar windowManager antes de crear la app
+import './utils/windowManager'
+// Si este window fue abierto por script (query param scriptOpen=1), marcarlo en sessionStorage
+if (typeof window !== 'undefined') {
+	try {
+		const url = new URL(window.location.href)
+		const isScriptOpen = url.searchParams.get('scriptOpen')
+		if (isScriptOpen === '1') {
+			sessionStorage.setItem('openedByScript', '1')
+			const openerId = url.searchParams.get('openerId')
+			if (openerId) sessionStorage.setItem('openerId', openerId)
+		}
+	} catch (e) {
+		// no crítico
+	}
+}
 // Notivue (notificaciones elegantes)
 import { createNotivue } from 'notivue'
 import 'notivue/notification.css'

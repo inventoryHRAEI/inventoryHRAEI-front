@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { validateSession, clearStoredSessionData } from '@/utils/auth'
+import { validateSession, clearStoredSessionData, isActiveWindow } from '@/utils/auth'
 
 const Home = () => import('./views/Home.vue')
 const Login = () => import('./views/Login.vue')
@@ -48,6 +48,12 @@ router.beforeEach(async (to, from, next) => {
   const needsAuth = to.matched.some(record => record.meta && record.meta.requiresAuth)
   
   if (needsAuth) {
+    // Verificar que la ventana sea la activa
+    if (!isActiveWindow()) {
+      // Si la ventana no es la activa y trata de acceder a ruta protegida
+      return next({ path: '/login', replace: true })
+    }
+    
     const result = await validateSession()
     if (!result.authenticated) {
       clearStoredSessionData()

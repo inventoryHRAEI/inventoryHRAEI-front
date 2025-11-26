@@ -59,6 +59,9 @@
       <!-- Mobile notifications modal (rendered globally) -->
       <MobileModal />
       
+      <!-- Overlay para ventanas inactivas -->
+      <InactiveWindowOverlay />
+      
       <!-- Notivue: contenedor global de notificaciones elegantes -->
       <Notivue v-slot="item">
         <NotivueSwipe :item="item" :touch-only="true" :threshold="0.35" exclude="a, button">
@@ -71,6 +74,7 @@
 <script setup>
   import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
   import MobileModal from '@/components/MobileModal.vue'
+  import InactiveWindowOverlay from '@/components/InactiveWindowOverlay.vue'
   import Swal from 'sweetalert2'
   import { useRouter, useRoute } from 'vue-router'
   import pendingRequestsStore from '@/stores/pendingRequestsStore'

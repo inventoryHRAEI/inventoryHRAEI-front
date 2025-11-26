@@ -1,4 +1,5 @@
 // Utilidades de autenticación: sistema basado en cookies httpOnly
+import { windowManager } from './windowManager'
 
 // BroadcastChannel para sincronizar logout entre pestañas
 const authChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('auth_channel') : null
@@ -15,6 +16,19 @@ if (authChannel) {
       }
     }
   }
+}
+
+// Escuchar eventos de logout desde ventana secundaria
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'secondaryLogout' && windowManager.isActiveWindow()) {
+      // Una ventana secundaria cerró sesión en backend
+      // La ventana activa debe recargar y mostrar alerta
+      clearStoredSessionData()
+      alert('Tu sesión fue cerrada porque se detectó actividad duplicada. Por favor, inicia sesión nuevamente.')
+      window.location.reload()
+    }
+  })
 }
 
 // Contador de ventanas/pestañas abiertas
@@ -41,10 +55,16 @@ if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
         })
       } catch {}
       clearStoredSessionData()
+      windowManager.cleanup()
     } else {
       localStorage.setItem('windowCount', count.toString())
     }
   })
+}
+
+// Verificar si esta ventana es la activa
+export function isActiveWindow() {
+  return windowManager.isActiveWindow()
 }
 
 // Validar sesión consultando al backend
@@ -90,6 +110,9 @@ export async function logout() {
   if (authChannel) {
     authChannel.postMessage('logout')
   }
+  
+  // Notificar mediante windowManager
+  windowManager.notifyLogout()
   
   // Limpiar datos locales
   clearStoredSessionData()

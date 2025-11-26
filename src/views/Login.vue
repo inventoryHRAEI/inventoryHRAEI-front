@@ -39,6 +39,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import notifier from '@/utils/notifier'
+import { windowManager } from '@/utils/windowManager'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
 
 const email = ref('')
@@ -59,6 +60,24 @@ onMounted(() => {
 
 const login = async () => {
   error.value = ''
+  
+  // Verificar si ya hay una ventana activa antes de hacer login
+  const activeWindowId = localStorage.getItem('activeWindowId')
+  const currentWindowId = sessionStorage.getItem('windowId')
+  
+  if (activeWindowId && activeWindowId !== currentWindowId) {
+    // Verificar si la ventana activa sigue viva
+    const lastHeartbeat = localStorage.getItem('activeWindowHeartbeat')
+    if (lastHeartbeat) {
+      const timeSinceHeartbeat = Date.now() - parseInt(lastHeartbeat)
+      if (timeSinceHeartbeat < 3000) { // Ventana activa detectada en los últimos 3 segundos
+        error.value = 'Ya existe una sesión activa en otra ventana. Cierra esa ventana primero.'
+        notifier.error(error.value)
+        return
+      }
+    }
+  }
+  
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -83,6 +102,20 @@ const login = async () => {
       else localStorage.removeItem('rememberedEmail')
     } catch {}
     
+    // Marcar esta ventana como la activa
+    try {
+      console.log('login: reclamando este window como activo')
+      windowManager.setAsActive()
+      // Si esta ventana fue abierta por script desde otra, intentar cerrar la ventana que abrió este (opener)
+      try {
+        if (window.opener && typeof window.opener.close === 'function') {
+          console.log('Cerrando la ventana que abrió este login (opener)')
+          window.opener.close()
+        }
+      } catch (err) {
+        console.warn('No se pudo cerrar la ventana opener:', err)
+      }
+    } catch (e) { console.warn('windowManager no disponible', e) }
     notifier.success('Sesión iniciada')
     try { window.dispatchEvent(new Event('session:updated')) } catch {}
     router.push({ name: 'dashboard' })
