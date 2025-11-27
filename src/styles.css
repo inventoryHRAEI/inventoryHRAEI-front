@@ -1,14 +1,14 @@
-:root{
+:root {
   --bg-1: #0b1220;
   --bg-2: #0f1724;
-  --card-bg: rgba(255,255,255,0.04);
-  --card-border: rgba(255,255,255,0.06);
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.06);
   --accent: #2edd5a;
   --accent-2: #299deb;
   --text: #000000;
   --muted: rgb(0, 0, 0);
   --btn-green: #0bb828;
-  --link-green-light: #0ccf6a;  
+  --link-green-light: #0ccf6a;
   --btn-text-dark: #0b6b4a;
   --bg-img-brightness: 0.6;
   /* Métricas del topbar para posicionar correctamente el dropdown fijo */
@@ -18,213 +18,761 @@
   --container-toppad: calc(var(--topbar-top) + var(--topbar-height) + 12px);
 }
 
-*{ box-sizing: border-box }
-html,body,#app{ height:100%; margin:0; font-family: 'Source Sans 3', 'Segoe UI', Roboto, Arial, sans-serif; color:var(--text); background: linear-gradient(180deg,var(--bg-1),var(--bg-2)); }
+* {
+  box-sizing: border-box
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  font-family: 'Source Sans 3', 'Segoe UI', Roboto, Arial, sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+}
 
 /* El fondo (imagen/video) se mantiene como elemento en App.vue */
-.bg-media{ position:fixed; inset:0; z-index:0 }
-.bg-img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02); }
-.bg-img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02) brightness(var(--bg-img-brightness)); }
+.bg-media {
+  position: fixed;
+  inset: 0;
+  z-index: 0
+}
 
-.container{ position:relative; z-index:2; max-width:920px; width:92%; margin:0 auto; padding-top: var(--container-toppad); }
-.container{ transition: none }
+.bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.02) brightness(var(--bg-img-brightness));
+}
+
+.container {
+  position: relative;
+  z-index: 2;
+  max-width: 920px;
+  width: 92%;
+  margin: 0 auto;
+  padding-top: var(--container-toppad);
+}
+
+.container {
+  transition: none
+}
 
 /* Cuando el topbar crece (por ejemplo, en móvil con título en dos líneas), agregar más espacio superior */
-@media (max-width:560px){
-  :root{ --container-toppad: calc(var(--topbar-top) + var(--topbar-height) + 18px) }
+@media (max-width:560px) {
+  :root {
+    --container-toppad: calc(var(--topbar-top) + var(--topbar-height) + 18px)
+  }
 }
 
 /* Global: Very small screens - ensure forms and controls keep readability and don't overflow */
-@media (max-width:420px){
-  .control { min-width: 0 !important; width: 100% !important; font-size: 0.95rem !important; height: 44px !important; padding: 8px 12px !important; }
-  .input, .btn, .dropdown, .user-btn { min-width: 0 !important; }
-  .ctr-btn { min-width: 36px !important; width: 36px !important; height: 36px !important; }
-  .ctr-input { min-width: 48px !important; width: 56px !important; }
-  .counter { gap: 8px !important; flex-wrap: wrap !important; }
-  .form-grid { gap: 12px !important; }
-  .glass{ padding: 10px !important; }
+@media (max-width:420px) {
+  .control {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 0.95rem !important;
+    height: 44px !important;
+    padding: 8px 12px !important;
+  }
+
+  .input,
+  .btn,
+  .dropdown,
+  .user-btn {
+    min-width: 0 !important;
+  }
+
+  .ctr-btn {
+    min-width: 36px !important;
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .ctr-input {
+    min-width: 48px !important;
+    width: 56px !important;
+  }
+
+  .counter {
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .form-grid {
+    gap: 12px !important;
+  }
+
+  .glass {
+    padding: 10px !important;
+  }
 }
 
 /* Ultra small screens (<=360px) - squeeze but keep touch targets accessible */
-@media (max-width:360px){
-  .control { font-size: 0.92rem !important; height: 42px !important; padding: 6px 10px !important; }
-  .ctr-btn { min-width: 32px !important; width: 32px !important; height: 32px !important; font-size: 0.86rem !important; }
-  .ctr-input { min-width: 40px !important; width: 44px !important; font-size: 0.88rem !important; }
-  .btn { padding: 12px 14px !important; font-size: 0.95rem !important; }
+@media (max-width:360px) {
+  .control {
+    font-size: 0.92rem !important;
+    height: 42px !important;
+    padding: 6px 10px !important;
+  }
+
+  .ctr-btn {
+    min-width: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.86rem !important;
+  }
+
+  .ctr-input {
+    min-width: 40px !important;
+    width: 44px !important;
+    font-size: 0.88rem !important;
+  }
+
+  .btn {
+    padding: 12px 14px !important;
+    font-size: 0.95rem !important;
+  }
 }
 
 /* Topbar compacto: altura típica ~48px */
-.topbar{
-  position:fixed;
-  top:12px;
-  left:50%;
-  transform:translateX(-50%);
-  width:calc(100% - 40px);
-  max-width:1000px;
-  z-index:220; /* Mantener el topbar por encima de tarjetas o paneles flotantes en pantallas pequeñas */
-  height:60px;
-  display:flex;
-  align-items:center;
-  border-radius:14px;
-  padding:0 16px;
-  background:var(--card-bg);
-  border:1px solid var(--card-border);
-  box-shadow: 0 14px 40px rgba(2,6,23,0.28);
+.topbar {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 1000px;
+  z-index: 220;
+  /* Mantener el topbar por encima de tarjetas o paneles flotantes en pantallas pequeñas */
+  height: 60px;
+  display: flex;
+  align-items: center;
+  border-radius: 14px;
+  padding: 0 16px;
+  background: rgba(19, 31, 52, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.28);
   backdrop-filter: blur(6px) saturate(140%);
 }
-.topbar-inner{ display:flex; align-items:center; justify-content:space-between; width:100%; gap:12px; flex-wrap:nowrap }
-/* Control del overflow en el topbar: truncar hijos para evitar que aumente la altura */
-.topbar{ overflow: visible }
-.brand{ display:flex; gap:12px; align-items:center; flex: 0 1 auto; min-width:0 }
-.brand-text{ flex: 0 1 auto; min-width:0; overflow:hidden }
-.brand-title, .brand-sub{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-/* El título del sitio usa el espacio restante y se trunca cuando es necesario */
-.site-title{ flex: 1 1 40%; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center }
-.topbar-actions{ display:flex; align-items:center; gap:12px; flex: 0 0 auto }
-.actions{ display:flex; gap:8px; align-items:center; flex: 0 0 auto }
-.top-action{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-/* El botón de usuario no debe crecer; limitar su tamaño y permitir truncar texto */
-.user-btn{ max-width:220px; min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; flex:0 0 auto }
-.user-btn .welcome-text{ display:inline-block; max-width:140px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-.brand{ display:flex; gap:12px; align-items:center }
-.topbar-logo{ width:36px; height:36px; object-fit:contain; filter: drop-shadow(0 6px 12px rgba(0,0,0,0.24)) }
-.brand-text{ display:flex; flex-direction:column }
-.brand-title{ font-weight:700; font-size:0.94rem }
-.brand-sub{ font-size:0.72rem; color:var(--muted); line-height:1 }
 
-.topbar-actions{ display:flex; align-items:center; gap:12px }
-.site-title{ font-size:0.82rem; color:var(--muted); margin-right:8px }
-.actions{ display:flex; gap:8px; align-items:center }
-.top-action{ display:inline-block; padding:4px 6px; border-radius:4px; background:transparent; color:var(--accent); text-decoration:none; font-weight:600; font-size:0.92rem }
-.top-action:hover{ text-decoration:underline }
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  flex-wrap: nowrap
+}
+
+/* Control del overflow en el topbar: truncar hijos para evitar que aumente la altura */
+.topbar {
+  overflow: visible
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0
+}
+
+.brand-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden
+}
+
+.brand-title,
+.brand-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+/* El título del sitio usa el espacio restante y se trunca cuando es necesario */
+.site-title {
+  flex: 1 1 40%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto
+}
+
+.top-action {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+/* El botón de usuario no debe crecer; limitar su tamaño y permitir truncar texto */
+.user-btn {
+  max-width: 220px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex: 0 0 auto
+}
+
+.user-btn .welcome-text {
+  display: inline-block;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center
+}
+
+.topbar-logo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.24))
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column
+}
+
+.brand-title {
+  font-weight: 700;
+  font-size: 0.94rem
+}
+
+.brand-sub {
+  font-size: 0.72rem;
+  color: var(--muted);
+  line-height: 1
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px
+}
+
+.site-title {
+  font-size: 0.82rem;
+  color: var(--muted);
+  margin-right: 8px
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center
+}
+
+.top-action {
+  display: inline-block;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.92rem
+}
+
+.top-action:hover {
+  text-decoration: underline
+}
 
 /* Asegurar que el .container dentro del topbar no agregue ancho/padding extra que provoque overflow.
    El encabezado usa .container en otros lugares; por eso lo sobreescribimos sólo cuando es hijo directo de .topbar. */
-.topbar > .container{ width:100%; max-width:1000px; padding:0; margin:0; box-sizing:border-box }
-.topbar-inner{ padding:6px 12px; box-sizing:border-box }
-.topbar{ width: calc(100% - 32px); left:50%; transform:translateX(-50%); }
+.topbar>.container {
+  width: 100%;
+  max-width: 1000px;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box
+}
+
+.topbar-inner {
+  padding: 6px 12px;
+  box-sizing: border-box
+}
+
+.topbar {
+  width: calc(100% - 32px);
+  left: 50%;
+  transform: translateX(-50%);
+}
 
 /* Evitar overflow en el área de acciones; truncar texto largo y mantener visibles las acciones */
-.topbar-actions{ min-width:0 }
-.topbar-actions .actions{ min-width:0; display:flex; gap:8px; align-items:center }
-.topbar .top-action{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.topbar-actions {
+  min-width: 0
+}
+
+.topbar-actions .actions {
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center
+}
+
+.topbar .top-action {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
 
 /* Bloque de bienvenida dentro del topbar */
-.welcome{ display:flex; align-items:center; gap:8px; margin-right:8px }
-.avatar{ width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:rgba(255,255,255,0.06); }
-.welcome-text{ font-weight:600 }
+.welcome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 8px
+}
 
-.top-avatar{ width:28px; height:28px; border-radius:50%; object-fit:cover }
+.avatar {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.welcome-text {
+  font-weight: 600
+}
+
+.top-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover
+}
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  25% { transform: translateY(-10px); }
-  50% { transform: translateY(-25px); }
-  75% { transform: translateY(-10px); }
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  25% {
+    transform: translateY(-10px);
+  }
+
+  50% {
+    transform: translateY(-25px);
+  }
+
+  75% {
+    transform: translateY(-10px);
+  }
 }
 
 /* Transición para el botón de usuario */
-.btn-float-enter-active, .btn-float-leave-active { transition: all 0.5s ease; }
-.btn-float-enter-from { opacity: 0; transform: translateY(10px) scale(0.9); }
-.btn-float-enter-to { opacity: 1; transform: translateY(0) scale(1); }
-.btn-float-leave-from { opacity: 1; transform: translateY(0) scale(1); }
-.btn-float-leave-to { opacity: 0; transform: translateY(-10px) scale(0.9); }
-
-/* Dropdown del menú de usuario */
-.user-menu{ position:relative }
-.user-btn{ display:flex; align-items:center; gap:8px; background:linear-gradient(135deg, rgba(46,221,90,0.22), rgba(25,59,8,0.18)); border:1px solid rgba(46,221,90,0.55); padding:6px 10px; border-radius:10px; cursor:pointer; color:var(--text) }
-.user-btn .avatar{ width:24px; height:24px; font-size:13px }
-.user-btn{ transition: box-shadow .12s ease, filter .12s ease }
-.user-btn:hover{ filter: saturate(1.1) }
-.user-btn.open{ box-shadow: 0 10px 26px rgba(2,6,23,0.22) }
-.user-btn .chev{ display:inline-block; width:12px; height:12px; border-right:2px solid rgba(0,0,0,0.35); border-bottom:2px solid rgba(0,0,0,0.35); transform:rotate(-45deg); margin-left:6px; transition: transform .18s ease, border-color .18s }
-.user-btn.open .chev{ transform: rotate(45deg) translateY(-1px); border-color:rgba(255,255,255,0.9) }
-
-/* Prevent user button from growing vertically when the name is long; truncate text with ellipsis */
-.user-btn{ max-width:260px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis }
-.user-btn .welcome-text{ display:inline-block; max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-
-@media (max-width:560px){
-  .user-btn{ max-width:160px; padding:6px 8px }
-  .user-btn .welcome-text{ max-width:96px }
+.btn-float-enter-active,
+.btn-float-leave-active {
+  transition: all 0.5s ease;
 }
 
-.dropdown{ position:absolute; right:0; top: calc(100% + 8px); background:rgba(255,255,255,0.92); border:1px solid rgba(0,0,0,0.08); padding:12px; border-radius:14px; min-width:200px; max-width:420px; box-shadow: 0 18px 48px rgba(2,6,23,0.28); z-index:9999; overflow:auto; backdrop-filter: blur(3px) saturate(120%) }
-.dropdown-item{ display:block; width:100%; text-align:left; padding:10px 12px; background:transparent; border:none; color:rgba(10,10,10,0.95); cursor:pointer; font-weight:700; border-radius:8px; font-size:0.96rem }
-.dropdown-item:hover{ background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:white }
+.btn-float-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(0.9);
+}
+
+.btn-float-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.btn-float-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.btn-float-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.9);
+}
+
+/* Dropdown del menú de usuario */
+.user-menu {
+  position: relative
+}
+
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(46, 221, 90, 0.22), rgba(25, 59, 8, 0.18));
+  border: 1px solid rgba(46, 221, 90, 0.55);
+  padding: 6px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--text)
+}
+
+.user-btn .avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 13px
+}
+
+.user-btn {
+  transition: box-shadow .12s ease, filter .12s ease
+}
+
+.user-btn:hover {
+  filter: saturate(1.1)
+}
+
+.user-btn.open {
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.22)
+}
+
+.user-btn .chev {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid rgba(0, 0, 0, 0.35);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.35);
+  transform: rotate(-45deg);
+  margin-left: 6px;
+  transition: transform .18s ease, border-color .18s
+}
+
+.user-btn.open .chev {
+  transform: rotate(45deg) translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.9)
+}
+
+/* Prevent user button from growing vertically when the name is long; truncate text with ellipsis */
+.user-btn {
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis
+}
+
+.user-btn .welcome-text {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+@media (max-width:560px) {
+  .user-btn {
+    max-width: 160px;
+    padding: 6px 8px
+  }
+
+  .user-btn .welcome-text {
+    max-width: 96px
+  }
+}
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: 12px;
+  border-radius: 14px;
+  min-width: 200px;
+  max-width: 420px;
+  box-shadow: 0 18px 48px rgba(2, 6, 23, 0.28);
+  z-index: 9999;
+  overflow: auto;
+  backdrop-filter: blur(3px) saturate(120%)
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  color: rgba(10, 10, 10, 0.95);
+  cursor: pointer;
+  font-weight: 700;
+  border-radius: 8px;
+  font-size: 0.96rem
+}
+
+.dropdown-item:hover {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  color: white
+}
 
 /* Expanded dropdown style when pushing content */
-.dropdown.expanded{ min-width:300px; max-width:380px; padding:12px 14px; border-radius:14px }
-.dropdown.expanded .dropdown-item{ font-size:0.98rem; padding:12px 14px }
+.dropdown.expanded {
+  min-width: 300px;
+  max-width: 380px;
+  padding: 12px 14px;
+  border-radius: 14px
+}
+
+.dropdown.expanded .dropdown-item {
+  font-size: 0.98rem;
+  padding: 12px 14px
+}
 
 /* Slide down transition */
-.slide-down-enter-from{ transform: translateY(-8px); opacity:0 }
-.slide-down-enter-active{ transition: all .22s cubic-bezier(.2,.9,.2,1) }
-.slide-down-enter-to{ transform: translateY(0); opacity:1 }
-.slide-down-leave-from{ transform: translateY(0); opacity:1 }
-.slide-down-leave-active{ transition: all .18s cubic-bezier(.2,.9,.2,1) }
-.slide-down-leave-to{ transform: translateY(-6px); opacity:0 }
+.slide-down-enter-from {
+  transform: translateY(-8px);
+  opacity: 0
+}
+
+.slide-down-enter-active {
+  transition: all .22s cubic-bezier(.2, .9, .2, 1)
+}
+
+.slide-down-enter-to {
+  transform: translateY(0);
+  opacity: 1
+}
+
+.slide-down-leave-from {
+  transform: translateY(0);
+  opacity: 1
+}
+
+.slide-down-leave-active {
+  transition: all .18s cubic-bezier(.2, .9, .2, 1)
+}
+
+.slide-down-leave-to {
+  transform: translateY(-6px);
+  opacity: 0
+}
 
 /* When menu is open, compress only the dashboard area slightly (no big slide of the whole container) */
 /* Suavizado general al abrir menú: nada debería moverse salvo la rejilla que reacomoda columnas */
-body.menu-open .dash-grid{ transition: grid-template-columns .22s ease, gap .18s ease }
-body.menu-open .dash-btn{ transition: padding .18s, font-size .18s }
+body.menu-open .dash-grid {
+  transition: grid-template-columns .22s ease, gap .18s ease
+}
+
+body.menu-open .dash-btn {
+  transition: padding .18s, font-size .18s
+}
 
 /* Ensure dropdown stays visible above content */
-body.menu-open .user-menu .dropdown{ z-index:140 }
+body.menu-open .user-menu .dropdown {
+  z-index: 140
+}
 
 /* Grid behavior: when the user menu is open, switch from 3 cols to 2 cols on wider screens */
-.dash-grid{ transition: transform .22s cubic-bezier(.2,.9,.2,1), gap .18s ease, margin-top .18s ease }
-@media (min-width: 861px){ body.menu-open .dash-grid{ grid-template-columns: repeat(2,1fr) !important; gap: 20px } }
-@media (max-width: 860px){
-  /* En pantallas medianas ya suele ser 2 columnas, mantenemos */
-  body.menu-open .dash-grid{ grid-template-columns: repeat(2,1fr) !important }
+.dash-grid {
+  transition: transform .22s cubic-bezier(.2, .9, .2, 1), gap .18s ease, margin-top .18s ease
 }
-@media (max-width: 640px){
+
+@media (min-width: 861px) {
+  body.menu-open .dash-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px
+  }
+}
+
+@media (max-width: 860px) {
+
+  /* En pantallas medianas ya suele ser 2 columnas, mantenemos */
+  body.menu-open .dash-grid {
+    grid-template-columns: repeat(2, 1fr) !important
+  }
+}
+
+@media (max-width: 640px) {
+
   /* En móviles, cuando se abre el menú, apilamos en 1 columna */
-  body.menu-open .dash-grid{ grid-template-columns: 1fr !important }
+  body.menu-open .dash-grid {
+    grid-template-columns: 1fr !important
+  }
 }
 
 /* Panel de acciones: layout fijo (no cambia por abrir el menú) */
-.reactive-panel{ display:grid; grid-template-columns: repeat(3,1fr); gap:16px }
-@media (max-width: 960px){ .reactive-panel{ grid-template-columns: repeat(2,1fr) } }
-@media (max-width: 560px){ .reactive-panel{ grid-template-columns: 1fr } }
-.dropdown-item.admin{ margin-top:8px; border-top:1px dashed rgba(255,255,255,0.04); padding-top:10px }
-/* Si hay muchos items, hacer scroll dentro del dropdown para no superponer toda la pantalla */
-.dropdown{ max-height:320px; overflow:auto }
-.dropdown::-webkit-scrollbar{ width:8px; height:8px }
-.dropdown::-webkit-scrollbar-thumb{ background:rgba(0,0,0,0.25); border-radius:8px }
-
-/* Ajustes visuales para items: más separación y subtítulos */
-.dropdown-item{ display:flex; align-items:center; justify-content:space-between }
-.dropdown-item .small{ font-weight:600; opacity:0.8; font-size:0.86rem }
-
-
-.glass{ background:var(--card-bg); border:1px solid var(--card-border); border-radius:14px; padding:18px; box-shadow: 0 12px 30px rgba(2,6,23,0.40); backdrop-filter: blur(6px) saturate(140%); }
-.card{ background:transparent; padding:0 }
-
-h2{ margin:0 0 12px 0; font-size:1.4rem; font-family: 'Poppins', 'Source Sans 3', sans-serif }
-
-/* Headings use Poppins by default */
-h1,h2,h3,h4,h5{ font-family: 'Poppins', 'Source Sans 3', sans-serif }
-
-.form-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh }
-.form-col{ width:100%; max-width:520px }
-
-/* Mobile: avoid centering the whole form in viewport (causa panel enorme). Align to top and cap glass height */
-@media (max-width:560px){
-  .form-wrap{ align-items:flex-start; justify-content:flex-start; min-height:auto; padding-top: calc(var(--container-toppad) + 8px); padding-bottom:20px }
-  .glass{ width: calc(100% - 28px); margin: 8px auto; padding:12px; border-radius:12px; max-height: none; overflow: visible }
-  .form-col{ max-width: 680px }
+.reactive-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px
 }
 
-.input{ width:100%; padding:14px 12px; border-radius:10px; border:1px solid rgba(255, 255, 255, 0.527); background: rgba(167, 165, 165, 0.473); color:var(--text); margin-bottom:12px; font-size:1rem }
-.input:focus{ outline:none; box-shadow: 0 6px 20px rgba(45,140,240,0.08); border-color:var(--accent) }
+@media (max-width: 960px) {
+  .reactive-panel {
+    grid-template-columns: repeat(2, 1fr)
+  }
+}
+
+@media (max-width: 560px) {
+  .reactive-panel {
+    grid-template-columns: 1fr
+  }
+}
+
+.dropdown-item.admin {
+  margin-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.04);
+  padding-top: 10px
+}
+
+/* Si hay muchos items, hacer scroll dentro del dropdown para no superponer toda la pantalla */
+.dropdown {
+  max-height: 320px;
+  overflow: auto
+}
+
+.dropdown::-webkit-scrollbar {
+  width: 8px;
+  height: 8px
+}
+
+.dropdown::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px
+}
+
+/* Ajustes visuales para items: más separación y subtítulos */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between
+}
+
+.dropdown-item .small {
+  font-weight: 600;
+  opacity: 0.8;
+  font-size: 0.86rem
+}
+
+
+.glass {
+  background: rgba(19, 31, 52, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.40);
+  backdrop-filter: blur(6px) saturate(140%);
+}
+
+.card {
+  background: transparent;
+  padding: 0
+}
+
+h2 {
+  margin: 0 0 12px 0;
+  font-size: 1.4rem;
+  font-family: 'Poppins', 'Source Sans 3', sans-serif
+}
+
+/* Headings use Poppins by default */
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: 'Poppins', 'Source Sans 3', sans-serif
+}
+
+.form-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh
+}
+
+.form-col {
+  width: 100%;
+  max-width: 520px
+}
+
+/* Mobile: avoid centering the whole form in viewport (causa panel enorme). Align to top and cap glass height */
+@media (max-width:560px) {
+  .form-wrap {
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: auto;
+    padding-top: calc(var(--container-toppad) + 8px);
+    padding-bottom: 20px
+  }
+
+  .glass {
+    width: calc(100% - 28px);
+    margin: 8px auto;
+    padding: 12px;
+    border-radius: 12px;
+    max-height: none;
+    overflow: visible
+  }
+
+  .form-col {
+    max-width: 680px
+  }
+}
+
+.input {
+  width: 100%;
+  padding: 14px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.527);
+  background: rgba(167, 165, 165, 0.473);
+  color: var(--text);
+  margin-bottom: 12px;
+  font-size: 1rem
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: 0 6px 20px rgba(45, 140, 240, 0.08);
+  border-color: var(--accent)
+}
+
 /* Placeholder más oscuro para mejor lectura */
-.input::placeholder{ color: rgba(0, 0, 0, 0.45); }
-.input:-ms-input-placeholder{ color: rgba(0, 0, 0, 0.74); }
-.input::-ms-input-placeholder{ color: rgba(0, 0, 0, 0.849); }
-.input::-webkit-input-placeholder{ color: rgba(61, 61, 61, 0.89); }
+.input::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.input:-ms-input-placeholder {
+  color: rgba(0, 0, 0, 0.74);
+}
+
+.input::-ms-input-placeholder {
+  color: rgba(0, 0, 0, 0.849);
+}
+
+.input::-webkit-input-placeholder {
+  color: rgba(61, 61, 61, 0.89);
+}
 
 /* Disabled / readonly inputs: visually distinguish and show not-allowed cursor
    This makes the email field (locked after step 1) clearly non-editable while
@@ -232,201 +780,585 @@ h1,h2,h3,h4,h5{ font-family: 'Poppins', 'Source Sans 3', sans-serif }
 .input:disabled,
 .input[disabled],
 .input[readonly] {
-  background: rgba(255,255,255,0.06); /* slightly dimmer over the backdrop */
-  border: 1px dashed rgba(255,255,255,0.32);
-  color: rgba(0,0,0,0.58);
+  background: rgba(255, 255, 255, 0.06);
+  /* slightly dimmer over the backdrop */
+  border: 1px dashed rgba(255, 255, 255, 0.32);
+  color: rgba(0, 0, 0, 0.58);
   cursor: not-allowed;
   opacity: 0.98;
   box-shadow: none;
 }
-.input:disabled:focus, .input[disabled]:focus, .input[readonly]:focus{ outline:none; box-shadow:none; border-color: rgba(255,255,255,0.32) }
-.input:disabled::placeholder, .input[disabled]::placeholder, .input[readonly]::placeholder{ color: rgba(0,0,0,0.32) }
+
+.input:disabled:focus,
+.input[disabled]:focus,
+.input[readonly]:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.32)
+}
+
+.input:disabled::placeholder,
+.input[disabled]::placeholder,
+.input[readonly]::placeholder {
+  color: rgba(0, 0, 0, 0.32)
+}
 
 /* Ensure inputs inside .glass forms keep the same consistent border style */
-.glass form .input{ border:1px solid rgba(255, 255, 255, 0.527); background: rgba(167, 165, 165, 0.473); }
+.glass form .input {
+  border: 1px solid rgba(255, 255, 255, 0.527);
+  background: rgba(167, 165, 165, 0.473);
+}
 
-.btn{ display:inline-block; padding:12px 20px; border-radius:10px; background:#ffffff; color:var(--btn-green); font-weight:600; border:1px solid rgba(0,0,0,0.06); cursor:pointer; transition: transform .12s ease, box-shadow .18s ease }
-.btn:hover{ transform:translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.06); background:#ffffff }
+.btn {
+  display: inline-block;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--btn-green);
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .18s ease
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  background: #ffffff
+}
 
 /* Variant buttons: primary (green filled) and secondary (white with green text) */
-.btn.primary{ background: linear-gradient(180deg,var(--btn-green),#00be2c); color:#fff; border:none }
-.btn.primary:hover{ filter:brightness(0.98); box-shadow: 0 8px 22px rgba(11, 172, 65, 0.14) }
-.btn.secondary{ background:#ffffff; color:var(--btn-green); border:1px solid rgba(0,0,0,0.06) }
+.btn.primary {
+  background: linear-gradient(180deg, var(--btn-green), #00be2c);
+  color: #fff;
+  border: none
+}
+
+.btn.primary:hover {
+  filter: brightness(0.98);
+  box-shadow: 0 8px 22px rgba(11, 172, 65, 0.14)
+}
+
+.btn.secondary {
+  background: #ffffff;
+  color: var(--btn-green);
+  border: 1px solid rgba(0, 0, 0, 0.06)
+}
 
 /* Backwards compatibility for .btn.resend used in some components */
-.btn.resend{ background:#ffffff; color:var(--btn-green); border:1px solid rgba(0,0,0,0.06) }
+.btn.resend {
+  background: #ffffff;
+  color: var(--btn-green);
+  border: 1px solid rgba(0, 0, 0, 0.06)
+}
 
-.link-row{ display:flex; justify-content:space-between; gap:10px; margin-top:12px }
-.link-row a{ color: rgba(10,10,10,0.78); text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1px }
+.link-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px
+}
+
+.link-row a {
+  color: rgba(10, 10, 10, 0.78);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px
+}
 
 /* Also style links that appear inside forms (e.g., 'Volver a login') to be more visible but subtle */
-.glass form a{ color: rgba(10,10,10,0.78); text-decoration:underline; text-underline-offset:3px; text-decoration-thickness:1px }
-.glass form a:hover{ color: var(--btn-green); text-decoration-color: var(--btn-green) }
+.glass form a {
+  color: rgba(10, 10, 10, 0.78);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px
+}
+
+.glass form a:hover {
+  color: var(--btn-green);
+  text-decoration-color: var(--btn-green)
+}
 
 /* Stronger highlighting for links inside cards to avoid blending with background imagery */
-.glass a{ display:inline-block; padding:4px 6px; border-radius:6px; background: transparent; color: var(--link-green-light); text-decoration:none; text-underline-offset:3px; text-decoration-thickness:1px; transition: color .12s ease, background .12s ease }
-.glass a:hover{ background: rgba(46,221,90,0.08); color: var(--accent-2); text-decoration:underline; text-decoration-color:var(--accent-2) }
+.glass a {
+  display: inline-block;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--link-green-light);
+  text-decoration: none;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: color .12s ease, background .12s ease
+}
+
+.glass a:hover {
+  background: rgba(46, 221, 90, 0.08);
+  color: var(--accent-2);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-2)
+}
 
 /* Utility helpers */
-.row{ display:flex; gap:12px; align-items:center }
-.row.col{ flex-direction: column }
-.flex-1{ flex: 1 1 auto }
-.mt-8{ margin-top: 8px }
-.mt-10{ margin-top: 10px }
-.mt-12{ margin-top: 12px }
-.mt-14{ margin-top: 14px }
-.mt-20{ margin-top: 20px }
-.visually-hidden{ position:absolute !important; left:-99999px !important }
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center
+}
 
-.small-info{ font-size: 12px; color: #78FFF1 }
-.user-btn--preview{ pointer-events: none; display: inline-flex }
+.row.col {
+  flex-direction: column
+}
+
+.flex-1 {
+  flex: 1 1 auto
+}
+
+.mt-8 {
+  margin-top: 8px
+}
+
+.mt-10 {
+  margin-top: 10px
+}
+
+.mt-12 {
+  margin-top: 12px
+}
+
+.mt-14 {
+  margin-top: 14px
+}
+
+.mt-20 {
+  margin-top: 20px
+}
+
+.visually-hidden {
+  position: absolute !important;
+  left: -99999px !important
+}
+
+.small-info {
+  font-size: 12px;
+  color: #78FFF1
+}
+
+.user-btn--preview {
+  pointer-events: none;
+  display: inline-flex
+}
 
 /* Ensure topbar links which may also use .glass or .link-row are not overridden incorrectly */
-.topbar a, .topbar .top-action{ background: transparent; color: var(--accent); }
-.topbar a:hover, .topbar .top-action:hover{ background: rgba(46,221,90,0.06); text-decoration: underline; text-decoration-color: var(--accent); }
+.topbar a,
+.topbar .top-action {
+  background: transparent;
+  color: var(--accent);
+}
 
-.error{ color:#ff8b8b; margin-top:10px }
-.msg{ color:#9ef1a6; margin-top:10px }
+.topbar a:hover,
+.topbar .top-action:hover {
+  background: rgba(46, 221, 90, 0.06);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+}
 
-.center{ display:flex; align-items:center; justify-content:center }
+.error {
+  color: #ff8b8b;
+  margin-top: 10px
+}
+
+.msg {
+  color: #9ef1a6;
+  margin-top: 10px
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
 
 
-@media (max-width:920px){
-  .container{ margin:48px auto }
-  .topbar-logo{ width:32px; height:32px }
-  .brand-sub{ display:none }
-  .site-title{ display:none }
+@media (max-width:920px) {
+  .container {
+    margin: 48px auto
+  }
+
+  .topbar-logo {
+    width: 32px;
+    height: 32px
+  }
+
+  .brand-sub {
+    display: none
+  }
+
+  .site-title {
+    display: none
+  }
 }
 
 /* Desktop safeguard: cap widths to prevent children from pushing out of topbar */
-@media (min-width:921px){
-  .brand-title{ max-width:220px }
-  .site-title{ max-width:360px }
-  .user-btn{ max-width:260px }
+@media (min-width:921px) {
+  .brand-title {
+    max-width: 220px
+  }
+
+  .site-title {
+    max-width: 360px
+  }
+
+  .user-btn {
+    max-width: 260px
+  }
 }
 
-@media (max-width:560px){
-  .topbar{ padding:4px 8px }
-  .topbar-logo{ width:24px; height:24px }
-  .top-action{ padding:6px 8px; font-size:0.9rem }
+@media (max-width:560px) {
+  .topbar {
+    padding: 4px 8px
+  }
+
+  .topbar-logo {
+    width: 24px;
+    height: 24px
+  }
+
+  .top-action {
+    padding: 6px 8px;
+    font-size: 0.9rem
+  }
 }
 
-@media (max-width:720px){
+@media (max-width:720px) {
+
   /* On narrow screens, ensure the dropdown fits within the topbar area */
-  .user-menu .dropdown{ right:8px; left:auto; transform:none; top: calc(100% + 6px); min-width:160px; max-width: calc(100vw - 32px) }
+  .user-menu .dropdown {
+    right: 8px;
+    left: auto;
+    transform: none;
+    top: calc(100% + 6px);
+    min-width: 160px;
+    max-width: calc(100vw - 32px)
+  }
 }
 
 /* Password field with eye toggle */
-.password-field{ position:relative; overflow:hidden; border-radius:10px; height:44px }
-.password-field .input{ padding-right:52px; height:44px; box-sizing:border-box; padding-top:8px; padding-bottom:8px }
-.password-field{ margin-bottom:12px }
+.password-field {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  height: 44px
+}
+
+.password-field .input {
+  padding-right: 52px;
+  height: 44px;
+  box-sizing: border-box;
+  padding-top: 8px;
+  padding-bottom: 8px
+}
+
+.password-field {
+  margin-bottom: 12px
+}
 
 /* Extra space when two password fields are stacked (registro) */
-.password-field + .password-field{ margin-top:10px; margin-bottom:14px }
-.toggle-eye{ position:absolute; right:6px; top:50%; transform:translateY(-50%); z-index:3; background:transparent; border:none; color:rgb(25, 0, 255); cursor:pointer; padding:6px; border-radius:8px; display:flex; align-items:center; justify-content:center; width:32px; height:32px }
-.toggle-eye svg{ width:18px; height:18px; color:inherit; transform:none !important; backface-visibility:hidden; transform-style:preserve-3d }
-.toggle-eye:focus{ outline:none; box-shadow:none }
-.toggle-eye[aria-pressed="true"] svg{ color:var(--accent-2); transform:none !important; transform-origin:center center }
+.password-field+.password-field {
+  margin-top: 10px;
+  margin-bottom: 14px
+}
+
+.toggle-eye {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  background: transparent;
+  border: none;
+  color: rgb(25, 0, 255);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px
+}
+
+.toggle-eye svg {
+  width: 18px;
+  height: 18px;
+  color: inherit;
+  transform: none !important;
+  backface-visibility: hidden;
+  transform-style: preserve-3d
+}
+
+.toggle-eye:focus {
+  outline: none;
+  box-shadow: none
+}
+
+.toggle-eye[aria-pressed="true"] svg {
+  color: var(--accent-2);
+  transform: none !important;
+  transform-origin: center center
+}
 
 /* Ensure icon visibility and no movement: change color when active */
-.toggle-eye[aria-pressed="true"]{ color:var(--accent-2) }
-.toggle-eye{ transition: none }
-.eye-icon{ color: inherit; opacity:1 }
+.toggle-eye[aria-pressed="true"] {
+  color: var(--accent-2)
+}
+
+.toggle-eye {
+  transition: none
+}
+
+.eye-icon {
+  color: inherit;
+  opacity: 1
+}
 
 /* Forzar tamaño/visibilidad de icon components (Heroicons) */
-.eye-icon{ width:18px; height:18px; display:block; color:inherit }
+.eye-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  color: inherit
+}
 
 /* Transition for eye open/close: subtle scale + fade only */
-.eye-enter-active, .eye-leave-active { transition: opacity .12s ease, transform .12s ease }
-.eye-enter-from, .eye-leave-to { opacity: 0; transform: scale(0.88) }
-.eye-enter-to, .eye-leave-from { opacity: 1; transform: scale(1) }
-
-@media (prefers-reduced-motion: reduce){
-  .btn, .toggle-eye, .eye-icon { transition: none !important }
+.eye-enter-active,
+.eye-leave-active {
+  transition: opacity .12s ease, transform .12s ease
 }
-.toggle-eye:hover .eye-icon{ transform:none }
+
+.eye-enter-from,
+.eye-leave-to {
+  opacity: 0;
+  transform: scale(0.88)
+}
+
+.eye-enter-to,
+.eye-leave-from {
+  opacity: 1;
+  transform: scale(1)
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .btn,
+  .toggle-eye,
+  .eye-icon {
+    transition: none !important
+  }
+}
+
+.toggle-eye:hover .eye-icon {
+  transform: none
+}
 
 /* Center links and buttons inside form areas */
-.link-row{ display:flex; justify-content:center; gap:12px; margin-top:12px }
-.link-row a{ color:var(--accent-2); text-decoration:none; text-align:center }
-.glass form{ text-align:center }
-.glass form .btn{ display:block; margin:12px auto 0 }
+.link-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px
+}
+
+.link-row a {
+  color: var(--accent-2);
+  text-decoration: none;
+  text-align: center
+}
+
+.glass form {
+  text-align: center
+}
+
+.glass form .btn {
+  display: block;
+  margin: 12px auto 0
+}
 
 /* Strong global overrides to enforce the Reset 'reenviar' button styles app-wide */
-.btn, button.btn, a.btn, .btn[role="button"] {
+.btn,
+button.btn,
+a.btn,
+.btn[role="button"] {
   background: #ffffff !important;
   color: var(--btn-text-dark) !important;
-  border: 1px solid rgba(0,0,0,0.06) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
   box-shadow: none !important;
 }
-.btn:hover, button.btn:hover, a.btn:hover {
+
+.btn:hover,
+button.btn:hover,
+a.btn:hover {
   background: #ffffff !important;
   color: var(--btn-text-dark) !important;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.06) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06) !important;
   transform: translateY(-1px) !important;
 }
+
 /* Primary variant remains filled green */
-.btn.primary, button.btn.primary, a.btn.primary {
-  background: linear-gradient(180deg,var(--btn-green),#00701a) !important;
+.btn.primary,
+button.btn.primary,
+a.btn.primary {
+  background: linear-gradient(180deg, var(--btn-green), #00701a) !important;
   color: #fff !important;
   border: none !important;
 }
+
 /* Keep small/ghost variants intact if explicitly defined */
-.btn.ghost, button.btn.ghost, a.btn.ghost { background: transparent !important; color: var(--btn-text-dark) !important; border:1px solid rgba(0,0,0,0.06) !important }
+.btn.ghost,
+button.btn.ghost,
+a.btn.ghost {
+  background: transparent !important;
+  color: var(--btn-text-dark) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important
+}
 
 /* Additional responsive fixes to avoid visual overlaps on mobile */
-@media (max-width:560px){
+@media (max-width:560px) {
+
   /* Aumentar ligeramente el tamaño base en móviles para mejor legibilidad */
-  html{ font-size: 17px }
+  html {
+    font-size: 17px
+  }
 
   /* Botones e inputs con altura táctil cómoda (>=44px) */
-  .btn{ font-size: 1rem; padding: 14px 18px; min-height: 44px }
-  .btn.small{ font-size: 0.98rem; padding: 12px 14px; min-height: 42px }
-  .input{ font-size: 1rem; min-height: 44px }
+  .btn {
+    font-size: 1rem;
+    padding: 14px 18px;
+    min-height: 44px
+  }
+
+  .btn.small {
+    font-size: 0.98rem;
+    padding: 12px 14px;
+    min-height: 42px
+  }
+
+  .input {
+    font-size: 1rem;
+    min-height: 44px
+  }
 
   /* Titulares y textos en tarjetas un poco más grandes */
-  .area-card .card-title{ font-size: 1.05rem }
-  .area-card .card-sub.small{ font-size: 0.95rem }
+  .area-card .card-title {
+    font-size: 1.05rem
+  }
+
+  .area-card .card-sub.small {
+    font-size: 0.95rem
+  }
 
   /* Ítems del dropdown más legibles al tacto */
-  .dropdown-item{ font-size: 1rem; padding: 12px 14px }
+  .dropdown-item {
+    font-size: 1rem;
+    padding: 12px 14px
+  }
 
   /* keep a reasonable top padding for the main container (fallback while JS calculates) */
-  .container{ padding-top: calc(var(--topbar-height) + 20px) }
-  .topbar{ padding:6px 10px; height:auto; align-items:center; max-height:84px }
+  .container {
+    padding-top: calc(var(--topbar-height) + 20px)
+  }
+
+  .topbar {
+    padding: 6px 10px;
+    height: auto;
+    align-items: center;
+    max-height: 84px
+  }
+
   /* dropdown fits within viewport and has higher stacking context */
-  .dropdown{ right:12px; left:12px; top: calc(var(--topbar-top) + var(--topbar-height) + 8px); min-width: auto; max-width: calc(100% - 36px); z-index: 600 }
+  .dropdown {
+    right: 12px;
+    left: 12px;
+    top: calc(var(--topbar-top) + var(--topbar-height) + 8px);
+    min-width: auto;
+    max-width: calc(100% - 36px);
+    z-index: 600
+  }
+
   /* reduce card media height to avoid pushing content too far up */
-  .area-card .card-media{ height:120px }
+  .area-card .card-media {
+    height: 120px
+  }
+
   /* ensure pending badges become inline (no absolute overlap) */
-  .area-card .pending-badge{ position:relative; display:inline-block; margin:8px 12px 0 auto; right:auto; top:auto }
+  .area-card .pending-badge {
+    position: relative;
+    display: inline-block;
+    margin: 8px 12px 0 auto;
+    right: auto;
+    top: auto
+  }
+
   /* Avoid centering the whole form in the viewport which creates a large modal-like box */
-  .form-wrap{ align-items:flex-start; justify-content:flex-start; min-height:auto; padding-top:12px; padding-bottom:20px }
-  .form-col{ padding:6px }
+  .form-wrap {
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: auto;
+    padding-top: 12px;
+    padding-bottom: 20px
+  }
+
+  .form-col {
+    padding: 6px
+  }
+
   /* Allow .glass panels to scroll rather than expand to full viewport */
-  .glass{ max-height: none; overflow: visible }
+  .glass {
+    max-height: none;
+    overflow: visible
+  }
+
   /* make sure titles inside topbar don't wrap into a second line */
-  .brand-text, .site-title, .user-btn .welcome-text { white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+  .brand-text,
+  .site-title,
+  .user-btn .welcome-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+  }
 }
 
 /* Long titles in cards should wrap cleanly rather than overflow */
-.area-card .card-title{ word-break:break-word; overflow-wrap:anywhere; max-width:100% }
+.area-card .card-title {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%
+}
 
 /* Toast minimal y discreto (vue3-toastify) */
-.toast-minimal{
-  background: rgba(255,255,255,0.95) !important;
-  color:#0b2540 !important;
+.toast-minimal {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #0b2540 !important;
   border-radius: 10px !important;
-  box-shadow: 0 8px 20px rgba(2,6,23,0.14) !important;
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.14) !important;
   padding: 5px 9px !important;
   font-weight: 600 !important;
   min-height: auto !important;
 }
-.toast-minimal .Toastify__toast-body{ margin:0 !important; font-size: 0.95rem !important; line-height: 1.2 !important }
-.toast-minimal .Toastify__close-button{ display:none !important }
+
+.toast-minimal .Toastify__toast-body {
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.2 !important
+}
+
+.toast-minimal .Toastify__close-button {
+  display: none !important
+}
+
 /* Barra de progreso delgada como contador de ~1s */
-.toast-minimal .Toastify__progress-bar{
-  display:block !important;
+.toast-minimal .Toastify__progress-bar {
+  display: block !important;
   height: 2px !important;
   top: auto !important;
   bottom: 0 !important;
@@ -435,61 +1367,116 @@ h1,h2,h3,h4,h5{ font-family: 'Poppins', 'Source Sans 3', sans-serif }
 }
 
 /* Afinar animaciones y separación para apilado suave */
-.Toastify__toast-container{ will-change: transform }
-.Toastify__toast{ margin-bottom: 1px !important; will-change: transform, opacity; backface-visibility: hidden; transform: translateZ(0); }
+.Toastify__toast-container {
+  will-change: transform
+}
+
+.Toastify__toast {
+  margin-bottom: 1px !important;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
 /* Animaciones fade-only, entrada 80ms y salida 40ms */
-@keyframes toast-fade-in-bottom{ from{ opacity:0; transform: translateY(2px) } to{ opacity:1; transform: translateY(0) } }
-@keyframes toast-fade-out-bottom{ from{ opacity:1; transform: translateY(0) } to{ opacity:0; transform: translateY(2px) } }
-@keyframes toast-fade-in-top{ from{ opacity:0; transform: translateY(-2px) } to{ opacity:1; transform: translateY(0) } }
-@keyframes toast-fade-out-top{ from{ opacity:1; transform: translateY(0) } to{ opacity:0; transform: translateY(-2px) } }
+@keyframes toast-fade-in-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(2px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+  }
+}
+
+@keyframes toast-fade-out-bottom {
+  from {
+    opacity: 1;
+    transform: translateY(0)
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(2px)
+  }
+}
+
+@keyframes toast-fade-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-2px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+  }
+}
+
+@keyframes toast-fade-out-top {
+  from {
+    opacity: 1;
+    transform: translateY(0)
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-2px)
+  }
+}
 
 .Toastify__slide-enter--bottom-left,
 .Toastify__slide-enter--bottom-center,
-.Toastify__slide-enter--bottom-right{
+.Toastify__slide-enter--bottom-right {
   animation-name: toast-fade-in-bottom !important;
   animation-duration: .08s !important;
-  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
 }
+
 .Toastify__slide-exit--bottom-left,
 .Toastify__slide-exit--bottom-center,
-.Toastify__slide-exit--bottom-right{
+.Toastify__slide-exit--bottom-right {
   animation-name: toast-fade-out-bottom !important;
   animation-duration: .04s !important;
-  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
 }
 
 /* Cubrir posiciones top también */
 .Toastify__slide-enter--top-left,
 .Toastify__slide-enter--top-center,
-.Toastify__slide-enter--top-right{
+.Toastify__slide-enter--top-right {
   animation-name: toast-fade-in-top !important;
   animation-duration: .08s !important;
-  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
 }
+
 .Toastify__slide-exit--top-left,
 .Toastify__slide-exit--top-center,
-.Toastify__slide-exit--top-right{
+.Toastify__slide-exit--top-right {
   animation-name: toast-fade-out-top !important;
   animation-duration: .04s !important;
-  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
 }
 
 /* Forzar todas las variantes (bounce/zoom/flip/slide) a usar fade compacto */
 [class*="Toastify__bounce-enter"],
 [class*="Toastify__zoom-enter"],
 [class*="Toastify__flip-enter"],
-[class*="Toastify__slide-enter"]{
+[class*="Toastify__slide-enter"] {
   animation-name: toast-fade-in-bottom !important;
   animation-duration: .08s !important;
-  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
 }
+
 [class*="Toastify__bounce-exit"],
 [class*="Toastify__zoom-exit"],
 [class*="Toastify__flip-exit"],
-[class*="Toastify__slide-exit"]{
+[class*="Toastify__slide-exit"] {
   animation-name: toast-fade-out-bottom !important;
   animation-duration: .04s !important;
-  animation-timing-function: cubic-bezier(.4,0,.2,1) !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
 }
 
 /* Bajón instantáneo del stack: el que sale se posiciona absoluto y libera layout */
@@ -499,16 +1486,43 @@ h1,h2,h3,h4,h5{ font-family: 'Poppins', 'Source Sans 3', sans-serif }
 /* Nota: no forzamos duración genérica para no sobreescribir enter/exit específicos */
 
 /* SweetAlert2: animaciones horizontales rápidas en modo toast */
-@keyframes swal-toast-fade-in{ from{ opacity:0; transform: translateX(-10px) } to{ opacity:1; transform: translateX(0) } }
-@keyframes swal-toast-fade-out{ from{ opacity:1; transform: translateX(0) } to{ opacity:0; transform: translateX(-8px) } }
-.swal2-toast-fade-in{ animation: swal-toast-fade-in .08s cubic-bezier(.4,0,.2,1) both !important; }
-.swal2-toast-fade-out{ animation: swal-toast-fade-out .04s cubic-bezier(.4,0,.2,1) both !important; }
+@keyframes swal-toast-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0)
+  }
+}
+
+@keyframes swal-toast-fade-out {
+  from {
+    opacity: 1;
+    transform: translateX(0)
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-8px)
+  }
+}
+
+.swal2-toast-fade-in {
+  animation: swal-toast-fade-in .08s cubic-bezier(.4, 0, .2, 1) both !important;
+}
+
+.swal2-toast-fade-out {
+  animation: swal-toast-fade-out .04s cubic-bezier(.4, 0, .2, 1) both !important;
+}
 
 /* Accesibilidad: respeta reduced-motion */
 /* (Opcional) Si se requiere, podemos reactivar reduced-motion específico para toasts */
 
 /* Notivue: overrides para acercarlo al estilo minimalista */
-:root{
+:root {
   /* Gap entre notificaciones (1px como en Toastify) */
   --nv-gap: 1px;
   /* Prioridad del stream de Notivue */
@@ -517,30 +1531,67 @@ h1,h2,h3,h4,h5{ font-family: 'Poppins', 'Source Sans 3', sans-serif }
 
 /* Animaciones suaves para Notivue: entrada con leve translate+scale+fade, salida suave */
 /* Horizontal suave: entrada izquierda→derecha; salida derecha→izquierda */
-@keyframes nv-soft-in{
-  0%{ opacity:0; transform: translateX(-14px) scale(0.98) }
-  100%{ opacity:1; transform: translateX(0) scale(1) }
-}
-@keyframes nv-soft-out{
-  0%{ opacity:1; transform: translateX(0) scale(1) }
-  100%{ opacity:0; transform: translateX(-10px) scale(0.99) }
+@keyframes nv-soft-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-14px) scale(0.98)
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1)
+  }
 }
 
-.nvSoftEnter{ animation: nv-soft-in .22s cubic-bezier(.2,.9,.2,1) both }
-.nvSoftLeave{ animation: nv-soft-out .12s cubic-bezier(.4,0,.2,1) both }
+@keyframes nv-soft-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1)
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.99)
+  }
+}
+
+.nvSoftEnter {
+  animation: nv-soft-in .22s cubic-bezier(.2, .9, .2, 1) both
+}
+
+.nvSoftLeave {
+  animation: nv-soft-out .12s cubic-bezier(.4, 0, .2, 1) both
+}
 
 /* Suavidad adicional y rendimiento: avisar al motor de composición */
-.Notivue__notification{ will-change: transform, opacity; backface-visibility: hidden; transform-origin: center left }
-
-/* Stagger sutil sólo en la animación de entrada (máx. 3) */
-.nvSoftEnter:nth-child(2){ animation-delay: .02s }
-.nvSoftEnter:nth-child(3){ animation-delay: .035s }
-
-/* Hover polish sin interferir con transform del layout */
-.Notivue__notification{ transition: box-shadow .18s ease }
-.Notivue__notification:hover{ box-shadow: 0 10px 26px rgba(2,6,23,0.22) }
-
-@media (prefers-reduced-motion: reduce){
-  .nvSoftEnter, .nvSoftLeave{ animation: none !important }
+.Notivue__notification {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform-origin: center left
 }
 
+/* Stagger sutil sólo en la animación de entrada (máx. 3) */
+.nvSoftEnter:nth-child(2) {
+  animation-delay: .02s
+}
+
+.nvSoftEnter:nth-child(3) {
+  animation-delay: .035s
+}
+
+/* Hover polish sin interferir con transform del layout */
+.Notivue__notification {
+  transition: box-shadow .18s ease
+}
+
+.Notivue__notification:hover {
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.22)
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .nvSoftEnter,
+  .nvSoftLeave {
+    animation: none !important
+  }
+}
