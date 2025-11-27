@@ -1301,6 +1301,20 @@ onBeforeUnmount(() => { clearTimeout(autosaveTimer); if (hideTimeout) clearTimeo
   z-index: 1;
 }
 
+/* Fix for nested cards accumulating opacity/whiteness */
+.section-card .section-card {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  backdrop-filter: none !important;
+  padding: 0 !important;
+  margin-top: 16px !important;
+}
+
+.section-card .section-card::after {
+  display: none !important;
+}
+
 .section-head {
   display: flex;
   flex-direction: column;
