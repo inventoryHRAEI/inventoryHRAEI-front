@@ -58,7 +58,7 @@
               </div>
               
               <div class="field">
-                <label>Folio Asociado</label>
+                <label>Folio de Resguardo Asociado</label>
                 <input
                   class="control"
                   v-model.trim="form.folioAsociado"
@@ -95,7 +95,7 @@
               <small class="hint">Especifica el motivo y una descripción del servicio</small>
             </div>
             <div class="section-grid combined">
-              <div class="field" style="grid-column: span 6;">
+              <div class="field" style="z-index: 100 !important;">
                 <label>Motivo de Servicio</label>
                 <CustomSelect 
                   v-model="form.motivoEntrada" 
@@ -104,7 +104,7 @@
                 />
               </div>
               
-              <div v-if="form.motivoEntrada === 'otro'" class="field" style="grid-column: span 6;">
+              <div v-if="form.motivoEntrada === 'otro'" class="field">
                 <label>Especifique Motivo de Servicio</label>
                 <input
                   class="control"
@@ -112,6 +112,7 @@
                   placeholder="Especifique el motivo"
                 />
               </div>
+              <div v-else class="field"></div>
               
               <div class="field">
                 <label>Descripción del Servicio</label>
@@ -536,13 +537,15 @@ const router = useRouter()
 // Opciones del select de motivo (reutiliza las opciones existentes)
 const motivoEntradaOptions = [
   { value: '', label: 'Seleccionar motivo' },
-  { value: 'mantenimiento-preventivo-externo', label: 'MANTENIMIENTO PREVENTIVO EXTERNO' },
-  { value: 'mantenimiento-correctivo-externo', label: 'MANTENIMIENTO CORRECTIVO EXTERNO' },
-  { value: 'calibracion-externa', label: 'CALIBRACIÓN EXTERNA' },
-  { value: 'diagnostico', label: 'DIAGNOSTICO' },
-  { value: 'inicio-contrato', label: 'INICIO DE CONTRATO' },
-  { value: 'inicio-demostracion', label: 'INICIO DE DEMOSTRACIÓN' },
-  { value: 'reemplazo-equipo', label: 'REEMPLAZO DE EQUIPO' },
+  { value: 'mantenimiento-preventivo', label: 'MANTENIMIENTO PREVENTIVO' },
+  { value: 'mantenimiento-correctivo', label: 'MANTENIMIENTO CORRECTIVO' },
+  { value: 'revision-verificacion', label: 'REVISIÓN Y VERIFICACIÓN' },
+  { value: 'soporte-tecnico', label: 'SOPORTE TECNICO' },
+  { value: 'capacitacion', label: 'CAPACITACIÓN' },
+  { value: 'traslado-equipo-medico', label: 'TRASLADO DE EQUIPO MÉDICO' },
+  { value: 'traslado-mobiliario', label: 'TRASLADO DE MOBILIARIO' },
+  { value: 'calibracion', label: 'CALIBRACIÓN' },
+  { value: 'instalacion-equipo-medico', label: 'INSTALACIÓN DE EQUIPO MÉDICO' },
   { value: 'otro', label: 'OTRO; ESPECIFICAR' }
 ]
 
