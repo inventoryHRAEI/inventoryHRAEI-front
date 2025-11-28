@@ -323,6 +323,10 @@ async function compressImageFile(file, maxW = 512, maxH = 512, quality = 0.82) {
 
 <style scoped>
 .form-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh }
-.form-col{ width:100%; max-width:520px }
+.form-col{ width:100%; max-width:1000px }
+
+@media (min-width: 1024px) {
+  .form-col { width: 90%; max-width: none; }
+}
 </style>
 *** End Patch

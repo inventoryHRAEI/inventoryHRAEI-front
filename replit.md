@@ -88,11 +88,11 @@ src/
 - **Breadcrumbs:** Navigation at top of page
 
 ### Desktop Layout Optimization (Nov 28, 2025) ✅
-**Formularios (Login, Register, Recovery):**
-- PC expansion: Forms now occupy **85% of viewport width** with 0 lateral padding
-- Max-width: `1000px` base, **100% for screens 1024px+**
-- Reduced padding: `24px 8px` for better spacing
-- Result: Cards no longer appear mobile-like on desktop
+**Formularios (Login, Register, Recovery) - FINAL FIX:**
+- **AHORA:** Forms expand to **90% viewport width** on PC (1024px+)
+- Fixed scoped CSS conflicts in Login.vue & Register.vue (`max-width: 520px` was overriding global styles)
+- Solution: Added media query to component scoped styles with `max-width: none` on desktop
+- Result: Cards now fully expand horizontally on large screens - NOT mobile-like ✅
 
 **Dashboard Cards (Admin & User):**
 - Grid: Changed from 3 columns → **2 columns** for better spacing
@@ -145,9 +145,11 @@ npm run build
 ## Known Issues
 - Backend connection errors (expected without backend running)
 
-## Modified Files (Latest Session)
-- `src/styles/forms.css` - Form layout expansion for desktop
-- `src/styles.css` - Container and form styling updates
+## Modified Files (Latest Session - Nov 28, 2025)
+- `src/views/Login.vue` - Fixed scoped styles: `max-width: none` on PC + media query for 90% width expansion ✅
+- `src/views/Register.vue` - Fixed scoped styles: `max-width: none` on PC + media query for 90% width expansion ✅
+- `src/styles/forms.css` - Global form layout with 90% width on desktop + `max-width: none`
+- `src/styles.css` - Global form styling backup
 - `src/views/AdminDashboard.vue` - Dashboard grid layout (3 → 2 columns)
 - `src/views/UserDashboard.vue` - Dashboard grid layout (3 → 2 columns)
 - `src/views/Home.vue` - Hero and features section expansion
