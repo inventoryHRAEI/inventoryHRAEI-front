@@ -19,8 +19,8 @@
   width: 100%;
   padding: 34px 38px;
   border-radius: 26px;
-  background: rgba(19, 31, 52, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(19, 31, 52, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(20px) saturate(170%);
   box-shadow: 0 32px 70px rgba(6, 12, 24, 0.45);
 }
