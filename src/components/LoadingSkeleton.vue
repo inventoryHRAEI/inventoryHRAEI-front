@@ -94,6 +94,11 @@
     </div>
 
     <div v-else-if="type === 'login'" class="skeleton-form-wrapper">
+      <!-- Breadcrumbs skeleton -->
+      <div class="skeleton-breadcrumbs">
+        <div class="skeleton skeleton-text" style="width: 30%; height: 14px;"></div>
+        <div class="skeleton skeleton-text" style="width: 40%; height: 14px;"></div>
+      </div>
       <!-- Card glass skeleton container -->
       <div class="skeleton-card-glass">
         <div class="skeleton-card-header">
@@ -114,8 +119,8 @@
           </div>
           <!-- Remember checkbox -->
           <div class="skeleton skeleton-checkbox" style="margin: 20px 0; width: 40%;"></div>
-          <!-- Submit button -->
-          <div class="skeleton skeleton-button" style="margin: 24px 0;"></div>
+          <!-- Submit button FULL WIDTH -->
+          <div class="skeleton skeleton-button" style="margin: 24px 0; width: 100%; height: 48px;"></div>
           <!-- Divider -->
           <div style="text-align: center; margin: 20px 0;">
             <div class="skeleton skeleton-text" style="width: 8px; height: 12px; display: inline-block;"></div>
@@ -130,14 +135,23 @@
     </div>
 
     <div v-else-if="type === 'register'" class="skeleton-form-wrapper">
+      <!-- Breadcrumbs skeleton -->
+      <div class="skeleton-breadcrumbs">
+        <div class="skeleton skeleton-text" style="width: 30%; height: 14px;"></div>
+        <div class="skeleton skeleton-text" style="width: 40%; height: 14px;"></div>
+      </div>
       <!-- Card glass skeleton container -->
       <div class="skeleton-card-glass">
         <div class="skeleton-card-header">
           <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
           <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
           <div class="skeleton skeleton-text" style="margin-bottom: 16px; width: 50%; height: 12px; margin-left: auto; margin-right: auto;"></div>
-          <!-- Progress bar (skeleton style) -->
-          <div class="skeleton skeleton" style="height: 6px; border-radius: 3px; margin-bottom: 24px; width: 100%;"></div>
+          <!-- Step bubbles (3 dots) -->
+          <div class="skeleton-step-bubbles" style="display: flex; justify-content: center; gap: 12px; margin-bottom: 24px;">
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px;"></div>
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px;"></div>
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px;"></div>
+          </div>
         </div>
         <div class="skeleton-card-content">
           <!-- Step info text -->
@@ -151,8 +165,8 @@
             <div class="skeleton skeleton-label" style="width: 25%;"></div>
             <div class="skeleton skeleton-input"></div>
           </div>
-          <!-- Submit button -->
-          <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
+          <!-- Submit button FULL WIDTH -->
+          <div class="skeleton skeleton-button" style="margin-top: 24px; width: 100%; height: 48px;"></div>
           <!-- Link -->
           <div style="margin-top: 20px; text-align: center;">
             <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
@@ -162,19 +176,29 @@
     </div>
 
     <div v-else-if="type === 'forgot'" class="skeleton-form-wrapper">
+      <!-- Breadcrumbs skeleton -->
+      <div class="skeleton-breadcrumbs">
+        <div class="skeleton skeleton-text" style="width: 30%; height: 14px;"></div>
+        <div class="skeleton skeleton-text" style="width: 40%; height: 14px;"></div>
+      </div>
       <!-- Card glass skeleton container -->
       <div class="skeleton-card-glass">
         <div class="skeleton-card-header">
           <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
           <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
           <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
+          <!-- Step bubbles (2 for forgot) -->
+          <div class="skeleton-step-bubbles" style="display: flex; justify-content: center; gap: 12px; margin-bottom: 16px;">
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px;"></div>
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px;"></div>
+          </div>
         </div>
         <div class="skeleton-card-content">
           <div class="skeleton-field">
             <div class="skeleton skeleton-label" style="width: 25%;"></div>
             <div class="skeleton skeleton-input"></div>
           </div>
-          <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
+          <div class="skeleton skeleton-button" style="margin-top: 24px; width: 100%; height: 48px;"></div>
           <!-- Link -->
           <div style="margin-top: 20px; text-align: center;">
             <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
@@ -184,12 +208,23 @@
     </div>
 
     <div v-else-if="type === 'reset'" class="skeleton-form-wrapper">
+      <!-- Breadcrumbs skeleton -->
+      <div class="skeleton-breadcrumbs">
+        <div class="skeleton skeleton-text" style="width: 30%; height: 14px;"></div>
+        <div class="skeleton skeleton-text" style="width: 40%; height: 14px;"></div>
+      </div>
       <!-- Card glass skeleton container -->
       <div class="skeleton-card-glass">
         <div class="skeleton-card-header">
           <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
           <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-          <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
+          <div class="skeleton skeleton-text" style="margin-bottom: 16px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
+          <!-- Step bubbles (3 for reset) -->
+          <div class="skeleton-step-bubbles" style="display: flex; justify-content: center; gap: 12px; margin-bottom: 24px;">
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px;"></div>
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px;"></div>
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px;"></div>
+          </div>
         </div>
         <div class="skeleton-card-content">
           <!-- Email field (disabled) -->
@@ -209,11 +244,8 @@
           </div>
           <!-- Password hint -->
           <div class="skeleton skeleton-text short" style="margin: 12px 0; width: 70%; height: 10px;"></div>
-          <!-- Two buttons side by side -->
-          <div class="skeleton-buttons" style="display: flex; gap: 12px; margin-top: 24px;">
-            <div class="skeleton skeleton-button" style="flex: 1;"></div>
-            <div class="skeleton skeleton-button" style="flex: 1;"></div>
-          </div>
+          <!-- Single full-width button -->
+          <div class="skeleton skeleton-button" style="margin-top: 24px; width: 100%; height: 48px;"></div>
           <!-- Link -->
           <div style="margin-top: 20px; text-align: center;">
             <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
@@ -416,9 +448,59 @@ defineProps({
 }
 
 .skeleton-form-wrapper {
-  max-width: 520px;
+  width: 100%;
   margin: 0 auto;
   padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 60vh;
+  justify-content: center;
+}
+
+/* Breadcrumbs skeleton */
+.skeleton-breadcrumbs {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 520px;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* MOBILE: Keep form narrow */
+@media (max-width: 1023px) {
+  .skeleton-form-wrapper {
+    max-width: 520px;
+    padding: 0 16px;
+  }
+  
+  .skeleton-card-glass {
+    max-width: 100%;
+    padding: 24px 20px;
+  }
+}
+
+/* PC: Form expands to 90% */
+@media (min-width: 1024px) {
+  .skeleton-form-wrapper {
+    width: 90%;
+    max-width: none;
+    padding: 24px 0;
+  }
+  
+  .skeleton-breadcrumbs {
+    width: 90%;
+    max-width: none;
+    margin-bottom: 32px;
+    padding: 0;
+  }
+  
+  .skeleton-card-glass {
+    width: 100%;
+    padding: 40px 32px;
+  }
 }
 
 .skeleton-form-card {
@@ -434,6 +516,9 @@ defineProps({
   padding: 32px 24px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 520px;
+  box-sizing: border-box;
 }
 
 .skeleton-card-header {
@@ -534,8 +619,8 @@ defineProps({
 }
 
 .skeleton-button {
-  height: 52px;
-  width: 160px;
+  height: 48px;
+  width: 100%;
   border-radius: 26px;
   margin-top: 16px;
 }

@@ -145,9 +145,21 @@ npm run build
 ## Known Issues
 - Backend connection errors (expected without backend running)
 
+## Skeleton Loaders Enhancement (Nov 28, 2025) ✅
+**LoadingSkeleton.vue Improvements:**
+- Breadcrumbs skeleton added to all forms (Login, Register, Forgot, Reset)
+- Step bubbles (progress dots) skeleton added to multi-step forms
+- Full-width buttons (100%) instead of fixed width
+- **Responsive design:**
+  - **Mobile (≤1023px):** Narrow form (max-width: 520px)
+  - **PC (≥1024px):** Expanded form (90% width, no max-width limit)
+- Matches exact visual structure of actual forms
+- Breadcrumbs positioned above glass card on both mobile and desktop
+
 ## Modified Files (Latest Session - Nov 28, 2025)
 - `src/views/Login.vue` - Fixed scoped styles: `max-width: none` on PC + media query for 90% width expansion ✅
 - `src/views/Register.vue` - Fixed scoped styles: `max-width: none` on PC + media query for 90% width expansion ✅
+- `src/components/LoadingSkeleton.vue` - Enhanced with breadcrumbs, step bubbles, responsive breakpoints ✅
 - `src/styles/forms.css` - Global form layout with 90% width on desktop + `max-width: none`
 - `src/styles.css` - Global form styling backup
 - `src/views/AdminDashboard.vue` - Dashboard grid layout (3 → 2 columns)
