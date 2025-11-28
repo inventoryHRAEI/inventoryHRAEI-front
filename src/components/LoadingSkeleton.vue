@@ -47,6 +47,25 @@
       </div>
     </div>
     
+    <div v-else-if="type === 'login'" class="skeleton-login">
+      <div class="skeleton-login-header">
+        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 16px;"></div>
+        <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
+        <div class="skeleton skeleton-text short" style="margin-bottom: 24px; width: 60%;"></div>
+      </div>
+      <div class="skeleton-login-form">
+        <div v-for="n in 2" :key="n" class="skeleton-field">
+          <div class="skeleton skeleton-label"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="skeleton skeleton-checkbox" style="margin: 16px 0;"></div>
+        <div class="skeleton skeleton-button"></div>
+      </div>
+      <div style="margin-top: 20px; text-align: center;">
+        <div class="skeleton skeleton-text short" style="width: 40%;"></div>
+      </div>
+    </div>
+    
     <div v-else-if="type === 'form'" class="skeleton-form">
       <div class="skeleton skeleton-title wide"></div>
       <div v-for="n in count" :key="n" class="skeleton-field">
@@ -67,7 +86,7 @@ defineProps({
   type: {
     type: String,
     default: 'default',
-    validator: (val) => ['default', 'cards', 'list', 'form', 'hero'].includes(val)
+    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login'].includes(val)
   },
   count: {
     type: Number,
@@ -171,6 +190,26 @@ defineProps({
 
 .skeleton-list-content {
   flex: 1;
+}
+
+.skeleton-login {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.skeleton-login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.skeleton-login-form {
+  margin-bottom: 20px;
+}
+
+.skeleton-checkbox {
+  height: 18px;
+  width: 120px;
+  border-radius: 4px;
 }
 
 .skeleton-form {
