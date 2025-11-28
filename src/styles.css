@@ -174,7 +174,7 @@ body,
   }
 }
 
-/* Topbar compacto: altura típica ~48px */
+/* Topbar moderno: altura 64px con glassmorphism mejorado */
 .topbar {
   position: fixed;
   top: 12px;
@@ -183,16 +183,24 @@ body,
   width: calc(100% - 40px);
   max-width: 1000px;
   z-index: 220;
-  /* Mantener el topbar por encima de tarjetas o paneles flotantes en pantallas pequeñas */
-  height: 60px;
+  height: 64px;
   display: flex;
   align-items: center;
-  border-radius: 14px;
-  padding: 0 16px;
-  background: rgba(19, 31, 52, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow: 0 14px 40px rgba(2, 6, 23, 0.28);
-  backdrop-filter: blur(6px) saturate(140%);
+  border-radius: 16px;
+  padding: 0 24px;
+  background: rgba(19, 31, 52, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 16px 48px rgba(2, 6, 23, 0.32),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px) saturate(150%);
+  transition: all 0.3s ease;
+}
+
+.topbar:hover {
+  background: rgba(19, 31, 52, 0.55);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 20px 60px rgba(2, 6, 23, 0.40),
+              inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .topbar-inner {
@@ -200,7 +208,7 @@ body,
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  gap: 12px;
+  gap: 16px;
   flex-wrap: nowrap
 }
 
@@ -281,14 +289,24 @@ body,
 .brand {
   display: flex;
   gap: 12px;
-  align-items: center
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.topbar:hover .brand {
+  gap: 14px;
 }
 
 .topbar-logo {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.24))
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.28));
+  transition: transform 0.3s ease;
+}
+
+.topbar:hover .topbar-logo {
+  transform: scale(1.05);
 }
 
 .brand-text {
@@ -298,7 +316,8 @@ body,
 
 .brand-title {
   font-weight: 700;
-  font-size: 0.94rem
+  font-size: 0.96rem;
+  letter-spacing: -0.3px;
 }
 
 .brand-sub {
@@ -314,9 +333,10 @@ body,
 }
 
 .site-title {
-  font-size: 0.82rem;
-  color: var(--muted);
-  margin-right: 8px
+  font-size: 0.84rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-right: 8px;
+  font-weight: 500;
 }
 
 .actions {
@@ -327,17 +347,22 @@ body,
 
 .top-action {
   display: inline-block;
-  padding: 4px 6px;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(45, 221, 90, 0.08);
+  color: #2ddd5a;
   text-decoration: none;
   font-weight: 600;
-  font-size: 0.92rem
+  font-size: 0.92rem;
+  transition: all 0.25s ease;
+  border: 1px solid rgba(45, 221, 90, 0.2);
 }
 
 .top-action:hover {
-  text-decoration: underline
+  background: rgba(45, 221, 90, 0.15);
+  border-color: rgba(45, 221, 90, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(45, 221, 90, 0.15);
 }
 
 /* Asegurar que el .container dentro del topbar no agregue ancho/padding extra que provoque overflow.
