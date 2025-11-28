@@ -12,29 +12,25 @@
     </div>
     
     <div v-else-if="type === 'topbar'" class="skeleton-topbar">
-      <div class="container skeleton-topbar-inner">
-        <!-- Left: Logo and brand -->
-        <div class="skeleton-topbar-brand">
-          <!-- Logo placeholder -->
-          <div class="skeleton skeleton-avatar" style="width: 48px; height: 48px; margin-right: 16px; flex-shrink: 0;"></div>
-          <!-- Brand text -->
-          <div style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
-            <div class="skeleton skeleton-text" style="width: 50px; height: 14px;"></div>
-            <div class="skeleton skeleton-text" style="width: 120px; height: 10px;"></div>
+      <div class="topbar-skeleton-wrapper">
+        <!-- Left: Logo and brand text -->
+        <div class="topbar-skeleton-left">
+          <div class="skeleton skeleton-avatar" style="width: 40px; height: 40px; border-radius: 6px; margin-right: 12px; flex-shrink: 0;"></div>
+          <div style="display: flex; flex-direction: column; gap: 3px; flex-shrink: 0;">
+            <div class="skeleton skeleton-text" style="width: 45px; height: 13px;"></div>
+            <div class="skeleton skeleton-text" style="width: 115px; height: 9px;"></div>
           </div>
         </div>
 
         <!-- Center: Site title -->
-        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
-          <div class="skeleton skeleton-text" style="width: 250px; height: 14px;"></div>
+        <div class="topbar-skeleton-center">
+          <div class="skeleton skeleton-text" style="width: 240px; height: 13px;"></div>
         </div>
 
-        <!-- Right: Navigation actions (2 links or avatar) -->
-        <div class="skeleton-topbar-actions">
-          <!-- Link 1 -->
-          <div class="skeleton skeleton-text" style="width: 80px; height: 12px;"></div>
-          <!-- Link 2 -->
-          <div class="skeleton skeleton-text" style="width: 80px; height: 12px;"></div>
+        <!-- Right: Navigation actions (2 links) -->
+        <div class="topbar-skeleton-right">
+          <div class="skeleton skeleton-text" style="width: 75px; height: 12px;"></div>
+          <div class="skeleton skeleton-text" style="width: 75px; height: 12px;"></div>
         </div>
       </div>
     </div>
@@ -483,22 +479,25 @@ defineProps({
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 12px 0;
+  padding: 10px 0;
   margin-bottom: 24px;
   position: sticky;
   top: 0;
   z-index: 100;
 }
 
-.skeleton-topbar-inner {
+.topbar-skeleton-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 0 16px;
+  gap: 16px;
+  height: 60px;
 }
 
-.skeleton-topbar-brand {
+.topbar-skeleton-left {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -506,9 +505,16 @@ defineProps({
   min-width: fit-content;
 }
 
-.skeleton-topbar-actions {
+.topbar-skeleton-center {
+  flex: 1;
   display: flex;
-  gap: 24px;
+  align-items: center;
+  justify-content: center;
+}
+
+.topbar-skeleton-right {
+  display: flex;
+  gap: 20px;
   align-items: center;
   flex-shrink: 0;
 }
