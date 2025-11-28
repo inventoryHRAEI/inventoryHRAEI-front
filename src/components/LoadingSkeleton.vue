@@ -48,81 +48,129 @@
     </div>
     
     <div v-else-if="type === 'login'" class="skeleton-login">
+      <!-- Header -->
       <div class="skeleton-login-header">
-        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 16px;"></div>
+        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
         <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text short" style="margin-bottom: 24px; width: 60%;"></div>
+        <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
       </div>
+      <!-- Form Fields -->
       <div class="skeleton-login-form">
-        <div v-for="n in 2" :key="n" class="skeleton-field">
-          <div class="skeleton skeleton-label"></div>
+        <!-- Email field -->
+        <div class="skeleton-field">
+          <div class="skeleton skeleton-label" style="width: 25%;"></div>
           <div class="skeleton skeleton-input"></div>
         </div>
-        <div class="skeleton skeleton-checkbox" style="margin: 16px 0;"></div>
-        <div class="skeleton skeleton-button"></div>
+        <!-- Password field -->
+        <div class="skeleton-field">
+          <div class="skeleton skeleton-label" style="width: 25%;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <!-- Remember checkbox -->
+        <div class="skeleton skeleton-checkbox" style="margin: 20px 0; width: 40%;"></div>
+        <!-- Submit button -->
+        <div class="skeleton skeleton-button" style="margin: 24px 0;"></div>
       </div>
-      <div style="margin-top: 20px; text-align: center;">
-        <div class="skeleton skeleton-text short" style="width: 40%;"></div>
+      <!-- Divider -->
+      <div style="text-align: center; margin: 20px 0;">
+        <div class="skeleton skeleton-text" style="width: 8px; height: 12px; display: inline-block;"></div>
+      </div>
+      <!-- Links -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="skeleton skeleton-text" style="width: 100%; height: 20px;"></div>
+        <div class="skeleton skeleton-text" style="width: 100%; height: 20px;"></div>
       </div>
     </div>
 
     <div v-else-if="type === 'register'" class="skeleton-register">
+      <!-- Header -->
       <div class="skeleton-register-header">
-        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 16px;"></div>
+        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
         <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text short" style="margin-bottom: 16px; width: 50%;"></div>
-        <div class="skeleton" style="height: 6px; border-radius: 3px; margin-bottom: 24px;"></div>
+        <div class="skeleton skeleton-text" style="margin-bottom: 16px; width: 50%; height: 12px; margin-left: auto; margin-right: auto;"></div>
+        <!-- Progress bar -->
+        <div class="skeleton-progress" style="height: 6px; border-radius: 3px; background: rgba(100, 200, 150, 0.2); margin-bottom: 24px; overflow: hidden;">
+          <div class="skeleton-progress-fill" style="height: 100%; width: 33%; background: linear-gradient(90deg, #4a9d5f 0%, #64c896 100%);"></div>
+        </div>
       </div>
+      <!-- Form Content -->
       <div class="skeleton-register-form">
-        <div class="skeleton skeleton-label" style="margin-bottom: 12px;"></div>
-        <div v-for="n in 2" :key="n" class="skeleton-field">
-          <div class="skeleton skeleton-label"></div>
+        <!-- Step info text -->
+        <div class="skeleton skeleton-text" style="width: 70%; height: 14px; margin-bottom: 16px;"></div>
+        <!-- Form fields (2 for step 1) -->
+        <div class="skeleton-field">
+          <div class="skeleton skeleton-label" style="width: 25%;"></div>
           <div class="skeleton skeleton-input"></div>
         </div>
+        <div class="skeleton-field">
+          <div class="skeleton skeleton-label" style="width: 25%;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <!-- Submit button -->
         <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
       </div>
+      <!-- Link -->
       <div style="margin-top: 20px; text-align: center;">
-        <div class="skeleton skeleton-text short" style="width: 40%;"></div>
+        <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
       </div>
     </div>
 
     <div v-else-if="type === 'forgot'" class="skeleton-forgot">
+      <!-- Header -->
       <div class="skeleton-forgot-header">
-        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 16px;"></div>
+        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
         <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text short" style="margin-bottom: 24px; width: 60%;"></div>
+        <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
       </div>
+      <!-- Form -->
       <div class="skeleton-forgot-form">
         <div class="skeleton-field">
-          <div class="skeleton skeleton-label"></div>
+          <div class="skeleton skeleton-label" style="width: 25%;"></div>
           <div class="skeleton skeleton-input"></div>
         </div>
         <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
       </div>
+      <!-- Link -->
       <div style="margin-top: 20px; text-align: center;">
-        <div class="skeleton skeleton-text short" style="width: 40%;"></div>
+        <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
       </div>
     </div>
 
     <div v-else-if="type === 'reset'" class="skeleton-reset">
+      <!-- Header -->
       <div class="skeleton-reset-header">
-        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 16px;"></div>
+        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
         <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text short" style="margin-bottom: 24px; width: 60%;"></div>
+        <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
       </div>
+      <!-- Form -->
       <div class="skeleton-reset-form">
-        <div v-for="n in 3" :key="n" class="skeleton-field">
-          <div class="skeleton skeleton-label"></div>
+        <!-- Email field (disabled) -->
+        <div class="skeleton-field">
+          <div class="skeleton skeleton-label" style="width: 25%;"></div>
+          <div class="skeleton skeleton-input" style="opacity: 0.7;"></div>
+        </div>
+        <!-- Code field -->
+        <div class="skeleton-field">
+          <div class="skeleton skeleton-label" style="width: 25%;"></div>
           <div class="skeleton skeleton-input"></div>
         </div>
+        <!-- Password field -->
+        <div class="skeleton-field">
+          <div class="skeleton skeleton-label" style="width: 25%;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <!-- Password hint -->
         <div class="skeleton skeleton-text short" style="margin: 12px 0; width: 70%; height: 10px;"></div>
+        <!-- Two buttons side by side -->
         <div class="skeleton-buttons" style="display: flex; gap: 12px; margin-top: 24px;">
           <div class="skeleton skeleton-button" style="flex: 1;"></div>
           <div class="skeleton skeleton-button" style="flex: 1;"></div>
         </div>
       </div>
+      <!-- Link -->
       <div style="margin-top: 20px; text-align: center;">
-        <div class="skeleton skeleton-text short" style="width: 40%;"></div>
+        <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
       </div>
     </div>
     
