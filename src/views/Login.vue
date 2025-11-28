@@ -4,6 +4,8 @@
     
     <div v-else class="form-col">
       <div class="glass">
+        <Breadcrumbs :items="breadcrumbItems" />
+
         <div class="form-header">
           <div class="icon-circle">
             <component :is="isAddAccount ? PlusIcon : LockClosedIcon" class="form-icon" />
@@ -68,6 +70,12 @@ import notifier from '@/utils/notifier'
 import { windowManager } from '@/utils/windowManager'
 import { EyeIcon, EyeSlashIcon, LockClosedIcon, EnvelopeIcon, KeyIcon, PlusIcon, QuestionMarkCircleIcon, UserPlusIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
+import Breadcrumbs from '@/components/Breadcrumbs.vue'
+
+const breadcrumbItems = [
+  { label: 'Inicio', to: '/' },
+  { label: 'Iniciar Sesión', to: '/login' }
+]
 
 const email = ref('')
 const password = ref('')

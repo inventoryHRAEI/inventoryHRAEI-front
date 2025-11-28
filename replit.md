@@ -22,7 +22,7 @@ This is a Vue 3 medical equipment inventory management system frontend applicati
 ### Project Structure
 ```
 src/
-├── components/        # Reusable UI components (including StepBubbles.vue, Breadcrumbs.vue)
+├── components/        # Reusable UI components (StepBubbles.vue, Breadcrumbs.vue)
 ├── views/            # Page components
 │   └── operations/   # Operation-specific views
 ├── stores/           # State management
@@ -38,43 +38,54 @@ src/
 3. **Operations Management:** Full CRUD for equipment, comodatos, donations, services, inventory, consumables
 4. **Multi-Window Management:** Window activity tracking
 5. **Responsive Design:** Mobile-friendly interface
-6. **Navigation:** Breadcrumbs in all authenticated pages, recovery flows
 
 ## Recent Enhancements (Nov 28, 2025)
 
-### Breadcrumbs Navigation ✅
-- **Dashboard & Operations:** Smart breadcrumbs with "Inicio" pointing to `/dashboard` (not home, prevents logout)
-- **Recovery Flow:** Breadcrumbs in ForgotPublic and ResetPublic showing navigation path
-- **Interactive:** Clickable for backward navigation, smooth transitions
+### Navigation System (Breadcrumbs) ✅
+- **All Public Pages:** Breadcrumbs in Login, Register, Home, ForgotPublic, ResetPublic
+- **Smart Routing:** "Inicio" in dashboard breadcrumbs points to `/dashboard` (prevents logout)
+- **Interactive:** Clickable navigation with smooth transitions
+- **Accessibility:** Proper ARIA labels and semantic navigation
 
-### Forms & Validation - Interactive & Alive 🎉
-1. **Discrete Input Glow Effects:**
-   - Soft green glow on focus: `0 0 12px rgba(45, 221, 90, 0.12)`
+### Multi-Stage Forms (Breadcrumbs + Progress Bubbles) ✅
+- **Registration Flow:** Breadcrumbs + 3 Step Bubbles
+  - Step 1: Información (Datos básicos)
+  - Step 2: Verificación (Confirma tu email)
+  - Step 3: Perfil (Completa tu cuenta)
+
+- **Password Recovery Flow:** Breadcrumbs + Progress Steps
+  - ForgotPublic: Breadcrumbs + 2 Step Bubbles
+  - ResetPublic: Breadcrumbs + 3 Step Bubbles
+
+### Forms & Validation - Discrete & Elegant 🎉
+1. **Input Glow Effects:**
+   - Soft focus glow: `0 0 12px rgba(45, 221, 90, 0.12)`
+   - Border color transition to green
    - Inset shadow for subtle depth
    - Smooth 0.3s transitions
 
-2. **Button Glow & Elevation (Refined):**
+2. **Button Effects (Refined):**
    - Primary buttons: `0 12px 28px rgba(11, 172, 65, 0.18)` on hover
    - Secondary buttons: `0 8px 20px rgba(11, 172, 65, 0.15)` on hover
-   - Elevation: `-1px to -2px` (subtle lift)
-   - Enhanced feedback for better interactivity
+   - Subtle elevation: `-1px to -2px` (minimal lift)
+   - Non-intrusive interactivity
 
 3. **Input Hints:**
    - Contextual help text under inputs
-   - Changes color on focus (green feedback)
-   - Non-invasive, clean design
+   - Color changes on focus (green feedback)
+   - Clean, minimal design
 
 4. **Password Strength Indicator:**
-   - Visual bars (weak/medium/strong) with color feedback
-   - Discrete and elegant styling
+   - Visual bars for weak/medium/strong
+   - Discrete color coding
+   - Elegant styling
 
-### Home Page Polish
-1. **Perfect Topbar Skeleton:** Matches real topbar exactly
-   - Floating capsule (64px height, 16px border-radius)
-   - Identical glassmorphism and positioning
-2. **Enhanced Carousel:** Better image quality, less overlay
-3. **Login/Register Buttons:** Positioned below carousel
-4. **Feature Cards:** Glassmorphic design with hover animations
+### Home Page & Hero Section
+- **Perfect Topbar Skeleton:** Matches real topbar exactly
+- **Carousel:** Enhanced images with better quality
+- **Login/Register CTA:** Positioned below carousel
+- **Feature Cards:** Glassmorphic design with hover animations
+- **Breadcrumbs:** Navigation at top of page
 
 ## Replit Configuration
 
@@ -104,9 +115,9 @@ npm run build
 ## User Preferences
 - **Language:** Spanish
 - **Design:** Glassmorphic UI with smooth animations
-- **Interactivity:** Maximum feedback without being invasive
+- **Interactivity:** Maximum feedback, non-invasive
+- **Navigation:** Breadcrumbs in all public pages, progress indicators in multi-step forms
 - **Skeleton Loaders:** Exact visual match to real components
-- **Navigation:** Clean breadcrumbs, intuitive flow
 
 ## Components
 - **StepBubbles.vue:** Interactive step progress indicator with descriptions

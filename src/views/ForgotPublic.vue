@@ -14,6 +14,8 @@
           <p class="form-subtitle">Recibe un código en tu correo</p>
         </div>
 
+        <StepBubbles :steps="stepBubbles" :current-step="1" />
+
         <form @submit.prevent="forgot">
           <div class="form-group">
             <label class="field-label">Correo Electrónico</label>
@@ -47,6 +49,7 @@ import { useRouter } from 'vue-router'
 import { EnvelopeIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import StepBubbles from '@/components/StepBubbles.vue'
 
 const router = useRouter()
 const isLoading = ref(true)
@@ -54,6 +57,11 @@ const isLoading = ref(true)
 const breadcrumbItems = [
   { label: 'Inicio', to: '/login' },
   { label: 'Recuperar Contraseña', to: '/forgot' }
+]
+
+const stepBubbles = [
+  { title: 'Correo', desc: 'Ingresa tu email' },
+  { title: 'Verificación', desc: 'Confirma tu código' }
 ]
 
 onMounted(() => {

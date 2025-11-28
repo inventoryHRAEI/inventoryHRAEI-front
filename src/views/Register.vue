@@ -4,6 +4,8 @@
     
     <div v-else class="form-col">
       <div class="glass">
+        <Breadcrumbs :items="breadcrumbItems" />
+
         <div class="form-header">
           <div class="icon-circle">
             <component :is="step === 1 ? UserPlusIcon : step === 2 ? CheckCircleIcon : ShieldCheckIcon" class="form-icon" />
@@ -116,11 +118,17 @@ import notifier from '@/utils/notifier'
 import { EyeIcon, EyeSlashIcon, UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, UserIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, PhotoIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 import StepBubbles from '@/components/StepBubbles.vue'
+import Breadcrumbs from '@/components/Breadcrumbs.vue'
 
 const stepBubbles = [
   { title: 'Información', desc: 'Datos básicos' },
   { title: 'Verificación', desc: 'Confirma tu email' },
   { title: 'Perfil', desc: 'Completa tu cuenta' }
+]
+
+const breadcrumbItems = [
+  { label: 'Inicio', to: '/login' },
+  { label: 'Registro', to: '/register' }
 ]
 
 const isLoading = ref(true)

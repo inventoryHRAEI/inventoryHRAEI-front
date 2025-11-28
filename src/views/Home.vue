@@ -1,5 +1,6 @@
 <template>
   <div class="home-wrap animate-in">
+    <Breadcrumbs :items="breadcrumbItems" />
     <LoadingSkeleton v-if="pageLoading" type="hero" />
     
     <div v-else class="hero glass">
@@ -109,6 +110,11 @@ import {
 } from '@heroicons/vue/24/outline'
 import { PackageIcon } from 'lucide-vue-next'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
+import Breadcrumbs from '@/components/Breadcrumbs.vue'
+
+const breadcrumbItems = [
+  { label: 'Inicio', to: '/' }
+]
 
 const pageLoading = ref(true)
 const slides = ref([
