@@ -733,12 +733,14 @@ body.menu-open .user-menu .dropdown {
 
 
 .glass {
+  width: 100%;
   background: rgba(19, 31, 52, 0.70);
   border: 1px solid rgba(255, 255, 255, 0.30);
   border-radius: 14px;
   padding: 18px;
   box-shadow: 0 12px 30px rgba(2, 6, 23, 0.40);
   backdrop-filter: blur(15px) saturate(150%);
+  box-sizing: border-box;
 }
 
 .card {
@@ -777,11 +779,12 @@ h5 {
 @media (min-width: 1024px) {
   .form-wrap {
     padding: 24px 0;
+    width: 100%;
   }
   
   .form-col {
-    max-width: 100%;
-    width: 85%;
+    max-width: none;
+    width: 90%;
   }
 }
 
