@@ -11,6 +11,32 @@
       </div>
     </div>
     
+    <div v-else-if="type === 'hero'" class="skeleton-hero">
+      <div class="skeleton-hero-left">
+        <div class="skeleton skeleton-title wide" style="margin-bottom: 16px;"></div>
+        <div class="skeleton skeleton-text" style="margin-bottom: 8px;"></div>
+        <div class="skeleton skeleton-text" style="margin-bottom: 8px;"></div>
+        <div class="skeleton skeleton-text short" style="margin-bottom: 24px;"></div>
+        
+        <div class="skeleton-stats">
+          <div v-for="n in 3" :key="n" class="skeleton-stat-card">
+            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px; margin-bottom: 12px;"></div>
+            <div class="skeleton skeleton-text" style="margin-bottom: 8px; width: 60%;"></div>
+            <div class="skeleton skeleton-text short"></div>
+          </div>
+        </div>
+        
+        <div style="margin-top: 24px;">
+          <div class="skeleton skeleton-button"></div>
+          <div class="skeleton skeleton-button" style="margin-top: 10px;"></div>
+        </div>
+      </div>
+      
+      <div class="skeleton-hero-right">
+        <div class="skeleton skeleton-carousel"></div>
+      </div>
+    </div>
+    
     <div v-else-if="type === 'list'" class="skeleton-list">
       <div v-for="n in count" :key="n" class="skeleton-list-item">
         <div class="skeleton skeleton-avatar"></div>
@@ -41,7 +67,7 @@ defineProps({
   type: {
     type: String,
     default: 'default',
-    validator: (val) => ['default', 'cards', 'list', 'form'].includes(val)
+    validator: (val) => ['default', 'cards', 'list', 'form', 'hero'].includes(val)
   },
   count: {
     type: Number,
@@ -173,8 +199,71 @@ defineProps({
   margin-top: 16px;
 }
 
+.skeleton-hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 24px;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.skeleton-hero-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+
+.skeleton-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.skeleton-stat-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(45, 221, 90, 0.1);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.skeleton-hero-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeleton-carousel {
+  width: 100%;
+  height: 400px;
+  border-radius: 12px;
+}
+
+@media (max-width: 768px) {
+  .skeleton-hero {
+    grid-template-columns: 1fr;
+  }
+  
+  .skeleton-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .skeleton-carousel {
+    height: 300px;
+  }
+}
+
 @media (max-width: 640px) {
   .skeleton-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .skeleton-stats {
     grid-template-columns: 1fr;
   }
 }

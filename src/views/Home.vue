@@ -1,6 +1,6 @@
 <template>
   <div class="home-wrap animate-in">
-    <LoadingSkeleton v-if="pageLoading" type="cards" :count="3" />
+    <LoadingSkeleton v-if="pageLoading" type="hero" />
     
     <div v-else class="hero glass">
       <div class="hero-left">
