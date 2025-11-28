@@ -12,6 +12,8 @@
           <p class="form-subtitle">Recibe un código en tu correo</p>
         </div>
 
+        <StepBubbles :steps="stepBubbles" :current-step="1" />
+
         <form @submit.prevent="forgot">
           <div class="form-group">
             <label class="field-label">Correo Electrónico</label>
@@ -44,9 +46,15 @@ import notifier from '@/utils/notifier'
 import { useRouter } from 'vue-router'
 import { EnvelopeIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
+import StepBubbles from '@/components/StepBubbles.vue'
 
 const router = useRouter()
 const isLoading = ref(true)
+
+const stepBubbles = [
+  { title: 'Correo', desc: 'Ingresa tu email' },
+  { title: 'Verificación', desc: 'Confirma tu código' }
+]
 
 onMounted(() => {
   setTimeout(() => {
