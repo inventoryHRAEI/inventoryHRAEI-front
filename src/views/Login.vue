@@ -1,6 +1,8 @@
 <template>
   <div class="form-wrap">
-    <div class="form-col">
+    <LoadingSkeleton v-if="isLoading" type="form" :count="2" />
+    
+    <div v-else class="form-col">
       <div class="glass">
         <div class="form-header">
           <div class="icon-circle">
@@ -65,6 +67,7 @@ import { useRouter, useRoute } from 'vue-router'
 import notifier from '@/utils/notifier'
 import { windowManager } from '@/utils/windowManager'
 import { EyeIcon, EyeSlashIcon, LockClosedIcon, EnvelopeIcon, KeyIcon, PlusIcon, QuestionMarkCircleIcon, UserPlusIcon } from '@heroicons/vue/24/outline'
+import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 
 const email = ref('')
 const password = ref('')
@@ -74,8 +77,13 @@ const show = ref(false)
 const route = useRoute()
 const isAddAccount = computed(() => route.name === 'add-account')
 const remember = ref(false)
+const isLoading = ref(true)
 
 onMounted(() => {
+  setTimeout(() => {
+    isLoading.value = false
+  }, 800)
+  
   try {
     const remembered = localStorage.getItem('rememberedEmail')
     if (remembered) { email.value = remembered; remember.value = true }

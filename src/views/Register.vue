@@ -1,6 +1,8 @@
 <template>
   <div class="form-wrap">
-    <div class="form-col">
+    <LoadingSkeleton v-if="isLoading" type="form" :count="3" />
+    
+    <div v-else class="form-col">
       <div class="glass">
         <div class="form-header">
           <div class="icon-circle">
@@ -109,10 +111,19 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import notifier from '@/utils/notifier'
 import { EyeIcon, EyeSlashIcon, UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, UserIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, PhotoIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
+
+const isLoading = ref(true)
+
+onMounted(() => {
+  setTimeout(() => {
+    isLoading.value = false
+  }, 800)
+})
 
 const nombre = ref('')
 const email = ref('')

@@ -1,6 +1,8 @@
 <template>
   <div class="form-wrap">
-    <div class="form-col">
+    <LoadingSkeleton v-if="isLoading" type="form" :count="3" />
+    
+    <div v-else class="form-col">
       <div class="glass">
         <div class="form-header">
           <div class="icon-circle">
@@ -66,8 +68,18 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useResetComposable } from '@/composables/useReset'
 import { LockOpenIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, ArrowPathIcon, CheckCircleIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
+
+const isLoading = ref(true)
+
+onMounted(() => {
+  setTimeout(() => {
+    isLoading.value = false
+  }, 800)
+})
 
 const { email, token, password, msg, error, show, sendingResend, resendCode, reset } = useResetComposable()
 </script>
