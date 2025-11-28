@@ -14,22 +14,22 @@
     <div v-else-if="type === 'topbar'" class="skeleton-topbar">
       <!-- Left: Logo and brand -->
       <div class="topbar-skeleton-left">
-        <div class="skeleton skeleton-avatar" style="width: 32px; height: 32px; border-radius: 4px; margin-right: 10px;"></div>
-        <div style="display: flex; flex-direction: column; gap: 2px;">
-          <div class="skeleton skeleton-text" style="width: 40px; height: 11px;"></div>
-          <div class="skeleton skeleton-text" style="width: 100px; height: 7px;"></div>
+        <div class="skeleton skeleton-avatar" style="width: 40px; height: 40px; border-radius: 4px; margin-right: 12px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 3px;">
+          <div class="skeleton skeleton-text" style="width: 48px; height: 12px;"></div>
+          <div class="skeleton skeleton-text" style="width: 110px; height: 9px;"></div>
         </div>
       </div>
 
       <!-- Center: Site title -->
       <div class="topbar-skeleton-center">
-        <div class="skeleton skeleton-text" style="width: 220px; height: 11px;"></div>
+        <div class="skeleton skeleton-text" style="width: 250px; height: 12px;"></div>
       </div>
 
       <!-- Right: Navigation links -->
       <div class="topbar-skeleton-right">
-        <div class="skeleton skeleton-text" style="width: 65px; height: 10px;"></div>
-        <div class="skeleton skeleton-text" style="width: 65px; height: 10px;"></div>
+        <div class="skeleton skeleton-text" style="width: 75px; height: 11px;"></div>
+        <div class="skeleton skeleton-text" style="width: 75px; height: 11px;"></div>
       </div>
     </div>
 
@@ -477,7 +477,7 @@ defineProps({
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 8px 24px;
+  padding: 12px 24px;
   position: fixed;
   top: 0;
   left: 0;
@@ -486,8 +486,8 @@ defineProps({
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  height: 48px;
+  gap: 20px;
+  height: 64px;
   width: 100%;
   box-sizing: border-box;
 }
