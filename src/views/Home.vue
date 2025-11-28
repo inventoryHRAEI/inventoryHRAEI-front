@@ -376,34 +376,89 @@ onBeforeUnmount(() => {
 }
 
 .feature-card {
-  padding: 24px 20px;
+  padding: 32px 28px;
   text-align: center;
-  transition: transform 0.2s ease;
+  border-radius: 16px;
+  background: rgba(19, 31, 52, 0.50);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px) saturate(150%);
+  box-shadow: 0 16px 48px rgba(2, 6, 23, 0.32),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  transition: left 0.6s ease;
+  pointer-events: none;
+}
+
+.feature-card:hover::before {
+  left: 100%;
 }
 
 .feature-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-12px) scale(1.02);
+  background: rgba(19, 31, 52, 0.60);
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 24px 64px rgba(2, 6, 23, 0.48),
+              inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .feature-icon {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   color: var(--accent);
-  margin-bottom: 12px;
+  margin: 0 auto 20px;
+  padding: 12px;
+  background: rgba(45, 221, 90, 0.15);
+  border-radius: 12px;
+  border: 1px solid rgba(45, 221, 90, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.feature-card:hover .feature-icon {
+  transform: scale(1.15) rotate(-5deg);
+  background: rgba(45, 221, 90, 0.25);
+  border-color: rgba(45, 221, 90, 0.5);
+  box-shadow: 0 8px 24px rgba(45, 221, 90, 0.2);
 }
 
 .feature-card h4 {
-  font-size: 1rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   color: #fff;
+  letter-spacing: -0.3px;
+  position: relative;
+  z-index: 1;
 }
 
 .feature-card p {
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.6;
+  position: relative;
+  z-index: 1;
 }
 
 @media (max-width: 960px) {
