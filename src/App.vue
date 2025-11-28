@@ -53,7 +53,7 @@
       </div>
     </header>
 
-    <main class="container">
+    <main :class="['container', { 'op-embed-active': isOperationRoute(), 'dashboard-main-active': isOnDashboard() }]">
       <router-view />
     </main>
       <!-- Mobile notifications modal (rendered globally) -->
@@ -239,6 +239,12 @@
       // route.name puede ser undefined al inicio; convertir a string seguro
       const name = route && route.name ? String(route.name) : ''
       return dashboardRoutes.includes(name)
+    }
+
+    // Devuelve true si la ruta actual corresponde a una operación (nombres que empiezan con 'op-')
+    function isOperationRoute() {
+      const name = route && route.name ? String(route.name) : ''
+      return /^op-/.test(name)
     }
 
     function toggleMenu() {

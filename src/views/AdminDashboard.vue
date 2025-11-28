@@ -1,10 +1,16 @@
 <template>
-  <ActionPanel>
+  <ActionPanel class="dashboard-main">
     <template #title>Administrador — Gestión</template>
 
     <div class="cards-panel">
       <div class="area-grid">
-        <div class="area-card" v-for="op in operations" :key="op.name" role="button" @click.prevent="go(op.name)">
+        <div
+          class="area-card"
+          v-for="op in operations"
+          :key="op.name"
+          :class="{ embedded: isEmbedded(op.name) }"
+          role="button"
+          @click.prevent="go(op.name)">
           <div class="card-media">
             <img class="card-img" :src="op.img" :alt="op.label" />
           </div>
@@ -51,6 +57,19 @@ const operations = [
 ]
 
 function go(name){ try { router.push({ name }) } catch {} }
+
+import { useRoute } from 'vue-router'
+const route = useRoute()
+
+function isEmbedded(opName) {
+  try {
+    const rn = route && route.name ? String(route.name) : ''
+    if (rn === opName) return true
+    const q = route && route.query ? route.query.area : null
+    if (q && String(q) === opName) return true
+  } catch (e) {}
+  return false
+}
 
 onMounted(async () => {
   try { await pendingStore.refresh() } catch {}
@@ -184,4 +203,15 @@ async function rejectRequest(id){
 .area-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:18px }
 @media (max-width:960px){ .area-grid{ grid-template-columns: repeat(2,1fr) } }
 @media (max-width:560px){ .area-grid{ grid-template-columns: 1fr } }
+
+/* Embedded area card: dark glass only for the selected embedded operation */
+.area-card.embedded {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 24px 52px rgba(5, 10, 18, 0.28) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  border-radius: 22px !important;
+  color: #e6ebf5;
+}
+.area-card.embedded .card-title, .area-card.embedded .card-sub, .area-card.embedded .card-desc { color: #e6ebf5 !important }
 </style>

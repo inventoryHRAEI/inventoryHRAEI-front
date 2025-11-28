@@ -3,6 +3,11 @@
   --bg-2: #0f1724;
   --card-bg: rgba(255, 255, 255, 0.04);
   --card-border: rgba(255, 255, 255, 0.06);
+  /* Dashboard embed specific variables (slightly darker to make them stand out) */
+  --dashboard-card-bg: rgba(19, 31, 52, 0.46);
+  --dashboard-card-border: rgba(255,255,255,0.12);
+  --dashboard-topbar-glass: linear-gradient(90deg, rgba(9,94,155,0.64), rgba(8,65,128,0.5));
+  --dashboard-topbar-border: rgba(255,255,255,0.08);
   --accent: #2edd5a;
   --accent-2: #299deb;
   --text: #000000;
@@ -64,6 +69,33 @@ body,
 
 .container {
   transition: none
+}
+
+/* When route is an operation (op-...), make the embedded operation card use the dark glass
+   This only applies when App toggles the `op-embed-active` class on the main container.
+   We scope the rules precisely to avoid altering area selection cards or input sizes. */
+.op-embed-active .auth-card,
+.op-embed-active .action-panel,
+.op-embed-active .glass,
+.op-embed-active .modal-card,
+.op-embed-active .op-card,
+.op-embed-active .area-card.embedded {
+  background: var(--dashboard-card-bg) !important;
+  border: 1px solid var(--dashboard-card-border) !important;
+  box-shadow: 0 24px 52px rgba(5, 10, 18, 0.28) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  border-radius: 22px !important;
+}
+
+/* Don't change control sizing — only colors/backgrounds for the embedded operation */
+.op-embed-active .auth-card .control,
+.op-embed-active .auth-card .input,
+.op-embed-active .auth-card input,
+.op-embed-active .auth-card textarea {
+  /* preserve existing paddings/heights; only adjust background/border colors */
+  background: rgba(255,255,255,0.12) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  color: inherit !important;
 }
 
 /* Cuando el topbar crece (por ejemplo, en móvil con título en dos líneas), agregar más espacio superior */
@@ -1594,4 +1626,55 @@ a.btn.ghost {
   .nvSoftLeave {
     animation: none !important
   }
+}
+
+/* Make sure auth-card headers use the same dark glass appearance */
+.op-embed-active .auth-card-header {
+  background: transparent !important;
+  color: #e6ebf5 !important;
+}
+
+/* Ensure operation header area also uses darker color */
+.op-embed-active .auth-card-header,
+.op-embed-active .auth-card .auth-card-header {
+  color: #e6ebf5 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+}
+
+/* Make sure .op-card body sections are clearly dark */
+.op-embed-active .op-card,
+.op-embed-active .section-card,
+.op-embed-active .section-card .section-head h4,
+.op-embed-active .section-card .hint {
+  color: #e6ebf5 !important;
+}
+
+/* Dashboard panels use the exact same skin as the login card */
+.action-panel--dashboard .panel-surface {
+  background: rgba(19, 31, 52, 0.42) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.4) !important;
+  backdrop-filter: blur(6px) saturate(140%) !important;
+  color: #e6ebf5 !important;
+  border-radius: 14px !important;
+}
+
+.action-panel--dashboard .panel-title,
+.action-panel--dashboard .panel-header,
+.action-panel--dashboard .panel-body {
+  color: #e6ebf5 !important;
+}
+
+.action-panel--dashboard .panel-label {
+  color: rgba(255, 255, 255, 0.66) !important;
+}
+
+/* Keep input measurements intact; only recolor fields inside dashboard panels */
+.action-panel--dashboard .control,
+.action-panel--dashboard .input,
+.action-panel--dashboard input,
+.action-panel--dashboard textarea {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: inherit !important;
 }

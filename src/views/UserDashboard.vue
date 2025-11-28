@@ -1,11 +1,21 @@
 <template>
-  <ActionPanel>
+  <ActionPanel class="dashboard-main">
     <template #title>Hola, {{ user?.nombre }}</template>
     <h5>Selecciona el tipo de operación</h5>
 
     <div class="cards-panel">
       <div class="area-grid">
-        <div class="area-card compact" v-for="op in operations" :key="op.name" role="button" tabindex="0" @click.prevent="go(op.name)" @keyup.enter="go(op.name)" :aria-label="`Ir a ${op.label}`">
+          <div
+            class="area-card compact"
+            v-for="op in operations"
+            :key="op.name"
+            :class="{ embedded: isEmbedded(op.name) }"
+            role="button"
+            tabindex="0"
+            @click.prevent="go(op.name)"
+            @keyup.enter="go(op.name)"
+            :aria-label="`Ir a ${op.label}`"
+          >
           <div class="card-media">
             <img class="card-img" :src="op.img" :alt="op.label" />
           </div>
@@ -56,6 +66,21 @@ const operations = [
 const showRequests = ref(false)
 const myRequests = ref([])
 
+import { useRoute } from 'vue-router'
+const route = useRoute()
+
+function isEmbedded(opName) {
+  try {
+    const rn = route && route.name ? String(route.name) : ''
+    // If current route is the operation itself
+    if (rn === opName) return true
+    // If dashboard has a query 'area' pointing to this op
+    const q = route && route.query ? route.query.area : null
+    if (q && String(q) === opName) return true
+  } catch (e) { /* ignore */ }
+  return false
+}
+
 function go(name){ router.push({ name }).catch(()=>{}) }
 </script>
 
@@ -92,6 +117,17 @@ function go(name){ router.push({ name }).catch(()=>{}) }
 .area-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:22px }
 @media (max-width:960px){ .area-grid{ grid-template-columns: repeat(2,1fr) } }
 @media (max-width:560px){ .area-grid{ grid-template-columns: 1fr } }
+
+/* Embedded area card: use dark glass like operation cards, but scoped to this one card only */
+.area-card.embedded {
+  background: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: 0 24px 52px rgba(5, 10, 18, 0.28) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  border-radius: 22px !important;
+  color: #e6ebf5;
+}
+.area-card.embedded .card-title, .area-card.embedded .card-desc { color: #e6ebf5 !important }
 
 /* Small mobile fixes: avoid top overlap and badges absolute on tiny screens */
 @media (max-width:560px){
