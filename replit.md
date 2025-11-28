@@ -87,6 +87,24 @@ src/
 - **Feature Cards:** Glassmorphic design with hover animations
 - **Breadcrumbs:** Navigation at top of page
 
+### Desktop Layout Optimization (Nov 28, 2025) ✅
+**Formularios (Login, Register, Recovery):**
+- PC expansion: Forms now occupy **85% of viewport width** with 0 lateral padding
+- Max-width: `1000px` base, **100% for screens 1024px+**
+- Reduced padding: `24px 8px` for better spacing
+- Result: Cards no longer appear mobile-like on desktop
+
+**Dashboard Cards (Admin & User):**
+- Grid: Changed from 3 columns → **2 columns** for better spacing
+- Gap increased: `22px` → `28px` for breathing room
+- Cards now more prominent on desktop
+
+**Home Page & General:**
+- Container max-width: `920px` → `1200px`
+- Hero section: `1100px` → `1300px`
+- Feature cards gap: `20px` → `28px`
+- All layouts now utilize full desktop width elegantly
+
 ## Replit Configuration
 
 ### Development Setup
@@ -118,6 +136,7 @@ npm run build
 - **Interactivity:** Maximum feedback, non-invasive
 - **Navigation:** Breadcrumbs in all public pages, progress indicators in multi-step forms
 - **Skeleton Loaders:** Exact visual match to real components
+- **Desktop Layout:** Forms and cards expanded to use full width elegantly
 
 ## Components
 - **StepBubbles.vue:** Interactive step progress indicator with descriptions
@@ -125,3 +144,10 @@ npm run build
 
 ## Known Issues
 - Backend connection errors (expected without backend running)
+
+## Modified Files (Latest Session)
+- `src/styles/forms.css` - Form layout expansion for desktop
+- `src/styles.css` - Container and form styling updates
+- `src/views/AdminDashboard.vue` - Dashboard grid layout (3 → 2 columns)
+- `src/views/UserDashboard.vue` - Dashboard grid layout (3 → 2 columns)
+- `src/views/Home.vue` - Hero and features section expansion

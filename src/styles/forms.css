@@ -7,12 +7,23 @@
   align-items: center;
   justify-content: center;
   min-height: 60vh;
-  padding: 24px 16px;
+  padding: 24px 8px;
 }
 
 .form-col {
   width: 100%;
-  max-width: 750px;
+  max-width: 1000px;
+}
+
+@media (min-width: 1024px) {
+  .form-wrap {
+    padding: 24px 0;
+  }
+  
+  .form-col {
+    max-width: 100%;
+    width: 85%;
+  }
 }
 
 /* Form Header with Icon Circle */
