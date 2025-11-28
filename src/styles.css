@@ -708,12 +708,12 @@ body.menu-open .user-menu .dropdown {
 
 
 .glass {
-  background: rgba(19, 31, 52, 0.42);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(19, 31, 52, 0.58);
+  border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 14px;
   padding: 18px;
   box-shadow: 0 12px 30px rgba(2, 6, 23, 0.40);
-  backdrop-filter: blur(6px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(150%);
 }
 
 .card {
