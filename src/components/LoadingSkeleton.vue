@@ -11,6 +11,27 @@
       </div>
     </div>
     
+    <div v-else-if="type === 'topbar'" class="skeleton-topbar">
+      <div class="skeleton-topbar-inner">
+        <!-- Logo and brand -->
+        <div class="skeleton-topbar-brand">
+          <div class="skeleton skeleton-avatar" style="width: 48px; height: 48px; margin-right: 16px;"></div>
+          <div style="flex: 1;">
+            <div class="skeleton skeleton-text" style="width: 60px; height: 16px; margin-bottom: 6px;"></div>
+            <div class="skeleton skeleton-text" style="width: 120px; height: 12px;"></div>
+          </div>
+        </div>
+
+        <!-- Site title -->
+        <div class="skeleton skeleton-text" style="width: 200px; height: 16px;"></div>
+
+        <!-- Actions (avatar or login links) -->
+        <div class="skeleton-topbar-actions">
+          <div class="skeleton skeleton-avatar" style="width: 40px; height: 40px; border-radius: 50%;"></div>
+        </div>
+      </div>
+    </div>
+
     <div v-else-if="type === 'hero'" class="skeleton-hero-wrapper">
       <div class="skeleton-hero-card">
         <div class="skeleton-hero-left">
@@ -220,7 +241,7 @@ defineProps({
   type: {
     type: String,
     default: 'default',
-    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login', 'register', 'forgot', 'reset', 'form-card'].includes(val)
+    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login', 'register', 'forgot', 'reset', 'form-card', 'topbar'].includes(val)
   },
   count: {
     type: Number,
@@ -449,6 +470,38 @@ defineProps({
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 40px;
+}
+
+.skeleton-topbar {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 16px 0;
+  margin-bottom: 24px;
+}
+
+.skeleton-topbar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.skeleton-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.skeleton-topbar-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .skeleton-field {

@@ -6,7 +6,9 @@
       </picture>
     </div>
 
-    <header class="topbar" role="banner">
+    <LoadingSkeleton v-if="isInitializing" type="topbar" />
+
+    <header v-else class="topbar" role="banner">
       <div class="container topbar-inner">
         <div class="brand" aria-label="HRAEI">
           <img src="/src/images/logo_sinfondo.png" alt="logo" class="topbar-logo" />
@@ -80,6 +82,7 @@
   import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
   import MobileModal from '@/components/MobileModal.vue'
   import InactiveWindowOverlay from '@/components/InactiveWindowOverlay.vue'
+  import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
   import Swal from 'sweetalert2'
   import { useRouter, useRoute } from 'vue-router'
   import pendingRequestsStore from '@/stores/pendingRequestsStore'
@@ -116,6 +119,7 @@
     const isAdmin = ref(false)
     const user = ref(null)
   const avatarError = ref(false)
+  const isInitializing = ref(true)
 
     const route = useRoute()
     const router = useRouter()
@@ -254,6 +258,13 @@
     // Operaciones
     'op-entrada','op-salida','op-resguardo','op-servicio','op-inventario-biomedica','op-insumos-consumibles'
   ]
+
+  // Inicializar la topbar skeleton al cargar
+  onMounted(() => {
+    setTimeout(() => {
+      isInitializing.value = false
+    }, 800)
+  })
     function isOnDashboard() {
       // route.name puede ser undefined al inicio; convertir a string seguro
       const name = route && route.name ? String(route.name) : ''
