@@ -1,6 +1,6 @@
 <template>
   <div class="form-wrap">
-    <LoadingSkeleton v-if="isLoading" type="register" />
+    <LoadingSkeleton v-if="isLoading" :type="skeletonType" />
     
     <div v-else class="form-col">
       <div class="glass">
@@ -131,7 +131,22 @@ const breadcrumbItems = [
   { label: 'Registro', to: '/register' }
 ]
 
+
 const isLoading = ref(true)
+const skeletonType = ref('register')
+
+function updateSkeletonType() {
+  skeletonType.value = window.innerWidth >= 1024 ? 'hero' : 'register'
+}
+
+onMounted(() => {
+  updateSkeletonType()
+  window.addEventListener('resize', updateSkeletonType)
+  setTimeout(() => {
+    isLoading.value = false
+    window.removeEventListener('resize', updateSkeletonType)
+  }, 800)
+})
 
 onMounted(() => {
   setTimeout(() => {
@@ -329,4 +344,4 @@ async function compressImageFile(file, maxW = 512, maxH = 512, quality = 0.82) {
   .form-col { width: 90%; max-width: none; }
 }
 </style>
-*** End Patch
+

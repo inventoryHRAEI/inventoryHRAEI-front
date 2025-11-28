@@ -1,6 +1,6 @@
 <template>
   <div class="form-wrap">
-    <LoadingSkeleton v-if="isLoading" type="forgot" />
+    <LoadingSkeleton v-if="isLoading" :type="skeletonType" />
     
     <div v-else class="form-col">
       <div class="glass">
@@ -53,6 +53,20 @@ import StepBubbles from '@/components/StepBubbles.vue'
 
 const router = useRouter()
 const isLoading = ref(true)
+const skeletonType = ref('forgot')
+
+function updateSkeletonType() {
+  skeletonType.value = window.innerWidth >= 1024 ? 'hero' : 'forgot'
+}
+
+onMounted(() => {
+  updateSkeletonType()
+  window.addEventListener('resize', updateSkeletonType)
+  setTimeout(() => {
+    isLoading.value = false
+    window.removeEventListener('resize', updateSkeletonType)
+  }, 800)
+})
 
 const breadcrumbItems = [
   { label: 'Inicio', to: '/login' },

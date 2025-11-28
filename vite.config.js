@@ -33,13 +33,13 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0',
-    port: 5000,
+    port: 5173,
     strictPort: false,
     allowedHosts: true,
     hmr: {
       host: 'localhost',
-      port: 443,
-      protocol: 'wss'
+      port: 5173,
+      protocol: 'ws'
     },
     proxy: {
       '/api': {

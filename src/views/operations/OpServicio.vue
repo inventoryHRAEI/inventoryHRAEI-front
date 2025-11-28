@@ -1,8 +1,9 @@
 <template>
-  <FormShell>
-    <template #title>Órdenes de Servicio</template>
+  <div>
+    <FormShell>
+      <template #title>Órdenes de Servicio</template>
 
-    <template #body>
+      <template #body>
   <div class="op-card insumos" ref="rootRef">
         <form @submit.prevent="onSubmit" class="form-grid" id="servicio-form" novalidate>
           <div class="section-card combined-card">
@@ -508,6 +509,7 @@
       <span class="scroll-text">Volver al principio</span>
     </button>
   </Transition>
+  </div>
 </template>
 
 <script setup>
@@ -785,7 +787,14 @@ const onCancel = async () => {
   })
 
   if (result.isConfirmed) {
-    try { router.push({ name: 'dashboard' }) } catch { router.push('/') }
+    // Limpiar localStorage antes de regresar
+    try { localStorage.removeItem(LOCAL_KEY) } catch {}
+    // Regresar al dashboard con refresco forzado
+    try { 
+      await router.push({ name: 'dashboard' })
+    } catch { 
+      try { await router.push('/') } catch {}
+    }
   }
 }
 

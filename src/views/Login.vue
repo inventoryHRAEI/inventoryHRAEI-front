@@ -1,6 +1,6 @@
 <template>
   <div class="form-wrap">
-    <LoadingSkeleton v-if="isLoading" type="login" />
+    <LoadingSkeleton v-if="isLoading" :type="skeletonType" />
     
     <div v-else class="form-col">
       <div class="glass">
@@ -85,7 +85,27 @@ const show = ref(false)
 const route = useRoute()
 const isAddAccount = computed(() => route.name === 'add-account')
 const remember = ref(false)
+
 const isLoading = ref(true)
+const skeletonType = ref('login')
+
+function updateSkeletonType() {
+  skeletonType.value = window.innerWidth >= 1024 ? 'hero' : 'login'
+}
+
+onMounted(() => {
+  updateSkeletonType()
+  window.addEventListener('resize', updateSkeletonType)
+  setTimeout(() => {
+    isLoading.value = false
+    window.removeEventListener('resize', updateSkeletonType)
+  }, 800)
+  // ...existing code...
+  try {
+    const remembered = localStorage.getItem('rememberedEmail')
+    if (remembered) { email.value = remembered; remember.value = true }
+  } catch {}
+})
 
 onMounted(() => {
   setTimeout(() => {

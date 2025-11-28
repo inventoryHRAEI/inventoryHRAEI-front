@@ -1,5 +1,53 @@
 <template>
   <div class="skeleton-wrapper">
+<div class="skeleton-wrapper">
+  <div v-if="type === 'cards'" class="skeleton-grid">
+    <div v-for="n in count" :key="n" class="skeleton-card-item">
+      <div class="skeleton skeleton-image"></div>
+      <div class="skeleton-content">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-text"></div>
+        <div class="skeleton skeleton-text short"></div>
+      </div>
+    </div>
+  </div>
+
+  <div v-else-if="type === 'form-hero'" class="skeleton-hero-wrapper">
+    <div class="skeleton-hero-card">
+      <div class="skeleton-hero-left">
+        <!-- Encabezado tipo formulario -->
+        <div class="skeleton skeleton-title wide" style="margin-bottom: 16px;"></div>
+        <div class="skeleton skeleton-text" style="margin-bottom: 8px; width: 60%;"></div>
+        <div class="skeleton skeleton-text short" style="margin-bottom: 24px; width: 40%;"></div>
+
+        <!-- Campos de formulario -->
+        <div class="skeleton-form-fields">
+          <div v-for="n in 3" :key="n" class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+        </div>
+
+        <!-- Checkbox y botones -->
+        <div class="skeleton skeleton-checkbox" style="margin: 20px 0; width: 40%;"></div>
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+          <div class="skeleton skeleton-button" style="flex: 1;"></div>
+          <div class="skeleton skeleton-button" style="flex: 1;"></div>
+        </div>
+
+        <!-- Links -->
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 24px;">
+          <div class="skeleton skeleton-text" style="width: 100%; height: 20px;"></div>
+          <div class="skeleton skeleton-text" style="width: 100%; height: 20px;"></div>
+        </div>
+      </div>
+      <div class="skeleton-hero-right">
+        <div class="skeleton skeleton-carousel" style="height: 320px;"></div>
+      </div>
+    </div>
+  </div>
+  <!-- ...existing code... -->
+</div>
     <div v-if="type === 'cards'" class="skeleton-grid">
       <div v-for="n in count" :key="n" class="skeleton-card-item">
         <div class="skeleton skeleton-image"></div>
@@ -242,7 +290,7 @@ defineProps({
   type: {
     type: String,
     default: 'default',
-    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login', 'register', 'forgot', 'reset', 'form-card', 'topbar'].includes(val)
+    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login', 'register', 'forgot', 'reset', 'form-card', 'topbar', 'form-hero'].includes(val)
   },
   count: {
     type: Number,
