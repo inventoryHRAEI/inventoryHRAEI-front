@@ -1,22 +1,48 @@
 <template>
-  <div class="home-wrap">
+  <div class="home-wrap animate-in">
     <div class="hero glass">
       <div class="hero-left">
-        <h2>Bienvenido al sistema de Gestion de inventarios de Ingeniería Biomédica HRAEI</h2>
-        <p class="small-msg">Puedes gestionar: Todos los equipos médicos, equipos a comodatos, donaciones hechas al hospital, moniliario clinico/medico de la ubdirección de Ingeniería Biomédica.</p>
-        <div class="cta-row">
+        <h2 class="heading-xl text-gradient">Bienvenido al sistema de Gestión de inventarios de Ingeniería Biomédica HRAEI</h2>
+        <p class="small-msg">Puedes gestionar: Todos los equipos médicos, equipos a comodatos, donaciones hechas al hospital, mobiliario clínico/médico de la subdirección de Ingeniería Biomédica.</p>
+        
+        <div class="stats-grid animate-in animate-in-delay-1">
+          <div class="stat-card">
+            <PackageIcon class="stat-icon" />
+            <div class="stat-number">
+              <span ref="stat1">0</span>+
+            </div>
+            <div class="stat-label">Equipos Gestionados</div>
+          </div>
+          <div class="stat-card">
+            <ClipboardDocumentListIcon class="stat-icon" />
+            <div class="stat-number">
+              <span ref="stat2">0</span>+
+            </div>
+            <div class="stat-label">Operaciones Mensuales</div>
+          </div>
+          <div class="stat-card">
+            <BuildingOffice2Icon class="stat-icon" />
+            <div class="stat-number">
+              <span ref="stat3">0</span>+
+            </div>
+            <div class="stat-label">Áreas Cubiertas</div>
+          </div>
+        </div>
+
+        <div class="cta-row animate-in animate-in-delay-2">
           <div class="cta-block">
             <div class="q">¿Ya tienes una cuenta creada?</div>
-          <router-link to="/login"><button class="btn secondary">Inicia sesión</button></router-link>
+            <router-link to="/login"><button class="btn secondary btn-ripple">Inicia sesión</button></router-link>
           </div>
           <div class="cta-block">
             <div class="q">¿Deseas crear una cuenta?</div>
-          <router-link to="/register"><button class="btn primary" style="margin-left:12px">Registrarse</button></router-link>
+            <router-link to="/register"><button class="btn primary btn-ripple" style="margin-left:12px">Registrarse</button></router-link>
           </div>
         </div>
       </div>
-      <div class="hero-right">
-        <div class="carousel">
+      
+      <div class="hero-right animate-in animate-in-delay-1">
+        <div class="carousel carousel-enhanced" @mouseenter="pauseCarousel" @mouseleave="resumeCarousel">
           <div class="slide" v-for="(s, i) in slides" :key="i" :class="{ active: i === idx }">
             <img :src="s.img" :alt="s.title" loading="lazy" />
             <div class="caption">
@@ -25,9 +51,43 @@
               <div class="sub">Puedes gestionar todo desde un solo lugar.</div>
             </div>
           </div>
-          <div class="dots">
-            <button v-for="(s, i) in slides" :key="i" :class="['dot', i===idx?'on':'']" @click="idx=i" aria-label="Ir a slide"></button>
+          
+          <button class="carousel-arrow prev" @click="prevSlide" aria-label="Anterior">
+            <ChevronLeftIcon />
+          </button>
+          <button class="carousel-arrow next" @click="nextSlide" aria-label="Siguiente">
+            <ChevronRightIcon />
+          </button>
+          
+          <div class="dots-enhanced">
+            <button 
+              v-for="(s, i) in slides" 
+              :key="i" 
+              :class="['dot-enhanced', i === idx ? 'active' : '']" 
+              @click="goToSlide(i)" 
+              :aria-label="`Ir a slide ${i + 1}`"
+            ></button>
           </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="features-section animate-in animate-in-delay-3">
+      <div class="features-grid">
+        <div class="feature-card glass-modern">
+          <ShieldCheckIcon class="feature-icon" />
+          <h4>Seguro y Confiable</h4>
+          <p>Sistema con autenticación robusta y control de acceso por roles.</p>
+        </div>
+        <div class="feature-card glass-modern">
+          <ChartBarIcon class="feature-icon" />
+          <h4>Trazabilidad Completa</h4>
+          <p>Historial detallado de todos los movimientos de equipos.</p>
+        </div>
+        <div class="feature-card glass-modern">
+          <DevicePhoneMobileIcon class="feature-icon" />
+          <h4>Acceso Móvil</h4>
+          <p>Interfaz adaptable para consultar desde cualquier dispositivo.</p>
         </div>
       </div>
     </div>
@@ -36,6 +96,16 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { 
+  ChevronLeftIcon, 
+  ChevronRightIcon,
+  ShieldCheckIcon,
+  ChartBarIcon,
+  DevicePhoneMobileIcon,
+  ClipboardDocumentListIcon,
+  BuildingOffice2Icon
+} from '@heroicons/vue/24/outline'
+import { PackageIcon } from 'lucide-vue-next'
 
 const slides = ref([
   { img: '/carrusel/inventario_hospitaal.jpg', title: 'Gestión de Equipos', desc: 'Altas, ubicación, historial y trazabilidad.' },
@@ -43,32 +113,360 @@ const slides = ref([
   { img: '/carrusel/insumos_consumibles.jpg', title: 'Comodatos (Proveedor)', desc: 'Equipos en préstamo/comodato de proveedores.' },
   { img: '/carrusel/donaciones.jpeg', title: 'Donaciones', desc: 'Registro, validación y control de altas.' }
 ])
+
 const idx = ref(0)
-let timer
-onMounted(() => { timer = setInterval(() => { idx.value = (idx.value + 1) % slides.value.length }, 4500) })
-onBeforeUnmount(() => { try{ clearInterval(timer) }catch{} })
+let timer = null
+let isPaused = false
+
+const stat1 = ref(null)
+const stat2 = ref(null)
+const stat3 = ref(null)
+
+function animateNumber(element, target, duration = 2000) {
+  if (!element) return
+  const start = 0
+  const startTime = performance.now()
+  
+  function update(currentTime) {
+    const elapsed = currentTime - startTime
+    const progress = Math.min(elapsed / duration, 1)
+    const easeOut = 1 - Math.pow(1 - progress, 3)
+    const current = Math.floor(start + (target - start) * easeOut)
+    element.textContent = current.toLocaleString()
+    
+    if (progress < 1) {
+      requestAnimationFrame(update)
+    }
+  }
+  
+  requestAnimationFrame(update)
+}
+
+function startCarousel() {
+  timer = setInterval(() => {
+    if (!isPaused) {
+      idx.value = (idx.value + 1) % slides.value.length
+    }
+  }, 4500)
+}
+
+function pauseCarousel() {
+  isPaused = true
+}
+
+function resumeCarousel() {
+  isPaused = false
+}
+
+function nextSlide() {
+  idx.value = (idx.value + 1) % slides.value.length
+}
+
+function prevSlide() {
+  idx.value = (idx.value - 1 + slides.value.length) % slides.value.length
+}
+
+function goToSlide(i) {
+  idx.value = i
+}
+
+onMounted(() => {
+  startCarousel()
+  
+  setTimeout(() => {
+    animateNumber(stat1.value, 500, 2000)
+    animateNumber(stat2.value, 150, 2200)
+    animateNumber(stat3.value, 25, 1800)
+  }, 400)
+})
+
+onBeforeUnmount(() => {
+  if (timer) clearInterval(timer)
+})
 </script>
 
 <style scoped>
-.home-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh; padding:20px }
-.hero{ display:grid; grid-template-columns: 1.1fr 1fr; gap:18px; width:100%; max-width:1000px; overflow:hidden }
-.hero-left{ display:flex; flex-direction:column; justify-content:center }
-.small-msg{ color: var(--muted); margin: 6px 0 16px 0 }
-.cta-row{ display:flex; gap:12px }
-.hero-right{ position:relative }
-.carousel{ position:relative; overflow:hidden; border-radius:12px; border:1px solid var(--card-border); background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)); height:260px; min-height:220px; max-height:320px }
-.slide{ position:absolute; inset:0; opacity:0; transition: opacity .7s cubic-bezier(.2,.9,.2,1); display:grid; place-items:center }
-.slide.active{ opacity:1 }
-.slide img{ width:100%; height:100%; object-fit:cover; filter: saturate(1.05) contrast(1.02) }
-.caption{ position:absolute; left:12px; right:12px; bottom:12px; background: rgba(0,0,0,.50); color:#fff; padding:10px 12px; border-radius:10px; font-size:.95rem; backdrop-filter: blur(3px) }
-.caption .title{ font-weight:800; margin-bottom:2px }
-.caption .sub{ font-size:.86rem; opacity:.9; margin-top:2px }
-.dots{ position:absolute; right:8px; bottom:8px; display:flex; gap:6px }
-.dot{ width:10px; height:10px; border-radius:50%; border:1px solid rgba(255,255,255,.8); background:transparent; cursor:pointer; transition: transform .28s cubic-bezier(.2,.9,.2,1), background .18s ease }
-.dot.on{ background:#fff; transform: scale(1.25) }
-
-@media (max-width: 820px){
-  .hero{ grid-template-columns: 1fr }
+.home-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 20px;
+  gap: 40px;
 }
 
+.hero {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 24px;
+  width: 100%;
+  max-width: 1100px;
+  overflow: hidden;
+}
+
+.hero-left {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 16px;
+}
+
+.heading-xl {
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 800;
+  line-height: 1.2;
+  margin-bottom: 8px;
+}
+
+.small-msg {
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0 0 8px 0;
+  line-height: 1.5;
+  font-size: 0.95rem;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 16px 12px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.stat-icon {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto 8px;
+  color: var(--accent);
+  opacity: 0.9;
+}
+
+.stat-number {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--accent);
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.1;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.cta-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.cta-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cta-block .q {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.hero-right {
+  position: relative;
+}
+
+.carousel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
+  height: 320px;
+  min-height: 280px;
+  max-height: 380px;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.7s cubic-bezier(.2,.9,.2,1), transform 0.7s cubic-bezier(.2,.9,.2,1);
+  display: grid;
+  place-items: center;
+  transform: scale(1.02);
+}
+
+.slide.active {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.slide img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.caption {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 60px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 0.95rem;
+  backdrop-filter: blur(6px);
+}
+
+.caption .title {
+  font-weight: 800;
+  margin-bottom: 4px;
+  font-size: 1.05rem;
+}
+
+.caption .desc {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.caption .sub {
+  font-size: 0.82rem;
+  opacity: 0.75;
+  margin-top: 4px;
+}
+
+.features-section {
+  width: 100%;
+  max-width: 1100px;
+  margin-top: 20px;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.feature-card {
+  padding: 24px 20px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-4px);
+}
+
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+.feature-card h4 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #fff;
+}
+
+.feature-card p {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+  line-height: 1.4;
+}
+
+@media (max-width: 960px) {
+  .hero {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .carousel {
+    height: 260px;
+    min-height: 220px;
+  }
+  
+  .features-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  
+  .stat-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    padding: 12px 16px;
+  }
+  
+  .stat-icon {
+    margin: 0;
+    width: 24px;
+    height: 24px;
+  }
+  
+  .stat-number {
+    font-size: 1.3rem;
+  }
+  
+  .stat-label {
+    font-size: 0.7rem;
+  }
+  
+  .cta-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .cta-block {
+    width: 100%;
+  }
+  
+  .cta-block .btn {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+  
+  .caption {
+    bottom: 50px;
+    left: 12px;
+    right: 12px;
+    padding: 12px;
+  }
+}
 </style>

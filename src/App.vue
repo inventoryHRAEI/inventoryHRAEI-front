@@ -27,9 +27,10 @@
             <div v-if="logged && isOnDashboard()" class="user-menu" ref="userMenu" @keyup.esc="closeMenu">
               <transition name="btn-float">
                 <button :class="['user-btn', menuOpen ? 'open' : '']" @click="toggleMenu" :aria-expanded="menuOpen" aria-haspopup="true">
-                  <span class="avatar">
-                    <img v-if="avatarUrl && !avatarError" :src="avatarUrl" alt="avatar" class="top-avatar" @error="onAvatarError" />
-                    <span v-else>👤</span>
+                  <span class="avatar avatar-enhanced">
+                    <img v-if="avatarUrl && !avatarError" :src="avatarUrl" alt="avatar" class="top-avatar avatar-img" @error="onAvatarError" />
+                    <span v-else class="avatar-fallback">👤</span>
+                    <span class="avatar-status"></span>
                   </span>
                   <span class="welcome-text">{{ (user && user.nombre) || nombre || 'Usuario' }}</span>
                   <span class="chev" aria-hidden="true"></span>
@@ -54,7 +55,11 @@
     </header>
 
     <main :class="['container', { 'op-embed-active': isOperationRoute(), 'dashboard-main-active': isOnDashboard() }]">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <transition name="page" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
     </main>
       <!-- Mobile notifications modal (rendered globally) -->
       <MobileModal />

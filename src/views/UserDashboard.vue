@@ -1,33 +1,50 @@
 <template>
   <ActionPanel class="dashboard-main">
-    <template #title>Hola, {{ user?.nombre }}</template>
-    <h5>Selecciona el tipo de operación</h5>
+    <template #title>
+      <div class="title-row">
+        <span>Hola, {{ user?.nombre }}</span>
+        <div class="activity-indicator">
+          <span class="activity-dot"></span>
+          <span>En línea</span>
+        </div>
+      </div>
+    </template>
+    
+    <Breadcrumbs />
+    
+    <h5 class="section-subtitle">Selecciona el tipo de operación</h5>
 
     <div class="cards-panel">
-      <div class="area-grid">
-          <div
-            class="area-card compact"
-            v-for="op in operations"
-            :key="op.name"
-            :class="{ embedded: isEmbedded(op.name) }"
-            role="button"
-            tabindex="0"
-            @click.prevent="go(op.name)"
-            @keyup.enter="go(op.name)"
-            :aria-label="`Ir a ${op.label}`"
-          >
+      <LoadingSkeleton v-if="loading" type="cards" :count="6" />
+      
+      <div v-else class="area-grid">
+        <div
+          class="area-card compact card-shimmer"
+          v-for="op in operations"
+          :key="op.name"
+          :class="{ embedded: isEmbedded(op.name) }"
+          role="button"
+          tabindex="0"
+          @click.prevent="go(op.name)"
+          @keyup.enter="go(op.name)"
+          :aria-label="`Ir a ${op.label}`"
+        >
           <div class="card-media">
             <img class="card-img" :src="op.img" :alt="op.label" />
+            <div class="card-icon-badge">
+              <component :is="op.icon" />
+            </div>
           </div>
           <div class="card-body">
             <div class="card-title">{{ op.label }}</div>
             <div class="card-desc">{{ op.desc }}</div>
+            <div v-if="op.badge" class="badge-modern badge-success badge-pulse">
+              {{ op.badge }}
+            </div>
           </div>
         </div>
       </div>
     </div>
-
-    <!-- Modal removed; confirmation uses SweetAlert2 inside requestPermission -->
 
     <section v-if="showRequests" class="glass-panel list-panel">
       <h3>Solicitudes enviadas</h3>
@@ -36,17 +53,28 @@
       </ul>
     </section>
   </ActionPanel>
-  
 </template>
 
 <script setup>
 import ActionPanel from '@/components/ActionPanel.vue'
+import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-const router = useRouter()
-const user = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre') }
+import { useRouter, useRoute } from 'vue-router'
+import { 
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  ShieldCheckIcon,
+  WrenchScrewdriverIcon,
+  ClipboardDocumentListIcon,
+  CubeIcon
+} from '@heroicons/vue/24/outline'
 
-// Imágenes para operaciones (proporcionadas en src/images)
+const router = useRouter()
+const route = useRoute()
+const user = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre') }
+const loading = ref(true)
+
 import imgEntrada from '@/images/entrada_equips.png'
 import imgSalida from '@/images/salida_equipo.png'
 import imgResguardo from '@/images/Resguardo_imagen.png'
@@ -55,102 +83,255 @@ import imgInventario from '@/images/Inventario.png'
 import imgConsumibles from '@/images/Consumibles_bajo_pedido.png'
 
 const operations = [
-  { name: 'op-entrada', label: 'Órdenes de Entrada', desc: 'Captura de entradas de equipo/material.', img: imgEntrada },
-  { name: 'op-salida', label: 'Órdenes de Salida', desc: 'Registro de salidas y egresos.', img: imgSalida },
-  { name: 'op-resguardo', label: 'Resguardo', desc: 'Asignaciones y resguardos.', img: imgResguardo },
-  { name: 'op-servicio', label: 'Servicio', desc: 'Órdenes de servicio y mantenimiento.', img: imgServicio },
-  { name: 'op-inventario-biomedica', label: 'Inventario Biomédica', desc: 'Inventario y conteos.', img: imgInventario },
-  { name: 'op-insumos-consumibles', label: 'Insumos y Consumibles', desc: 'Gestión de insumos.', img: imgConsumibles }
+  { name: 'op-entrada', label: 'Órdenes de Entrada', desc: 'Captura de entradas de equipo/material.', img: imgEntrada, icon: ArrowDownTrayIcon },
+  { name: 'op-salida', label: 'Órdenes de Salida', desc: 'Registro de salidas y egresos.', img: imgSalida, icon: ArrowUpTrayIcon },
+  { name: 'op-resguardo', label: 'Resguardo', desc: 'Asignaciones y resguardos.', img: imgResguardo, icon: ShieldCheckIcon },
+  { name: 'op-servicio', label: 'Servicio', desc: 'Órdenes de servicio y mantenimiento.', img: imgServicio, icon: WrenchScrewdriverIcon },
+  { name: 'op-inventario-biomedica', label: 'Inventario Biomédica', desc: 'Inventario y conteos.', img: imgInventario, icon: ClipboardDocumentListIcon },
+  { name: 'op-insumos-consumibles', label: 'Insumos y Consumibles', desc: 'Gestión de insumos.', img: imgConsumibles, icon: CubeIcon }
 ]
 
 const showRequests = ref(false)
 const myRequests = ref([])
 
-import { useRoute } from 'vue-router'
-const route = useRoute()
-
 function isEmbedded(opName) {
   try {
     const rn = route && route.name ? String(route.name) : ''
-    // If current route is the operation itself
     if (rn === opName) return true
-    // If dashboard has a query 'area' pointing to this op
     const q = route && route.query ? route.query.area : null
     if (q && String(q) === opName) return true
-  } catch (e) { /* ignore */ }
+  } catch (e) {}
   return false
 }
 
-function go(name){ router.push({ name }).catch(()=>{}) }
+function go(name) {
+  router.push({ name }).catch(() => {})
+}
+
+onMounted(() => {
+  setTimeout(() => {
+    loading.value = false
+  }, 600)
+})
 </script>
 
 <style scoped>
-.grid-cards{ display:grid; grid-template-columns: repeat(3,1fr); gap:16px; margin-top:14px }
-.card-button{ padding:16px; border-radius:12px; border:1px solid rgba(0,0,0,0.06); background: rgba(255,255,255,0.78); cursor:pointer; font-weight:800; box-shadow:0 10px 20px rgba(2,6,23,0.1) }
-.card-button:hover{ box-shadow:0 14px 30px rgba(2,6,23,0.12) }
-.card-button.muted{ background: rgba(255,255,255,0.72); color:#222 }
-.glass-panel{ margin-top:16px; padding:12px; border-radius:12px; background: rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.22); backdrop-filter: blur(8px) }
-.list-panel h3{ margin:0 0 8px 0 }
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
 
-@media (max-width: 960px){ .grid-cards{ grid-template-columns: repeat(2,1fr) } }
-@media (max-width: 560px){ .grid-cards{ grid-template-columns: 1fr } }
+.section-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+}
 
-/* New cards style */
-.cards-panel{ margin-top:18px }
-.area-card{ width:100%; border-radius:12px; overflow:hidden; display:flex; flex-direction:column; background:#fff; border:1px solid rgba(16,24,40,0.06); box-shadow:0 6px 18px rgba(11,37,64,0.04); transition: transform .18s ease, box-shadow .18s ease }
-.area-card.compact{ cursor:pointer }
-.area-card.compact:focus{ outline:2px solid rgba(0,166,255,0.12); outline-offset:4px }
-.area-card.compact:hover{ transform: translateY(-6px); box-shadow:0 22px 44px rgba(11,37,64,0.12) }
-.area-card .card-media{ height:120px; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden }
-.area-card .card-media img{ width:100%; height:100%; object-fit:cover; display:block }
-.area-card .card-media img{ border-top-left-radius:12px; border-top-right-radius:12px }
-.area-card.disabled{ opacity:0.7; filter: grayscale(100%); }
-.area-card .card-body{ padding:12px 14px; display:flex; flex-direction:column; gap:6px }
-.area-card .card-title{ font-weight:800; font-size:15px; color: #0b2540 }
-.area-card .card-sub.small{ font-size:13px; color:#52607a }
+.activity-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
 
-.pending-badge{ position:absolute; top:10px; right:10px; background:var(--btn-green,#0a8b5b); color:#fff; padding:6px 8px; border-radius:999px; font-weight:700; font-size:12px; box-shadow:0 6px 14px rgba(11,37,64,0.12) }
+.activity-dot {
+  width: 8px;
+  height: 8px;
+  background: #2edd5a;
+  border-radius: 50%;
+  animation: activity-blink 2s infinite;
+}
 
-.area-icon{ width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; background:rgba(255,255,255,0.9); box-shadow:0 6px 12px rgba(11,37,64,0.04); margin-right:8px }
-.card-title .label-wrap{ display:flex; align-items:center; gap:10px }
+@keyframes activity-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
 
-.area-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:22px }
-@media (max-width:960px){ .area-grid{ grid-template-columns: repeat(2,1fr) } }
-@media (max-width:560px){ .area-grid{ grid-template-columns: 1fr } }
+.cards-panel {
+  margin-top: 18px;
+}
 
-/* Embedded area card: use dark glass like operation cards, but scoped to this one card only */
+.area-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+
+.area-card {
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid rgba(16, 24, 40, 0.06);
+  box-shadow: 0 6px 18px rgba(11, 37, 64, 0.04);
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              box-shadow 0.28s ease,
+              border-color 0.28s ease;
+  cursor: pointer;
+}
+
+.area-card:focus {
+  outline: 2px solid rgba(46, 221, 90, 0.4);
+  outline-offset: 4px;
+}
+
+.area-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 28px 56px rgba(11, 37, 64, 0.15),
+              0 0 0 1px rgba(46, 221, 90, 0.15);
+}
+
+.area-card:active {
+  transform: translateY(-4px) scale(1.01);
+}
+
+.area-card .card-media {
+  height: 130px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.area-card .card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  transition: transform 0.3s ease;
+}
+
+.area-card:hover .card-media img {
+  transform: scale(1.05);
+}
+
+.card-icon-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 5;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-icon-badge svg {
+  width: 24px;
+  height: 24px;
+  color: #0bb828;
+}
+
+.area-card:hover .card-icon-badge {
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.area-card .card-body {
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.area-card .card-title {
+  font-weight: 800;
+  font-size: 1rem;
+  color: #0b2540;
+}
+
+.card-desc {
+  margin-top: 4px;
+  color: #52607a;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.badge-modern {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  width: fit-content;
+  margin-top: 8px;
+}
+
+.badge-success {
+  background: rgba(46, 221, 90, 0.15);
+  color: #0bb828;
+  border: 1px solid rgba(46, 221, 90, 0.3);
+}
+
+.glass-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+}
+
+.list-panel h3 {
+  margin: 0 0 12px 0;
+  color: #fff;
+}
+
 .area-card.embedded {
-  background: var(--card-bg) !important;
-  border: 1px solid var(--card-border) !important;
-  box-shadow: 0 24px 52px rgba(5, 10, 18, 0.28) !important;
-  backdrop-filter: blur(18px) saturate(160%) !important;
-  border-radius: 22px !important;
+  background: rgba(19, 31, 52, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 24px 52px rgba(5, 10, 18, 0.28);
+  backdrop-filter: blur(18px) saturate(160%);
+}
+
+.area-card.embedded .card-title,
+.area-card.embedded .card-desc {
   color: #e6ebf5;
 }
-.area-card.embedded .card-title, .area-card.embedded .card-desc { color: #e6ebf5 !important }
 
-/* Small mobile fixes: avoid top overlap and badges absolute on tiny screens */
-@media (max-width:560px){
-  .cards-panel{ margin-top:22px }
-  .area-card .pending-badge{ position:relative; margin:8px 12px 0 auto }
+@media (max-width: 960px) {
+  .area-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
-/* Modal / catalog styles */
-.modal-backdrop{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.48); z-index:1400; padding:20px }
-.modal-card{ width:min(920px,100%); max-width:920px; background:var(--card-bg,#fff); border-radius:12px; overflow:hidden; box-shadow:0 30px 80px rgba(2,6,23,0.48); display:flex; gap:0 }
-.modal-media{ flex:1 1 48%; background:#f6f8fa; display:flex; align-items:center; justify-content:center; min-height:260px }
-.modal-media img{ width:100%; height:100%; object-fit:cover }
-.modal-body{ flex:1 1 52%; padding:20px; display:flex; flex-direction:column; gap:12px }
-.modal-body h3{ margin:0; font-size:20px }
-.modal-hint{ color:#50718a; font-weight:700 }
-.modal-desc{ color:#334155; line-height:1.45 }
-.modal-actions{ margin-top:auto; display:flex; gap:12px; justify-content:flex-end }
-.card-desc{ margin-top:8px; color:#44566b; font-size:13px }
-.pending-line{ margin-top:8px; color:#b08800; font-weight:700; font-size:12px }
-.card-actions{ margin-top:12px; display:flex; justify-content:flex-end }
-.btn.ghost{ background:transparent; border:1px solid rgba(0,0,0,0.06); color:var(--btn-green,#0a8b5b); padding:8px 12px }
-.btn.primary{ background: linear-gradient(90deg,var(--btn-green,#00c6a7),#00a5ff); color:#fff; padding:8px 12px; border-radius:8px; border:none }
-
-@media (max-width:880px){ .modal-card{ flex-direction:column } .modal-media{ min-height:180px } }
-
+@media (max-width: 560px) {
+  .area-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .title-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .cards-panel {
+    margin-top: 16px;
+  }
+  
+  .area-card .card-media {
+    height: 120px;
+  }
+}
 </style>

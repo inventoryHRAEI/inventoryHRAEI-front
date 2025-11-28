@@ -1,0 +1,789 @@
+/* ============================================
+   MEJORAS VISUALES MODERNAS - ENHANCEMENTS.CSS
+   ============================================ */
+
+/* ===========================================
+   1. TRANSICIONES DE PÁGINA
+   =========================================== */
+.page-enter-active,
+.page-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+/* Fade simple para rutas específicas */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* ===========================================
+   2. EFECTO RIPPLE EN BOTONES
+   =========================================== */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(255,255,255,0.3) 10%, transparent 10.01%);
+  background-repeat: no-repeat;
+  background-position: 50%;
+  transform: scale(10, 10);
+  opacity: 0;
+  transition: transform 0.4s, opacity 0.8s;
+}
+
+.btn-ripple:active::after {
+  transform: scale(0, 0);
+  opacity: 0.3;
+  transition: 0s;
+}
+
+/* ===========================================
+   3. EFECTO SHIMMER/BRILLO EN TARJETAS
+   =========================================== */
+.card-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  transition: left 0.5s ease;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.card-shimmer:hover::before {
+  left: 100%;
+}
+
+/* ===========================================
+   4. HOVER MEJORADO EN TARJETAS
+   =========================================== */
+.area-card {
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              box-shadow 0.28s ease,
+              border-color 0.28s ease !important;
+}
+
+.area-card:hover {
+  transform: translateY(-8px) scale(1.02) !important;
+  box-shadow: 0 28px 56px rgba(11, 37, 64, 0.18),
+              0 0 0 1px rgba(46, 221, 90, 0.15) !important;
+}
+
+.area-card:active {
+  transform: translateY(-4px) scale(1.01) !important;
+}
+
+/* Efecto de brillo en imagen al hover */
+.area-card .card-media {
+  position: relative;
+  overflow: hidden;
+}
+
+.area-card .card-media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.12) 50%,
+    transparent 60%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.area-card:hover .card-media::after {
+  transform: translateX(100%);
+}
+
+/* ===========================================
+   5. ICONOS EN TARJETAS
+   =========================================== */
+.card-icon-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 5;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-icon-badge svg {
+  width: 24px;
+  height: 24px;
+  color: #0bb828;
+}
+
+.area-card:hover .card-icon-badge {
+  transform: scale(1.1) rotate(-5deg);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ===========================================
+   6. MEJORAS EN SOMBRAS
+   =========================================== */
+.shadow-soft {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06),
+              0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-medium {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08),
+              0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-elevated {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12),
+              0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+/* ===========================================
+   7. GRADIENTES MODERNOS
+   =========================================== */
+.gradient-primary {
+  background: linear-gradient(135deg, #0bb828 0%, #00a86b 50%, #00c9a7 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, #2edd5a 0%, #00d4aa 100%);
+}
+
+.gradient-glass {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+/* ===========================================
+   8. BREADCRUMBS
+   =========================================== */
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breadcrumb-item a {
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb-item a:hover {
+  color: var(--accent);
+}
+
+.breadcrumb-separator {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.75rem;
+}
+
+.breadcrumb-current {
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ===========================================
+   9. AVATAR MEJORADO
+   =========================================== */
+.avatar-enhanced {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-enhanced .avatar-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(46, 221, 90, 0.5);
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.avatar-enhanced:hover .avatar-img {
+  border-color: var(--accent);
+  transform: scale(1.05);
+}
+
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+}
+
+.avatar-status {
+  position: absolute;
+  bottom: 0;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: #2edd5a;
+  border: 2px solid rgba(19, 31, 52, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(46, 221, 90, 0.5);
+}
+
+.avatar-status.offline {
+  background: #6b7280;
+  box-shadow: none;
+}
+
+/* ===========================================
+   10. LOADING SKELETON
+   =========================================== */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 25%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.06) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: 8px;
+}
+
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+}
+
+.skeleton-title {
+  height: 24px;
+  width: 60%;
+  margin-bottom: 12px;
+}
+
+.skeleton-card {
+  height: 180px;
+  border-radius: 12px;
+}
+
+.skeleton-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ===========================================
+   11. ESTADÍSTICAS ANIMADAS
+   =========================================== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.stat-number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent);
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.1;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.stat-icon {
+  width: 32px;
+  height: 32px;
+  margin-bottom: 8px;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+/* ===========================================
+   12. MEJORAS EN CARRUSEL
+   =========================================== */
+.carousel-enhanced {
+  position: relative;
+}
+
+.carousel-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+  opacity: 0;
+}
+
+.carousel-enhanced:hover .carousel-arrow {
+  opacity: 1;
+}
+
+.carousel-arrow:hover {
+  transform: translateY(-50%) scale(1.1);
+  background: #fff;
+}
+
+.carousel-arrow:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.carousel-arrow.prev {
+  left: 12px;
+}
+
+.carousel-arrow.next {
+  right: 12px;
+}
+
+.carousel-arrow svg {
+  width: 20px;
+  height: 20px;
+  color: #0b2540;
+}
+
+/* Dots mejorados */
+.dots-enhanced {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.dot-enhanced {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.25s ease;
+  padding: 0;
+}
+
+.dot-enhanced.active {
+  background: #fff;
+  width: 24px;
+  border-radius: 4px;
+}
+
+.dot-enhanced:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+/* ===========================================
+   13. TOOLTIP MODERNO
+   =========================================== */
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.95);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border-radius: 8px;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: rgba(15, 23, 42, 0.95);
+}
+
+.tooltip-wrapper:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ===========================================
+   14. BADGES MODERNOS
+   =========================================== */
+.badge-modern {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.badge-success {
+  background: rgba(46, 221, 90, 0.15);
+  color: #2edd5a;
+  border: 1px solid rgba(46, 221, 90, 0.3);
+}
+
+.badge-warning {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.badge-info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-pulse {
+  position: relative;
+}
+
+.badge-pulse::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  background: inherit;
+  opacity: 0.5;
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0;
+  }
+}
+
+/* ===========================================
+   15. FOCUS STATES MEJORADOS
+   =========================================== */
+.focus-ring:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(46, 221, 90, 0.3);
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ===========================================
+   16. ANIMACIÓN DE ENTRADA PARA CONTENIDO
+   =========================================== */
+.animate-in {
+  animation: content-in 0.4s ease-out forwards;
+}
+
+@keyframes content-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in-delay-1 { animation-delay: 0.1s; opacity: 0; }
+.animate-in-delay-2 { animation-delay: 0.2s; opacity: 0; }
+.animate-in-delay-3 { animation-delay: 0.3s; opacity: 0; }
+
+/* ===========================================
+   17. INDICADOR DE ACTIVIDAD RECIENTE
+   =========================================== */
+.activity-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.activity-dot {
+  width: 6px;
+  height: 6px;
+  background: #2edd5a;
+  border-radius: 50%;
+  animation: activity-blink 2s infinite;
+}
+
+@keyframes activity-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ===========================================
+   18. GLASSMORPHISM MEJORADO
+   =========================================== */
+.glass-modern {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+}
+
+.glass-card-inner {
+  position: relative;
+}
+
+.glass-card-inner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.2) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ===========================================
+   19. TIPOGRAFÍA MEJORADA
+   =========================================== */
+.text-gradient {
+  background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.8) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-accent-gradient {
+  background: linear-gradient(135deg, #2edd5a 0%, #00d4aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heading-xl {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+
+.heading-lg {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+/* ===========================================
+   20. EFECTOS DE HOVER EN LINKS
+   =========================================== */
+.link-hover-underline {
+  position: relative;
+  text-decoration: none;
+}
+
+.link-hover-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width 0.25s ease;
+}
+
+.link-hover-underline:hover::after {
+  width: 100%;
+}
+
+/* ===========================================
+   RESPONSIVE ADJUSTMENTS
+   =========================================== */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .stat-number {
+    font-size: 1.5rem;
+  }
+  
+  .carousel-arrow {
+    width: 36px;
+    height: 36px;
+    opacity: 0.7;
+  }
+  
+  .carousel-enhanced:hover .carousel-arrow {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .breadcrumbs {
+    font-size: 0.8rem;
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .page-enter-active,
+  .page-leave-active,
+  .fade-enter-active,
+  .fade-leave-active {
+    transition: none;
+  }
+  
+  .skeleton {
+    animation: none;
+  }
+  
+  .card-shimmer::before {
+    display: none;
+  }
+  
+  .area-card {
+    transition: none !important;
+  }
+  
+  .carousel-arrow,
+  .area-card:hover .card-icon-badge {
+    transition: none;
+  }
+}
