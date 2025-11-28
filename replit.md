@@ -67,6 +67,21 @@ src/
 
 ## Recent Changes (Nov 28, 2025)
 
+### Topbar & Skeleton Loading Perfection
+1. **Perfect Skeleton Topbar:** Loading skeleton now matches topbar exactly in position, shape, and styling
+   - Floating capsule shape with `border-radius: 16px`
+   - Fixed position at `top: 12px` with centered layout
+   - Identical glassmorphism: `blur(12px) saturate(150%)`
+   - Same shadow and inset border effects
+   - Exact color and border styling
+2. **Enhanced Topbar Design:**
+   - Height increased to 64px for better proportions
+   - Improved padding and spacing (24px horizontal)
+   - Glassmorphism refinement with hover effects
+   - Logo scales on hover (1.05x)
+   - Action buttons styled with green theme and hover animations
+   - Better typography with adjusted letter-spacing
+
 ### Frontend Modernization Enhancements
 1. **Page Transitions:** Smooth fade transitions between routes using Vue's transition system
 2. **Animated Statistics:** Home page now shows animated counters (194+ equipos, 53+ operaciones, 10+ áreas) with Intersection Observer
@@ -106,7 +121,9 @@ npm run build
 - Multi-window session management uses sessionStorage and localStorage
 
 ## User Preferences
-None specified yet.
+- **Language:** Spanish (en toda la interfaz y comunicación)
+- **Skeleton Loaders:** Must match real components exactly - including structure, layout, and visual effects
+- **Design:** Glassmorphic UI with high-quality animations and smooth transitions
 
 ## Known Issues
 - Vite CJS Node API deprecation warning (non-critical, will be resolved in future Vite versions)
