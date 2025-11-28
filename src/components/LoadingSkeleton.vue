@@ -474,21 +474,25 @@ defineProps({
 }
 
 .skeleton-topbar {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 12px 24px;
+  background: rgba(19, 31, 52, 0.50);
+  backdrop-filter: blur(12px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  padding: 0 24px;
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 1000px;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
   height: 64px;
-  width: 100%;
+  box-shadow: 0 16px 48px rgba(2, 6, 23, 0.32),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
   box-sizing: border-box;
 }
 
