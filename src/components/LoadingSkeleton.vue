@@ -11,29 +11,36 @@
       </div>
     </div>
     
-    <div v-else-if="type === 'hero'" class="skeleton-hero">
-      <div class="skeleton-hero-left">
-        <div class="skeleton skeleton-title wide" style="margin-bottom: 16px;"></div>
-        <div class="skeleton skeleton-text" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text short" style="margin-bottom: 24px;"></div>
-        
-        <div class="skeleton-stats">
-          <div v-for="n in 3" :key="n" class="skeleton-stat-card">
-            <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px; margin-bottom: 12px;"></div>
-            <div class="skeleton skeleton-text" style="margin-bottom: 8px; width: 60%;"></div>
-            <div class="skeleton skeleton-text short"></div>
+    <div v-else-if="type === 'hero'" class="skeleton-hero-wrapper">
+      <div class="skeleton-hero-card">
+        <div class="skeleton-hero-left">
+          <!-- Main title -->
+          <div class="skeleton skeleton-title wide" style="margin-bottom: 16px;"></div>
+          <!-- Description -->
+          <div class="skeleton skeleton-text" style="margin-bottom: 8px;"></div>
+          <div class="skeleton skeleton-text" style="margin-bottom: 8px;"></div>
+          <div class="skeleton skeleton-text short" style="margin-bottom: 24px;"></div>
+          
+          <!-- Stats grid -->
+          <div class="skeleton-stats">
+            <div v-for="n in 3" :key="n" class="skeleton-stat-card">
+              <div class="skeleton skeleton-avatar" style="width: 36px; height: 36px; margin-bottom: 12px;"></div>
+              <div class="skeleton skeleton-text" style="margin-bottom: 8px; width: 60%;"></div>
+              <div class="skeleton skeleton-text short"></div>
+            </div>
+          </div>
+          
+          <!-- CTA Buttons -->
+          <div style="margin-top: 24px; display: flex; gap: 12px;">
+            <div class="skeleton skeleton-button" style="flex: 1;"></div>
+            <div class="skeleton skeleton-button" style="flex: 1;"></div>
           </div>
         </div>
         
-        <div style="margin-top: 24px;">
-          <div class="skeleton skeleton-button"></div>
-          <div class="skeleton skeleton-button" style="margin-top: 10px;"></div>
+        <!-- Carousel -->
+        <div class="skeleton-hero-right">
+          <div class="skeleton skeleton-carousel"></div>
         </div>
-      </div>
-      
-      <div class="skeleton-hero-right">
-        <div class="skeleton skeleton-carousel"></div>
       </div>
     </div>
     
@@ -420,6 +427,28 @@ defineProps({
 
 .skeleton-form {
   max-width: 400px;
+}
+
+.skeleton-hero-wrapper {
+  padding: 24px 16px;
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.skeleton-hero-card {
+  width: 100%;
+  max-width: 1200px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border-radius: 14px;
+  padding: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
 }
 
 .skeleton-field {
