@@ -12,22 +12,29 @@
     </div>
     
     <div v-else-if="type === 'topbar'" class="skeleton-topbar">
-      <div class="skeleton-topbar-inner">
-        <!-- Logo and brand -->
+      <div class="container skeleton-topbar-inner">
+        <!-- Left: Logo and brand -->
         <div class="skeleton-topbar-brand">
-          <div class="skeleton skeleton-avatar" style="width: 48px; height: 48px; margin-right: 16px;"></div>
-          <div style="flex: 1;">
-            <div class="skeleton skeleton-text" style="width: 60px; height: 16px; margin-bottom: 6px;"></div>
-            <div class="skeleton skeleton-text" style="width: 120px; height: 12px;"></div>
+          <!-- Logo placeholder -->
+          <div class="skeleton skeleton-avatar" style="width: 48px; height: 48px; margin-right: 16px; flex-shrink: 0;"></div>
+          <!-- Brand text -->
+          <div style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+            <div class="skeleton skeleton-text" style="width: 50px; height: 14px;"></div>
+            <div class="skeleton skeleton-text" style="width: 120px; height: 10px;"></div>
           </div>
         </div>
 
-        <!-- Site title -->
-        <div class="skeleton skeleton-text" style="width: 200px; height: 16px;"></div>
+        <!-- Center: Site title -->
+        <div style="flex: 1; display: flex; align-items: center; justify-content: center;">
+          <div class="skeleton skeleton-text" style="width: 250px; height: 14px;"></div>
+        </div>
 
-        <!-- Actions (avatar or login links) -->
+        <!-- Right: Navigation actions (2 links or avatar) -->
         <div class="skeleton-topbar-actions">
-          <div class="skeleton skeleton-avatar" style="width: 40px; height: 40px; border-radius: 50%;"></div>
+          <!-- Link 1 -->
+          <div class="skeleton skeleton-text" style="width: 80px; height: 12px;"></div>
+          <!-- Link 2 -->
+          <div class="skeleton skeleton-text" style="width: 80px; height: 12px;"></div>
         </div>
       </div>
     </div>
@@ -476,30 +483,32 @@ defineProps({
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding: 16px 0;
+  padding: 12px 0;
   margin-bottom: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .skeleton-topbar-inner {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  padding: 0 16px;
 }
 
 .skeleton-topbar-brand {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   flex-shrink: 0;
+  min-width: fit-content;
 }
 
 .skeleton-topbar-actions {
   display: flex;
-  gap: 16px;
+  gap: 24px;
   align-items: center;
   flex-shrink: 0;
 }
