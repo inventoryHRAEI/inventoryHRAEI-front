@@ -1,37 +1,47 @@
 <template>
-  <FormShell>
-    <template #title>
-      <h2>Recuperar Contraseña</h2>
-    </template>
-
-    <template #body>
-      <form @submit.prevent="forgot">
-        <input v-model="email" placeholder="Email" type="email" required class="input" />
-        <div style="margin-top:12px">
-          <button class="btn secondary ui-btn ui-btn--md" type="submit">Enviar código</button>
+  <div class="form-wrap">
+    <div class="form-col">
+      <div class="glass">
+        <div class="form-header">
+          <div class="icon-circle">
+            <component :is="EnvelopeIcon" class="form-icon" />
+          </div>
+          <h2>Recuperar Contraseña</h2>
+          <p class="form-subtitle">Recibe un código en tu correo</p>
         </div>
-      </form>
-    </template>
 
-    <template #links>
-      <router-link to="/login">Volver a iniciar sesión</router-link>
-    </template>
+        <form @submit.prevent="forgot">
+          <div class="form-group">
+            <label class="field-label">Correo Electrónico</label>
+            <div class="input-wrapper">
+              <component :is="EnvelopeIcon" class="input-icon" />
+              <input v-model="email" placeholder="tu@email.com" type="email" required class="input" />
+            </div>
+          </div>
 
-    <template #msg v-if="msg">
-      {{ msg }}
-    </template>
+          <button class="btn secondary btn-lg" type="submit">Enviar Código</button>
+        </form>
 
-    <template #error v-if="error">
-      {{ error }}
-    </template>
-  </FormShell>
+        <div class="link-row mt-12">
+          <router-link to="/login" class="link-item">
+            <component :is="ArrowLeftIcon" class="link-icon" />
+            Volver a iniciar sesión
+          </router-link>
+        </div>
+
+        <div v-if="msg" class="msg">{{ msg }}</div>
+        <div v-if="error" class="error">{{ error }}</div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import FormShell from '@/components/FormShell.vue'
 import { ref } from 'vue'
 import notifier from '@/utils/notifier'
 import { useRouter } from 'vue-router'
+import { EnvelopeIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
+
 const router = useRouter()
 
 const email = ref('')

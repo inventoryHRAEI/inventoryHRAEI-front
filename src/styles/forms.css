@@ -115,6 +115,7 @@
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .input-icon {
@@ -126,6 +127,7 @@
   pointer-events: none;
   stroke-width: 2;
   flex-shrink: 0;
+  z-index: 1;
 }
 
 .input {
@@ -133,11 +135,12 @@
   padding: 12px 14px 12px 44px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: 12px;
   color: #fff;
   font-size: 14px;
   font-family: inherit;
   transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .input::placeholder {
@@ -158,29 +161,40 @@
   cursor: not-allowed;
 }
 
-/* Password Field */
+/* Password Field - Special handling for toggle-eye button */
 .password-field {
   position: relative;
+  width: 100%;
+}
+
+.password-field .input {
+  padding-right: 44px;
 }
 
 .toggle-eye {
   position: absolute;
-  right: 14px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
   border: none;
   color: rgba(45, 221, 90, 0.6);
   cursor: pointer;
-  padding: 4px;
+  padding: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  z-index: 2;
+  margin: 0;
+  min-width: 32px;
+  height: 32px;
+  border-radius: 6px;
 }
 
 .toggle-eye:hover {
   color: #2ddd5a;
+  background: rgba(45, 221, 90, 0.1);
 }
 
 .eye-icon {
