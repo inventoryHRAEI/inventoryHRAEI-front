@@ -30,17 +30,6 @@
             <div class="stat-label">Áreas Cubiertas</div>
           </div>
         </div>
-
-        <div class="cta-row animate-in animate-in-delay-2">
-          <div class="cta-block">
-            <div class="q">¿Ya tienes una cuenta creada?</div>
-            <router-link to="/login"><button class="btn secondary btn-ripple">Inicia sesión</button></router-link>
-          </div>
-          <div class="cta-block">
-            <div class="q">¿Deseas crear una cuenta?</div>
-            <router-link to="/register"><button class="btn primary btn-ripple" style="margin-left:12px">Registrarse</button></router-link>
-          </div>
-        </div>
       </div>
       
       <div class="hero-right animate-in animate-in-delay-1">
@@ -69,6 +58,17 @@
               @click="goToSlide(i)" 
               :aria-label="`Ir a slide ${i + 1}`"
             ></button>
+          </div>
+        </div>
+
+        <div class="cta-row animate-in animate-in-delay-2">
+          <div class="cta-block">
+            <div class="q">¿Ya tienes una cuenta creada?</div>
+            <router-link to="/login"><button class="btn secondary btn-ripple">Inicia sesión</button></router-link>
+          </div>
+          <div class="cta-block">
+            <div class="q">¿Deseas crear una cuenta?</div>
+            <router-link to="/register"><button class="btn primary btn-ripple" style="margin-left:12px">Registrarse</button></router-link>
           </div>
         </div>
       </div>

@@ -67,31 +67,29 @@ src/
 
 ## Recent Changes (Nov 28, 2025)
 
-### Topbar & Skeleton Loading Perfection
-1. **Perfect Skeleton Topbar:** Loading skeleton now matches topbar exactly in position, shape, and styling
+### Topbar & Home Page Final Refinements
+1. **Perfect Skeleton Topbar:** Loading skeleton matches topbar exactly
    - Floating capsule shape with `border-radius: 16px`
    - Fixed position at `top: 12px` with centered layout
    - Identical glassmorphism: `blur(12px) saturate(150%)`
    - Same shadow and inset border effects
-   - Exact color and border styling
-2. **Enhanced Topbar Design:**
-   - Height increased to 64px for better proportions
-   - Improved padding and spacing (24px horizontal)
-   - Glassmorphism refinement with hover effects
-   - Logo scales on hover (1.05x)
-   - Action buttons styled with green theme and hover animations
-   - Better typography with adjusted letter-spacing
+2. **Enhanced Topbar Design:** Height 64px, improved padding (24px horizontal), glassmorphism with hover effects
+3. **Carousel Improvements:**
+   - Login/Register buttons moved below carousel for better layout
+   - Improved image display without excessive tapas
+   - Gradient overlay on images optimized for text readability
+   - Better quality image handling with `object-fit: cover` and `object-position: center`
+   - Navigation dots and arrows with smooth transitions
 
 ### Frontend Modernization Enhancements
 1. **Page Transitions:** Smooth fade transitions between routes using Vue's transition system
-2. **Animated Statistics:** Home page now shows animated counters (194+ equipos, 53+ operaciones, 10+ áreas) with Intersection Observer
-3. **Enhanced Carousel:** Added navigation arrows, improved indicators with animations, pause on hover
-4. **Dashboard Icons:** Added Heroicons and Lucide icons to operation cards for better visual hierarchy
+2. **Animated Statistics:** Home page shows animated counters (194+ equipos, 53+ operaciones, 10+ áreas)
+3. **Enhanced Carousel:** Navigation arrows, improved indicators with animations, pause on hover
+4. **Dashboard Icons:** Heroicons and Lucide icons to operation cards
 5. **Avatar Improvements:** Enhanced topbar avatar with status indicator and hover effects
-6. **Glass Effects:** Modernized glassmorphism with improved backdrop filters and subtle gradients
-7. **New CSS Architecture:** Created `src/styles/enhancements.css` with organized sections for animations, cards, buttons, etc.
-8. **Reusable Components:** Added LoadingSkeleton.vue and Breadcrumbs.vue components
-9. **Microinteractions:** Hover effects, button ripples, and smooth transitions throughout
+6. **Glass Effects:** Modernized glassmorphism with improved backdrop filters
+7. **Reusable Components:** LoadingSkeleton.vue and Breadcrumbs.vue components
+8. **Microinteractions:** Hover effects, button ripples, and smooth transitions
 
 ### Initial Replit Setup
 1. Configured Vite to run on port 5000 (Replit requirement)
@@ -124,6 +122,7 @@ npm run build
 - **Language:** Spanish (en toda la interfaz y comunicación)
 - **Skeleton Loaders:** Must match real components exactly - including structure, layout, and visual effects
 - **Design:** Glassmorphic UI with high-quality animations and smooth transitions
+- **Carousel:** Clean, modern presentation without excessive overlays; buttons positioned below for clarity
 
 ## Known Issues
 - Vite CJS Node API deprecation warning (non-critical, will be resolved in future Vite versions)
