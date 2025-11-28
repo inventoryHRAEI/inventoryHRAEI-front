@@ -5,7 +5,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { validateSession } from '@/utils/auth'
 import AdminDashboard from './AdminDashboard.vue'
@@ -28,12 +28,26 @@ onMounted(async () => {
   }
 })
 
-// Escuchar eventos de sesión (logout en otra pestaña)
-window.addEventListener('session:updated', () => {
-  router.replace('/login')
+// Escuchar eventos de sesión pero solo si la sesión se perdió realmente
+const handleSessionUpdate = () => {
+  const role = localStorage.getItem('role')
+  if (!role) {
+    // Solo redirigir si no hay rol en localStorage (sesión cerrada)
+    router.replace('/login')
+  }
+}
+
+const handleStorageChange = (e) => {
+  if (e.key === 'role') roleRef.value = e.newValue || 'user'
+}
+
+onMounted(() => {
+  window.addEventListener('session:updated', handleSessionUpdate)
+  window.addEventListener('storage', handleStorageChange)
 })
 
-window.addEventListener('storage', (e) => {
-  if (e.key === 'role') roleRef.value = e.newValue || 'user'
+onBeforeUnmount(() => {
+  window.removeEventListener('session:updated', handleSessionUpdate)
+  window.removeEventListener('storage', handleStorageChange)
 })
 </script>

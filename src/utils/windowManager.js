@@ -68,8 +68,8 @@ class WindowManager {
       }
     })
 
-    // Verificar periódicamente si la ventana activa sigue viva
-    this.startActiveCheck()
+    // Desactivado: no verificar ventana activa para evitar recargas y overlays
+    // this.startActiveCheck()
   }
 
   // Establecer esta ventana como activa
@@ -95,11 +95,13 @@ class WindowManager {
   // Heartbeat para indicar que la ventana activa sigue viva
   startHeartbeat() {
     this.stopHeartbeat()
-    this.heartbeatInterval = setInterval(() => {
-      if (this.isActive) {
-        localStorage.setItem('activeWindowHeartbeat', Date.now().toString())
-      }
-    }, 1000) // Actualizar cada segundo
+    // DESACTIVADO: heartbeat causa cambios constantes en localStorage que disparan eventos
+    // y pueden causar loops de recargas. La verificación de ventana activa ya no es crítica.
+    // this.heartbeatInterval = setInterval(() => {
+    //   if (this.isActive) {
+    //     localStorage.setItem('activeWindowHeartbeat', Date.now().toString())
+    //   }
+    // }, 1000)
   }
 
   stopHeartbeat() {
@@ -109,22 +111,8 @@ class WindowManager {
     }
   }
 
-  // Verificar si la ventana activa sigue viva (para ventanas inactivas)
-  startActiveCheck() {
-    this.checkInterval = setInterval(() => {
-      if (!this.isActive) {
-        const activeWindowId = localStorage.getItem('activeWindowId')
-        const lastHeartbeat = parseInt(localStorage.getItem('activeWindowHeartbeat') || '0')
-        const now = Date.now()
-
-        // Si la ventana activa no ha dado señales de vida en 3 segundos
-        if (activeWindowId && now - lastHeartbeat > 3000) {
-          // La ventana activa probablemente se cerró, intentar tomar su lugar
-          this.setAsActive()
-        }
-      }
-    }, 1000)
-  }
+  // Desactivado: no verificar si la ventana activa sigue viva
+  // startActiveCheck() {}
 
   // Manejar cuando esta ventana no es la activa
   handleInactiveWindow() {

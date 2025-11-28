@@ -31,7 +31,6 @@ async function refresh() {
   }
 }
 
-// Inicializar en background (opcional)
-try { refresh() } catch {}
+// NO inicializar automáticamente - se ejecutará desde App.vue solo en rutas protegidas
 
 export default { totalPending, byEmail, byArea, refresh }

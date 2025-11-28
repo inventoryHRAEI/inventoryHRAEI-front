@@ -48,11 +48,10 @@ router.beforeEach(async (to, from, next) => {
   const needsAuth = to.matched.some(record => record.meta && record.meta.requiresAuth)
   
   if (needsAuth) {
-    // Verificar que la ventana sea la activa
-    if (!isActiveWindow()) {
-      // Si la ventana no es la activa y trata de acceder a ruta protegida
-      return next({ path: '/login', replace: true })
-    }
+    // Verificar que la ventana sea la activa (pero no redirigir a /login porque causaría loop)
+    // if (!isActiveWindow()) {
+    //   return next({ path: '/login', replace: true })
+    // }
     
     const result = await validateSession()
     if (!result.authenticated) {
@@ -62,14 +61,7 @@ router.beforeEach(async (to, from, next) => {
     return next()
   }
 
-  if (to.name === 'login' || to.name === 'register' || to.name === 'home') {
-    // Permitir acceso a estas rutas públicas sin redirección automática
-    return next()
-  }
-
-  // Permitir /add-account incluso si hay sesión válida (flujo de cuenta adicional)
-  if (to.name === 'add-account') return next()
-
+  // Permitir acceso a rutas públicas sin redirección
   next()
 })
 

@@ -10,26 +10,25 @@ if (authChannel) {
       // Limpiar datos locales cuando otra pestaña cierre sesión
       clearStoredSessionData()
       try { window.dispatchEvent(new Event('session:updated')) } catch {}
-      // Redirigir a home
-      if (window.location.pathname !== '/') {
-        window.location.href = '/'
-      }
+      // DESACTIVADO: window.location.href causa recargas infinitas
+      // if (window.location.pathname !== '/') {
+      //   window.location.href = '/'
+      // }
     }
   }
 }
 
 // Escuchar eventos de logout desde ventana secundaria
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (e) => {
-    if (e.key === 'secondaryLogout' && windowManager.isActiveWindow()) {
-      // Una ventana secundaria cerró sesión en backend
-      // La ventana activa debe recargar y mostrar alerta
-      clearStoredSessionData()
-      alert('Tu sesión fue cerrada porque se detectó actividad duplicada. Por favor, inicia sesión nuevamente.')
-      window.location.reload()
-    }
-  })
-}
+// Desactivado: no recargar ni borrar sesión automáticamente por actividad duplicada
+// if (typeof window !== 'undefined') {
+//   window.addEventListener('storage', (e) => {
+//     if (e.key === 'secondaryLogout' && windowManager.isActiveWindow()) {
+//       clearStoredSessionData()
+//       alert('Tu sesión fue cerrada porque se detectó actividad duplicada. Por favor, inicia sesión nuevamente.')
+//       window.location.reload()
+//     }
+//   })
+// }
 
 // Contador de ventanas/pestañas abiertas
 if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {

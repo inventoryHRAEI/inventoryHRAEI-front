@@ -128,10 +128,10 @@ function goLogin() {
 }
 
 onMounted(() => {
-  // Si la ventana no es la activa al montar, mostrar overlay
-  if (!windowManager.isActiveWindow()) {
-    handleInactive()
-  }
+  // DESACTIVADO: la lógica de ventana inactiva causaba loops infinitos
+  // if (!windowManager.isActiveWindow()) {
+  //   handleInactive()
+  // }
 
   window.addEventListener('window:inactive', handleInactive)
   window.addEventListener('window:activated', handleActivated)

@@ -123,6 +123,20 @@
 
     async function refreshSession(){
       try {
+        // Solo validar sesión en rutas que requieren autenticación
+        const name = route && route.name ? String(route.name) : ''
+        const requiresAuth = dashboardRoutes.includes(name)
+        
+        if (!requiresAuth) {
+          // Si estamos en una ruta pública (login, register, home), limpiar sesión
+          logged.value = false
+          nombre.value = null
+          role.value = null
+          user.value = null
+          isAdmin.value = false
+          return
+        }
+        
         // Solo actualizar estado, NO redirigir
         const result = await validateSession()
         if (result.authenticated && result.user) {
@@ -321,19 +335,29 @@
 
     const pendingCount = computed(() => pendingRequestsStore.totalPending.value || 0)
 
-    // refrescar conteo al montar y cada vez que la sesión cambia
+    // refrescar conteo al montar y cada vez que la sesión cambia (solo en rutas protegidas)
     onMounted(() => {
-    try { pendingRequestsStore.refresh() } catch {}
-    const onSessionEvt = () => { try { pendingRequestsStore.refresh() } catch {} }
-    try { window.addEventListener('session:updated', onSessionEvt) } catch {}
-    try { window.addEventListener('storage', onSessionEvt) } catch {}
-  })
+      const onSessionEvt = () => { 
+        const name = route && route.name ? String(route.name) : ''
+        const requiresAuth = dashboardRoutes.includes(name)
+        if (requiresAuth) {
+          try { pendingRequestsStore.refresh() } catch {}
+        }
+      }
+      try { window.addEventListener('session:updated', onSessionEvt) } catch {}
+      try { window.addEventListener('storage', onSessionEvt) } catch {}
+      onSessionEvt() // Llamar una vez al montar
+    })
 
     // Cerramos el menú cuando cambia la ruta; también refrescamos la sesión
+    let refreshTimeout = null
     watch(() => route.fullPath, () => {
       menuOpen.value = false
-      refreshSession()
-      ensureUserFoto()
+      clearTimeout(refreshTimeout)
+      refreshTimeout = setTimeout(() => {
+        refreshSession()
+        ensureUserFoto()
+      }, 100)
     })
 
     // Toggle class on body to allow CSS adjustments (como empujar el contenido) cuando el menu esté abierto
