@@ -2,66 +2,104 @@
   <div class="form-wrap">
     <div class="form-col">
       <div class="glass">
-        <h3>Registro</h3>
-
-        <form v-if="step === 1" @submit.prevent="sendToken">
-          <h4>Ingresa nombre y un correo electrónico</h4>
-          <input v-model="nombre" placeholder="Nombre" required class="input" />
-          <input v-model="email" placeholder="Email" type="email" required class="input" />
-          <div class="mt-12">
-            <button class="btn secondary" type="submit">Enviar código</button>
+        <div class="form-header">
+          <div class="icon-circle">
+            <component :is="step === 1 ? UserPlusIcon : step === 2 ? CheckCircleIcon : ShieldCheckIcon" class="form-icon" />
           </div>
+          <h2>Crear Cuenta</h2>
+          <p class="form-subtitle">Paso {{ step }} de 3</p>
+          <div class="progress-bar">
+            <div class="progress-fill" :style="{ width: (step / 3 * 100) + '%' }"></div>
+          </div>
+        </div>
+
+        <form v-if="step === 1" @submit.prevent="sendToken" class="step-form">
+          <p class="step-info">Ingresa tu información básica</p>
+          <div class="form-group">
+            <label class="field-label">Nombre Completo</label>
+            <div class="input-wrapper">
+              <component :is="UserIcon" class="input-icon" />
+              <input v-model="nombre" placeholder="Juan Pérez" required class="input" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="field-label">Correo Electrónico</label>
+            <div class="input-wrapper">
+              <component :is="EnvelopeIcon" class="input-icon" />
+              <input v-model="email" placeholder="tu@email.com" type="email" required class="input" />
+            </div>
+          </div>
+          <button class="btn secondary btn-lg" type="submit">Enviar Código</button>
         </form>
 
-        <form v-else-if="step === 2" @submit.prevent="verifyToken">
-          <h4> Valida tu correo electronico</h4>
-          <h6>ahi deberia haber un codigo para validar tu correo...</h6>
-          <input v-model="token" placeholder="Código (6 dígitos)" type="text" maxlength="6" required class="input" />
+        <form v-else-if="step === 2" @submit.prevent="verifyToken" class="step-form">
+          <p class="step-info">Verifica tu correo electrónico</p>
+          <p class="step-hint">Enviamos un código a {{ email }}</p>
+          <div class="form-group">
+            <label class="field-label">Código de Verificación</label>
+            <div class="input-wrapper">
+              <component :is="KeyIcon" class="input-icon" />
+              <input v-model="token" placeholder="000000" type="text" maxlength="6" required class="input token-input" />
+            </div>
+          </div>
           <div class="row mt-8">
-            <button class="btn secondary" type="submit">Verificar</button>
-            <button class="btn secondary" type="button" :disabled="resendCount >= maxResends" @click="resendToken">Reenviar código ({{ remainingResends }})</button>
+            <button class="btn secondary flex-1" type="submit">Verificar</button>
+            <button class="btn secondary flex-1" type="button" :disabled="resendCount >= maxResends" @click="resendToken">Reenviar ({{ remainingResends }})</button>
           </div>
-          <div class="mt-8 small-info">Si no recibes el token, puedes reenviarlo hasta 4 veces.</div>
+          <div class="mt-8 small-info">Puedes reenviar hasta {{ maxResends }} veces</div>
         </form>
 
-        <form v-else-if="step === 3" @submit.prevent="completeRegistration">
-          <h4> Completa tu perfil!</h4>
-          <div class="password-field">
-            <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="Contraseña (mín. 8, mayúscula, minúscula, número y símbolo)" required class="input" />
-            <button type="button" class="toggle-eye" @click="showPassword = !showPassword">
-              <component :is="showPassword ? EyeSlashIcon : EyeIcon" class="eye-icon" />
-            </button>
+        <form v-else-if="step === 3" @submit.prevent="completeRegistration" class="step-form">
+          <p class="step-info">Completa tu perfil</p>
+          <div class="form-group">
+            <label class="field-label">Contraseña</label>
+            <div class="input-wrapper password-field">
+              <component :is="LockClosedIcon" class="input-icon" />
+              <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="••••••••" required class="input" />
+              <button type="button" class="toggle-eye" @click="showPassword = !showPassword">
+                <component :is="showPassword ? EyeSlashIcon : EyeIcon" class="eye-icon" />
+              </button>
+            </div>
+            <small class="pwd-hint">Min. 8 caracteres, mayúscula, minúscula, número y símbolo</small>
           </div>
-          <div class="password-field">
-            <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'" placeholder="Confirmar contraseña" required class="input" />
-            <button type="button" class="toggle-eye" @click="showConfirm = !showConfirm">
-              <component :is="showConfirm ? EyeSlashIcon : EyeIcon" class="eye-icon" />
-            </button>
+          <div class="form-group">
+            <label class="field-label">Confirmar Contraseña</label>
+            <div class="input-wrapper password-field">
+              <component :is="LockClosedIcon" class="input-icon" />
+              <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'" placeholder="••••••••" required class="input" />
+              <button type="button" class="toggle-eye" @click="showConfirm = !showConfirm">
+                <component :is="showConfirm ? EyeSlashIcon : EyeIcon" class="eye-icon" />
+              </button>
+            </div>
           </div>
-          <div style="margin-top:8px">
-            <label>Foto de perfil (opcional)</label>
-            <input type="file" @change="onFileChange" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml" />
+          <div class="form-group">
+            <label class="field-label">Foto de Perfil <span class="optional">(opcional)</span></label>
+            <div class="file-input-wrapper">
+              <component :is="PhotoIcon" class="upload-icon" />
+              <input type="file" @change="onFileChange" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml" class="file-input" />
+              <span class="file-label">Selecciona una imagen</span>
+            </div>
             <div v-if="previewUrl || nombre" class="mt-10">
-              <div class="small-info" style="opacity:.8; margin-bottom:6px">Vista previa — así se verá en el encabezado</div>
+              <div class="small-info" style="opacity:.8; margin-bottom:6px">Vista previa</div>
               <div class="user-btn user-btn--preview">
                 <span class="avatar">
                   <img v-if="previewUrl" :src="previewUrl" alt="preview" class="top-avatar" />
                   <span v-else>👤</span>
                 </span>
                 <span class="welcome-text">{{ nombre || 'Tu nombre' }}</span>
-                <span class="chev" aria-hidden="true"></span>
               </div>
             </div>
             <div v-if="photoMsg" class="msg">{{ photoMsg }}</div>
             <div v-if="photoErr" class="error">{{ photoErr }}</div>
           </div>
-          <div class="mt-20">
-            <button class="btn secondary" type="submit">Crear cuenta</button>
-          </div>
+          <button class="btn secondary btn-lg" type="submit">Crear Cuenta</button>
         </form>
 
         <div class="link-row mt-12">
-          <router-link to="/login">¿Ya tienes una cuenta? Inicia sesión</router-link>
+          <router-link to="/login" class="link-item">
+            <component :is="ArrowLeftIcon" class="link-icon" />
+            Volver a iniciar sesión
+          </router-link>
         </div>
 
         <div v-if="error" class="error">{{ error }}</div>
@@ -74,7 +112,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import notifier from '@/utils/notifier'
-import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
+import { EyeIcon, EyeSlashIcon, UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, UserIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, PhotoIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 
 const nombre = ref('')
 const email = ref('')

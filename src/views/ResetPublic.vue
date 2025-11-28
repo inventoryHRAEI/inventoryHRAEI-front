@@ -2,33 +2,62 @@
   <div class="form-wrap">
     <div class="form-col">
       <div class="glass">
-        <h2>Restablecer Contraseña</h2>
+        <div class="form-header">
+          <div class="icon-circle">
+            <component :is="LockOpenIcon" class="form-icon" />
+          </div>
+          <h2>Restablecer Contraseña</h2>
+          <p class="form-subtitle">Crea una nueva contraseña segura</p>
+        </div>
+
         <form @submit.prevent="reset">
-          <label class="field-label">Email</label>
-          <div>
-            <input v-model="email" placeholder="Email" type="email" required class="input" :disabled="true" />
-          </div>
-
-          <label class="field-label">Token</label>
-          <div>
-            <input v-model="token" placeholder="Token" required class="input" />
-          </div>
-
-          <div>
-            <label class="field-label">Nueva contraseña</label>
-            <div>
-              <div class="password-field">
-                <input v-model="password" :type="show ? 'text' : 'password'" placeholder="Nueva contraseña" required class="input" />
-              </div>
+          <div class="form-group">
+            <label class="field-label">Correo Electrónico</label>
+            <div class="input-wrapper">
+              <component :is="EnvelopeIcon" class="input-icon" />
+              <input v-model="email" placeholder="tu@email.com" type="email" required class="input" :disabled="true" />
             </div>
           </div>
 
+          <div class="form-group">
+            <label class="field-label">Código de Verificación</label>
+            <div class="input-wrapper">
+              <component :is="KeyIcon" class="input-icon" />
+              <input v-model="token" placeholder="000000" type="text" required class="input" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="field-label">Nueva Contraseña</label>
+            <div class="input-wrapper password-field">
+              <component :is="LockClosedIcon" class="input-icon" />
+              <input v-model="password" :type="show ? 'text' : 'password'" placeholder="••••••••" required class="input" />
+              <button type="button" class="toggle-eye" @click="show = !show">
+                <component :is="show ? EyeSlashIcon : EyeIcon" class="eye-icon" />
+              </button>
+            </div>
+            <small class="pwd-hint">Min. 8 caracteres, mayúscula, minúscula, número y símbolo</small>
+          </div>
+
           <div class="row mt-14">
-            <button type="button" class="btn secondary flex-1" @click="resendCode" :disabled="sendingResend">Reenviar código</button>
-            <button class="btn primary flex-1" type="submit">Restablecer</button>
+            <button type="button" class="btn secondary flex-1" @click="resendCode" :disabled="sendingResend">
+              <component :is="ArrowPathIcon" class="btn-icon" />
+              Reenviar
+            </button>
+            <button class="btn primary flex-1" type="submit">
+              <component :is="CheckCircleIcon" class="btn-icon" />
+              Restablecer
+            </button>
           </div>
         </form>
-        <div class="link-row mt-12"><router-link to="/login">Volver a iniciar sesión</router-link></div>
+
+        <div class="link-row mt-12">
+          <router-link to="/login" class="link-item">
+            <component :is="ArrowLeftIcon" class="link-icon" />
+            Volver a iniciar sesión
+          </router-link>
+        </div>
+
         <div v-if="msg" class="msg">{{ msg }}</div>
         <div v-if="error" class="error">{{ error }}</div>
       </div>
@@ -38,6 +67,8 @@
 
 <script setup>
 import { useResetComposable } from '@/composables/useReset'
+import { LockOpenIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, ArrowPathIcon, CheckCircleIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
+
 const { email, token, password, msg, error, show, sendingResend, resendCode, reset } = useResetComposable()
 </script>
 

@@ -2,16 +2,34 @@
   <div class="form-wrap">
     <div class="form-col">
       <div class="glass">
-        <h2>{{ isAddAccount ? 'Añadir otra cuenta' : 'Iniciar Sesión' }}</h2>
+        <div class="form-header">
+          <div class="icon-circle">
+            <component :is="isAddAccount ? PlusIcon : LockClosedIcon" class="form-icon" />
+          </div>
+          <h2>{{ isAddAccount ? 'Añadir otra cuenta' : 'Iniciar Sesión' }}</h2>
+          <p class="form-subtitle">{{ isAddAccount ? 'Completa tus credenciales' : 'Bienvenido al sistema' }}</p>
+        </div>
+
         <form @submit.prevent="login">
-          <input v-model="email" placeholder="Email" type="email" required class="input" />
-          <div class="password-field">
-            <input v-model="password" :type="show ? 'text' : 'password'" placeholder="Contraseña" required class="input" />
-            <button type="button" class="toggle-eye" @click="show = !show" :aria-label="show ? 'Ocultar contraseña' : 'Mostrar contraseña'" :aria-pressed="show">
-              <transition name="eye" mode="out-in">
-                <component :is="show ? EyeSlashIcon : EyeIcon" class="eye-icon" :key="show ? 'off' : 'on'" aria-hidden="true" />
-              </transition>
-            </button>
+          <div class="form-group">
+            <label class="field-label">Correo Electrónico</label>
+            <div class="input-wrapper">
+              <component :is="EnvelopeIcon" class="input-icon" />
+              <input v-model="email" placeholder="tu@email.com" type="email" required class="input" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="field-label">Contraseña</label>
+            <div class="input-wrapper password-field">
+              <component :is="KeyIcon" class="input-icon" />
+              <input v-model="password" :type="show ? 'text' : 'password'" placeholder="••••••••" required class="input" />
+              <button type="button" class="toggle-eye" @click="show = !show" :aria-label="show ? 'Ocultar contraseña' : 'Mostrar contraseña'" :aria-pressed="show">
+                <transition name="eye" mode="out-in">
+                  <component :is="show ? EyeSlashIcon : EyeIcon" class="eye-icon" :key="show ? 'off' : 'on'" aria-hidden="true" />
+                </transition>
+              </button>
+            </div>
           </div>
 
           <label class="remember-row">
@@ -19,14 +37,20 @@
             <span>Recordar usuario</span>
           </label>
 
-          <div style="margin-top:16px" class="center">
-            <button class="btn secondary" type="submit">Entrar</button>
-          </div>
+          <button class="btn secondary btn-lg" type="submit">Entrar</button>
         </form>
 
-        <div class="link-row" style="margin-top:12px">
-          <router-link to="/forgot">¿Olvidaste tu contraseña?</router-link>
-          <router-link v-if="!isAddAccount" to="/register">Registrarse</router-link>
+        <div class="divider">o</div>
+
+        <div class="link-row">
+          <router-link to="/forgot" class="link-item">
+            <component :is="QuestionMarkCircleIcon" class="link-icon" />
+            ¿Olvidaste tu contraseña?
+          </router-link>
+          <router-link v-if="!isAddAccount" to="/register" class="link-item">
+            <component :is="UserPlusIcon" class="link-icon" />
+            Registrarse
+          </router-link>
         </div>
 
         <div v-if="error" class="error">{{ error }}</div>
@@ -40,7 +64,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import notifier from '@/utils/notifier'
 import { windowManager } from '@/utils/windowManager'
-import { EyeIcon, EyeSlashIcon } from '@heroicons/vue/24/outline'
+import { EyeIcon, EyeSlashIcon, LockClosedIcon, EnvelopeIcon, KeyIcon, PlusIcon, QuestionMarkCircleIcon, UserPlusIcon } from '@heroicons/vue/24/outline'
 
 const email = ref('')
 const password = ref('')
