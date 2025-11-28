@@ -85,6 +85,46 @@
         <div class="skeleton skeleton-text short" style="width: 40%;"></div>
       </div>
     </div>
+
+    <div v-else-if="type === 'forgot'" class="skeleton-forgot">
+      <div class="skeleton-forgot-header">
+        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 16px;"></div>
+        <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
+        <div class="skeleton skeleton-text short" style="margin-bottom: 24px; width: 60%;"></div>
+      </div>
+      <div class="skeleton-forgot-form">
+        <div class="skeleton-field">
+          <div class="skeleton skeleton-label"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
+      </div>
+      <div style="margin-top: 20px; text-align: center;">
+        <div class="skeleton skeleton-text short" style="width: 40%;"></div>
+      </div>
+    </div>
+
+    <div v-else-if="type === 'reset'" class="skeleton-reset">
+      <div class="skeleton-reset-header">
+        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 16px;"></div>
+        <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
+        <div class="skeleton skeleton-text short" style="margin-bottom: 24px; width: 60%;"></div>
+      </div>
+      <div class="skeleton-reset-form">
+        <div v-for="n in 3" :key="n" class="skeleton-field">
+          <div class="skeleton skeleton-label"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="skeleton skeleton-text short" style="margin: 12px 0; width: 70%; height: 10px;"></div>
+        <div class="skeleton-buttons" style="display: flex; gap: 12px; margin-top: 24px;">
+          <div class="skeleton skeleton-button" style="flex: 1;"></div>
+          <div class="skeleton skeleton-button" style="flex: 1;"></div>
+        </div>
+      </div>
+      <div style="margin-top: 20px; text-align: center;">
+        <div class="skeleton skeleton-text short" style="width: 40%;"></div>
+      </div>
+    </div>
     
     <div v-else-if="type === 'form'" class="skeleton-form">
       <div class="skeleton skeleton-title wide"></div>
@@ -106,7 +146,7 @@ defineProps({
   type: {
     type: String,
     default: 'default',
-    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login', 'register'].includes(val)
+    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login', 'register', 'forgot', 'reset'].includes(val)
   },
   count: {
     type: Number,
@@ -244,6 +284,39 @@ defineProps({
 
 .skeleton-register-form {
   margin-bottom: 20px;
+}
+
+.skeleton-forgot {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.skeleton-forgot-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.skeleton-forgot-form {
+  margin-bottom: 20px;
+}
+
+.skeleton-reset {
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.skeleton-reset-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.skeleton-reset-form {
+  margin-bottom: 20px;
+}
+
+.skeleton-buttons {
+  display: flex;
+  gap: 12px;
 }
 
 .skeleton-form {
