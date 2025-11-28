@@ -478,16 +478,18 @@ defineProps({
   backdrop-filter: blur(8px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding: 8px 24px;
-  margin-bottom: 0;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
   height: 48px;
-  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .topbar-skeleton-left {
