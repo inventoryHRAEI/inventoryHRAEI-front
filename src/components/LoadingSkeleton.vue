@@ -88,10 +88,8 @@
         <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
         <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
         <div class="skeleton skeleton-text" style="margin-bottom: 16px; width: 50%; height: 12px; margin-left: auto; margin-right: auto;"></div>
-        <!-- Progress bar -->
-        <div class="skeleton-progress" style="height: 6px; border-radius: 3px; background: rgba(100, 200, 150, 0.2); margin-bottom: 24px; overflow: hidden;">
-          <div class="skeleton-progress-fill" style="height: 100%; width: 33%; background: linear-gradient(90deg, #4a9d5f 0%, #64c896 100%);"></div>
-        </div>
+        <!-- Progress bar (skeleton style) -->
+        <div class="skeleton skeleton" style="height: 6px; border-radius: 3px; margin-bottom: 24px; width: 100%;"></div>
       </div>
       <!-- Form Content -->
       <div class="skeleton-register-form">
