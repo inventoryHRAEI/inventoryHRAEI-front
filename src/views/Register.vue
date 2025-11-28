@@ -1,6 +1,6 @@
 <template>
   <div class="form-wrap">
-    <LoadingSkeleton v-if="isLoading" type="form" :count="3" />
+    <LoadingSkeleton v-if="isLoading" type="register" />
     
     <div v-else class="form-col">
       <div class="glass">
