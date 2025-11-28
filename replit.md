@@ -157,9 +157,11 @@ npm run build
 - Breadcrumbs positioned above glass card on both mobile and desktop
 
 ## Modified Files (Latest Session - Nov 28, 2025)
-- `src/views/Login.vue` - Fixed scoped styles: `max-width: none` on PC + media query for 90% width expansion ✅
-- `src/views/Register.vue` - Fixed scoped styles: `max-width: none` on PC + media query for 90% width expansion ✅
-- `src/components/LoadingSkeleton.vue` - Enhanced with breadcrumbs, step bubbles, responsive breakpoints ✅
+- `src/views/Login.vue` - Fixed scoped styles + 5s loading delay for skeleton visibility ✅
+- `src/views/Register.vue` - Fixed scoped styles + 5s loading delay for skeleton visibility ✅
+- `src/views/ForgotPublic.vue` - 5s loading delay for skeleton visibility ✅
+- `src/views/ResetPublic.vue` - 5s loading delay for skeleton visibility ✅
+- `src/components/LoadingSkeleton.vue` - Breadcrumbs + step bubbles + responsive PC/Mobile ✅
 - `src/styles/forms.css` - Global form layout with 90% width on desktop + `max-width: none`
 - `src/styles.css` - Global form styling backup
 - `src/views/AdminDashboard.vue` - Dashboard grid layout (3 → 2 columns)

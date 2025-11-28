@@ -90,7 +90,7 @@ const isLoading = ref(true)
 onMounted(() => {
   setTimeout(() => {
     isLoading.value = false
-  }, 800)
+  }, 5000)
   
   try {
     const remembered = localStorage.getItem('rememberedEmail')

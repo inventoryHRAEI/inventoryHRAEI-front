@@ -136,7 +136,7 @@ const isLoading = ref(true)
 onMounted(() => {
   setTimeout(() => {
     isLoading.value = false
-  }, 800)
+  }, 5000)
 })
 
 const nombre = ref('')

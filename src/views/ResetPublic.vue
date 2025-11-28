@@ -96,7 +96,7 @@ const stepBubbles = [
 onMounted(() => {
   setTimeout(() => {
     isLoading.value = false
-  }, 800)
+  }, 5000)
 })
 
 const { email, token, password, msg, error, show, sendingResend, resendCode, reset } = useResetComposable()

@@ -67,7 +67,7 @@ const stepBubbles = [
 onMounted(() => {
   setTimeout(() => {
     isLoading.value = false
-  }, 800)
+  }, 5000)
 })
 
 const email = ref('')
