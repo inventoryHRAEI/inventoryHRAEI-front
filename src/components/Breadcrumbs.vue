@@ -23,6 +23,13 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { ChevronRightIcon, HomeIcon } from '@heroicons/vue/24/outline'
 
+const props = defineProps({
+  items: {
+    type: Array,
+    default: null
+  }
+})
+
 const route = useRoute()
 
 const routeLabels = {
@@ -42,7 +49,9 @@ const routeLabels = {
   'reset': 'Restablecer Contraseña'
 }
 
-const items = computed(() => {
+const breadcrumbsComputed = computed(() => {
+  if (props.items) return props.items
+  
   const breadcrumbs = []
   const name = route.name ? String(route.name) : ''
   
@@ -66,6 +75,8 @@ const items = computed(() => {
   
   return breadcrumbs
 })
+
+const items = breadcrumbsComputed
 </script>
 
 <style scoped>
