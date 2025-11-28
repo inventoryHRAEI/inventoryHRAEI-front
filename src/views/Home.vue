@@ -212,9 +212,9 @@ onBeforeUnmount(() => {
 .hero {
   display: grid;
   grid-template-columns: 1.1fr 1fr;
-  gap: 24px;
+  gap: 32px;
   width: 100%;
-  max-width: 1100px;
+  max-width: 1300px;
   overflow: hidden;
 }
 
@@ -371,14 +371,14 @@ onBeforeUnmount(() => {
 
 .features-section {
   width: 100%;
-  max-width: 1100px;
+  max-width: 1300px;
   margin-top: 20px;
 }
 
 .features-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  gap: 28px;
 }
 
 .feature-card {
