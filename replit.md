@@ -22,7 +22,7 @@ This is a Vue 3 medical equipment inventory management system frontend applicati
 ### Project Structure
 ```
 src/
-├── components/        # Reusable UI components (including StepBubbles.vue)
+├── components/        # Reusable UI components (including StepBubbles.vue, Breadcrumbs.vue)
 ├── views/            # Page components
 │   └── operations/   # Operation-specific views
 ├── stores/           # State management
@@ -38,32 +38,35 @@ src/
 3. **Operations Management:** Full CRUD for equipment, comodatos, donations, services, inventory, consumables
 4. **Multi-Window Management:** Window activity tracking
 5. **Responsive Design:** Mobile-friendly interface
+6. **Navigation:** Breadcrumbs in all authenticated pages, recovery flows
 
 ## Recent Enhancements (Nov 28, 2025)
 
-### Forms & Validation - Interactive & Alive 🎉
-1. **StepBubbles Component:** Interactive step indicator with:
-   - Visual progress bubbles (active, completed states)
-   - Step titles and descriptions
-   - Connecting lines that fill as progress advances
-   - Responsive design (bubbles-only on mobile)
+### Breadcrumbs Navigation ✅
+- **Dashboard & Operations:** Smart breadcrumbs with "Inicio" pointing to `/dashboard` (not home, prevents logout)
+- **Recovery Flow:** Breadcrumbs in ForgotPublic and ResetPublic showing navigation path
+- **Interactive:** Clickable for backward navigation, smooth transitions
 
-2. **Input Focus Glow Effects:**
-   - Soft green glow on focus (`0 0 16px rgba(45, 221, 90, 0.2)`)
-   - Border color transition to green
-   - Inset shadow for depth
+### Forms & Validation - Interactive & Alive 🎉
+1. **Discrete Input Glow Effects:**
+   - Soft green glow on focus: `0 0 12px rgba(45, 221, 90, 0.12)`
+   - Inset shadow for subtle depth
    - Smooth 0.3s transitions
 
-3. **Button Glow & Elevation:**
-   - Primary buttons: `0 16px 40px rgba(11, 172, 65, 0.3)` glow on hover
-   - Secondary buttons: `0 12px 32px rgba(11, 172, 65, 0.2)` glow on hover
-   - Buttons lift up on hover with `translateY(-2px to -3px)`
+2. **Button Glow & Elevation (Refined):**
+   - Primary buttons: `0 12px 28px rgba(11, 172, 65, 0.18)` on hover
+   - Secondary buttons: `0 8px 20px rgba(11, 172, 65, 0.15)` on hover
+   - Elevation: `-1px to -2px` (subtle lift)
    - Enhanced feedback for better interactivity
 
-4. **Input Hints:**
-   - Contextual help text that appears under inputs
-   - Changes color on focus (contextual feedback)
+3. **Input Hints:**
+   - Contextual help text under inputs
+   - Changes color on focus (green feedback)
    - Non-invasive, clean design
+
+4. **Password Strength Indicator:**
+   - Visual bars (weak/medium/strong) with color feedback
+   - Discrete and elegant styling
 
 ### Home Page Polish
 1. **Perfect Topbar Skeleton:** Matches real topbar exactly
@@ -71,11 +74,7 @@ src/
    - Identical glassmorphism and positioning
 2. **Enhanced Carousel:** Better image quality, less overlay
 3. **Login/Register Buttons:** Positioned below carousel
-4. **Feature Cards:** Glassmorphic design with:
-   - Glassmorphism: blur(12px), saturate(150%)
-   - Hover animation: `translateY(-12px) scale(1.02)`
-   - Icon scaling and rotating on hover
-   - Shimmer effect overlay
+4. **Feature Cards:** Glassmorphic design with hover animations
 
 ## Replit Configuration
 
@@ -107,9 +106,11 @@ npm run build
 - **Design:** Glassmorphic UI with smooth animations
 - **Interactivity:** Maximum feedback without being invasive
 - **Skeleton Loaders:** Exact visual match to real components
+- **Navigation:** Clean breadcrumbs, intuitive flow
 
-## Components Added
+## Components
 - **StepBubbles.vue:** Interactive step progress indicator with descriptions
+- **Breadcrumbs.vue:** Smart navigation with proper logout prevention
 
 ## Known Issues
 - Backend connection errors (expected without backend running)

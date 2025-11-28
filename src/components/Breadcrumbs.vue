@@ -50,7 +50,7 @@ const items = computed(() => {
     return [{ label: 'Inicio', to: '/', icon: HomeIcon }]
   }
   
-  breadcrumbs.push({ label: 'Inicio', to: '/', icon: HomeIcon })
+  breadcrumbs.push({ label: 'Inicio', to: '/dashboard', icon: HomeIcon })
   
   if (name.startsWith('op-')) {
     breadcrumbs.push({ label: 'Dashboard', to: '/dashboard' })

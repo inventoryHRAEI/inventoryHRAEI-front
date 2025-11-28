@@ -4,6 +4,8 @@
     
     <div v-else class="form-col">
       <div class="glass">
+        <Breadcrumbs :items="breadcrumbItems" />
+
         <div class="form-header">
           <div class="icon-circle">
             <component :is="LockOpenIcon" class="form-icon" />
@@ -11,8 +13,6 @@
           <h2>Restablecer Contraseña</h2>
           <p class="form-subtitle">Crea una nueva contraseña segura</p>
         </div>
-
-        <StepBubbles :steps="stepBubbles" :current-step="2" />
 
         <form @submit.prevent="reset">
           <div class="form-group">
@@ -74,14 +74,14 @@ import { ref, onMounted } from 'vue'
 import { useResetComposable } from '@/composables/useReset'
 import { LockOpenIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, EyeIcon, EyeSlashIcon, ArrowPathIcon, CheckCircleIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
-import StepBubbles from '@/components/StepBubbles.vue'
+import Breadcrumbs from '@/components/Breadcrumbs.vue'
 
 const isLoading = ref(true)
 
-const stepBubbles = [
-  { title: 'Verificación', desc: 'Confirma tu código' },
-  { title: 'Contraseña', desc: 'Nueva contraseña' },
-  { title: 'Listo', desc: 'Restablecer cuenta' }
+const breadcrumbItems = [
+  { label: 'Inicio', to: '/login' },
+  { label: 'Recuperar Contraseña', to: '/forgot' },
+  { label: 'Restablecer Contraseña', to: '/reset' }
 ]
 
 onMounted(() => {
