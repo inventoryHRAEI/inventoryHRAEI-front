@@ -22,82 +22,72 @@ This is a Vue 3 medical equipment inventory management system frontend applicati
 ### Project Structure
 ```
 src/
-├── components/        # Reusable UI components
+├── components/        # Reusable UI components (including StepBubbles.vue)
 ├── views/            # Page components
-│   └── operations/   # Operation-specific views (entrada, salida, etc.)
-├── stores/           # State management (mobile notifications, pending requests)
+│   └── operations/   # Operation-specific views
+├── stores/           # State management
 ├── utils/            # Utilities (API, auth, notifier, roles, window manager)
 ├── composables/      # Vue composables
 ├── styles/           # Global CSS
-└── router.js         # Route definitions with auth guards
+└── router.js         # Route definitions
 ```
 
 ### Key Features
 1. **Authentication System:** Session-based with httpOnly cookies
 2. **Role-Based Access:** Admin, user, and public routes
-3. **Operations Management:**
-   - Equipment entry (OpEntrada)
-   - Equipment exit (OpSalida)
-   - Equipment custody/resguardo (OpResguardo)
-   - Equipment service (OpServicio)
-   - Biomedical inventory (OpInventarioBiomedica)
-   - Consumables on demand (OpInsumosConsumibles)
-4. **Multi-Window Management:** Window activity tracking and session management
-5. **Responsive Design:** Mobile-friendly with dynamic topbar adjustments
+3. **Operations Management:** Full CRUD for equipment, comodatos, donations, services, inventory, consumables
+4. **Multi-Window Management:** Window activity tracking
+5. **Responsive Design:** Mobile-friendly interface
+
+## Recent Enhancements (Nov 28, 2025)
+
+### Forms & Validation - Interactive & Alive 🎉
+1. **StepBubbles Component:** Interactive step indicator with:
+   - Visual progress bubbles (active, completed states)
+   - Step titles and descriptions
+   - Connecting lines that fill as progress advances
+   - Responsive design (bubbles-only on mobile)
+
+2. **Input Focus Glow Effects:**
+   - Soft green glow on focus (`0 0 16px rgba(45, 221, 90, 0.2)`)
+   - Border color transition to green
+   - Inset shadow for depth
+   - Smooth 0.3s transitions
+
+3. **Button Glow & Elevation:**
+   - Primary buttons: `0 16px 40px rgba(11, 172, 65, 0.3)` glow on hover
+   - Secondary buttons: `0 12px 32px rgba(11, 172, 65, 0.2)` glow on hover
+   - Buttons lift up on hover with `translateY(-2px to -3px)`
+   - Enhanced feedback for better interactivity
+
+4. **Input Hints:**
+   - Contextual help text that appears under inputs
+   - Changes color on focus (contextual feedback)
+   - Non-invasive, clean design
+
+### Home Page Polish
+1. **Perfect Topbar Skeleton:** Matches real topbar exactly
+   - Floating capsule (64px height, 16px border-radius)
+   - Identical glassmorphism and positioning
+2. **Enhanced Carousel:** Better image quality, less overlay
+3. **Login/Register Buttons:** Positioned below carousel
+4. **Feature Cards:** Glassmorphic design with:
+   - Glassmorphism: blur(12px), saturate(150%)
+   - Hover animation: `translateY(-12px) scale(1.02)`
+   - Icon scaling and rotating on hover
+   - Shimmer effect overlay
 
 ## Replit Configuration
 
 ### Development Setup
-- **Dev Server:** Runs on port 5000 (configured for Replit's webview)
-- **Host:** Bound to 0.0.0.0 for Replit proxy compatibility
-- **HMR:** Configured with clientPort 443 for Replit environment
+- **Dev Server:** Port 5000 (Replit webview)
+- **Host:** 0.0.0.0 (Replit proxy compatible)
 - **Workflow:** "Frontend Dev Server" runs `npm run dev`
 
-### Backend Integration
-- The app expects a backend API at `http://localhost:3002`
-- API proxy configured in vite.config.js for `/api/*` routes
-- Uses credentials: 'include' for cookie-based authentication
-- **Note:** Backend not included in this frontend-only Replit
-
 ### Deployment
-- **Type:** Static site deployment
-- **Build Command:** `npm run build`
-- **Public Directory:** `dist`
-- **Output:** Optimized static assets for production
-
-## Recent Changes (Nov 28, 2025)
-
-### Topbar & Home Page Final Refinements
-1. **Perfect Skeleton Topbar:** Loading skeleton matches topbar exactly
-   - Floating capsule shape with `border-radius: 16px`
-   - Fixed position at `top: 12px` with centered layout
-   - Identical glassmorphism: `blur(12px) saturate(150%)`
-   - Same shadow and inset border effects
-2. **Enhanced Topbar Design:** Height 64px, improved padding (24px horizontal), glassmorphism with hover effects
-3. **Carousel Improvements:**
-   - Login/Register buttons moved below carousel for better layout
-   - Improved image display without excessive tapas
-   - Gradient overlay on images optimized for text readability
-   - Better quality image handling with `object-fit: cover` and `object-position: center`
-   - Navigation dots and arrows with smooth transitions
-
-### Frontend Modernization Enhancements
-1. **Page Transitions:** Smooth fade transitions between routes using Vue's transition system
-2. **Animated Statistics:** Home page shows animated counters (194+ equipos, 53+ operaciones, 10+ áreas)
-3. **Enhanced Carousel:** Navigation arrows, improved indicators with animations, pause on hover
-4. **Dashboard Icons:** Heroicons and Lucide icons to operation cards
-5. **Avatar Improvements:** Enhanced topbar avatar with status indicator and hover effects
-6. **Glass Effects:** Modernized glassmorphism with improved backdrop filters
-7. **Reusable Components:** LoadingSkeleton.vue and Breadcrumbs.vue components
-8. **Microinteractions:** Hover effects, button ripples, and smooth transitions
-
-### Initial Replit Setup
-1. Configured Vite to run on port 5000 (Replit requirement)
-2. Set host to 0.0.0.0 for proper Replit proxy support
-3. Added HMR clientPort configuration for Replit environment
-4. Fixed node_modules binary permissions for Vite
-5. Configured static deployment settings
-6. Created workflow for frontend dev server
+- **Type:** Static site
+- **Build:** `npm run build`
+- **Public Dir:** `dist`
 
 ## Development Notes
 
@@ -112,18 +102,14 @@ npm run dev
 npm run build
 ```
 
-### Important Considerations
-- The app makes API calls to `/api/*` which proxy to port 3002
-- Without a running backend, some features will show connection errors (expected)
-- Authentication flows require the backend API to be available
-- Multi-window session management uses sessionStorage and localStorage
-
 ## User Preferences
-- **Language:** Spanish (en toda la interfaz y comunicación)
-- **Skeleton Loaders:** Must match real components exactly - including structure, layout, and visual effects
-- **Design:** Glassmorphic UI with high-quality animations and smooth transitions
-- **Carousel:** Clean, modern presentation without excessive overlays; buttons positioned below for clarity
+- **Language:** Spanish
+- **Design:** Glassmorphic UI with smooth animations
+- **Interactivity:** Maximum feedback without being invasive
+- **Skeleton Loaders:** Exact visual match to real components
+
+## Components Added
+- **StepBubbles.vue:** Interactive step progress indicator with descriptions
 
 ## Known Issues
-- Vite CJS Node API deprecation warning (non-critical, will be resolved in future Vite versions)
-- Backend connection refused errors (expected without backend running)
+- Backend connection errors (expected without backend running)

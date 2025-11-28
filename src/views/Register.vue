@@ -10,10 +10,9 @@
           </div>
           <h2>Crear Cuenta</h2>
           <p class="form-subtitle">Paso {{ step }} de 3</p>
-          <div class="progress-bar">
-            <div class="progress-fill" :style="{ width: (step / 3 * 100) + '%' }"></div>
-          </div>
         </div>
+
+        <StepBubbles :currentStep="step" :bubbles="stepBubbles" />
 
         <form v-if="step === 1" @submit.prevent="sendToken" class="step-form">
           <p class="step-info">Ingresa tu información básica</p>
@@ -116,6 +115,13 @@ import { useRouter } from 'vue-router'
 import notifier from '@/utils/notifier'
 import { EyeIcon, EyeSlashIcon, UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, UserIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, PhotoIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
+import StepBubbles from '@/components/StepBubbles.vue'
+
+const stepBubbles = [
+  { title: 'Información', desc: 'Datos básicos' },
+  { title: 'Verificación', desc: 'Confirma tu email' },
+  { title: 'Perfil', desc: 'Completa tu cuenta' }
+]
 
 const isLoading = ref(true)
 
