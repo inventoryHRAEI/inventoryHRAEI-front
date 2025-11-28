@@ -770,7 +770,7 @@ h5 {
 
 .form-col {
   width: 100%;
-  max-width: 650px
+  max-width: 750px
 }
 
 /* Mobile: avoid centering the whole form in viewport (causa panel enorme). Align to top and cap glass height */
