@@ -47,128 +47,149 @@
       </div>
     </div>
     
-    <div v-else-if="type === 'login'" class="skeleton-login">
-      <!-- Header -->
-      <div class="skeleton-login-header">
-        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
-        <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
-      </div>
-      <!-- Form Fields -->
-      <div class="skeleton-login-form">
-        <!-- Email field -->
-        <div class="skeleton-field">
-          <div class="skeleton skeleton-label" style="width: 25%;"></div>
-          <div class="skeleton skeleton-input"></div>
+    <div v-else-if="type === 'form-card'" class="skeleton-form-card">
+      <div class="skeleton-card-glass">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
+          <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
+          <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 60%; height: 12px; margin-left: auto; margin-right: auto;"></div>
         </div>
-        <!-- Password field -->
-        <div class="skeleton-field">
-          <div class="skeleton skeleton-label" style="width: 25%;"></div>
-          <div class="skeleton skeleton-input"></div>
+        <div class="skeleton-card-content">
+          <div v-for="n in 3" :key="n" class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+          <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
         </div>
-        <!-- Remember checkbox -->
-        <div class="skeleton skeleton-checkbox" style="margin: 20px 0; width: 40%;"></div>
-        <!-- Submit button -->
-        <div class="skeleton skeleton-button" style="margin: 24px 0;"></div>
-      </div>
-      <!-- Divider -->
-      <div style="text-align: center; margin: 20px 0;">
-        <div class="skeleton skeleton-text" style="width: 8px; height: 12px; display: inline-block;"></div>
-      </div>
-      <!-- Links -->
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        <div class="skeleton skeleton-text" style="width: 100%; height: 20px;"></div>
-        <div class="skeleton skeleton-text" style="width: 100%; height: 20px;"></div>
       </div>
     </div>
 
-    <div v-else-if="type === 'register'" class="skeleton-register">
-      <!-- Header -->
-      <div class="skeleton-register-header">
-        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
-        <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text" style="margin-bottom: 16px; width: 50%; height: 12px; margin-left: auto; margin-right: auto;"></div>
-        <!-- Progress bar (skeleton style) -->
-        <div class="skeleton skeleton" style="height: 6px; border-radius: 3px; margin-bottom: 24px; width: 100%;"></div>
-      </div>
-      <!-- Form Content -->
-      <div class="skeleton-register-form">
-        <!-- Step info text -->
-        <div class="skeleton skeleton-text" style="width: 70%; height: 14px; margin-bottom: 16px;"></div>
-        <!-- Form fields (2 for step 1) -->
-        <div class="skeleton-field">
-          <div class="skeleton skeleton-label" style="width: 25%;"></div>
-          <div class="skeleton skeleton-input"></div>
+    <div v-else-if="type === 'login'" class="skeleton-form-wrapper">
+      <!-- Card glass skeleton container -->
+      <div class="skeleton-card-glass">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
+          <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
+          <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
         </div>
-        <div class="skeleton-field">
-          <div class="skeleton skeleton-label" style="width: 25%;"></div>
-          <div class="skeleton skeleton-input"></div>
+        <div class="skeleton-card-content">
+          <!-- Email field -->
+          <div class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+          <!-- Password field -->
+          <div class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+          <!-- Remember checkbox -->
+          <div class="skeleton skeleton-checkbox" style="margin: 20px 0; width: 40%;"></div>
+          <!-- Submit button -->
+          <div class="skeleton skeleton-button" style="margin: 24px 0;"></div>
+          <!-- Divider -->
+          <div style="text-align: center; margin: 20px 0;">
+            <div class="skeleton skeleton-text" style="width: 8px; height: 12px; display: inline-block;"></div>
+          </div>
+          <!-- Links -->
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div class="skeleton skeleton-text" style="width: 100%; height: 20px;"></div>
+            <div class="skeleton skeleton-text" style="width: 100%; height: 20px;"></div>
+          </div>
         </div>
-        <!-- Submit button -->
-        <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
-      </div>
-      <!-- Link -->
-      <div style="margin-top: 20px; text-align: center;">
-        <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
       </div>
     </div>
 
-    <div v-else-if="type === 'forgot'" class="skeleton-forgot">
-      <!-- Header -->
-      <div class="skeleton-forgot-header">
-        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
-        <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
-      </div>
-      <!-- Form -->
-      <div class="skeleton-forgot-form">
-        <div class="skeleton-field">
-          <div class="skeleton skeleton-label" style="width: 25%;"></div>
-          <div class="skeleton skeleton-input"></div>
+    <div v-else-if="type === 'register'" class="skeleton-form-wrapper">
+      <!-- Card glass skeleton container -->
+      <div class="skeleton-card-glass">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
+          <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
+          <div class="skeleton skeleton-text" style="margin-bottom: 16px; width: 50%; height: 12px; margin-left: auto; margin-right: auto;"></div>
+          <!-- Progress bar (skeleton style) -->
+          <div class="skeleton skeleton" style="height: 6px; border-radius: 3px; margin-bottom: 24px; width: 100%;"></div>
         </div>
-        <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
-      </div>
-      <!-- Link -->
-      <div style="margin-top: 20px; text-align: center;">
-        <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
+        <div class="skeleton-card-content">
+          <!-- Step info text -->
+          <div class="skeleton skeleton-text" style="width: 70%; height: 14px; margin-bottom: 16px;"></div>
+          <!-- Form fields (2 for step 1) -->
+          <div class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+          <div class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+          <!-- Submit button -->
+          <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
+          <!-- Link -->
+          <div style="margin-top: 20px; text-align: center;">
+            <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div v-else-if="type === 'reset'" class="skeleton-reset">
-      <!-- Header -->
-      <div class="skeleton-reset-header">
-        <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
-        <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
-        <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
-      </div>
-      <!-- Form -->
-      <div class="skeleton-reset-form">
-        <!-- Email field (disabled) -->
-        <div class="skeleton-field">
-          <div class="skeleton skeleton-label" style="width: 25%;"></div>
-          <div class="skeleton skeleton-input" style="opacity: 0.7;"></div>
+    <div v-else-if="type === 'forgot'" class="skeleton-form-wrapper">
+      <!-- Card glass skeleton container -->
+      <div class="skeleton-card-glass">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
+          <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
+          <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
         </div>
-        <!-- Code field -->
-        <div class="skeleton-field">
-          <div class="skeleton skeleton-label" style="width: 25%;"></div>
-          <div class="skeleton skeleton-input"></div>
-        </div>
-        <!-- Password field -->
-        <div class="skeleton-field">
-          <div class="skeleton skeleton-label" style="width: 25%;"></div>
-          <div class="skeleton skeleton-input"></div>
-        </div>
-        <!-- Password hint -->
-        <div class="skeleton skeleton-text short" style="margin: 12px 0; width: 70%; height: 10px;"></div>
-        <!-- Two buttons side by side -->
-        <div class="skeleton-buttons" style="display: flex; gap: 12px; margin-top: 24px;">
-          <div class="skeleton skeleton-button" style="flex: 1;"></div>
-          <div class="skeleton skeleton-button" style="flex: 1;"></div>
+        <div class="skeleton-card-content">
+          <div class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+          <div class="skeleton skeleton-button" style="margin-top: 24px;"></div>
+          <!-- Link -->
+          <div style="margin-top: 20px; text-align: center;">
+            <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
+          </div>
         </div>
       </div>
-      <!-- Link -->
-      <div style="margin-top: 20px; text-align: center;">
-        <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
+    </div>
+
+    <div v-else-if="type === 'reset'" class="skeleton-form-wrapper">
+      <!-- Card glass skeleton container -->
+      <div class="skeleton-card-glass">
+        <div class="skeleton-card-header">
+          <div class="skeleton skeleton-avatar" style="width: 80px; height: 80px; margin: 0 auto 20px;"></div>
+          <div class="skeleton skeleton-title wide" style="margin-bottom: 8px;"></div>
+          <div class="skeleton skeleton-text" style="margin-bottom: 24px; width: 70%; height: 12px; margin-left: auto; margin-right: auto;"></div>
+        </div>
+        <div class="skeleton-card-content">
+          <!-- Email field (disabled) -->
+          <div class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input" style="opacity: 0.7;"></div>
+          </div>
+          <!-- Code field -->
+          <div class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+          <!-- Password field -->
+          <div class="skeleton-field">
+            <div class="skeleton skeleton-label" style="width: 25%;"></div>
+            <div class="skeleton skeleton-input"></div>
+          </div>
+          <!-- Password hint -->
+          <div class="skeleton skeleton-text short" style="margin: 12px 0; width: 70%; height: 10px;"></div>
+          <!-- Two buttons side by side -->
+          <div class="skeleton-buttons" style="display: flex; gap: 12px; margin-top: 24px;">
+            <div class="skeleton skeleton-button" style="flex: 1;"></div>
+            <div class="skeleton skeleton-button" style="flex: 1;"></div>
+          </div>
+          <!-- Link -->
+          <div style="margin-top: 20px; text-align: center;">
+            <div class="skeleton skeleton-text" style="width: 60%; height: 18px; margin-left: auto; margin-right: auto;"></div>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -192,7 +213,7 @@ defineProps({
   type: {
     type: String,
     default: 'default',
-    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login', 'register', 'forgot', 'reset'].includes(val)
+    validator: (val) => ['default', 'cards', 'list', 'form', 'hero', 'login', 'register', 'forgot', 'reset', 'form-card'].includes(val)
   },
   count: {
     type: Number,
@@ -363,6 +384,38 @@ defineProps({
 .skeleton-buttons {
   display: flex;
   gap: 12px;
+}
+
+.skeleton-form-wrapper {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.skeleton-form-card {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.skeleton-card-glass {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  border-radius: 14px;
+  padding: 32px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.skeleton-card-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.skeleton-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .skeleton-form {
