@@ -904,17 +904,17 @@ h5 {
 }
 
 .btn.secondary:hover {
-  box-shadow: 0 12px 32px rgba(11, 172, 65, 0.2), 0 0 24px rgba(11, 172, 65, 0.15);
-  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(11, 172, 65, 0.15);
+  transform: translateY(-1px);
 }
 
 .btn.primary {
-  box-shadow: 0 8px 24px rgba(11, 172, 65, 0.18);
+  box-shadow: 0 6px 18px rgba(11, 172, 65, 0.12);
 }
 
 .btn.primary:hover {
-  box-shadow: 0 16px 40px rgba(11, 172, 65, 0.3), 0 0 20px rgba(11, 172, 65, 0.2);
-  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(11, 172, 65, 0.18);
+  transform: translateY(-2px);
 }
 
 /* Backwards compatibility for .btn.resend used in some components */
