@@ -117,7 +117,7 @@ const users = ref([])
 onMounted(async () => {
   setTimeout(() => {
     loading.value = false
-  }, 600)
+  }, 1500)
   
   try { await pendingStore.refresh() } catch {}
   

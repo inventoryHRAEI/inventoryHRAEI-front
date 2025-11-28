@@ -111,7 +111,7 @@ function go(name) {
 onMounted(() => {
   setTimeout(() => {
     loading.value = false
-  }, 600)
+  }, 1500)
 })
 </script>
 

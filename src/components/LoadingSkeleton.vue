@@ -58,17 +58,21 @@ defineProps({
 .skeleton {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.06) 25%,
-    rgba(255, 255, 255, 0.12) 50%,
-    rgba(255, 255, 255, 0.06) 75%
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.15) 20%,
+    rgba(255, 255, 255, 0.22) 50%,
+    rgba(255, 255, 255, 0.15) 80%,
+    rgba(255, 255, 255, 0.08) 100%
   );
   background-size: 200% 100%;
-  animation: skeleton-loading 1.5s infinite;
+  animation: skeleton-loading 2.2s ease-in-out infinite;
   border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(45, 221, 90, 0.1);
 }
 
 @keyframes skeleton-loading {
   0% { background-position: 200% 0; }
+  50% { background-position: 0 0; }
   100% { background-position: -200% 0; }
 }
 
@@ -79,36 +83,36 @@ defineProps({
 }
 
 .skeleton-card-item {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 12px;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(45, 221, 90, 0.15);
 }
 
 .skeleton-image {
-  height: 140px;
+  height: 160px;
   border-radius: 0;
 }
 
 .skeleton-content {
-  padding: 16px;
+  padding: 18px;
 }
 
 .skeleton-title {
-  height: 20px;
-  margin-bottom: 12px;
+  height: 24px;
+  margin-bottom: 14px;
   width: 70%;
 }
 
 .skeleton-title.wide {
   width: 50%;
-  height: 28px;
-  margin-bottom: 24px;
+  height: 32px;
+  margin-bottom: 28px;
 }
 
 .skeleton-text {
-  height: 14px;
-  margin-bottom: 8px;
+  height: 16px;
+  margin-bottom: 10px;
   width: 100%;
 }
 
@@ -125,15 +129,16 @@ defineProps({
 .skeleton-list-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.04);
+  gap: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 10px;
+  border: 1px solid rgba(45, 221, 90, 0.1);
 }
 
 .skeleton-avatar {
-  width: 44px;
-  height: 44px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -162,10 +167,10 @@ defineProps({
 }
 
 .skeleton-button {
-  height: 48px;
-  width: 140px;
-  border-radius: 24px;
-  margin-top: 12px;
+  height: 52px;
+  width: 160px;
+  border-radius: 26px;
+  margin-top: 16px;
 }
 
 @media (max-width: 640px) {

@@ -175,14 +175,16 @@ function goToSlide(i) {
 }
 
 onMounted(() => {
-  pageLoading.value = false
-  startCarousel()
-  
   setTimeout(() => {
-    animateNumber(stat1.value, 500, 2000)
-    animateNumber(stat2.value, 150, 2200)
-    animateNumber(stat3.value, 25, 1800)
-  }, 400)
+    pageLoading.value = false
+    startCarousel()
+    
+    setTimeout(() => {
+      animateNumber(stat1.value, 500, 2000)
+      animateNumber(stat2.value, 150, 2200)
+      animateNumber(stat3.value, 25, 1800)
+    }, 400)
+  }, 1200)
 })
 
 onBeforeUnmount(() => {
