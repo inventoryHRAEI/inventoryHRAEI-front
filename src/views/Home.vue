@@ -1,6 +1,8 @@
 <template>
   <div class="home-wrap animate-in">
-    <div class="hero glass">
+    <LoadingSkeleton v-if="pageLoading" type="cards" :count="3" />
+    
+    <div v-else class="hero glass">
       <div class="hero-left">
         <h2 class="heading-xl text-gradient">Bienvenido al sistema de Gestión de inventarios de Ingeniería Biomédica HRAEI</h2>
         <p class="small-msg">Puedes gestionar: Todos los equipos médicos, equipos a comodatos, donaciones hechas al hospital, mobiliario clínico/médico de la subdirección de Ingeniería Biomédica.</p>
@@ -106,7 +108,9 @@ import {
   BuildingOffice2Icon
 } from '@heroicons/vue/24/outline'
 import { PackageIcon } from 'lucide-vue-next'
+import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 
+const pageLoading = ref(true)
 const slides = ref([
   { img: '/carrusel/inventario_hospitaal.jpg', title: 'Gestión de Equipos', desc: 'Altas, ubicación, historial y trazabilidad.' },
   { img: '/carrusel/reparacion_equipo.jpg', title: 'Reparaciones y Mantenimiento', desc: 'Servicios, órdenes y seguimiento técnico.' },
@@ -171,6 +175,7 @@ function goToSlide(i) {
 }
 
 onMounted(() => {
+  pageLoading.value = false
   startCarousel()
   
   setTimeout(() => {

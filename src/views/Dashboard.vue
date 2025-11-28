@@ -1,6 +1,7 @@
 <template>
-  <div v-if="hasAccess">
-    <component :is="isAdmin ? AdminDashboard : UserDashboard" />
+  <div>
+    <LoadingSkeleton v-if="!hasAccess" type="cards" :count="6" />
+    <component v-else :is="isAdmin ? AdminDashboard : UserDashboard" />
   </div>
 </template>
 
@@ -10,6 +11,7 @@ import { useRouter } from 'vue-router'
 import { validateSession } from '@/utils/auth'
 import AdminDashboard from './AdminDashboard.vue'
 import UserDashboard from './UserDashboard.vue'
+import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 
 const router = useRouter()
 const hasAccess = ref(false)
