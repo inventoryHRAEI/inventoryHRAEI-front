@@ -26,6 +26,7 @@ const selectedHost = envHost || pickPrimaryIPv4() || true; // fallback to true (
 if (typeof selectedHost === 'string') console.log('[vite.config] selected dev host:', selectedHost);
 
 export default defineConfig({
+  assetsInclude: ['**/*.xlsx'],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

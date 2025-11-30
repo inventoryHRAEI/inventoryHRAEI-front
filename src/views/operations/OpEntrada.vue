@@ -510,6 +510,8 @@ import {
 } from '@heroicons/vue/24/outline'
 import { HashtagIcon } from '@heroicons/vue/24/outline'
 import TrashButton from '@/components/TrashButton.vue'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 
 const LOCAL_KEY = 'op-entrada'
 
@@ -894,6 +896,165 @@ const isValid = computed(() => {
   return nombreSolicitante.length > 0 && descripcion.length > 0
 })
 
+async function generarExcelEntrada() {
+  try {
+    const plantillaUrl = new URL('@/plantillas/entrada_plantilla.xlsx', import.meta.url).href
+    const response = await fetch(plantillaUrl)
+    const arrayBuffer = await response.arrayBuffer()
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(arrayBuffer)
+    const worksheet = workbook.getWorksheet('ENTRADA')
+    
+    worksheet.getCell('C1').value = form.nombreSolicitante || ''
+    worksheet.getCell('C2').value = form.servicio || ''
+    worksheet.getCell('C3').value = form.especialidad || ''
+    worksheet.getCell('I1').value = form.folio || ''
+    worksheet.getCell('I2').value = form.fecha || ''
+    worksheet.getCell('I3').value = form.horaInicio || ''
+    worksheet.getCell('I4').value = form.horaTermino || ''
+    
+    const motivosMap = {
+      'mantenimiento-preventivo-externo': 0,
+      'mantenimiento-correctivo-externo': 1,
+      'calibracion-externa': 2,
+      'diagnostico': 3,
+      'inicio-contrato': 4,
+      'inicio-demostracion': 5,
+      'reemplazo-equipo': 6,
+      'otro': 7
+    }
+    
+    const celdaMotivos = ['A7', 'A8', 'A9', 'A10', 'A11', 'A12', 'A13', 'A14']
+    const indiceMotivo = motivosMap[form.motivoEntrada]
+    celdaMotivos.forEach((celda, idx) => {
+      worksheet.getCell(celda).value = idx === indiceMotivo ? 'X' : ''
+    })
+    
+    worksheet.getCell('D7').value = form.descripcion || ''
+    
+    const equiposData = form.equiposEntrada.filter(item => item.tipo === 'equipo-medico' || item.tipo === 'mobiliario')
+    let todasLasUnidadesEquipos = []
+    equiposData.forEach(item => {
+      if (item.unidades && item.unidades.length > 0) {
+        todasLasUnidadesEquipos.push(...item.unidades)
+      }
+    })
+    
+    if (todasLasUnidadesEquipos.length > 0) {
+      let filaEquipo = 18
+      todasLasUnidadesEquipos.forEach((unidad, idx) => {
+        worksheet.getCell(`A${filaEquipo}`).value = idx + 1
+        worksheet.getCell(`B${filaEquipo}`).value = unidad.cantidad || 1
+        worksheet.getCell(`C${filaEquipo}`).value = unidad.nombre || ''
+        worksheet.getCell(`D${filaEquipo}`).value = unidad.marca || ''
+        worksheet.getCell(`E${filaEquipo}`).value = unidad.modelo || ''
+        worksheet.getCell(`F${filaEquipo}`).value = unidad.serie || ''
+        worksheet.getCell(`G${filaEquipo}`).value = unidad.referencia || ''
+        worksheet.getCell(`H${filaEquipo}`).value = unidad.ubicacion || ''
+        worksheet.getCell(`I${filaEquipo}`).value = unidad.claveHRAEI || ''
+        filaEquipo++
+      })
+    } else {
+      for (let fila = 16; fila <= 21; fila++) {
+        worksheet.getRow(fila).hidden = true
+      }
+    }
+    
+    const accesoriosData = form.equiposEntrada.filter(item => item.tipo === 'accesorio')
+    let todasLasUnidadesAccesorios = []
+    accesoriosData.forEach(item => {
+      if (item.unidades && item.unidades.length > 0) {
+        todasLasUnidadesAccesorios.push(...item.unidades)
+      }
+    })
+    
+    if (todasLasUnidadesAccesorios.length > 0) {
+      let filaAccesorio = 23
+      todasLasUnidadesAccesorios.forEach((unidad, idx) => {
+        worksheet.getCell(`A${filaAccesorio}`).value = idx + 1
+        worksheet.getCell(`B${filaAccesorio}`).value = unidad.cantidad || 1
+        worksheet.getCell(`C${filaAccesorio}`).value = unidad.nombre || ''
+        worksheet.getCell(`D${filaAccesorio}`).value = unidad.marca || ''
+        worksheet.getCell(`E${filaAccesorio}`).value = unidad.modelo || ''
+        worksheet.getCell(`F${filaAccesorio}`).value = unidad.lote || ''
+        worksheet.getCell(`G${filaAccesorio}`).value = unidad.referencia || ''
+        worksheet.getCell(`H${filaAccesorio}`).value = ''
+        worksheet.getCell(`I${filaAccesorio}`).value = unidad.claveHRAEI || ''
+        filaAccesorio++
+      })
+    } else {
+      for (let fila = 22; fila <= 26; fila++) {
+        worksheet.getRow(fila).hidden = true
+      }
+    }
+    
+    const consumiblesData = form.equiposEntrada.filter(item => item.tipo === 'consumible')
+    let todasLasUnidadesConsumibles = []
+    consumiblesData.forEach(item => {
+      if (item.unidades && item.unidades.length > 0) {
+        todasLasUnidadesConsumibles.push(...item.unidades)
+      }
+    })
+    
+    if (todasLasUnidadesConsumibles.length > 0) {
+      let filaConsumible = 28
+      todasLasUnidadesConsumibles.forEach((unidad, idx) => {
+        worksheet.getCell(`A${filaConsumible}`).value = idx + 1
+        worksheet.getCell(`B${filaConsumible}`).value = unidad.cantidad || 1
+        worksheet.getCell(`C${filaConsumible}`).value = unidad.nombre || ''
+        worksheet.getCell(`D${filaConsumible}`).value = unidad.marca || ''
+        worksheet.getCell(`E${filaConsumible}`).value = unidad.modelo || ''
+        worksheet.getCell(`F${filaConsumible}`).value = unidad.lote || ''
+        worksheet.getCell(`G${filaConsumible}`).value = unidad.referencia || ''
+        worksheet.getCell(`H${filaConsumible}`).value = ''
+        worksheet.getCell(`I${filaConsumible}`).value = unidad.claveHRAEI || ''
+        filaConsumible++
+      })
+    } else {
+      for (let fila = 27; fila <= 31; fila++) {
+        worksheet.getRow(fila).hidden = true
+      }
+    }
+    
+    const refaccionesData = form.equiposEntrada.filter(item => item.tipo === 'refaccion')
+    let todasLasUnidadesRefacciones = []
+    refaccionesData.forEach(item => {
+      if (item.unidades && item.unidades.length > 0) {
+        todasLasUnidadesRefacciones.push(...item.unidades)
+      }
+    })
+    
+    if (todasLasUnidadesRefacciones.length > 0) {
+      let filaRefaccion = 33
+      todasLasUnidadesRefacciones.forEach((unidad, idx) => {
+        worksheet.getCell(`A${filaRefaccion}`).value = idx + 1
+        worksheet.getCell(`B${filaRefaccion}`).value = unidad.cantidad || 1
+        worksheet.getCell(`C${filaRefaccion}`).value = unidad.nombre || ''
+        worksheet.getCell(`D${filaRefaccion}`).value = unidad.marca || ''
+        worksheet.getCell(`E${filaRefaccion}`).value = unidad.modelo || ''
+        worksheet.getCell(`F${filaRefaccion}`).value = unidad.lote || ''
+        worksheet.getCell(`G${filaRefaccion}`).value = unidad.referencia || ''
+        worksheet.getCell(`H${filaRefaccion}`).value = ''
+        worksheet.getCell(`I${filaRefaccion}`).value = unidad.claveHRAEI || ''
+        filaRefaccion++
+      })
+    } else {
+      for (let fila = 32; fila <= 36; fila++) {
+        worksheet.getRow(fila).hidden = true
+      }
+    }
+    
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    saveAs(blob, 'entrada_generada.xlsx')
+    
+    notifier.success('Excel generado correctamente')
+  } catch (error) {
+    console.error('Error al generar Excel:', error)
+    notifier.error('Error al generar el archivo Excel')
+  }
+}
+
 function normalizedCount(value) {
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) {
@@ -988,41 +1149,13 @@ async function onSubmit() {
 
   loading.value = true
 
-  const payload = {
-    descripcion: form.descripcion,
-    cantidad: normalizedCount(form.cantidad),
-    fechaRecibo: form.fechaRecibo,
-    solicitante: form.solicitante,
-    unidad: form.unidad,
-    turno: form.turno,
-    items: form.items.map(item => ({
-      descripcion: item.descripcion,
-      claveHRAEI: item.claveHRAEI,
-      cantidad: item.cantidad
-    })),
-    createdAt: new Date().toISOString()
-  }
-
   try {
-    const res = await fetch('/api/ops/entrada', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-
-    if (!res.ok) {
-      throw new Error('No se pudo guardar en el servidor')
-    }
-
-    notifier.success('Orden guardada')
+    await generarExcelEntrada()
+    notifier.success('Orden guardada y Excel generado')
     clearForm()
   } catch (err) {
-    try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(payload))
-    } catch {
-      // ignore storage errors
-    }
-    notifier.success('Orden guardada como borrador (offline)')
+    console.error('Error:', err)
+    notifier.error('Error al guardar la orden')
   } finally {
     loading.value = false
   }

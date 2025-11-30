@@ -10,15 +10,24 @@
   "dependencies": {
     "@heroicons/vue": "^2.2.0",
     "@vitejs/plugin-vue": "^4.5.0",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "gsap": "^3.13.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
+    "jspdf-autotable": "^5.0.2",
     "liquid-glass-vue": "^0.0.1",
     "lucide-vue-next": "^0.544.0",
     "notivue": "^2.4.5",
+    "pdfmake": "^0.2.20",
+    "puppeteer": "^24.31.0",
     "sweetalert2": "^11.26.0",
     "vue": "^3.4.0",
     "vue-liquid-glass": "^1.0.0",
     "vue-router": "^4.2.5",
-    "vue3-toastify": "^0.2.8"
+    "vue3-toastify": "^0.2.8",
+    "xlsx": "^0.18.5",
+    "xlsx-populate": "^1.21.0"
   },
   "devDependencies": {
     "sharp": "^0.34.4",
