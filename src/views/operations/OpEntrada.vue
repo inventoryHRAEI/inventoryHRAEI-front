@@ -1147,15 +1147,118 @@ async function onSubmit() {
     return
   }
 
+  // Construir resumen para modal de confirmación
+  const escapeHtml = (s) => {
+    if (!s) return ''
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  const makeListHtml = (title, units) => {
+    if (!units || units.length === 0) return ''
+    const rows = units.map((u, i) => {
+      const name = escapeHtml(u.nombre || u.descripcion || '-')
+      const qty = u.cantidad || 1
+      const modelo = escapeHtml(u.modelo || '')
+      const serie = escapeHtml(u.serie || u.lote || '')
+      return `<li><strong>${i + 1}.</strong> ${name} — x${qty} ${modelo ? `— ${modelo}` : ''} ${serie ? `— ${serie}` : ''}</li>`
+    }).join('')
+    return `<p style="margin:10px 0 4px"><strong>${escapeHtml(title)} (${units.length}):</strong></p><ul style="margin:4px 0 8px 18px;">${rows}</ul>`
+  }
+
+  const equipos = form.equiposEntrada.filter(i => i.tipo === 'equipo-medico' || i.tipo === 'mobiliario')
+  const accesorios = form.equiposEntrada.filter(i => i.tipo === 'accesorio')
+  const consumibles = form.equiposEntrada.filter(i => i.tipo === 'consumible')
+  const refacciones = form.equiposEntrada.filter(i => i.tipo === 'refaccion')
+
+  // Generar listas por tipo (unidades)
+  const unidadesEquipos = equipos.flatMap(it => Array.isArray(it.unidades) ? it.unidades : [{ nombre: it.descripcion || it.unidades?.[0]?.nombre || '' , cantidad: it.cantidad || 1, modelo: it.modelo || it.unidades?.[0]?.modelo || '', serie: it.serie || it.unidades?.[0]?.serie || '' }])
+  const unidadesAccesorios = accesorios.flatMap(it => Array.isArray(it.unidades) ? it.unidades : [{ nombre: it.descripcion || it.unidades?.[0]?.nombre || '', cantidad: it.cantidad || 1, modelo: it.modelo || it.unidades?.[0]?.modelo || '', serie: it.lote || it.unidades?.[0]?.lote || '' }])
+  const unidadesConsumibles = consumibles.flatMap(it => Array.isArray(it.unidades) ? it.unidades : [{ nombre: it.descripcion || it.unidades?.[0]?.nombre || '', cantidad: it.cantidad || 1, modelo: it.modelo || it.unidades?.[0]?.modelo || '', serie: it.lote || it.unidades?.[0]?.lote || '' }])
+  const unidadesRefacciones = refacciones.flatMap(it => Array.isArray(it.unidades) ? it.unidades : [{ nombre: it.descripcion || it.unidades?.[0]?.nombre || '', cantidad: it.cantidad || 1, modelo: it.modelo || it.unidades?.[0]?.modelo || '', serie: it.lote || it.unidades?.[0]?.lote || '' }])
+
+  const motivoLabel = (() => {
+    if (form.motivoEntrada === 'otro') return `OTRO: ${escapeHtml(form.otroMotivo || '')}`
+    const opt = motivoEntradaOptions.find(o => o.value === form.motivoEntrada)
+    return opt ? escapeHtml(opt.label) : ''
+  })()
+
+  const html = `
+    <div style="text-align:left; max-height: 480px; overflow:auto; font-size: 14px;">
+      <p><strong>Solicitante:</strong> ${escapeHtml(form.nombreSolicitante)}</p>
+      <p><strong>Servicio:</strong> ${escapeHtml(form.servicio)}</p>
+      <p><strong>Especialidad:</strong> ${escapeHtml(form.especialidad)}</p>
+      <p><strong>Folio:</strong> ${escapeHtml(form.folio)}</p>
+      <p><strong>Fecha:</strong> ${escapeHtml(form.fecha)}</p>
+      <p><strong>Hora inicio:</strong> ${escapeHtml(form.horaInicio)} — <strong>Hora término:</strong> ${escapeHtml(form.horaTermino)}</p>
+      <p><strong>Motivo:</strong> ${motivoLabel}</p>
+      <p><strong>Descripción:</strong> ${escapeHtml(form.descripcion).slice(0, 100)}${(form.descripcion && form.descripcion.length > 100) ? '...' : ''}</p>
+      ${makeListHtml('Equipos', unidadesEquipos)}
+      ${makeListHtml('Accesorios', unidadesAccesorios)}
+      ${makeListHtml('Consumibles', unidadesConsumibles)}
+      ${makeListHtml('Refacciones', unidadesRefacciones)}
+    </div>
+  `
+
+  const result = await Swal.fire({
+    title: 'Confirma y genera Excel',
+    html,
+    showCancelButton: true,
+    confirmButtonText: 'Generar y Guardar',
+    cancelButtonText: 'Cancelar',
+    width: '800px'
+  })
+
+  if (!result.isConfirmed) return
+
   loading.value = true
 
+  const payload = {
+    nombreSolicitante: form.nombreSolicitante,
+    servicio: form.servicio,
+    especialidad: form.especialidad,
+    folio: form.folio,
+    fecha: form.fecha,
+    horaInicio: form.horaInicio,
+    horaTermino: form.horaTermino,
+    motivoEntrada: form.motivoEntrada,
+    otroMotivo: form.otroMotivo,
+    descripcion: form.descripcion,
+    equiposEntrada: form.equiposEntrada,
+    createdAt: new Date().toISOString()
+  }
+
   try {
+    const res = await fetch('/api/ops/entrada', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+
+    if (!res.ok) {
+      throw new Error('No se pudo guardar en el servidor')
+    }
+
+    notifier.success('Orden guardada en el servidor')
     await generarExcelEntrada()
-    notifier.success('Orden guardada y Excel generado')
     clearForm()
   } catch (err) {
-    console.error('Error:', err)
-    notifier.error('Error al guardar la orden')
+    try {
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(payload))
+    } catch {
+      // ignore storage errors
+    }
+    notifier.success('Orden guardada como borrador (offline)')
+    // Intentar generar Excel igualmente
+    try {
+      await generarExcelEntrada()
+    } catch (e) {
+      console.error('Error generando Excel tras fallback:', e)
+      notifier.error('No se pudo generar el Excel')
+    }
   } finally {
     loading.value = false
   }
