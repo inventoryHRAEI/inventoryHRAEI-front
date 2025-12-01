@@ -1488,25 +1488,29 @@ async function generarExcelEntrada() {
     const refSeccionFinal = sections.find(s => s.key === 'refacciones')
     const ultimaFilaRefacciones = Math.max(...refSeccionFinal.actualDataRows)
     
-    // FILA EN BLANCO DESPUÉS DE REFACCIONES (para evitar colisión)
-    const FILA_ESPACIO_BLANCO = ultimaFilaRefacciones + 1
-    worksheet.getRow(FILA_ESPACIO_BLANCO).height = 15  // Fila pequeña en blanco
-    // Limpiar esta fila para asegurar que esté vacía
-    for (let col = 1; col <= 9; col++) {
-      const celda = worksheet.getCell(FILA_ESPACIO_BLANCO, col)
-      celda.value = null
-      celda.fill = null
-      celda.border = null
+    // DOS FILAS EN BLANCO DESPUÉS DE REFACCIONES (para evitar colisión con muchos items)
+    const FILA_ESPACIO_BLANCO_1 = ultimaFilaRefacciones + 1
+    const FILA_ESPACIO_BLANCO_2 = ultimaFilaRefacciones + 2
+    
+    // Limpiar filas de espacio
+    for (let filaEspacio of [FILA_ESPACIO_BLANCO_1, FILA_ESPACIO_BLANCO_2]) {
+      worksheet.getRow(filaEspacio).height = 5  // Fila muy pequeña
+      for (let col = 1; col <= 9; col++) {
+        const celda = worksheet.getCell(filaEspacio, col)
+        celda.value = null
+        celda.fill = null
+        celda.border = null
+      }
     }
     
-    // POSICIONES ABSOLUTAS (después del espacio en blanco)
-    const FILA_ENCABEZADO_OBS = FILA_ESPACIO_BLANCO + 1
+    // POSICIONES ABSOLUTAS (después del espacio en blanco doble)
+    const FILA_ENCABEZADO_OBS = FILA_ESPACIO_BLANCO_2 + 1
     const FILA_CONTENIDO_OBS = FILA_ENCABEZADO_OBS + 1
     const FILA_INGENIERO = FILA_CONTENIDO_OBS + 1
     
     console.log(`[🔒 OBSERVACIONES BLINDADAS] Posiciones calculadas:`)
     console.log(`[🔒] Última refacción: Fila ${ultimaFilaRefacciones}`)
-    console.log(`[🔒] Espacio en blanco: Fila ${FILA_ESPACIO_BLANCO}`)
+    console.log(`[🔒] Espacios en blanco: Filas ${FILA_ESPACIO_BLANCO_1} y ${FILA_ESPACIO_BLANCO_2}`)
     console.log(`[🔒] Encabezado azul: Fila ${FILA_ENCABEZADO_OBS}`)
     console.log(`[🔒] Contenido texto+imagen: Fila ${FILA_CONTENIDO_OBS}`)
     console.log(`[🔒] Ingeniero: Fila ${FILA_INGENIERO}`)
@@ -1673,10 +1677,13 @@ async function generarExcelEntrada() {
         console.log(`[${sec.key}] Mostrando sección vacía con fila N/A`)
         
         // Los encabezados quedan visibles (ya tienen formato azul)
-        // Solo llenar la primera fila con N/A
-        const naRow = sec.actualDataRows[0]
+        // USAR LA FILA CORRECTA: actualDataRows[0] o headerColRow + 1 como fallback
+        const naRow = sec.actualDataRows[0] || (sec.headerColRow + 1)
         
-        console.log(`[${sec.key}] Escribiendo fila N/A en fila ${naRow}`)
+        console.log(`[${sec.key}] Escribiendo fila N/A en fila ${naRow} (actualDataRows: ${JSON.stringify(sec.actualDataRows)}, dataRows: ${JSON.stringify(sec.dataRows)})`)
+        
+        // FORZAR que la fila NO esté oculta
+        worksheet.getRow(naRow).hidden = false
         
         setCellValuePreserveStyle(worksheet, `A${naRow}`, 1)
         setCellValuePreserveStyle(worksheet, `B${naRow}`, 1)
@@ -1688,9 +1695,24 @@ async function generarExcelEntrada() {
         setCellValuePreserveStyle(worksheet, `H${naRow}`, 'N/A')
         setCellValuePreserveStyle(worksheet, `I${naRow}`, 'N/A')
         
-        // Ocultar las filas restantes de esta sección
+        // APLICAR FORMATO EXPLÍCITO a la fila N/A (para que se vea correctamente)
+        for (let col = 1; col <= 9; col++) {
+          const cell = worksheet.getRow(naRow).getCell(col)
+          cell.alignment = { horizontal: 'center', vertical: 'middle' }
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FF000000' } },
+            left: { style: 'thin', color: { argb: 'FF000000' } },
+            bottom: { style: 'thin', color: { argb: 'FF000000' } },
+            right: { style: 'thin', color: { argb: 'FF000000' } }
+          }
+          cell.font = { name: 'Calibri', size: 11, color: { argb: 'FF000000' } }
+        }
+        
+        console.log(`[${sec.key}] ✅ Fila N/A escrita y formateada en fila ${naRow}`)
+        
+        // Ocultar las filas restantes de esta sección (usando dataRows actualizado)
         sec.dataRows.slice(1).forEach(rowNum => {
-          if (!PROTECTED_ROWS.has(rowNum)) {
+          if (!PROTECTED_ROWS.has(rowNum) && rowNum !== naRow) {
             worksheet.getRow(rowNum).hidden = true
           }
         })
@@ -1884,6 +1906,35 @@ async function generarExcelEntrada() {
     
     console.log(`[FORMATO-MÁXIMO] ✅ ${formatRepairs} filas procesadas con ARTILLERÍA MÁXIMA`)
     
+    // ═══════════════════════════════════════════════════════════════
+    // 🧹 LIMPIEZA FILAS MOTIVOS (7-14) - NO DEBEN TENER FONDO AZUL
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[LIMPIEZA-MOTIVOS] 🧹 Limpiando fondo de filas de motivos (7-14)...')
+    
+    // Las filas 7-14 contienen los motivos de entrada y NO deben tener fondo azul
+    for (let filaMotivo = 7; filaMotivo <= 14; filaMotivo++) {
+      const fila = worksheet.getRow(filaMotivo)
+      
+      // Limpiar fondo de TODAS las columnas de esta fila (A-I)
+      for (let col = 1; col <= 9; col++) {
+        const celda = fila.getCell(col)
+        
+        // Quitar cualquier fondo (fill) que pueda tener
+        celda.fill = null
+        
+        // Asegurar que el texto sea negro (no blanco)
+        if (celda.font) {
+          celda.font = {
+            ...celda.font,
+            color: { argb: 'FF000000' }  // Negro
+          }
+        }
+      }
+      
+      console.log(`[LIMPIEZA-MOTIVOS] ✓ Fila ${filaMotivo} limpiada (sin fondo azul)`)
+    }
+    
+    console.log('[LIMPIEZA-MOTIVOS] ✅ Filas de motivos (7-14) limpias')
 
     
     // ═══════════════════════════════════════════════════════════════
