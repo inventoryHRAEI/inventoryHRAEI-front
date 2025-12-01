@@ -6,7 +6,7 @@
       <template #body>
   <div class="op-card insumos" ref="rootRef">
         <form @submit.prevent="onSubmit" class="form-grid" id="entrada-form" novalidate>
-          <div class="section-card combined-card">
+          <div class="section-card combined-card observaciones-support">
             <div class="section-head">
               <h4>Datos del Solicitante</h4>
               <small class="hint">Información de quien solicita la entrada</small>
@@ -459,6 +459,37 @@
             </p>
           </div>
 
+          <!-- Observaciones e Ingeniero Residente (Apoyo) -->
+          <div class="section-card combined-card">
+            <div class="section-head">
+              <h4>Observaciones y Soporte</h4>
+              <small class="hint">Anota observaciones y el nombre del ingeniero residente de apoyo</small>
+            </div>
+            <div class="section-grid combined">
+              <div class="field" style="grid-column: span 12;">
+                <label>Observaciones</label>
+                <textarea class="control" v-model.trim="form.observaciones" placeholder="Escribe observaciones aquí" style="min-height: 120px;"></textarea>
+                <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
+                  <label class="btn secondary" style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:8px 12px;">
+                    Subir imagen
+                    <input type="file" accept="image/*" @change="onObservacionesImgChange" style="display:none;" />
+                  </label>
+                  <div v-if="form.observacionesImg" class="observ-img-preview" style="display:flex; align-items:center; gap:10px;">
+                    <img :src="form.observacionesImg.dataUrl" alt="preview" style="width:90px; height:56px; object-fit:cover; border-radius:8px; border:1px solid rgba(0,0,0,0.06)" />
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                      <span style="font-weight:700; color:rgba(15,23,42,0.9)">{{ form.observacionesImg.name }}</span>
+                      <button type="button" class="btn secondary" @click="removeObservacionesImg" style="padding:6px 10px; font-size:0.85rem;">Quitar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="field ing-res">
+                <label>Ingeniero residente (apoyo)</label>
+                <input class="control" v-model.trim="form.nombreIngeniero" placeholder="Nombre del ingeniero residente" />
+              </div>
+            </div>
+          </div>
+
         </form>
         
         <div class="form-actions">
@@ -555,6 +586,9 @@ const form = reactive({
   
   // Descripción
   descripcion: '',
+  observaciones: '',
+  nombreIngeniero: '',
+  observacionesImg: null, // { name, dataUrl, extension }
   
   // Equipos que entran
   equiposEntrada: [],
@@ -594,6 +628,24 @@ const resetNewItem = () => {
   newItem.ubicacion = ''
   newItem.claveHRAEI = ''
   newItem.unidades = []
+}
+
+// Observaciones image helper
+const onObservacionesImgChange = (e) => {
+  const file = e.target.files && e.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    const dataUrl = String(reader.result || '')
+    const match = dataUrl.match(/^data:image\/(\w+);base64,/) || []
+    const ext = match[1] || (file.name.split('.').pop() || 'png')
+    form.observacionesImg = { name: file.name, dataUrl, extension: ext }
+  }
+  reader.readAsDataURL(file)
+}
+
+const removeObservacionesImg = () => {
+  form.observacionesImg = null
 }
 
 // Ajustar array de unidades cuando cambia la cantidad (para equipos médicos)
@@ -905,13 +957,47 @@ async function generarExcelEntrada() {
     await workbook.xlsx.load(arrayBuffer)
     const worksheet = workbook.getWorksheet('ENTRADA')
     
-    worksheet.getCell('C1').value = form.nombreSolicitante || ''
-    worksheet.getCell('C2').value = form.servicio || ''
-    worksheet.getCell('C3').value = form.especialidad || ''
-    worksheet.getCell('I1').value = form.folio || ''
-    worksheet.getCell('I2').value = form.fecha || ''
-    worksheet.getCell('I3').value = form.horaInicio || ''
-    worksheet.getCell('I4').value = form.horaTermino || ''
+    const setCellValuePreserveStyle = (ws, addr, val) => {
+      const c = ws.getCell(addr)
+      const originalStyle = JSON.parse(JSON.stringify(c.style || {}))
+      c.value = val
+      try { c.style = originalStyle } catch (e) { /* ignore style reapply errors */ }
+    }
+
+    setCellValuePreserveStyle(worksheet, 'C1', form.nombreSolicitante || '')
+    setCellValuePreserveStyle(worksheet, 'C2', form.servicio || '')
+    setCellValuePreserveStyle(worksheet, 'C3', form.especialidad || '')
+    setCellValuePreserveStyle(worksheet, 'I1', form.folio || '')
+    setCellValuePreserveStyle(worksheet, 'I2', form.fecha || '')
+    setCellValuePreserveStyle(worksheet, 'I3', form.horaInicio || '')
+    setCellValuePreserveStyle(worksheet, 'I4', form.horaTermino || '')
+
+    // Helper para duplicar una fila con estilos
+    const duplicateRowWithStyle = (ws, sourceRowNum, targetRowNum) => {
+      // Insertar fila vacía en targetRowNum
+      ws.spliceRows(targetRowNum, 0, [])
+      const source = ws.getRow(sourceRowNum)
+      const target = ws.getRow(targetRowNum)
+      target.height = source.height
+      source.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        const newCell = target.getCell(colNumber)
+        try {
+          // Copiar estilo si existe
+          if (cell && cell.style) newCell.style = JSON.parse(JSON.stringify(cell.style || {}))
+        } catch (e) {
+          // ignore style copy error
+        }
+      })
+      // Copiar merges que estén contenidos en source row (simple case)
+      const merges = Array.from(ws._merges || [])
+      merges.forEach(([mergeRange]) => {
+        try {
+          // mergeRange is object; for compatibility use string keys
+        } catch (e) {}
+      })
+    }
+
+    
     
     const motivosMap = {
       'mantenimiento-preventivo-externo': 0,
@@ -927,10 +1013,12 @@ async function generarExcelEntrada() {
     const celdaMotivos = ['A7', 'A8', 'A9', 'A10', 'A11', 'A12', 'A13', 'A14']
     const indiceMotivo = motivosMap[form.motivoEntrada]
     celdaMotivos.forEach((celda, idx) => {
-      worksheet.getCell(celda).value = idx === indiceMotivo ? 'X' : ''
+      setCellValuePreserveStyle(worksheet, celda, idx === indiceMotivo ? 'X' : '')
     })
     
-    worksheet.getCell('D7').value = form.descripcion || ''
+    setCellValuePreserveStyle(worksheet, 'D7', form.descripcion || '')
+    // Observaciones y nombre de ingeniero (mapeo)
+    // Observaciones y nombre de ingeniero se establecerán después de ajustar filas
     
     const equiposData = form.equiposEntrada.filter(item => item.tipo === 'equipo-medico' || item.tipo === 'mobiliario')
     let todasLasUnidadesEquipos = []
@@ -940,26 +1028,16 @@ async function generarExcelEntrada() {
       }
     })
     
-    if (todasLasUnidadesEquipos.length > 0) {
-      let filaEquipo = 18
-      todasLasUnidadesEquipos.forEach((unidad, idx) => {
-        worksheet.getCell(`A${filaEquipo}`).value = idx + 1
-        worksheet.getCell(`B${filaEquipo}`).value = unidad.cantidad || 1
-        worksheet.getCell(`C${filaEquipo}`).value = unidad.nombre || ''
-        worksheet.getCell(`D${filaEquipo}`).value = unidad.marca || ''
-        worksheet.getCell(`E${filaEquipo}`).value = unidad.modelo || ''
-        worksheet.getCell(`F${filaEquipo}`).value = unidad.serie || ''
-        worksheet.getCell(`G${filaEquipo}`).value = unidad.referencia || ''
-        worksheet.getCell(`H${filaEquipo}`).value = unidad.ubicacion || ''
-        worksheet.getCell(`I${filaEquipo}`).value = unidad.claveHRAEI || ''
-        filaEquipo++
-      })
-    } else {
-      for (let fila = 16; fila <= 21; fila++) {
-        worksheet.getRow(fila).hidden = true
-      }
-    }
+    // Recopilar todas las unidades de accesorios, consumibles y refacciones
     
+    
+    
+    
+    
+
+    
+
+    // Inserciones dinámicas por lotes (se calcularán ahora y usaremos 'sections' para todas las escrituras)
     const accesoriosData = form.equiposEntrada.filter(item => item.tipo === 'accesorio')
     let todasLasUnidadesAccesorios = []
     accesoriosData.forEach(item => {
@@ -969,23 +1047,9 @@ async function generarExcelEntrada() {
     })
     
     if (todasLasUnidadesAccesorios.length > 0) {
-      let filaAccesorio = 23
-      todasLasUnidadesAccesorios.forEach((unidad, idx) => {
-        worksheet.getCell(`A${filaAccesorio}`).value = idx + 1
-        worksheet.getCell(`B${filaAccesorio}`).value = unidad.cantidad || 1
-        worksheet.getCell(`C${filaAccesorio}`).value = unidad.nombre || ''
-        worksheet.getCell(`D${filaAccesorio}`).value = unidad.marca || ''
-        worksheet.getCell(`E${filaAccesorio}`).value = unidad.modelo || ''
-        worksheet.getCell(`F${filaAccesorio}`).value = unidad.lote || ''
-        worksheet.getCell(`G${filaAccesorio}`).value = unidad.referencia || ''
-        worksheet.getCell(`H${filaAccesorio}`).value = ''
-        worksheet.getCell(`I${filaAccesorio}`).value = unidad.claveHRAEI || ''
-        filaAccesorio++
-      })
+      // La escritura de filas para accesorios se hace después del cálculo de secciones y offsets
     } else {
-      for (let fila = 22; fila <= 26; fila++) {
-        worksheet.getRow(fila).hidden = true
-      }
+      // hide logic deferred until after `sections` has been calculated
     }
     
     const consumiblesData = form.equiposEntrada.filter(item => item.tipo === 'consumible')
@@ -997,23 +1061,9 @@ async function generarExcelEntrada() {
     })
     
     if (todasLasUnidadesConsumibles.length > 0) {
-      let filaConsumible = 28
-      todasLasUnidadesConsumibles.forEach((unidad, idx) => {
-        worksheet.getCell(`A${filaConsumible}`).value = idx + 1
-        worksheet.getCell(`B${filaConsumible}`).value = unidad.cantidad || 1
-        worksheet.getCell(`C${filaConsumible}`).value = unidad.nombre || ''
-        worksheet.getCell(`D${filaConsumible}`).value = unidad.marca || ''
-        worksheet.getCell(`E${filaConsumible}`).value = unidad.modelo || ''
-        worksheet.getCell(`F${filaConsumible}`).value = unidad.lote || ''
-        worksheet.getCell(`G${filaConsumible}`).value = unidad.referencia || ''
-        worksheet.getCell(`H${filaConsumible}`).value = ''
-        worksheet.getCell(`I${filaConsumible}`).value = unidad.claveHRAEI || ''
-        filaConsumible++
-      })
+      // La escritura de filas para consumibles se hace después del cálculo de secciones y offsets
     } else {
-      for (let fila = 27; fila <= 31; fila++) {
-        worksheet.getRow(fila).hidden = true
-      }
+      // hide deferred
     }
     
     const refaccionesData = form.equiposEntrada.filter(item => item.tipo === 'refaccion')
@@ -1023,30 +1073,819 @@ async function generarExcelEntrada() {
         todasLasUnidadesRefacciones.push(...item.unidades)
       }
     })
+
+    // Configuración de secciones con estructura COMPLETA
+    // Cada sección: título azul + encabezado columnas + filas de datos (algunas son reserva)
+    const sections = [
+      { 
+        key: 'equipos', 
+        headerTitleRow: 16, 
+        headerColRow: 17, 
+        dataRows: [18, 19, 20], // 3 filas base - soporta expansión ilimitada
+        capacity: 999, // Sin límite - expansión automática
+        units: todasLasUnidadesEquipos 
+      },
+      { 
+        key: 'accesorios', 
+        headerTitleRow: 21, 
+        headerColRow: 22, 
+        dataRows: [23, 24, 25], // 3 filas base - soporta expansión ilimitada  
+        capacity: 999, // Sin límite - expansión automática
+        units: todasLasUnidadesAccesorios 
+      },
+      { 
+        key: 'consumibles', 
+        headerTitleRow: 26, 
+        headerColRow: 27, 
+        dataRows: [28, 29, 30], // 3 filas base - soporta expansión ilimitada
+        capacity: 999, // Sin límite - expansión automática
+        units: todasLasUnidadesConsumibles 
+      },
+      { 
+        key: 'refacciones', 
+        headerTitleRow: 31, 
+        headerColRow: 32, 
+        dataRows: [33, 34], // 2 filas base - soporta expansión ilimitada
+        capacity: 999, // Sin límite - expansión automática (observaciones en 35+)
+        units: todasLasUnidadesRefacciones 
+      }
+    ]
     
-    if (todasLasUnidadesRefacciones.length > 0) {
-      let filaRefaccion = 33
-      todasLasUnidadesRefacciones.forEach((unidad, idx) => {
-        worksheet.getCell(`A${filaRefaccion}`).value = idx + 1
-        worksheet.getCell(`B${filaRefaccion}`).value = unidad.cantidad || 1
-        worksheet.getCell(`C${filaRefaccion}`).value = unidad.nombre || ''
-        worksheet.getCell(`D${filaRefaccion}`).value = unidad.marca || ''
-        worksheet.getCell(`E${filaRefaccion}`).value = unidad.modelo || ''
-        worksheet.getCell(`F${filaRefaccion}`).value = unidad.lote || ''
-        worksheet.getCell(`G${filaRefaccion}`).value = unidad.referencia || ''
-        worksheet.getCell(`H${filaRefaccion}`).value = ''
-        worksheet.getCell(`I${filaRefaccion}`).value = unidad.claveHRAEI || ''
-        filaRefaccion++
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 1: SNAPSHOT DE ESTRUCTURA CRÍTICA (ANTES DE CUALQUIER CAMBIO)
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[PROTECCIÓN] Creando snapshot de filas críticas...')
+    
+    const CRITICAL_ROWS = [16, 17, 21, 22, 26, 27, 31, 32, 35, 36, 37, 38, 39, 40] // Todos los encabezados + observaciones + firmas
+    const rowSnapshots = {}
+    
+    CRITICAL_ROWS.forEach(rowNum => {
+      const row = worksheet.getRow(rowNum)
+      const snapshot = {
+        height: row.height,
+        hidden: row.hidden,
+        cells: {}
+      }
+      
+      row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+        snapshot.cells[colNum] = {
+          value: cell.value,
+          style: cell.style ? JSON.parse(JSON.stringify(cell.style)) : null,
+          merge: cell.isMerged
+        }
       })
-    } else {
-      for (let fila = 32; fila <= 36; fila++) {
-        worksheet.getRow(fila).hidden = true
+      
+      rowSnapshots[rowNum] = snapshot
+      console.log(`[SNAPSHOT] Fila ${rowNum} respaldada (${Object.keys(snapshot.cells).length} celdas)`)
+    })
+    
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 2: ASIGNAR FILAS PARA DATOS (SIN MODIFICAR TEMPLATE)
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[ASIGNACIÓN] Calculando filas para datos...')
+    
+    // ZONA MEGA-PROTEGIDA: Todos los encabezados dobles + observaciones + firmas
+    const PROTECTED_ROWS = new Set([
+      // EQUIPOS: Encabezados primario y secundario
+      16, 17,
+      // ACCESORIOS: Encabezados primario y secundario  
+      21, 22,
+      // CONSUMIBLES: Encabezados primario y secundario
+      26, 27,
+      // REFACCIONES: Encabezados primario y secundario
+      31, 32,
+      // OBSERVACIONES Y FIRMAS: Sección crítica del final
+      35, 36, 37, 38, 39, 40
+    ])
+    
+    console.log('[PROTECCIÓN] 🛡️ Filas mega-protegidas:', Array.from(PROTECTED_ROWS).sort((a,b) => a-b))
+    
+    // ═══════════════════════════════════════════════════════════════
+    // PASO 1: ASIGNAR FILAS NORMALES PRIMERO (DISTRIBUCIÓN SECUENCIAL)
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[ASIGNACIÓN] 🎯 PASO 1: Llenando filas normales secuencialmente...')
+    
+    // Primero, asignar filas normales a cada sección
+    for (const sec of sections) {
+      const unitsCount = (sec.units || []).length
+      sec.actualDataRows = []
+      sec.normalRowsUsed = 0
+      sec.extraRowsNeeded = 0
+      
+      if (unitsCount === 0) {
+        // En lugar de ocultar, mostrar UNA fila con N/A
+        sec.shouldShowNA = true
+        sec.actualDataRows = [sec.dataRows[0]] // Solo usar la primera fila de datos
+        sec.normalRowsUsed = 1
+        sec.extraRowsNeeded = 0
+        continue
+      }
+      
+      // USAR SOLO FILAS DISPONIBLES (NO protegidas)
+      console.log(`[${sec.key}] Procesando ${unitsCount} unidades`)
+      
+      // Paso 1: Usar filas normales disponibles
+      for (let i = 0; i < Math.min(unitsCount, sec.dataRows.length); i++) {
+        const rowNum = sec.dataRows[i]
+        if (!PROTECTED_ROWS.has(rowNum)) {
+          sec.actualDataRows.push(rowNum)
+          sec.normalRowsUsed++
+        }
+      }
+      
+      // Calcular cuántas filas extras necesita
+      sec.extraRowsNeeded = unitsCount - sec.normalRowsUsed
+      console.log(`[${sec.key}] Filas normales: ${sec.normalRowsUsed}/${unitsCount}, Extras necesarias: ${sec.extraRowsNeeded}`)
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // PASO 2: INSERTAR FILAS EXTRAS JUSTO DESPUÉS DE CADA SECCIÓN
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[ASIGNACIÓN] 🎯 PASO 2: Insertando filas extras inmediatamente después de cada sección...')
+    
+    // PROCESAR DE ABAJO HACIA ARRIBA para evitar desplazamiento de referencias
+    const sectionsReversed = [...sections].reverse()
+    
+    for (const sec of sectionsReversed) {
+      if (sec.extraRowsNeeded > 0) {
+        // Posición exacta donde insertar: después de la última fila de datos
+        const lastDataRow = sec.dataRows[sec.dataRows.length - 1]
+        const insertPosition = lastDataRow + 1
+        
+        console.log(`[${sec.key}] Insertando ${sec.extraRowsNeeded} filas después de fila ${lastDataRow} → posición ${insertPosition}`)
+        
+        // INSERTAR filas vacías
+        worksheet.spliceRows(insertPosition, 0, ...Array(sec.extraRowsNeeded).fill([]))
+        
+        // APLICAR formato inmediatamente a cada fila insertada
+        for (let i = 0; i < sec.extraRowsNeeded; i++) {
+          const newRowNum = insertPosition + i
+          const newRow = worksheet.getRow(newRowNum)
+          
+          // Formato básico de fila
+          newRow.height = 15
+          
+          // Formato de celdas (A-I)
+          for (let col = 1; col <= 9; col++) {
+            const cell = newRow.getCell(col)
+            
+            cell.alignment = { horizontal: 'center', vertical: 'middle' }
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FF000000' } },
+              left: { style: 'thin', color: { argb: 'FF000000' } },
+              bottom: { style: 'thin', color: { argb: 'FF000000' } },
+              right: { style: 'thin', color: { argb: 'FF000000' } }
+            }
+            cell.font = { name: 'Calibri', size: 11, color: { argb: 'FF000000' } }
+          }
+          
+          // Agregar a las filas asignadas de esta sección
+          sec.actualDataRows.push(newRowNum)
+        }
+        
+        console.log(`[${sec.key}] ✓ ${sec.extraRowsNeeded} filas insertadas en posiciones [${insertPosition}-${insertPosition + sec.extraRowsNeeded - 1}]`)
+        
+        // ═══════════════════════════════════════════════════════════════
+        // MOVER ENCABEZADOS Y SECCIONES COMO BLOQUES PROTEGIDOS
+        // ═══════════════════════════════════════════════════════════════
+        console.log(`[MOVIMIENTO-PROTEGIDO] Moviendo encabezados y secciones posteriores +${sec.extraRowsNeeded} filas`)
+        
+        // PASO 1: SIMPLIFICAR - Solo mover lo esencial usando spliceRows
+        console.log(`[MOVIMIENTO-SIMPLIFICADO] Usando spliceRows para desplazar automáticamente`)
+        
+        // El spliceRows ya movió todo automáticamente, solo necesitamos actualizar referencias
+        console.log(`[MOVIMIENTO-SIMPLIFICADO] spliceRows ya desplazó todas las filas posteriores a ${insertPosition}`)
+        
+        // PASO 2: ACTUALIZAR REFERENCIAS (spliceRows ya movió las filas automáticamente)
+        sections.forEach(otherSec => {
+          if (otherSec.dataRows[0] > lastDataRow) {
+            console.log(`[ACTUALIZACIÓN] Actualizando referencias de sección ${otherSec.key}`)
+            
+            // Actualizar encabezados
+            otherSec.headerTitleRow += sec.extraRowsNeeded
+            otherSec.headerColRow += sec.extraRowsNeeded
+            
+            // Actualizar filas de datos
+            otherSec.dataRows = otherSec.dataRows.map(r => r + sec.extraRowsNeeded)
+            otherSec.actualDataRows = otherSec.actualDataRows.map(r => r + sec.extraRowsNeeded)
+          }
+        })
+        
+        // ACTUALIZAR FILAS PROTEGIDAS (spliceRows las movió automáticamente)
+        const newProtectedRows = new Set()
+        const newCriticalRows = []
+        
+        PROTECTED_ROWS.forEach(row => {
+          newProtectedRows.add(row > lastDataRow ? row + sec.extraRowsNeeded : row)
+        })
+        
+        CRITICAL_ROWS.forEach(row => {
+          newCriticalRows.push(row > lastDataRow ? row + sec.extraRowsNeeded : row)
+        })
+        
+        // Reemplazar estructuras globales
+        PROTECTED_ROWS.clear()
+        newProtectedRows.forEach(row => PROTECTED_ROWS.add(row))
+        
+        CRITICAL_ROWS.length = 0
+        CRITICAL_ROWS.push(...newCriticalRows)
+        
+        console.log(`[MOVIMIENTO-SIMPLIFICADO] ✅ Referencias actualizadas correctamente`)
+        
+        // ═══════════════════════════════════════════════════════════════
+        // 🔵 RESTAURAR FORMATO AZUL Y COMBINAR CELDAS DE ENCABEZADOS 
+        // ═══════════════════════════════════════════════════════════════
+        console.log(`[FORMATO-AZUL] 🔵 Restaurando encabezados azules y celdas combinadas...`)
+        
+        sections.forEach(section => {
+          // ENCABEZADO PRIMARIO (azul combinado)
+          const titleRow = section.headerTitleRow
+          const titleCell = worksheet.getCell(`A${titleRow}`)
+          
+          console.log(`[FORMATO-AZUL] Restaurando encabezado primario fila ${titleRow} para ${section.key}`)
+          
+          // Combinar celdas A-I para el título (solo si no están ya combinadas)
+          try {
+            worksheet.mergeCells(`A${titleRow}:I${titleRow}`)
+            console.log(`[FORMATO-AZUL] ✓ Celdas combinadas A${titleRow}:I${titleRow} para ${section.key}`)
+          } catch (error) {
+            console.log(`[FORMATO-AZUL] ⚠️ Celdas A${titleRow}:I${titleRow} para ${section.key} ya estaban combinadas`)
+          }
+          
+          // REFUERZO ESPECIAL para ACCESORIOS - Asegurar que SIEMPRE quede combinado
+          if (section.key === 'accesorios') {
+            console.log(`[ACCESORIOS-FIX] 🔧 REFUERZO ESPECIAL para encabezado de accesorios en fila ${titleRow}`)
+            
+            try {
+              worksheet.unMergeCells(titleRow, 1, titleRow, 9)
+            } catch(e) {}
+            
+            for (let col = 1; col <= 9; col++) {
+              const celda = worksheet.getCell(titleRow, col)
+              celda.value = null
+              celda.fill = null
+              celda.font = null
+              celda.border = null
+              celda.alignment = null
+            }
+            
+            worksheet.mergeCells(titleRow, 1, titleRow, 9)
+            console.log(`[ACCESORIOS-FIX] ✅ Accesorios FORZADAMENTE combinado en fila ${titleRow}`)
+          }
+          
+          // REFUERZO ESPECIAL para CONSUMIBLES - Asegurar que SIEMPRE quede combinado
+          if (section.key === 'consumibles') {
+            console.log(`[CONSUMIBLES-FIX] 🔧 REFUERZO ESPECIAL para encabezado de consumibles en fila ${titleRow}`)
+            
+            try {
+              // Descombinar primero
+              worksheet.unMergeCells(titleRow, 1, titleRow, 9)
+            } catch(e) {}
+            
+            // Limpiar todas las celdas
+            for (let col = 1; col <= 9; col++) {
+              const celda = worksheet.getCell(titleRow, col)
+              celda.value = null
+              celda.fill = null
+              celda.font = null
+              celda.border = null
+              celda.alignment = null
+            }
+            
+            // Combinar de nuevo limpiamente
+            worksheet.mergeCells(titleRow, 1, titleRow, 9)
+            console.log(`[CONSUMIBLES-FIX] ✅ Consumibles FORZADAMENTE combinado en fila ${titleRow}`)
+          }
+          
+          // REFUERZO ESPECIAL para REFACCIONES - Asegurar que SIEMPRE quede combinado
+          if (section.key === 'refacciones') {
+            console.log(`[REFACCIONES-FIX] 🔧 REFUERZO ESPECIAL para encabezado de refacciones en fila ${titleRow}`)
+            
+            // Forzar combinación y formato azul para refacciones
+            try {
+              // Primero deshacer cualquier combinación existente en esa fila
+              for (let col = 1; col <= 9; col++) {
+                const cell = worksheet.getCell(titleRow, col)
+                if (cell.master && cell.master !== cell) {
+                  // Esta celda está combinada, deshacerla
+                  worksheet.unMergeCells(cell.master.address, cell.address)
+                }
+              }
+              
+              // Ahora combinar de nuevo limpiamente
+              worksheet.mergeCells(`A${titleRow}:I${titleRow}`)
+              console.log(`[REFACCIONES-FIX] ✅ Refacciones FORZADAMENTE combinado en fila ${titleRow}`)
+              
+            } catch (error) {
+              console.log(`[REFACCIONES-FIX] ⚠️ Error al forzar combinación de refacciones:`, error.message)
+            }
+          }
+          
+          // Aplicar formato azul al encabezado primario
+          titleCell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF4472C4' }
+          }
+          titleCell.font = {
+            name: 'Calibri',
+            size: 11,
+            bold: true,
+            color: { argb: 'FFFFFFFF' }
+          }
+          titleCell.alignment = {
+            horizontal: 'center',
+            vertical: 'middle'
+          }
+          titleCell.border = {
+            top: { style: 'thin', color: { argb: 'FF000000' } },
+            left: { style: 'thin', color: { argb: 'FF000000' } },
+            bottom: { style: 'thin', color: { argb: 'FF000000' } },
+            right: { style: 'thin', color: { argb: 'FF000000' } }
+          }
+          
+          // Restaurar texto del encabezado según la sección
+          const titleTexts = {
+            'equipos': 'DESCRIPCIÓN DEL EQUIPO MÉDICO Y/O MOBILIARIO MÉDICO.',
+            'accesorios': 'DESCRIPCIÓN DE ACCESORIOS QUE SE INGRESA CON EL EQUIPO MÉDICO.',
+            'consumibles': 'DESCRIPCIÓN DE CONSUMIBLES QUE SE INGRESA CON EL EQUIPO MÉDICO.',
+            'refacciones': 'DESCRIPCIÓN DE REFACCIONES QUE SE INGRESA CON EL EQUIPO MÉDICO.'
+          }
+          titleCell.value = titleTexts[section.key] || `DESCRIPCIÓN DE ${section.key.toUpperCase()}`
+          
+          // ENCABEZADO SECUNDARIO (columnas)
+          const colRow = section.headerColRow
+          console.log(`[FORMATO-AZUL] Restaurando encabezado secundario fila ${colRow} para ${section.key}`)
+          
+          // LIMPIEZA ESPECIAL para REFACCIONES - Evitar duplicados
+          if (section.key === 'refacciones') {
+            console.log(`[REFACCIONES-FIX] 🧹 Limpiando posibles duplicados de encabezado secundario...`)
+            
+            // Limpiar un rango amplio alrededor de la fila esperada para eliminar duplicados
+            for (let checkRow = colRow - 2; checkRow <= colRow + 2; checkRow++) {
+              const checkCell = worksheet.getCell(`A${checkRow}`)
+              if (checkCell.value === 'N°' && checkRow !== colRow) {
+                console.log(`[REFACCIONES-FIX] 🗑️ Eliminando encabezado duplicado en fila ${checkRow}`)
+                // Limpiar toda la fila duplicada
+                for (let col = 1; col <= 9; col++) {
+                  const cellToClean = worksheet.getCell(checkRow, col)
+                  cellToClean.value = null
+                  cellToClean.fill = null
+                  cellToClean.font = null
+                  cellToClean.border = null
+                }
+              }
+            }
+          }
+          
+          const columnHeaders = ['N°', 'CANTIDAD', 'DESCRIPCIÓN', 'MARCA', 'MODELO', 'SERIE', 'REFERENCIA', 'UBICACIÓN', 'CLAVE HRAEI']
+          columnHeaders.forEach((header, idx) => {
+            const cell = worksheet.getCell(`${String.fromCharCode(65 + idx)}${colRow}`)
+            
+            cell.value = header
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid', 
+              fgColor: { argb: 'FF4472C4' }
+            }
+            cell.font = {
+              name: 'Calibri',
+              size: 11,
+              bold: true,
+              color: { argb: 'FFFFFFFF' }
+            }
+            cell.alignment = {
+              horizontal: 'center',
+              vertical: 'middle'
+            }
+            cell.border = {
+              top: { style: 'thin', color: { argb: 'FF000000' } },
+              left: { style: 'thin', color: { argb: 'FF000000' } },
+              bottom: { style: 'thin', color: { argb: 'FF000000' } },
+              right: { style: 'thin', color: { argb: 'FF000000' } }
+            }
+          })
+          
+          console.log(`[FORMATO-AZUL] ✅ Encabezados de ${section.key} restaurados con formato azul`)
+        })
+        
+        console.log(`[FORMATO-AZUL] ✅ Todas las celdas combinadas y formatos azules restaurados`)
       }
     }
     
+    // ██████████████████████████████████████████████████████████████████████████
+    // 🔒🔒🔒 SECCIÓN OBSERVACIONES - CREACIÓN ULTRA DEFINITIVA Y BLINDADA 🔒🔒🔒
+    // ██████████████████████████████████████████████████████████████████████████
+    
+    // Calcular posición EXACTA después de refacciones
+    const refSeccionFinal = sections.find(s => s.key === 'refacciones')
+    const ultimaFilaRefacciones = Math.max(...refSeccionFinal.actualDataRows)
+    
+    // FILA EN BLANCO DESPUÉS DE REFACCIONES (para evitar colisión)
+    const FILA_ESPACIO_BLANCO = ultimaFilaRefacciones + 1
+    worksheet.getRow(FILA_ESPACIO_BLANCO).height = 15  // Fila pequeña en blanco
+    // Limpiar esta fila para asegurar que esté vacía
+    for (let col = 1; col <= 9; col++) {
+      const celda = worksheet.getCell(FILA_ESPACIO_BLANCO, col)
+      celda.value = null
+      celda.fill = null
+      celda.border = null
+    }
+    
+    // POSICIONES ABSOLUTAS (después del espacio en blanco)
+    const FILA_ENCABEZADO_OBS = FILA_ESPACIO_BLANCO + 1
+    const FILA_CONTENIDO_OBS = FILA_ENCABEZADO_OBS + 1
+    const FILA_INGENIERO = FILA_CONTENIDO_OBS + 1
+    
+    console.log(`[🔒 OBSERVACIONES BLINDADAS] Posiciones calculadas:`)
+    console.log(`[🔒] Última refacción: Fila ${ultimaFilaRefacciones}`)
+    console.log(`[🔒] Espacio en blanco: Fila ${FILA_ESPACIO_BLANCO}`)
+    console.log(`[🔒] Encabezado azul: Fila ${FILA_ENCABEZADO_OBS}`)
+    console.log(`[🔒] Contenido texto+imagen: Fila ${FILA_CONTENIDO_OBS}`)
+    console.log(`[🔒] Ingeniero: Fila ${FILA_INGENIERO}`)
+    
+    // ══════════════════════════════════════════════════════════════════════════
+    // FILA 1: ENCABEZADO AZUL "OBSERVACIONES" - A:I COMBINADO
+    // ══════════════════════════════════════════════════════════════════════════
+    
+    // PASO 1: DESCOMBINAR TODO EN ESA FILA PRIMERO
+    try { worksheet.unMergeCells(FILA_ENCABEZADO_OBS, 1, FILA_ENCABEZADO_OBS, 9) } catch(e) {}
+    
+    // PASO 2: LIMPIAR TODAS LAS CELDAS DE ESA FILA
+    for (let col = 1; col <= 9; col++) {
+      const celda = worksheet.getCell(FILA_ENCABEZADO_OBS, col)
+      celda.value = null
+      celda.fill = null
+      celda.font = null
+      celda.border = null
+      celda.alignment = null
+    }
+    
+    // PASO 3: COMBINAR A:I
+    worksheet.mergeCells(FILA_ENCABEZADO_OBS, 1, FILA_ENCABEZADO_OBS, 9)
+    
+    // PASO 4: APLICAR FORMATO Y VALOR
+    const celdaEncabezadoObs = worksheet.getCell(FILA_ENCABEZADO_OBS, 1)
+    celdaEncabezadoObs.value = 'OBSERVACIONES'
+    celdaEncabezadoObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
+    celdaEncabezadoObs.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } }
+    celdaEncabezadoObs.alignment = { horizontal: 'center', vertical: 'middle' }
+    celdaEncabezadoObs.border = {
+      top: { style: 'thin', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'thin', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } }
+    }
+    worksheet.getRow(FILA_ENCABEZADO_OBS).height = 25
+    
+    console.log(`[🔒] ✅ ENCABEZADO "OBSERVACIONES" CREADO EN FILA ${FILA_ENCABEZADO_OBS}`)
+    
+    // ══════════════════════════════════════════════════════════════════════════
+    // FILA 2: CONTENIDO - TEXTO (A:F) + IMAGEN (G:I)
+    // ══════════════════════════════════════════════════════════════════════════
+    
+    // LIMPIAR FILA PRIMERO
+    try { worksheet.unMergeCells(FILA_CONTENIDO_OBS, 1, FILA_CONTENIDO_OBS, 9) } catch(e) {}
+    for (let col = 1; col <= 9; col++) {
+      const celda = worksheet.getCell(FILA_CONTENIDO_OBS, col)
+      celda.value = null
+      celda.fill = null
+      celda.font = null
+      celda.border = null
+      celda.alignment = null
+    }
+    
+    // Área de texto observaciones (A:F)
+    worksheet.mergeCells(FILA_CONTENIDO_OBS, 1, FILA_CONTENIDO_OBS, 6)
+    const celdaTextoObs = worksheet.getCell(FILA_CONTENIDO_OBS, 1)
+    celdaTextoObs.value = form.observaciones || ''  // DATO AQUÍ
+    celdaTextoObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }  // FONDO BLANCO
+    celdaTextoObs.font = { name: 'Calibri', size: 11, color: { argb: 'FF000000' } }  // TEXTO NEGRO
+    celdaTextoObs.alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
+    celdaTextoObs.border = {
+      top: { style: 'thin', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'thin', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } }
+    }
+    
+    // Área de imagen (G:I)
+    worksheet.mergeCells(FILA_CONTENIDO_OBS, 7, FILA_CONTENIDO_OBS, 9)
+    const celdaImagenObs = worksheet.getCell(FILA_CONTENIDO_OBS, 7)
+    celdaImagenObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' } }  // FONDO BLANCO
+    celdaImagenObs.alignment = { horizontal: 'center', vertical: 'middle' }
+    celdaImagenObs.border = {
+      top: { style: 'thin', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'thin', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } }
+    }
+    worksheet.getRow(FILA_CONTENIDO_OBS).height = 100
+    
+    // Insertar imagen si existe - AJUSTADA AL ÁREA G:I
+    if (form.observacionesImg && form.observacionesImg.dataUrl) {
+      try {
+        const base64Img = String(form.observacionesImg.dataUrl).replace(/^data:image\/\w+;base64,/, '')
+        const extImg = (form.observacionesImg.extension || 'png').replace('jpeg', 'jpg')
+        const idImagen = workbook.addImage({ base64: base64Img, extension: extImg })
+        
+        // Usar tl (top-left) y br (bottom-right) para que la imagen se ajuste al área G:I
+        worksheet.addImage(idImagen, {
+          tl: { col: 6, row: FILA_CONTENIDO_OBS - 1 },      // G (columna 6) - inicio de fila
+          br: { col: 9, row: FILA_CONTENIDO_OBS },          // I (columna 9) - fin de fila
+          editAs: 'oneCell'  // La imagen se ajusta a las celdas
+        })
+        
+        console.log(`[🖼️] Imagen insertada y ajustada al área G${FILA_CONTENIDO_OBS}:I${FILA_CONTENIDO_OBS}`)
+      } catch (errImg) {
+        console.warn('[🔒] Error imagen:', errImg)
+      }
+    }
+    
+    // ══════════════════════════════════════════════════════════════════════════
+    // FILA 3: INGENIERO - ETIQUETA (A:C) + NOMBRE (D:I)
+    // ══════════════════════════════════════════════════════════════════════════
+    
+    // LIMPIAR FILA PRIMERO
+    try { worksheet.unMergeCells(FILA_INGENIERO, 1, FILA_INGENIERO, 9) } catch(e) {}
+    for (let col = 1; col <= 9; col++) {
+      const celda = worksheet.getCell(FILA_INGENIERO, col)
+      celda.value = null
+      celda.fill = null
+      celda.font = null
+      celda.border = null
+      celda.alignment = null
+    }
+    
+    // Etiqueta (A:C)
+    worksheet.mergeCells(FILA_INGENIERO, 1, FILA_INGENIERO, 3)
+    const celdaEtiquetaIng = worksheet.getCell(FILA_INGENIERO, 1)
+    celdaEtiquetaIng.value = 'NOMBRE DE INGENIERO RESIDENTE DE APOYO'
+    celdaEtiquetaIng.font = { name: 'Calibri', size: 10, bold: true }
+    celdaEtiquetaIng.alignment = { horizontal: 'left', vertical: 'middle' }
+    celdaEtiquetaIng.border = {
+      top: { style: 'thin', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'thin', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } }
+    }
+    
+    // Campo nombre (D:I)
+    worksheet.mergeCells(FILA_INGENIERO, 4, FILA_INGENIERO, 9)
+    const celdaNombreIng = worksheet.getCell(FILA_INGENIERO, 4)
+    celdaNombreIng.value = form.nombreIngeniero || ''  // DATO AQUÍ
+    celdaNombreIng.alignment = { horizontal: 'center', vertical: 'middle' }
+    celdaNombreIng.border = {
+      top: { style: 'thin', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'thin', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } }
+    }
+    worksheet.getRow(FILA_INGENIERO).height = 25
+    
+    // 🔒 BLINDAJE FINAL: Re-forzar encabezado azul una última vez
+    celdaEncabezadoObs.value = 'OBSERVACIONES'
+    celdaEncabezadoObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
+    celdaEncabezadoObs.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } }
+    
+    console.log(`[🔒 OBSERVACIONES BLINDADAS] ✅ COMPLETADO PERFECTAMENTE`)
+    
+    // Procesar secciones en orden normal para mostrar resumen
+    sections.forEach(sec => {
+      console.log(`[${sec.key}] ✓ Asignación final: [${sec.actualDataRows.join(', ')}]`)
+    })
+    
+    // ═══════════════════════════════════════════════════════════════
+    // PASO 3: ESCRIBIR DATOS EN CADA SECCIÓN Y OCULTAR SECCIONES VACÍAS
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[ESCRITURA] Escribiendo datos con protección de filas críticas...')
+    
+    for (const sec of sections) {
+      if (sec.shouldShowNA) {
+        // Mostrar sección con UNA fila de N/A
+        console.log(`[${sec.key}] Mostrando sección vacía con fila N/A`)
+        
+        // Los encabezados quedan visibles (ya tienen formato azul)
+        // Solo llenar la primera fila con N/A
+        const naRow = sec.actualDataRows[0]
+        
+        console.log(`[${sec.key}] Escribiendo fila N/A en fila ${naRow}`)
+        
+        setCellValuePreserveStyle(worksheet, `A${naRow}`, 1)
+        setCellValuePreserveStyle(worksheet, `B${naRow}`, 1)
+        setCellValuePreserveStyle(worksheet, `C${naRow}`, 'N/A')
+        setCellValuePreserveStyle(worksheet, `D${naRow}`, 'N/A') 
+        setCellValuePreserveStyle(worksheet, `E${naRow}`, 'N/A')
+        setCellValuePreserveStyle(worksheet, `F${naRow}`, 'N/A')
+        setCellValuePreserveStyle(worksheet, `G${naRow}`, 'N/A')
+        setCellValuePreserveStyle(worksheet, `H${naRow}`, 'N/A')
+        setCellValuePreserveStyle(worksheet, `I${naRow}`, 'N/A')
+        
+        // Ocultar las filas restantes de esta sección
+        sec.dataRows.slice(1).forEach(rowNum => {
+          if (!PROTECTED_ROWS.has(rowNum)) {
+            worksheet.getRow(rowNum).hidden = true
+          }
+        })
+        
+      } else {
+        // Escribir datos en las filas calculadas
+        console.log(`[${sec.key}] Escribiendo ${sec.units.length} items`)
+        sec.units.forEach((unidad, idx) => {
+          const row = sec.actualDataRows[idx]
+          
+          // PROTECCIÓN: Verificar que no escribimos en filas críticas
+          if (PROTECTED_ROWS.has(row)) {
+            console.error(`[PROTECCIÓN] ⛔ Fila ${row} está protegida - saltando`)
+            return
+          }
+          
+          console.log(`[${sec.key}] Escribiendo item ${idx + 1} en fila ${row}`)
+          
+          // Si es fila extra (>=50), FORZAR formato antes de escribir
+          if (row >= 50) {
+            console.log(`[FORMATO] Aplicando formato forzado a fila ${row}`)
+            for (let col = 1; col <= 9; col++) {
+              const cell = worksheet.getRow(row).getCell(col)
+              
+              cell.alignment = { horizontal: 'center', vertical: 'middle' }
+              cell.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+              }
+              cell.font = { name: 'Calibri', size: 11, color: { argb: 'FF000000' } }
+            }
+          }
+          
+          // AUTOCOMPLETADO CON "N/A" - Si un campo está vacío o en blanco, usar "N/A"
+          const autoNA = (value) => {
+            if (!value || value.toString().trim() === '') {
+              return 'N/A'
+            }
+            return value
+          }
+          
+          console.log(`[${sec.key}] Autocompletando campos vacíos con N/A para item ${idx + 1}`)
+          
+          setCellValuePreserveStyle(worksheet, `A${row}`, idx + 1)
+          setCellValuePreserveStyle(worksheet, `B${row}`, unidad.cantidad || 1)
+          setCellValuePreserveStyle(worksheet, `C${row}`, autoNA(unidad.nombre))
+          setCellValuePreserveStyle(worksheet, `D${row}`, autoNA(unidad.marca))
+          setCellValuePreserveStyle(worksheet, `E${row}`, autoNA(unidad.modelo))
+          setCellValuePreserveStyle(worksheet, `F${row}`, autoNA(unidad.serie || unidad.lote))
+          setCellValuePreserveStyle(worksheet, `G${row}`, autoNA(unidad.referencia))
+          setCellValuePreserveStyle(worksheet, `H${row}`, autoNA(unidad.ubicacion))
+          setCellValuePreserveStyle(worksheet, `I${row}`, autoNA(unidad.claveHRAEI))
+        })
+        
+        // Ocultar filas no usadas dentro de la capacidad
+        const unusedRows = sec.dataRows.filter(r => !sec.actualDataRows.includes(r) && !PROTECTED_ROWS.has(r))
+        unusedRows.forEach(rowNum => {
+          console.log(`[${sec.key}] Ocultando fila no usada: ${rowNum}`)
+          worksheet.getRow(rowNum).hidden = true
+        })
+      }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 3: AUTO-REPARACIÓN - VALIDAR Y RESTAURAR FILAS CRÍTICAS
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[AUTO-REPARACIÓN] Validando integridad de filas críticas...')
+    
+    let repairsNeeded = 0
+    CRITICAL_ROWS.forEach(rowNum => {
+      const currentRow = worksheet.getRow(rowNum)
+      const snapshot = rowSnapshots[rowNum]
+      
+      // VALIDACIÓN: Verificar que existe el snapshot
+      if (!snapshot) {
+        console.warn(`[REPARACIÓN] No hay snapshot para fila ${rowNum} - saltando validación`)
+        return
+      }
+      
+      // Verificar si la fila está corrupta (vacía o sin estilo)
+      let isCorrupted = true
+      currentRow.eachCell({ includeEmpty: false }, (cell) => {
+        if (cell.value || cell.style) isCorrupted = false
+      })
+      
+      if (isCorrupted || !currentRow.height) {
+        console.warn(`[REPARACIÓN] Fila ${rowNum} corrupta - restaurando desde snapshot`)
+        repairsNeeded++
+        
+        // Restaurar altura (con validación)
+        currentRow.height = snapshot.height || 15
+        currentRow.hidden = snapshot.hidden || false
+        
+        // Restaurar cada celda (con validación)
+        if (snapshot.cells) {
+          Object.keys(snapshot.cells).forEach(colNum => {
+            const cellData = snapshot.cells[colNum]
+            if (cellData) {
+              const cell = currentRow.getCell(Number(colNum))
+              
+              cell.value = cellData.value
+              if (cellData.style) {
+                cell.style = JSON.parse(JSON.stringify(cellData.style))
+              }
+            }
+          })
+        }
+        
+        console.log(`[REPARACIÓN] ✓ Fila ${rowNum} restaurada`)
+      } else {
+        console.log(`[VALIDACIÓN] ✓ Fila ${rowNum} intacta`)
+      }
+    })
+    
+    if (repairsNeeded > 0) {
+      console.warn(`[AUTO-REPARACIÓN] ${repairsNeeded} filas fueron reparadas`)
+    } else {
+      console.log('[AUTO-REPARACIÓN] ✓ Todas las filas críticas están intactas')
+    }
+    
+    // ═══════════════════════════════════════════════════════════════
+    // 💥 ARTILLERÍA MÁXIMA - FORMATO AGRESIVO A TODAS LAS FILAS DE DATOS 💥
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[FORMATO-MÁXIMO] 💥 ARTILLERÍA MÁXIMA - Aplicando formato a TODAS las filas de datos...')
+    
+    let formatRepairs = 0
+    const standardBorder = {
+      top: { style: 'thin', color: { argb: 'FF000000' } },
+      left: { style: 'thin', color: { argb: 'FF000000' } },
+      bottom: { style: 'thin', color: { argb: 'FF000000' } },
+      right: { style: 'thin', color: { argb: 'FF000000' } }
+    }
+    
+    const standardAlignment = { horizontal: 'center', vertical: 'middle' }
+    const standardFont = { name: 'Calibri', size: 11, color: { argb: 'FF000000' } }
+    
+    // APLICAR A TODAS LAS FILAS DE DATOS SIN EXCEPCIÓN
+    sections.forEach(sec => {
+      sec.actualDataRows.forEach(row => {
+        console.log(`[FORMATO-MÁXIMO] 💥 FORZANDO formato fila ${row}`)
+        formatRepairs++
+        
+        // BORRAR TODO EL FORMATO EXISTENTE Y APLICAR NUEVO
+        const excelRow = worksheet.getRow(row)
+        
+        // Forzar altura
+        excelRow.height = 15
+        
+        // APLICAR A TODAS LAS COLUMNAS A-I (1-9) SIN PIEDAD
+        for (let col = 1; col <= 9; col++) {
+          const cell = excelRow.getCell(col)
+          
+          // APLICAR formato de manera brutal (sin limpiar style ya que puede causar problemas)
+          cell.alignment = standardAlignment
+          cell.border = standardBorder  
+          cell.font = standardFont
+          
+          // Forzar aplicación inmediata estableciendo propiedades individuales
+          Object.assign(cell, {
+            alignment: standardAlignment,
+            border: standardBorder,
+            font: standardFont
+          })
+        }
+      })
+    })
+    
+    // SEGUNDA PASADA - VERIFICACIÓN Y REAPLICACIÓN
+    console.log('[FORMATO-MÁXIMO] 💥 SEGUNDA PASADA - Verificando formato aplicado...')
+    sections.forEach(sec => {
+      sec.actualDataRows.forEach(row => {
+        const excelRow = worksheet.getRow(row)
+        for (let col = 1; col <= 9; col++) {
+          const cell = excelRow.getCell(col)
+          
+          // Reaplicar formato sin condiciones (más agresivo)
+          console.log(`[FORMATO-MÁXIMO] 🔧 Reaplicando formato a celda ${row}:${col}`)
+          cell.alignment = { horizontal: 'center', vertical: 'middle' }
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FF000000' } },
+            left: { style: 'thin', color: { argb: 'FF000000' } },
+            bottom: { style: 'thin', color: { argb: 'FF000000' } },
+            right: { style: 'thin', color: { argb: 'FF000000' } }
+          }
+          cell.font = { name: 'Calibri', size: 11, color: { argb: 'FF000000' } }
+        }
+      })
+    })
+    
+    console.log(`[FORMATO-MÁXIMO] ✅ ${formatRepairs} filas procesadas con ARTILLERÍA MÁXIMA`)
+    
+
+    
+    // ═══════════════════════════════════════════════════════════════
+    // FASE 4: GENERAR Y DESCARGAR ARCHIVO
+    // ═══════════════════════════════════════════════════════════════
+    console.log('[GENERACIÓN] Creando archivo final...')
     const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
-    saveAs(blob, 'entrada_generada.xlsx')
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheeml.sheet' })
+    saveAs(blob, `entrada_${form.folio || 'sin-folio'}_${Date.now()}.xlsx`)
     
     notifier.success('Excel generado correctamente')
   } catch (error) {
@@ -1126,6 +1965,9 @@ function decMainBy(amount) {
 
 function clearForm() {
   form.descripcion = ''
+  form.observaciones = ''
+  form.nombreIngeniero = ''
+  form.observacionesImg = null
   form.cantidad = 0
   form.fechaRecibo = ''
   form.solicitante = ''
@@ -1196,10 +2038,13 @@ async function onSubmit() {
       <p><strong>Hora inicio:</strong> ${escapeHtml(form.horaInicio)} — <strong>Hora término:</strong> ${escapeHtml(form.horaTermino)}</p>
       <p><strong>Motivo:</strong> ${motivoLabel}</p>
       <p><strong>Descripción:</strong> ${escapeHtml(form.descripcion).slice(0, 100)}${(form.descripcion && form.descripcion.length > 100) ? '...' : ''}</p>
+      <p><strong>Observaciones:</strong> ${escapeHtml(form.observaciones || '').slice(0, 150)}${(form.observaciones && form.observaciones.length > 150) ? '...' : ''}</p>
+      <p><strong>Ingeniero Residente:</strong> ${escapeHtml(form.nombreIngeniero || '')}</p>
       ${makeListHtml('Equipos', unidadesEquipos)}
       ${makeListHtml('Accesorios', unidadesAccesorios)}
       ${makeListHtml('Consumibles', unidadesConsumibles)}
       ${makeListHtml('Refacciones', unidadesRefacciones)}
+      ${form.observacionesImg ? `<p style="margin:6px 0 4px"><strong>Imagen adjunta:</strong></p><img src="${form.observacionesImg.dataUrl}" style="max-width:200px; max-height:160px; border-radius:8px; display:block; margin-top:6px;" />` : ''}
     </div>
   `
 
@@ -1227,7 +2072,10 @@ async function onSubmit() {
     motivoEntrada: form.motivoEntrada,
     otroMotivo: form.otroMotivo,
     descripcion: form.descripcion,
+    observaciones: form.observaciones,
+    nombreIngeniero: form.nombreIngeniero,
     equiposEntrada: form.equiposEntrada,
+    observacionesImg: form.observacionesImg ? form.observacionesImg.dataUrl : null,
     createdAt: new Date().toISOString()
   }
 
@@ -1239,12 +2087,21 @@ async function onSubmit() {
     })
 
     if (!res.ok) {
-      throw new Error('No se pudo guardar en el servidor')
+      if (res.status === 404) {
+        // Endpoint no disponible: guardar local y generar Excel igualmente
+        notifier.info('API de guardado no disponible (404), se guardará como borrador localmente')
+      } else {
+        throw new Error('No se pudo guardar en el servidor')
+      }
+    } else {
+      notifier.success('Orden guardada en el servidor')
+      // clearForm se realiza tras generar el Excel para que la descarga se pueda llevar a cabo
+      // (no queremos limpiar antes de la generación)
+      await generarExcelEntrada()
+      clearForm()
+      loading.value = false
+      return
     }
-
-    notifier.success('Orden guardada en el servidor')
-    await generarExcelEntrada()
-    clearForm()
   } catch (err) {
     try {
       localStorage.setItem(LOCAL_KEY, JSON.stringify(payload))
@@ -1273,7 +2130,10 @@ watch(
     clearTimeout(autosaveTimer)
     autosaveTimer = setTimeout(() => {
       try {
-        localStorage.setItem(LOCAL_KEY, JSON.stringify(form))
+        // Avoid storing base64 image in localStorage to prevent large entries
+        const safeCopy = { ...form }
+        if (safeCopy.observacionesImg) delete safeCopy.observacionesImg
+        localStorage.setItem(LOCAL_KEY, JSON.stringify(safeCopy))
         savedAt.value = new Date().toLocaleTimeString()
       } catch {
         // ignore storage errors
@@ -1302,6 +2162,8 @@ onMounted(async () => {
       form.solicitante = data.solicitante || ''
       form.unidad = data.unidad || ''
       form.turno = data.turno || ''
+      form.observaciones = data.observaciones || ''
+      form.nombreIngeniero = data.nombreIngeniero || ''
       const storedItems = Array.isArray(data.items) ? data.items : []
       form.items = []
       syncItemsToCantidad()
@@ -2865,6 +3727,45 @@ input[type="text"],
     inset 0 1px 2px rgba(255, 255, 255, 0.2);
   transition: all 0.1s cubic-bezier(0.4, 0.0, 0.2, 1);
   animation-play-state: paused;
+}
+
+/* Observaciones & Ingeniero - estilos centrados y simétricos */
+.observaciones-support .section-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.observaciones-support .section-head h4 {
+  margin-bottom: 0;
+}
+.observaciones-support .section-head .hint {
+  text-align: center;
+}
+.observaciones-support .section-grid.combined {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 18px 20px;
+  align-items: center;
+}
+.observaciones-support .field.ing-res {
+  grid-column: 4 / 10; /* centered 6 cols on 12col grid */
+  justify-self: center;
+  width: 100%;
+  max-width: 640px;
+}
+.observaciones-support .field textarea.control {
+  min-height: 140px !important;
+  padding: 14px 18px !important;
+  border-radius: 28px !important;
+}
+.observaciones-support .field label {
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: rgba(15,23,42,0.68);
+}
+@media (max-width: 900px) {
+  .observaciones-support .field.ing-res { grid-column: 1 / -1; justify-self: stretch; max-width: none; }
+  .observaciones-support .field { grid-column: 1 / -1; }
 }
 
 /* Transiciones Vue - Solo una animación por vez */
