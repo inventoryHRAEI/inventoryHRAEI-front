@@ -1016,6 +1016,13 @@ async function generarExcelEntrada() {
       setCellValuePreserveStyle(worksheet, celda, idx === indiceMotivo ? 'X' : '')
     })
     
+    // Si el motivo es "otro", escribir la especificación en B14
+    if (form.motivoEntrada === 'otro' && form.otroMotivo) {
+      // Actualizar el texto de B14 para incluir el motivo especificado
+      const celdaOtroMotivo = worksheet.getCell('B14')
+      celdaOtroMotivo.value = `OTRO; ESPECIFICAR (${form.otroMotivo})`
+    }
+    
     setCellValuePreserveStyle(worksheet, 'D7', form.descripcion || '')
     // Observaciones y nombre de ingeniero (mapeo)
     // Observaciones y nombre de ingeniero se establecerán después de ajustar filas
