@@ -23,7 +23,10 @@
               </div>
               <div class="field fecha-field">
                 <label>Fecha de recibo en biomédica</label>
-                <input class="control" v-model="form.fechaRecibo" type="date" />
+                <DatePickerModern
+                  v-model="form.fechaRecibo"
+                  placeholder="Seleccionar fecha de recibo"
+                />
               </div>
               
               <!-- Segunda fila: Cantidad centrada -->
@@ -165,6 +168,8 @@
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import FormShell from '@/components/FormShell.vue'
+import DatePickerModern from '@/components/DatePickerModern.vue'
+import TimePickerModern from '@/components/TimePickerModern.vue'
 import notifier from '@/utils/notifier'
 import Swal from 'sweetalert2'
 

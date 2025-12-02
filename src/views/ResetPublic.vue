@@ -103,10 +103,50 @@ const { email, token, password, msg, error, show, sendingResend, resendCode, res
 </script>
 
 <style scoped>
-/* Reuse styles from Reset.vue (kept minimal since global styles exist) */
-.form-wrap{ display:flex; align-items:center; justify-content:center; min-height:72vh; padding:24px }
-.form-col{ width:100%; max-width:420px }
-.glass{ background: rgba(255,255,255,0.08); backdrop-filter: blur(8px); border-radius:14px; padding:20px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06) }
+/* Responsive form styling */
+.form-wrap{ 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  min-height: 72vh; 
+  padding: 24px 16px;
+}
+
+.form-col{ 
+  width: 100%; 
+  max-width: 480px;
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .form-wrap {
+    padding: 24px 32px;
+  }
+  
+  .form-col {
+    max-width: 520px;
+  }
+}
+
+/* Large desktop styles */
+@media (min-width: 1024px) {
+  .form-col {
+    max-width: 580px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 480px) {
+  .form-wrap {
+    padding: 16px 12px;
+    min-height: 70vh;
+  }
+  
+  .form-col {
+    max-width: 100%;
+  }
+}
+
 .link-row{ text-align:center }
 .msg{ margin-top:10px; color:green; text-align:center }
 .error{ margin-top:10px; color:#b00020; text-align:center }

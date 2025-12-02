@@ -52,30 +52,25 @@
               <!-- Segunda fila -->
               <div class="field">
                 <label>Fecha</label>
-                <input
-                  class="control"
+                <DatePickerModern
                   v-model="form.fecha"
-                  type="date"
+                  placeholder="Seleccionar fecha"
                 />
               </div>
               
               <div class="field">
                 <label>Hora de inicio</label>
-                <input
-                  class="control"
+                <TimePickerModern
                   v-model="form.horaInicio"
-                  type="time"
-                  placeholder="14:00"
+                  placeholder="Hora de inicio"
                 />
               </div>
               
               <div class="field">
                 <label>Hora de terminó</label>
-                <input
-                  class="control"
+                <TimePickerModern
                   v-model="form.horaTermino"
-                  type="time"
-                  placeholder="14:00"
+                  placeholder="Hora de término"
                 />
               </div>
             </div>
@@ -497,6 +492,8 @@ import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import FormShell from '@/components/FormShell.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
+import DatePickerModern from '@/components/DatePickerModern.vue'
+import TimePickerModern from '@/components/TimePickerModern.vue'
 import notifier from '@/utils/notifier'
 import Swal from 'sweetalert2'
 import {

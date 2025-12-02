@@ -5,6 +5,7 @@ import './styles.css'
 import './styles/operations-global.css'
 import './styles/enhancements.css'
 import './styles/forms.css'
+import './styles/datetime-inputs.css'
 // Inicializar windowManager antes de crear la app
 import './utils/windowManager'
 // Si este window fue abierto por script (query param scriptOpen=1), marcarlo en sessionStorage

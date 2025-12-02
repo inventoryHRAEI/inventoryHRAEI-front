@@ -1,0 +1,128 @@
+/* Estilos para inputs de fecha y hora */
+.datetime-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.datetime-input-group label {
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--text-primary, #333);
+  margin-bottom: 4px;
+}
+
+/* Estilos base para inputs de fecha y hora */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  padding: 8px 12px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background-color: var(--input-bg, #ffffff);
+  color: var(--text-primary, #333);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="datetime-local"]:focus {
+  outline: none;
+  border-color: var(--primary-color, #3b82f6);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+input[type="date"]:disabled,
+input[type="time"]:disabled,
+input[type="datetime-local"]:disabled {
+  background-color: var(--disabled-bg, #f3f4f6);
+  color: var(--text-disabled, #6b7280);
+  cursor: not-allowed;
+}
+
+/* Estilos específicos para inputs de fecha */
+input[type="date"] {
+  width: 100%;
+  max-width: 200px;
+}
+
+/* Estilos específicos para inputs de hora */
+input[type="time"] {
+  width: 100%;
+  max-width: 150px;
+}
+
+/* Estilos específicos para inputs de fecha y hora */
+input[type="datetime-local"] {
+  width: 100%;
+  max-width: 250px;
+}
+
+/* Contenedor para inputs de fecha y hora en línea */
+.datetime-inline {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.datetime-inline .datetime-input-group {
+  margin-bottom: 0;
+  min-width: 120px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .datetime-inline {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .datetime-inline .datetime-input-group {
+    width: 100%;
+  }
+  
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    max-width: 100%;
+  }
+}
+
+/* Estilos para validación */
+input[type="date"].error,
+input[type="time"].error,
+input[type="datetime-local"].error {
+  border-color: var(--error-color, #ef4444);
+}
+
+input[type="date"].success,
+input[type="time"].success,
+input[type="datetime-local"].success {
+  border-color: var(--success-color, #10b981);
+}
+
+/* Personalización del icono del calendario (webkit) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}
+
+/* Personalización del icono del reloj (webkit) */
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 3px;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  background-color: var(--hover-bg, rgba(0, 0, 0, 0.05));
+}

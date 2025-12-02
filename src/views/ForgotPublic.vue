@@ -118,9 +118,51 @@ const forgot = async () => {
 </script>
 
 <style scoped>
-/* No styles here: FormShell centraliza el diseño del card para consistencia */
+/* Responsive form styling */
+.form-wrap{ 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  min-height: 72vh; 
+  padding: 24px 16px;
+  margin-top: 8px;
+}
+
+.form-col{ 
+  width: 100%; 
+  max-width: 480px;
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .form-wrap {
+    padding: 24px 32px;
+  }
+  
+  .form-col {
+    max-width: 520px;
+  }
+}
+
+/* Large desktop styles */
+@media (min-width: 1024px) {
+  .form-col {
+    max-width: 580px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 480px) {
+  .form-wrap {
+    padding: 16px 12px;
+    min-height: 70vh;
+  }
+  
+  .form-col {
+    max-width: 100%;
+  }
+}
+
 /* Ocultar cualquier H2 directo dentro del contenedor principal para evitar títulos duplicados */
 :deep(.container) > h2 { display: none !important; }
-/* Asegurar espacio superior consistente */
-.form-wrap{ margin-top: 8px }
 </style>

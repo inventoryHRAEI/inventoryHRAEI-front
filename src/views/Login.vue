@@ -189,7 +189,7 @@ const login = async () => {
 <style scoped>
 .form-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh }
 .form-col{ width:100%; max-width:1000px }
-.remember-row{ display:flex; align-items:center; gap:8px; margin-top:10px; color:#334155; font-size:14px }
+.remember-row{ display:flex; align-items:center; gap:8px; margin-top:10px; color:rgba(255, 255, 255, 0.85); font-size:14px }
 .remember-row input{ accent-color: var(--btn-green,#0a8b5b) }
 
 @media (min-width: 1024px) {
