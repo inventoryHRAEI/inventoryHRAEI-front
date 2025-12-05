@@ -61,22 +61,42 @@
               
               <div class="field">
                 <label>Hora de inicio</label>
-                <input
-                  class="control"
-                  v-model="form.horaInicio"
-                  type="time"
-                  placeholder="14:00"
-                />
+                <TimePicker v-model="form.horaInicio" placeholder="14:00" />
               </div>
               
               <div class="field">
-                <label>Hora de terminó</label>
-                <input
-                  class="control"
-                  v-model="form.horaTermino"
-                  type="time"
-                  placeholder="14:00"
-                />
+                <label>Hora de término</label>
+                <div class="term-input-row">
+                  <input
+                    class="control term-input"
+                    type="text"
+                    :value="displayEndTime"
+                    readonly
+                    tabindex="-1"
+                    aria-disabled="true"
+                    @mousedown.prevent
+                    @click.prevent
+                    @focus.prevent
+                    @keydown.prevent
+                  />
+                  <span
+                    class="term-help"
+                    role="button"
+                    tabindex="0"
+                    aria-label="La hora de término se establece al pulsar Guardar orden. No editable."
+                    ref="termHelpRef"
+                    @mouseenter="showTermTooltip"
+                    @mouseleave="hideTermTooltip"
+                    @focus="showTermTooltip"
+                    @blur="hideTermTooltip"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 1 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12" y2="17"></line></svg>
+                  </span>
+                  <Teleport to="body">
+                    <div v-if="tooltipVisible" :style="tooltipStyle" class="term-tooltip-portal" role="tooltip">La hora de término se establece al pulsar <strong>Guardar orden</strong>. No editable.</div>
+                  </Teleport>
+                </div>
+                
               </div>
             </div>
           </div>
@@ -529,6 +549,7 @@ import { useRouter } from 'vue-router'
 import FormShell from '@/components/FormShell.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
 import DatePicker from '@/components/DatePicker.vue'
+import TimePicker from '@/components/TimePicker.vue'
 import notifier from '@/utils/notifier'
 import Swal from 'sweetalert2'
 import {
@@ -861,6 +882,47 @@ const hydrated = ref(false)
 const showScrollTop = ref(false)
 const isAnimatingOut = ref(false)
 let hideTimeout = null
+// Root reference for focus/click detection to start the timer
+const rootRef = ref(null)
+
+// Timer for capturing hora de término
+const timerStartedAt = ref(null) // timestamp ms
+const elapsedSeconds = ref(0)
+let timerInterval = null
+
+// formattedElapsed removed; duration not shown visually (tooltip only)
+
+const displayEndTime = computed(() => {
+  // Depend on elapsedSeconds so this recomputes every second while timer running
+  const _tick = elapsedSeconds.value
+  if (form.horaTermino) {
+    return form.horaTermino
+  }
+  if (timerStartedAt.value) {
+    const now = new Date()
+    const hh = String(now.getHours()).padStart(2, '0')
+    const mm = String(now.getMinutes()).padStart(2, '0')
+    const ss = String(now.getSeconds()).padStart(2, '0')
+    return `${hh}:${mm}:${ss}`
+  }
+  return ''
+})
+
+const startTimer = () => {
+  if (timerStartedAt.value) return
+  timerStartedAt.value = Date.now()
+  elapsedSeconds.value = 0
+  timerInterval = setInterval(() => {
+    elapsedSeconds.value = Math.floor((Date.now() - timerStartedAt.value) / 1000)
+  }, 1000)
+}
+
+const stopTimer = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval)
+    timerInterval = null
+  }
+}
 
 const onCancel = async () => {
   const result = await Swal.fire({
@@ -951,8 +1013,10 @@ const isValid = computed(() => {
 
 async function generarExcelEntrada() {
   try {
-    const plantillaUrl = new URL('@/plantillas/entrada_plantilla.xlsx', import.meta.url).href
+    // Usar ruta relativa a la carpeta `src/plantillas` (Vite no resuelve `@` dentro de new URL)
+    const plantillaUrl = new URL('../../plantillas/entrada_plantilla.xlsx', import.meta.url).href
     const response = await fetch(plantillaUrl)
+    if (!response.ok) throw new Error(`Error al obtener plantilla (${response.status} ${response.statusText})`)
     const arrayBuffer = await response.arrayBuffer()
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(arrayBuffer)
@@ -1943,7 +2007,8 @@ async function generarExcelEntrada() {
     // ═══════════════════════════════════════════════════════════════
     console.log('[GENERACIÓN] Creando archivo final...')
     const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheeml.sheet' })
+    // MIME corregido: spreadsheetml (antes había un typo)
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
     saveAs(blob, `entrada_${form.folio || 'sin-folio'}_${Date.now()}.xlsx`)
     
     notifier.success('Excel generado correctamente')
@@ -2049,6 +2114,15 @@ async function onSubmit() {
     notifier.error('Completa los campos obligatorios')
     return
   }
+
+  // Capturar hora de término (con segundos) en el momento en que el usuario pulsa "Guardar orden"
+  // (esto fija la hora final incluso antes de la confirmación del modal)
+  const nowStart = new Date()
+  const hhStart = String(nowStart.getHours()).padStart(2, '0')
+  const mmStart = String(nowStart.getMinutes()).padStart(2, '0')
+  const ssStart = String(nowStart.getSeconds()).padStart(2, '0')
+  form.horaTermino = `${hhStart}:${mmStart}:${ssStart}`
+  stopTimer()
 
   // Construir resumen para modal de confirmación
   const escapeHtml = (s) => {
@@ -2212,6 +2286,13 @@ watch(
   }
 )
 
+// Iniciar el temporizador automáticamente cuando el usuario seleccione la hora de inicio
+watch(() => form.horaInicio, (val) => {
+  if (val && !timerStartedAt.value) {
+    startTimer()
+  }
+})
+
 onMounted(async () => {
   // Cargar datos guardados localmente
   try {
@@ -2249,6 +2330,60 @@ onMounted(async () => {
   // Configurar scroll listener
   window.addEventListener('scroll', handleScroll)
   handleScroll() // Check initial scroll position
+
+  // Start timer if user focuses inside the form (first interaction)
+  if (rootRef.value) {
+    rootRef.value.addEventListener('focusin', startTimer)
+    rootRef.value.addEventListener('click', startTimer)
+  }
+
+  // Iniciar el temporizador automáticamente al montar el componente
+  startTimer()
+})
+
+// Tooltip portal for Hora de término (avoid layout shifts)
+const tooltipVisible = ref(false)
+const tooltipStyle = ref({})
+const termHelpRef = ref(null)
+
+const showTermTooltip = () => {
+  const el = termHelpRef.value
+  if (!el) return
+  const rect = el.getBoundingClientRect()
+  // position below the icon, centered
+  tooltipStyle.value = {
+    position: 'fixed',
+    left: `${rect.left + rect.width / 2}px`,
+    top: `${rect.bottom + 10}px`,
+    transform: 'translateX(-50%)',
+    zIndex: 2147483647
+  }
+  tooltipVisible.value = true
+}
+
+const hideTermTooltip = () => {
+  tooltipVisible.value = false
+}
+
+// reposition on scroll/resize when visible
+const onWindowChange = () => {
+  if (tooltipVisible.value) showTermTooltip()
+}
+window.addEventListener('scroll', onWindowChange, true)
+window.addEventListener('resize', onWindowChange)
+
+onBeforeUnmount(() => {
+  stopTimer()
+  try {
+    if (rootRef.value) {
+      rootRef.value.removeEventListener('focusin', startTimer)
+      rootRef.value.removeEventListener('click', startTimer)
+    }
+  } catch (e) {}
+  try {
+    window.removeEventListener('scroll', onWindowChange, true)
+    window.removeEventListener('resize', onWindowChange)
+  } catch (e) {}
 })
 
 onBeforeUnmount(() => {
@@ -3072,6 +3207,67 @@ onBeforeUnmount(() => {
   color: #6b7280;
   opacity: 1;
   font-weight: 500;
+}
+
+/* Tooltip helper for Hora de término */
+.term-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* make the readonly end-time input visually non-interactive */
+.term-input {
+  cursor: not-allowed;
+  opacity: 0.98;
+}
+.term-help {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.06));
+  border: 1px solid rgba(6,182,212,0.18);
+  color: rgba(6,182,212,0.95);
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(6,182,212,0.06);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+.term-help svg { display: block; stroke: rgba(6,182,212,0.95); }
+.term-help:hover, .term-help:focus {
+  transform: translateY(-3px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(6,182,212,0.12);
+}
+.term-help:focus { outline: none; box-shadow: 0 12px 30px rgba(6,182,212,0.18); }
+
+/* Portal tooltip (rendered in body) */
+.term-tooltip-portal {
+  position: fixed;
+  background: rgba(2,8,18,0.98);
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  box-shadow: 0 18px 40px rgba(2,8,18,0.6);
+  border: 1px solid rgba(6,182,212,0.08);
+  transform: translateY(0);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  opacity: 1;
+  z-index: 2147483647;
+}
+.term-tooltip-portal::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 12px;
+  height: 12px;
+  background: inherit;
 }
 
 .control:focus {
