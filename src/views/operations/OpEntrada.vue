@@ -43,7 +43,7 @@
               <div class="field">
                 <label>Folio</label>
                 <input
-                  class="control"
+                  class="control" 
                   v-model.trim="form.folio"
                   placeholder="Ej. 5-011"
                 />
@@ -65,26 +65,40 @@
               </div>
               
               <div class="field">
-                <label>Hora de término</label>
-                <div class="term-input-row">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                  <label style="margin:0;">Hora de término</label>
+                  <label class="toggle-label">
+                    <input type="checkbox" v-model="enableCustomEndTime" class="toggle-checkbox" />
+                    <span class="toggle-switch"></span>
+                    <span class="toggle-text">¿Hora distinta?</span>
+                  </label>
+                </div>
+                <div class="term-input-row" :class="{ 'unlocking': isUnlocking, 'locking': isLocking }">
                   <input
+                    ref="endTimeInputRef"
                     class="control term-input"
+                    :class="{ 'locked': !enableCustomEndTime }"
                     type="text"
                     :value="displayEndTime"
-                    readonly
-                    tabindex="-1"
-                    aria-disabled="true"
-                    @mousedown.prevent
-                    @click.prevent
-                    @focus.prevent
-                    @keydown.prevent
+                    :readonly="!enableCustomEndTime"
+                    :tabindex="enableCustomEndTime ? 0 : -1"
+                    :aria-disabled="!enableCustomEndTime"
+                    @mousedown="enableCustomEndTime ? null : $event.preventDefault()"
+                    @click="enableCustomEndTime ? openFlowbiteTimepicker() : $event.preventDefault()"
+                    @focus="enableCustomEndTime ? openFlowbiteTimepicker() : $event.preventDefault()"
+                    @keydown="enableCustomEndTime ? null : $event.preventDefault()"
+                    data-input
                   />
+                  <span v-if="!enableCustomEndTime" ref="lockIconRef" class="lock-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  </span>
                   <span
+                    v-if="!enableCustomEndTime"
+                    ref="helpIconRef"
                     class="term-help"
                     role="button"
                     tabindex="0"
                     aria-label="La hora de término se establece al pulsar Guardar orden. No editable."
-                    ref="termHelpRef"
                     @mouseenter="showTermTooltip"
                     @mouseleave="hideTermTooltip"
                     @focus="showTermTooltip"
@@ -1614,7 +1628,7 @@ async function generarExcelEntrada() {
     }
     worksheet.getRow(FILA_ENCABEZADO_OBS).height = 25
     
-    console.log(`[🔒] ✅ ENCABEZADO "OBSERVACIONES" CREADO EN FILA ${FILA_ENCABEZADO_OBS}`)
+    console.log(` ENCABEZADO "OBSERVACIONES" CREADO EN FILA ${FILA_ENCABEZADO_OBS}`)
     
     // ══════════════════════════════════════════════════════════════════════════
     // FILA 2: CONTENIDO - TEXTO (A:F) + IMAGEN (G:I)
@@ -1672,9 +1686,9 @@ async function generarExcelEntrada() {
           editAs: 'oneCell'  // La imagen se ajusta a las celdas
         })
         
-        console.log(`[🖼️] Imagen insertada y ajustada al área G${FILA_CONTENIDO_OBS}:I${FILA_CONTENIDO_OBS}`)
+        console.log(` Imagen insertada y ajustada al área G${FILA_CONTENIDO_OBS}:I${FILA_CONTENIDO_OBS}`)
       } catch (errImg) {
-        console.warn('[🔒] Error imagen:', errImg)
+        console.warn(' Error imagen:', errImg)
       }
     }
     
@@ -1719,12 +1733,12 @@ async function generarExcelEntrada() {
     }
     worksheet.getRow(FILA_INGENIERO).height = 25
     
-    // 🔒 BLINDAJE FINAL: Re-forzar encabezado azul una última vez
+    // Re-forzar encabezado azul una última vez
     celdaEncabezadoObs.value = 'OBSERVACIONES'
     celdaEncabezadoObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
     celdaEncabezadoObs.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } }
     
-    console.log(`[🔒 OBSERVACIONES BLINDADAS] ✅ COMPLETADO PERFECTAMENTE`)
+    console.log(`[ OBSERVACIONES BLINDADAS]  COMPLETADO PERFECTAMENTE`)
     
     // Procesar secciones en orden normal para mostrar resumen
     sections.forEach(sec => {
@@ -2344,10 +2358,86 @@ onMounted(async () => {
 // Tooltip portal for Hora de término (avoid layout shifts)
 const tooltipVisible = ref(false)
 const tooltipStyle = ref({})
-const termHelpRef = ref(null)
+
+// Toggle for custom end time + Flowbite timepicker + FRAMER MOTION animations
+const enableCustomEndTime = ref(false)
+const isUnlocking = ref(false)
+const isLocking = ref(false)
+const endTimeInputRef = ref(null)
+let flowbiteTimepickerInstance = null
+
+// Ref para los elementos que van a tener animación
+const lockIconRef = ref(null)
+const helpIconRef = ref(null)
+
+// Watch toggle to trigger animations
+watch(enableCustomEndTime, async (newVal, oldVal) => {
+  if (newVal && !oldVal) {
+    // Unlocking animation - desaparecer con absorción
+    isUnlocking.value = true
+    setTimeout(() => {
+      isUnlocking.value = false
+    }, 600)
+  } else if (!newVal && oldVal) {
+    // Locking animation - aparecer
+    isLocking.value = true
+    setTimeout(() => {
+      isLocking.value = false
+    }, 600)
+    
+    // Destroy Flowbite timepicker if exists
+    if (flowbiteTimepickerInstance) {
+      try {
+        flowbiteTimepickerInstance.hide()
+        flowbiteTimepickerInstance = null
+      } catch (e) {}
+    }
+  }
+})
+
+// Initialize Flowbite timepicker when enabled
+const openFlowbiteTimepicker = () => {
+  if (!enableCustomEndTime.value || !endTimeInputRef.value) return
+  
+  // Lazy init Flowbite timepicker (assumes Flowbite is loaded globally)
+  if (typeof window.Datepicker === 'undefined') {
+    console.warn('Flowbite Timepicker not loaded')
+    return
+  }
+  
+  if (!flowbiteTimepickerInstance) {
+    try {
+      // Use Flowbite's Datepicker with time option (or Timepicker if available)
+      const Timepicker = window.Timepicker || window.Datepicker
+      flowbiteTimepickerInstance = new Timepicker(endTimeInputRef.value, {
+        format: 'HH:mm:ss',
+        defaultTime: displayEndTime.value || '00:00:00',
+        onSelect: (time) => {
+          form.horaTermino = time
+        }
+      })
+    } catch (e) {
+      console.error('Error initializing Flowbite timepicker:', e)
+    }
+  }
+  
+  if (flowbiteTimepickerInstance) {
+    flowbiteTimepickerInstance.show()
+  }
+}
+
+// Close timepicker on scroll
+const closeTimepickerOnScroll = () => {
+  if (flowbiteTimepickerInstance && enableCustomEndTime.value) {
+    try {
+      flowbiteTimepickerInstance.hide()
+    } catch (e) {}
+  }
+}
+window.addEventListener('scroll', closeTimepickerOnScroll, true)
 
 const showTermTooltip = () => {
-  const el = termHelpRef.value
+  const el = helpIconRef.value
   if (!el) return
   const rect = el.getBoundingClientRect()
   // position below the icon, centered
@@ -2392,6 +2482,15 @@ onBeforeUnmount(() => {
     clearTimeout(hideTimeout)
   }
   window.removeEventListener('scroll', handleScroll)
+  try {
+    window.removeEventListener('scroll', closeTimepickerOnScroll, true)
+  } catch (e) {}
+  if (flowbiteTimepickerInstance) {
+    try {
+      flowbiteTimepickerInstance.hide()
+      flowbiteTimepickerInstance = null
+    } catch (e) {}
+  }
 })
 </script>
 
@@ -3216,26 +3315,132 @@ onBeforeUnmount(() => {
   gap: 10px;
 }
 /* make the readonly end-time input visually non-interactive */
-.term-input {
+.term-input.locked {
   cursor: not-allowed;
   opacity: 0.98;
 }
-.term-help {
-  position: relative;
+
+/* Toggle switch styles (minimal, respect existing design) */
+.toggle-label {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.06));
-  border: 1px solid rgba(6,182,212,0.18);
-  color: rgba(6,182,212,0.95);
+  gap: 8px;
   cursor: pointer;
-  flex-shrink: 0;
-  box-shadow: 0 6px 18px rgba(6,182,212,0.06);
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  user-select: none;
 }
+.toggle-checkbox {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.toggle-switch {
+  position: relative;
+  width: 42px;
+  height: 22px;
+  background: rgba(100,116,139,0.3);
+  border-radius: 999px;
+  transition: background 0.3s ease;
+  flex-shrink: 0;
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+.toggle-checkbox:checked + .toggle-switch {
+  background: rgba(34,197,94,0.7);
+}
+.toggle-checkbox:checked + .toggle-switch::after {
+  transform: translateX(20px);
+}
+.toggle-text {
+  font-size: 0.82rem;
+  color: rgba(15,23,42,0.7);
+  font-weight: 500;
+}
+
+/* Lock icon (appears when locked) */
+/* Lock icon styles and animations */
+.lock-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(100,116,139,0.6);
+  pointer-events: none;
+  z-index: 2;
+  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.term-input-row.unlocking .lock-icon {
+  animation: lockAbsorb 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.term-input-row.locking .lock-icon {
+  animation: lockEmmerge 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes lockAbsorb {
+  0% { opacity: 1; transform: translateY(-50%) scale(1); }
+  30% { opacity: 0.9; transform: translateY(-50%) scale(0.95); }
+  60% { opacity: 0.4; transform: translateY(-50%) scale(0.7) translateX(4px); }
+  100% { opacity: 0; transform: translateY(-50%) scale(0.2) translateX(15px); }
+}
+
+@keyframes lockEmmerge {
+  0% { opacity: 0; transform: translateY(-50%) scale(0.2) translateX(15px); }
+  40% { opacity: 0.4; transform: translateY(-50%) scale(0.7) translateX(4px); }
+  70% { opacity: 0.9; transform: translateY(-50%) scale(0.95); }
+  100% { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+
+/* Help icon styles and animations */
+.term-help {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(100,116,139,0.5);
+  cursor: help;
+  pointer-events: auto;
+  z-index: 3;
+  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.term-help:hover,
+.term-help:focus {
+  color: rgba(100,116,139,0.8);
+}
+
+.term-input-row.unlocking .term-help {
+  animation: helpAbsorb 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.term-input-row.locking .term-help {
+  animation: helpEmmerge 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes helpAbsorb {
+  0% { opacity: 1; transform: translateX(0) scale(1); }
+  30% { opacity: 0.95; transform: translateX(-15px) scale(0.98); }
+  60% { opacity: 0.4; transform: translateX(-50px) scale(0.7); }
+  100% { opacity: 0; transform: translateX(-100px) scale(0.1); }
+}
+
+@keyframes helpEmmerge {
+  0% { opacity: 0; transform: translateX(-100px) scale(0.1); }
+  40% { opacity: 0.4; transform: translateX(-50px) scale(0.7); }
+  70% { opacity: 0.95; transform: translateX(-15px) scale(0.98); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+
 .term-help svg { display: block; stroke: rgba(6,182,212,0.95); }
 .term-help:hover, .term-help:focus {
   transform: translateY(-3px) scale(1.03);
@@ -4646,4 +4851,5 @@ html {
   position: relative;
   z-index: 1;
 }
+
 </style>
