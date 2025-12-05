@@ -371,7 +371,6 @@
       }, 100)
     })
 
-    // Toggle class on body to allow CSS adjustments (como empujar el contenido) cuando el menu esté abierto
     watch(menuOpen, (val) => {
       try { document.body.classList.toggle('menu-open', val) } catch (e) { /* environment may not have body during SSR */ }
     })
@@ -403,8 +402,6 @@
     try { window.removeEventListener('session:updated', refreshSession) } catch {}
     try { window.removeEventListener('storage', refreshSession) } catch {}
   })
-
   
-
   </script>
 

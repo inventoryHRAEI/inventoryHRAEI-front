@@ -1,11 +1,21 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+// Tailwind base + Flowbite processed CSS
+import './styles/tailwind.css'
+// Legacy global styles
 import './styles.css'
 import './styles/operations-global.css'
 import './styles/enhancements.css'
 import './styles/forms.css'
 import './styles/datetime-inputs.css'
+// Disabled vendor flowbite-datepicker.css import: causes PostCSS / @layer parsing errors if Tailwind is not configured
+// If you want the full Flowbite datepicker styling, follow the Tailwind integration steps (recommended) below and re-enable this import.
+// Import a minimal standalone CSS for datepickers (safe without Tailwind)
+// The flowbite-datepicker CSS is included via Tailwind's pipeline: styles/tailwind.css. Avoid importing vendor files directly.
+// import '@/assets/vendor/flowbite-datepicker-standalone.css'
+// 🚀 SASS Simple para calendario
+import './styles/calendar-simple.scss'
 // Inicializar windowManager antes de crear la app
 import './utils/windowManager'
 // Si este window fue abierto por script (query param scriptOpen=1), marcarlo en sessionStorage

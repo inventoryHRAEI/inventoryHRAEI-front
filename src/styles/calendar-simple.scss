@@ -1,0 +1,57 @@
+// Estilos mínimos para el calendario (calendar-simple)
+// Este archivo evita el error por import faltante. Amplía según diseño.
+
+/* Contenedor principal del calendario */
+.calendar-simple {
+  display: block;
+  max-width: 340px;
+  margin: 0 auto;
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Cabecera */
+.calendar-simple__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+}
+
+/* Días de la semana */
+.calendar-simple__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+/* Celdas de día */
+.calendar-simple__day {
+  padding: 0.5rem;
+  text-align: center;
+  border-radius: 0.375rem;
+}
+
+.calendar-simple__day--today {
+  background: rgba(59,130,246,0.12);
+  color: #1e3a8a;
+}
+
+.calendar-simple__day--selected {
+  background: #3b82f6;
+  color: white;
+}
+
+/* Soporte responsivo pequeño */
+@media (max-width: 420px) {
+  .calendar-simple { max-width: 100%; }
+}
+/* Placeholder restored: calendar-simple.scss
+   Este archivo es intencionalmente minimal para restaurar la importación
+   eliminada accidentalmente. Mantén aquí cualquier regla específica para
+   el calendario simple si lo deseas. No cambia estilos por defecto.
+*/
+
+/* Mantener vacío para no alterar la estética existente */

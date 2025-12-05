@@ -4,7 +4,7 @@
       <template #title>Órdenes de Entrada</template>
 
       <template #body>
-  <div class="op-card insumos" ref="rootRef">
+  <div class="op-card insumos op-entrada-form" ref="rootRef">
         <form @submit.prevent="onSubmit" class="form-grid" id="entrada-form" novalidate>
           <div class="section-card combined-card observaciones-support">
             <div class="section-head">
@@ -52,10 +52,10 @@
               <!-- Segunda fila -->
               <div class="field">
                 <label>Fecha</label>
-                <input
-                  class="control"
+                <DatePicker 
                   v-model="form.fecha"
-                  type="date"
+                  :forceFlowbite="true"
+                  placeholder="Seleccionar fecha"
                 />
               </div>
               
@@ -528,6 +528,7 @@ import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import FormShell from '@/components/FormShell.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
+import DatePicker from '@/components/DatePicker.vue'
 import notifier from '@/utils/notifier'
 import Swal from 'sweetalert2'
 import {
@@ -2041,6 +2042,8 @@ function clearForm() {
   savedAt.value = ''
 }
 
+
+
 async function onSubmit() {
   if (!isValid.value) {
     notifier.error('Completa los campos obligatorios')
@@ -2210,6 +2213,7 @@ watch(
 )
 
 onMounted(async () => {
+  // Cargar datos guardados localmente
   try {
     const raw = localStorage.getItem(LOCAL_KEY)
     if (raw) {
@@ -4087,5 +4091,363 @@ select {
   .ctr-btn {
     transition: none;
   }
+}
+
+/* Input de fecha con glassmorphism - Base */
+:deep(input[type="date"]) {
+  position: relative !important;
+  background: rgba(15, 20, 40, 0.65) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
+  transition: all 0.3s ease !important;
+  font-weight: 500 !important;
+  color-scheme: dark !important;
+  /* Forzar el calendario nativo oscuro */
+  filter: invert(0) !important;
+}
+
+:deep(input[type="date"]:hover) {
+  border-color: #06b6d4 !important;
+  box-shadow: 
+    0 6px 8px -1px rgba(6, 182, 212, 0.1),
+    0 3px 6px -1px rgba(6, 182, 212, 0.06),
+    0 0 0 1px rgba(6, 182, 212, 0.3) !important;
+  transform: translateY(-1px) !important;
+}
+
+:deep(input[type="date"]:focus) {
+  border-color: #22d3ee !important;
+  box-shadow: 
+    0 0 0 4px rgba(34, 211, 238, 0.25),
+    0 8px 10px -2px rgba(34, 211, 238, 0.1) !important;
+  background: linear-gradient(135deg, #0c1220 0%, #1e293b 100%) !important;
+  outline: none !important;
+  transform: translateY(-2px) !important;
+}
+
+:deep(input[type="date"]::-webkit-calendar-picker-indicator) {
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2306b6d4' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='3' ry='3'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: center !important;
+  background-size: 20px !important;
+  cursor: pointer !important;
+  opacity: 0.85 !important;
+  transition: all 0.3s ease !important;
+  filter: drop-shadow(0 2px 4px rgba(6, 182, 212, 0.3)) !important;
+  margin-right: 4px !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+:deep(input[type="date"]::-webkit-calendar-picker-indicator:hover) {
+  opacity: 1 !important;
+  transform: scale(1.15) rotate(5deg) !important;
+  filter: drop-shadow(0 4px 8px rgba(6, 182, 212, 0.5)) !important;
+}
+
+/* Texto del date picker con efectos mejorados */
+:deep(input[type="date"]::-webkit-datetime-edit) {
+  color: #f1f5f9 !important;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit-fields-wrapper) {
+  background: rgba(6, 182, 212, 0.08) !important;
+  padding: 4px 8px !important;
+  border-radius: 8px !important;
+  margin-right: 8px !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit-text) {
+  color: #64748b !important;
+  padding: 0 4px !important;
+  font-weight: 500 !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit-month-field),
+:deep(input[type="date"]::-webkit-datetime-edit-day-field),
+:deep(input[type="date"]::-webkit-datetime-edit-year-field) {
+  color: #e2e8f0 !important;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(34, 211, 238, 0.1) 100%) !important;
+  border-radius: 6px !important;
+  padding: 3px 6px !important;
+  margin: 0 2px !important;
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+  border: 1px solid rgba(6, 182, 212, 0.2) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit-month-field:focus),
+:deep(input[type="date"]::-webkit-datetime-edit-day-field:focus),
+:deep(input[type="date"]::-webkit-datetime-edit-year-field:focus) {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%) !important;
+  color: #22d3ee !important;
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.2) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Color scheme oscuro para el calendario nativo */
+:deep(input[type="date"]) {
+  color-scheme: dark !important;
+}
+
+/* ===== CALENDARIO GLASSMORPHISM - CONFIGURACIÓN PRINCIPAL ===== */
+
+/* Forzar color-scheme oscuro de manera global en este componente */
+.op-entrada-form * {
+  color-scheme: dark !important;
+}
+
+/* Configuración principal del input date */
+:deep(input[type="date"]),
+.control[type="date"] {
+  color-scheme: dark !important;
+  background: rgba(15, 20, 40, 0.65) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+/* Icono del calendario con color verde neón */
+:deep(input[type="date"]::-webkit-calendar-picker-indicator),
+.control[type="date"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2300ff6a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E") !important;
+  background-size: 18px !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  opacity: 0.9 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+:deep(input[type="date"]::-webkit-calendar-picker-indicator:hover) {
+  opacity: 1 !important;
+  transform: scale(1.1) !important;
+}
+
+/* Cabecera del calendario - Mes, año y navegación */
+:deep(input[type="date"]::-webkit-calendar-picker-header) {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 0 !important;
+  padding: 12px 0 !important;
+  margin-bottom: 18px !important;
+  font-weight: 600 !important;
+  font-size: 19px !important;
+  text-align: center !important;
+  border: none !important;
+  box-shadow: none !important;
+  letter-spacing: 0.3px !important;
+}
+
+/* Botones de navegación (< >) - Rectangulares con bordes redondeados */
+:deep(input[type="date"]::-webkit-calendar-picker-navigation-button) {
+  background: rgba(0, 0, 0, 0.35) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  width: 36px !important;
+  height: 32px !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+:deep(input[type="date"]::-webkit-calendar-picker-navigation-button:hover) {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Grilla de días del mes - Botones redondeados */
+:deep(input[type="date"]::-webkit-calendar-picker-day-cell) {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  border-radius: 50% !important;
+  border: none !important;
+  margin: 2px !important;
+  padding: 8px !important;
+  font-weight: 400 !important;
+  transition: all 0.2s ease !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+}
+
+/* Día actual - Verde tenue con soft-glow */
+:deep(input[type="date"]::-webkit-calendar-picker-day-cell:current-day) {
+  background: rgba(0, 255, 106, 0.25) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 255, 106, 0.4) !important;
+  font-weight: 500 !important;
+  box-shadow: 0 0 12px rgba(0, 255, 106, 0.3) !important;
+}
+
+/* Día seleccionado - Verde fosforescente intenso (círculo) */
+:deep(input[type="date"]::-webkit-calendar-picker-day-cell:selected) {
+  background: #00ff6a !important;
+  color: #000000 !important;
+  border: none !important;
+  font-weight: 600 !important;
+  transform: none !important;
+  box-shadow: 0 0 15px rgba(0, 255, 106, 0.5) !important;
+  border-radius: 50% !important;
+}
+
+/* Hover en días normales - Iluminación tenue */
+:deep(input[type="date"]::-webkit-calendar-picker-day-cell:hover) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Días inactivos (fuera del mes) - Gris con baja opacidad */
+:deep(input[type="date"]::-webkit-calendar-picker-day-cell:inactive) {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.3) !important;
+  border: none !important;
+  opacity: 1 !important;
+}
+
+/* Barra de días de la semana (L M X J V S D) */
+:deep(input[type="date"]::-webkit-calendar-picker-week-header) {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.65) !important;
+  font-weight: 400 !important;
+  text-align: center !important;
+  padding: 8px 4px !important;
+  border-radius: 0 !important;
+  margin-bottom: 12px !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  border: none !important;
+}
+
+/* Panel de la tabla del calendario - Fondo transparente */
+:deep(input[type="date"]::-webkit-calendar-picker-table) {
+  background: transparent !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Ocultar elementos no deseados */
+:deep(input[type="date"]::-webkit-inner-spin-button),
+:deep(input[type="date"]::-webkit-clear-button) {
+  display: none !important;
+}
+
+/* CSS adicional para forzar el tema oscuro en el calendario */
+:deep(input[type="date"]) {
+  /* Configuración del esquema de color oscuro */
+  color-scheme: dark !important;
+}
+
+/* Configuración global para el calendario en este componente */
+.op-card input[type="date"] {
+  color-scheme: dark !important;
+}
+
+/* Estilos específicos para WebKit */
+@supports (-webkit-appearance: none) {
+  :deep(input[type="date"]) {
+    -webkit-appearance: none !important;
+    appearance: none !important;
+  }
+}
+
+/* Estilos directos para el calendario nativo - Enfoque alternativo */
+:deep(.control[type="date"]) {
+  color-scheme: dark !important;
+  background: rgba(15, 20, 40, 0.65) !important;
+  backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Aplicar directamente al control específico */
+.control[type="date"] {
+  color-scheme: dark !important;
+}
+
+/* Estilos CSS nativos para el calendario del navegador */
+html {
+  color-scheme: light dark;
+}
+
+/* Configuración específica para este componente */
+.op-entrada-form {
+  color-scheme: dark;
+}
+
+.op-entrada-form input[type="date"] {
+  color-scheme: dark !important;
+}
+
+/* CSS específico y directo para el calendario */
+.op-entrada-form input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) !important;
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2300ff6a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E") !important;
+  background-size: 18px !important;
+  opacity: 0.8 !important;
+}
+
+/* Forzar el tema oscuro usando el atributo data-theme */
+.op-entrada-form {
+  --date-picker-bg: rgba(15, 20, 40, 0.9);
+  --date-picker-text: rgba(255, 255, 255, 0.95);
+  --date-picker-border: rgba(255, 255, 255, 0.15);
+  --date-picker-accent: #00ff6a;
+}
+
+/* Configuración meta para el color-scheme */
+@supports (color-scheme: dark) {
+  .op-entrada-form input[type="date"] {
+    color-scheme: dark;
+  }
+}
+
+/* Usar :where() para mayor especificidad */
+:where(.op-entrada-form) input[type="date"] {
+  color-scheme: dark;
+}
+
+/* ===== CALENDARIO GLASSMORPHISM - CONTROLADO POR SASS ===== */
+/* Los estilos principales están en src/styles/calendar-glassmorphism.scss */
+/* Este componente solo aplicará configuraciones específicas */
+
+.op-entrada-form {
+  position: relative;
+}
+
+.op-entrada-form input[type="date"] {
+  /* Los estilos base son aplicados por el archivo SCSS global */
+  /* Solo configuraciones específicas del componente aquí */
+  position: relative;
+  z-index: 1;
 }
 </style>

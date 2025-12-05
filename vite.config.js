@@ -35,11 +35,15 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    strictPort: false,
+    // Force Vite to fail if port 5173 is unavailable so it doesn't
+    // fallback to other ports (keeps client HMR websocket stable).
+    strictPort: true,
     allowedHosts: true,
+    // Do not hardcode the HMR port — when Vite falls back to another port
+    // (e.g. 5174/5175) the client should be injected with the correct one.
+    // Leaving out `port` allows Vite to use the actual server port.
     hmr: {
       host: 'localhost',
-      port: 5173,
       protocol: 'ws'
     },
     proxy: {
