@@ -16,37 +16,146 @@
 
       <Breadcrumbs />
 
-      <!-- Filtros -->
+      <!-- Filtros: mostrar solo lo esencial por defecto (Folio, Solicitante, Fecha). -->
       <div class="filters-section">
         <div class="filter-group">
-          <label>Buscar por folio o solicitante:</label>
-          <input
-            v-model="searchTerm"
-            type="text"
-            class="control filter-input"
-            placeholder="Ingresa folio o nombre..."
-          />
+          <label>Folio de operación:</label>
+          <input v-model="filterFolio" class="control filter-input" placeholder="Ej. 5-011" />
+        </div>
+        <div class="filter-group">
+          <label>Nombre del solicitante:</label>
+          <input v-model="filterSolicitante" class="control filter-input" placeholder="Ej. Dr. Juan Pérez" />
         </div>
         <div class="filter-group">
           <label>Filtrar por fecha:</label>
-          <input
-            v-model="filterDate"
-            type="date"
-            class="control filter-input"
-          />
+          <input v-model="filterDate" type="date" class="control filter-input" />
         </div>
+
         <div class="filter-group">
-          <label>Filtrar por servicio:</label>
-          <input
-            v-model="filterService"
-            type="text"
-            class="control filter-input"
-            placeholder="Ej. Urgencias..."
-          />
+          <label>Filtrar</label>
+          <button class="btn-filter" @click="showMoreFilters = !showMoreFilters" aria-expanded="false" :aria-pressed="showMoreFilters">
+            <!-- icono de filtro (funnel) -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path d="M22 3H2l8 9v7l4 2v-9l8-9z" fill="currentColor" />
+            </svg>
+            <span class="btn-filter-label">Filtrar</span>
+          </button>
+
+          <!-- Panel desplegable anclado al botón -->
+          <div v-if="showMoreFilters" class="filter-panel">
+            <div class="checkbox-list">
+              <label><input type="checkbox" v-model="filterServiceActive" /> Servicio</label>
+              <label><input type="checkbox" v-model="filterEspecialidadActive" /> Especialidad</label>
+              <label><input type="checkbox" v-model="filterMotivoActive" /> Motivo de entrada</label>
+              <label><input type="checkbox" v-model="filterObservacionesActive" /> Observaciones</label>
+              <label><input type="checkbox" v-model="filterIngenieroActive" /> Ingeniero residente</label>
+              <label><input type="checkbox" v-model="filterTipoActive" /> Tipo de artículo</label>
+              <label><input type="checkbox" v-model="filterItemTextActive" /> Buscar dentro de artículos</label>
+              <label><input type="checkbox" v-model="filterHoraActive" /> Hora inicio (rango)</label>
+            </div>
+
+            <div class="dynamic-filters">
+          <div v-if="filterServiceActive" class="filter-group">
+            <label>Servicio</label>
+            <input v-model="filterService" class="control filter-input" placeholder="Ej. Urgencias..." />
+          </div>
+          <div v-if="filterEspecialidadActive" class="filter-group">
+            <label>Especialidad</label>
+            <input v-model="filterEspecialidad" class="control filter-input" placeholder="Ej. Traumatología..." />
+          </div>
+          <div v-if="filterMotivoActive" class="filter-group">
+            <label>Motivo de entrada</label>
+            <select v-model="filterMotivo" class="control filter-input">
+              <option value="">(Seleccionar)</option>
+              <option v-for="opt in motivoEntradaOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+            </select>
+          </div>
+          <div v-if="filterObservacionesActive" class="filter-group">
+            <label>Observaciones</label>
+            <input v-model="filterObservaciones" class="control filter-input" placeholder="Buscar en observaciones" />
+          </div>
+          <div v-if="filterIngenieroActive" class="filter-group">
+            <label>Ingeniero residente (apoyo)</label>
+            <input v-model="filterIngeniero" class="control filter-input" placeholder="Buscar nombre" />
+          </div>
+          <div v-if="filterTipoActive" class="filter-group">
+            <label>Tipo de artículo</label>
+            <select v-model="filterTipo" class="control filter-input">
+              <option value="">Todos</option>
+              <option value="equipo-medico">Equipo Médico</option>
+              <option value="mobiliario">Mobiliario</option>
+              <option value="accesorio">Accesorio</option>
+              <option value="consumible">Consumible</option>
+              <option value="refaccion">Refacción</option>
+            </select>
+          </div>
+          <div v-if="filterItemTextActive" class="filter-group">
+            <label>Buscar dentro de artículos</label>
+            <input v-model="filterItemText" class="control filter-input" placeholder="Nombre, modelo, serie..." />
+          </div>
+          <div v-if="filterHoraActive" class="filter-group time-range">
+            <label>Hora inicio desde</label>
+            <input v-model="filterHoraInicioFrom" type="time" class="control filter-input" />
+            <label>Hora inicio hasta</label>
+            <input v-model="filterHoraInicioTo" type="time" class="control filter-input" />
+          </div>
         </div>
-        <button class="btn-clear-filters" @click="clearFilters" v-if="hasActiveFilters">
-          Limpiar filtros
-        </button>
+
+            <div class="filter-actions panel-actions">
+              <button type="button" class="btn primary" @click="applyFilters">Aplicar filtros</button>
+              <button type="button" class="btn secondary" @click="clearFilters">Limpiar</button>
+            </div>
+          </div>
+        </div>
+        <!-- Active filters row: muestra los filtros seleccionados inmediatamente debajo de los inputs principales -->
+        <div class="active-filters-row">
+          <div class="active-filters-grid">
+            <template v-for="(f, idx) in activeFiltersList" :key="f.key">
+              <div class="filter-chip">
+                <label class="chip-label">{{ f.label }}</label>
+                <div class="chip-control">
+                  <template v-if="f.key === 'service'">
+                    <input v-model="filterService" class="control filter-input" placeholder="Ej. Urgencias..." />
+                  </template>
+                  <template v-else-if="f.key === 'especialidad'">
+                    <input v-model="filterEspecialidad" class="control filter-input" placeholder="Ej. Traumatología..." />
+                  </template>
+                  <template v-else-if="f.key === 'motivo'">
+                    <select v-model="filterMotivo" class="control filter-input">
+                      <option value="">(Seleccionar)</option>
+                      <option v-for="opt in motivoEntradaOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    </select>
+                  </template>
+                  <template v-else-if="f.key === 'obs'">
+                    <input v-model="filterObservaciones" class="control filter-input" placeholder="Buscar en observaciones" />
+                  </template>
+                  <template v-else-if="f.key === 'ing'">
+                    <input v-model="filterIngeniero" class="control filter-input" placeholder="Buscar nombre" />
+                  </template>
+                  <template v-else-if="f.key === 'tipo'">
+                    <select v-model="filterTipo" class="control filter-input">
+                      <option value="">Todos</option>
+                      <option value="equipo-medico">Equipo Médico</option>
+                      <option value="mobiliario">Mobiliario</option>
+                      <option value="accesorio">Accesorio</option>
+                      <option value="consumible">Consumible</option>
+                      <option value="refaccion">Refacción</option>
+                    </select>
+                  </template>
+                  <template v-else-if="f.key === 'itemText'">
+                    <input v-model="filterItemText" class="control filter-input" placeholder="Nombre, modelo, serie..." />
+                  </template>
+                  <template v-else-if="f.key === 'hora'">
+                    <div class="hora-range">
+                      <input v-model="filterHoraInicioFrom" type="time" class="control filter-input" />
+                      <input v-model="filterHoraInicioTo" type="time" class="control filter-input" />
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
       </div>
 
       <!-- Datatable -->
@@ -56,10 +165,18 @@
             <tr>
               <th>Folio</th>
               <th>Solicitante</th>
-              <th>Servicio</th>
               <th>Fecha</th>
-              <th>Hora Inicio</th>
-              <th>Estado</th>
+                <th v-if="showColumnService">Servicio</th>
+                <th v-if="showColumnEspecialidad">Especialidad</th>
+                <th v-if="showColumnMotivo">Motivo</th>
+                <th v-if="showColumnDescripcion">Descripción</th>
+                <th v-if="showColumnObservaciones">Observaciones</th>
+                <th v-if="showColumnIngeniero">Ingeniero</th>
+                <th v-if="showColumnHora">Hora Inicio</th>
+                <th v-if="showColumnHora">Hora Término</th>
+                <th v-if="showColumnTipo">Tipo</th>
+                <th v-if="showColumnItems">Items</th>
+                <th v-if="showColumnEstado">Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -67,14 +184,22 @@
             <tr v-for="order in filteredOrders" :key="order.id" class="order-row">
               <td class="cell-folio">{{ order.folio }}</td>
               <td>{{ order.nombreSolicitante }}</td>
-              <td>{{ order.servicio }}</td>
               <td>{{ formatDate(order.fecha) }}</td>
-              <td>{{ order.horaInicio }}</td>
-              <td>
-                <span class="badge" :class="`badge-${order.estado || 'pendiente'}`">
-                  {{ order.estado || 'Pendiente' }}
-                </span>
-              </td>
+                <td v-if="showColumnService">{{ order.servicio }}</td>
+                <td v-if="showColumnEspecialidad">{{ order.especialidad || '-' }}</td>
+                <td v-if="showColumnMotivo">{{ order.motivoEntrada || '-' }}</td>
+                <td v-if="showColumnDescripcion">{{ (order.descripcion || '').slice(0,60) || '-' }}</td>
+                <td v-if="showColumnObservaciones">{{ (order.observaciones || '').slice(0,60) || '-' }}</td>
+                <td v-if="showColumnIngeniero">{{ order.nombreIngeniero || '-' }}</td>
+              <td v-if="showColumnHora">{{ order.horaInicio || '-' }}</td>
+              <td v-if="showColumnHora">{{ order.horaTermino || '-' }}</td>
+                <td v-if="showColumnTipo">{{ order.tipo || '-' }}</td>
+              <td v-if="showColumnItems">{{ (order.equiposEntrada || []).length || 0 }}</td>
+                <td v-if="showColumnEstado">
+                  <span class="badge" :class="`badge-${order.estado || 'pendiente'}`">
+                    {{ order.estado || 'Pendiente' }}
+                  </span>
+                </td>
               <td class="cell-actions">
                 <button class="action-btn btn-edit" @click="openEditModal(order)" title="Editar">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -239,12 +364,36 @@
                     <div style="flex:1; padding:12px; background:rgba(255,255,255,0.03); border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
                       <p style="margin:0; font-size:0.85rem; color:rgba(255,255,255,0.7);">{{ item.descripcion || item.nombre || 'Sin descripción' }}</p>
                     </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                      <button class="action-btn" title="Editar item" @click="toggleEditItem(index)">Editar</button>
+                      <button class="action-btn btn-delete" title="Eliminar item" @click="removeEditItem(index)">Eliminar</button>
+                    </div>
+                  </div>
+                  <div v-if="editingItemIndex === index" style="margin-top:8px; display:flex; gap:8px; align-items:center;">
+                    <input class="control" v-model="editingOrder.equiposEntrada[index].descripcion" placeholder="Descripción" />
+                    <input class="control" v-model.number="editingOrder.equiposEntrada[index].cantidad" type="number" min="1" style="width:80px;" />
+                    <input class="control" v-model="editingOrder.equiposEntrada[index].marca" placeholder="Marca" />
+                    <input class="control" v-model="editingOrder.equiposEntrada[index].modelo" placeholder="Modelo" />
                   </div>
                 </div>
               </div>
+              
               <p v-else style="color: rgba(255, 255, 255, 0.5); font-style: italic; text-align: center; margin: 20px 0;">
                 No hay artículos agregados en esta orden
               </p>
+              <div style="display:flex; gap:12px; margin-top:12px; align-items:center;">
+                <select v-model="newEditItem.tipo" class="control" style="width:220px;">
+                  <option value="">Seleccionar tipo</option>
+                  <option value="equipo-medico">Equipo Médico</option>
+                  <option value="mobiliario">Mobiliario</option>
+                  <option value="accesorio">Accesorio</option>
+                  <option value="consumible">Consumible</option>
+                  <option value="refaccion">Refacción</option>
+                </select>
+                <input class="control" v-model="newEditItem.descripcion" placeholder="Descripción" />
+                <input class="control" v-model.number="newEditItem.cantidad" type="number" min="1" style="width:100px;" />
+                <button type="button" class="btn primary" @click="addEditItem">Agregar Item</button>
+              </div>
             </div>
 
             <!-- Estado -->
@@ -286,6 +435,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 import { useRouter } from 'vue-router'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
@@ -293,31 +443,114 @@ import Breadcrumbs from '@/components/Breadcrumbs.vue'
 const router = useRouter()
 
 const allOrders = ref([])
-const searchTerm = ref('')
+const filterFolio = ref('')
+const filterSolicitante = ref('')
+const searchTerm = ref('') // keep general fallback search
+const showMoreFilters = ref(false)
 const filterDate = ref('')
 const filterService = ref('')
+const filterEspecialidad = ref('')
+const filterMotivo = ref('')
+const filterObservaciones = ref('')
+const filterIngeniero = ref('')
+const filterServiceActive = ref(false)
+const filterEspecialidadActive = ref(false)
+const filterMotivoActive = ref(false)
+const filterObservacionesActive = ref(false)
+const filterIngenieroActive = ref(false)
+const filterTipoActive = ref(false)
+const filterItemTextActive = ref(false)
+const filterHoraActive = ref(false)
+const filterEstado = ref('')
+const filterHoraInicioFrom = ref('')
+const filterHoraInicioTo = ref('')
+const filterMinItems = ref(null)
+const filterMaxItems = ref(null)
+const filterTipo = ref('')
+const filterItemText = ref('')
 const loading = ref(true)
 const showEditModal = ref(false)
 const editingOrder = ref(null)
+const newEditItem = ref({ tipo: '', cantidad: 1, descripcion: '', marca: '', modelo: '', serie: '', lote: '', referencia: '', claveHRAEI: '', unidades: [] })
+const editingItemIndex = ref(-1)
+
+// Columns visibility computed from active filters
+const showColumnService = computed(() => filterServiceActive.value)
+const showColumnHora = computed(() => filterHoraActive.value)
+const showColumnItems = computed(() => filterTipoActive.value || filterItemTextActive.value || filterMinItems.value != null || filterMaxItems.value != null)
+const showColumnEstado = computed(() => !!filterEstado.value)
+const showColumnEspecialidad = computed(() => filterEspecialidadActive.value)
+const showColumnMotivo = computed(() => filterMotivoActive.value)
+const showColumnDescripcion = computed(() => filterMotivoActive.value || filterObservacionesActive.value)
+const showColumnObservaciones = computed(() => filterObservacionesActive.value)
+const showColumnIngeniero = computed(() => filterIngenieroActive.value)
+const showColumnTipo = computed(() => filterTipoActive.value)
+
+// Build a list of active filters to render under the main inputs
+const activeFiltersList = computed(() => {
+  const list = []
+  if (filterServiceActive.value) list.push({ key: 'service', label: 'Servicio', type: 'input', bindings: { modelValue: filterService, 'onUpdate:modelValue': val => filterService.value = val, class: 'control filter-input', placeholder: 'Ej. Urgencias...' } })
+  if (filterEspecialidadActive.value) list.push({ key: 'especialidad', label: 'Especialidad', type: 'input', bindings: { modelValue: filterEspecialidad, 'onUpdate:modelValue': val => filterEspecialidad.value = val, class: 'control filter-input', placeholder: 'Ej. Traumatología...' } })
+  if (filterMotivoActive.value) list.push({ key: 'motivo', label: 'Motivo de entrada', type: 'select', bindings: { modelValue: filterMotivo, 'onUpdate:modelValue': val => filterMotivo.value = val, class: 'control filter-input' } })
+  if (filterObservacionesActive.value) list.push({ key: 'obs', label: 'Observaciones', type: 'input', bindings: { modelValue: filterObservaciones, 'onUpdate:modelValue': val => filterObservaciones.value = val, class: 'control filter-input', placeholder: 'Buscar en observaciones' } })
+  if (filterIngenieroActive.value) list.push({ key: 'ing', label: 'Ingeniero residente', type: 'input', bindings: { modelValue: filterIngeniero, 'onUpdate:modelValue': val => filterIngeniero.value = val, class: 'control filter-input', placeholder: 'Buscar nombre' } })
+  if (filterTipoActive.value) list.push({ key: 'tipo', label: 'Tipo de artículo', type: 'select', bindings: { modelValue: filterTipo, 'onUpdate:modelValue': val => filterTipo.value = val, class: 'control filter-input' } })
+  if (filterItemTextActive.value) list.push({ key: 'itemText', label: 'Buscar en artículos', type: 'input', bindings: { modelValue: filterItemText, 'onUpdate:modelValue': val => filterItemText.value = val, class: 'control filter-input', placeholder: 'Nombre, modelo, serie...' } })
+  if (filterHoraActive.value) list.push({ key: 'hora', label: 'Hora inicio (rango)', type: 'hora-range', bindings: {} })
+  return list
+})
 
 const hasActiveFilters = computed(() => {
-  return searchTerm.value || filterDate.value || filterService.value
+  return (
+    filterFolio.value ||
+    filterSolicitante.value ||
+    searchTerm.value ||
+    filterDate.value ||
+    filterTipo.value ||
+    filterItemText.value ||
+    filterEstado.value ||
+    filterHoraInicioFrom.value ||
+    filterHoraInicioTo.value ||
+    filterServiceActive.value ||
+    filterEspecialidadActive.value ||
+    filterMotivoActive.value ||
+    filterObservacionesActive.value ||
+    filterIngenieroActive.value ||
+    filterTipoActive.value ||
+    filterItemTextActive.value ||
+    filterHoraActive.value
+  )
 })
 
 const filteredOrders = computed(() => {
   return allOrders.value.filter(order => {
-    const matchSearch = 
-      !searchTerm.value || 
-      order.folio?.toLowerCase().includes(searchTerm.value.toLowerCase()) ||
-      order.nombreSolicitante?.toLowerCase().includes(searchTerm.value.toLowerCase())
+    const matchFolio = !filterFolio.value || order.folio?.toLowerCase().includes(filterFolio.value.toLowerCase())
+    const matchSolicitante = !filterSolicitante.value || order.nombreSolicitante?.toLowerCase().includes(filterSolicitante.value.toLowerCase())
+    const matchSearch = !searchTerm.value || order.folio?.toLowerCase().includes(searchTerm.value.toLowerCase()) || order.nombreSolicitante?.toLowerCase().includes(searchTerm.value.toLowerCase())
     
     const matchDate = !filterDate.value || order.fecha === filterDate.value
     
-    const matchService = 
-      !filterService.value || 
-      order.servicio?.toLowerCase().includes(filterService.value.toLowerCase())
+    const matchService = !filterServiceActive.value || !filterService.value || order.servicio?.toLowerCase().includes(filterService.value.toLowerCase())
+    const matchEspecialidad = !filterEspecialidadActive.value || !filterEspecialidad.value || order.especialidad?.toLowerCase().includes(filterEspecialidad.value.toLowerCase())
+    const matchMotivo = !filterMotivoActive.value || !filterMotivo.value || ((order.motivoEntrada || '').toLowerCase() === filterMotivo.value.toLowerCase())
+    const matchObservaciones = !filterObservacionesActive.value || !filterObservaciones.value || ((order.observaciones || '').toLowerCase().includes(filterObservaciones.value.toLowerCase()))
+    const matchIngeniero = !filterIngenieroActive.value || !filterIngeniero.value || ((order.nombreIngeniero || '').toLowerCase().includes(filterIngeniero.value.toLowerCase()))
+    const matchEstado = !filterEstado.value || (order.estado || '').toLowerCase() === filterEstado.value.toLowerCase()
+    const matchHoraFrom = !filterHoraActive.value || !filterHoraInicioFrom.value || (order.horaInicio && order.horaInicio >= filterHoraInicioFrom.value)
+    const matchHoraTo = !filterHoraActive.value || !filterHoraInicioTo.value || (order.horaInicio && order.horaInicio <= filterHoraInicioTo.value)
     
-    return matchSearch && matchDate && matchService
+    const matchTipo = !filterTipoActive.value || !filterTipo.value || (order.equiposEntrada || []).some(e => e.tipo === filterTipo.value)
+    const matchItemText = !filterItemTextActive.value || !filterItemText.value || (order.equiposEntrada || []).some(e => {
+      const search = filterItemText.value.toLowerCase()
+      return String(e.descripcion || e.nombre || '').toLowerCase().includes(search)
+        || String(e.modelo || '').toLowerCase().includes(search)
+        || String(e.serie || e.lote || '').toLowerCase().includes(search)
+        || String(e.marca || '').toLowerCase().includes(search)
+    })
+    const itemCount = (order.equiposEntrada || []).length || 0
+    const matchMin = filterMinItems.value == null || filterMinItems.value === '' || itemCount >= Number(filterMinItems.value)
+    const matchMax = filterMaxItems.value == null || filterMaxItems.value === '' || itemCount <= Number(filterMaxItems.value)
+    return matchFolio && matchSolicitante && matchSearch && matchDate && matchService && matchEspecialidad && matchMotivo && matchObservaciones && matchIngeniero && matchTipo && matchItemText && matchEstado && matchHoraFrom && matchHoraTo && matchMin && matchMax
   })
 })
 
@@ -352,6 +585,8 @@ function updateAndDownloadExcel() {
     // Generar y descargar el Excel corregido
     downloadExcelWithData(editingOrder.value)
     closeEditModal()
+    // Try to persist the updated order back to backend or localStorage
+    tryPersistUpdatedOrder(editingOrder.value)
   }
 }
 
@@ -373,6 +608,43 @@ function deleteOrder(orderId) {
   if (confirm('¿Estás seguro de que deseas eliminar esta orden? Esta acción no se puede deshacer.')) {
     allOrders.value = allOrders.value.filter(o => o.id !== orderId)
     console.log('Orden eliminada:', orderId)
+    try {
+      const raw = localStorage.getItem('orders_list')
+      if (raw) {
+        const arr = JSON.parse(raw)
+        const updated = arr.filter(o => String(o.id) !== String(orderId))
+        localStorage.setItem('orders_list', JSON.stringify(updated))
+      }
+    } catch (e) {}
+  }
+}
+
+async function tryPersistUpdatedOrder(order) {
+  try {
+    const res = await fetch('/api/ops/entrada', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(order)
+    })
+    if (res.ok) {
+      console.log('Order updated and saved to server')
+      return
+    }
+  } catch (err) {
+    // ignore - fallback to local
+  }
+  // Save to localStorage array
+  try {
+    const raw = localStorage.getItem('orders_list')
+    const arr = raw ? JSON.parse(raw) : []
+    // ensure id
+    if (!order.id) order.id = Date.now()
+    const idx = arr.findIndex(o => o.id === order.id)
+    if (idx === -1) arr.push(order)
+    else arr[idx] = order
+    localStorage.setItem('orders_list', JSON.stringify(arr))
+  } catch (e) {
+    console.warn('Failed to persist order locally', e)
   }
 }
 
@@ -395,16 +667,63 @@ function removeEditObservacionesImg() {
 }
 
 function clearFilters() {
+  // Reset basic filters
   searchTerm.value = ''
   filterDate.value = ''
+  filterFolio.value = ''
+  filterSolicitante.value = ''
+  // Reset more filters
   filterService.value = ''
+  filterServiceActive.value = false
+  filterEspecialidad.value = ''
+  filterEspecialidadActive.value = false
+  filterMotivo.value = ''
+  filterMotivoActive.value = false
+  filterObservaciones.value = ''
+  filterObservacionesActive.value = false
+  filterIngeniero.value = ''
+  filterIngenieroActive.value = false
+  filterTipo.value = ''
+  filterTipoActive.value = false
+  filterItemText.value = ''
+  filterItemTextActive.value = false
+  filterMinItems.value = null
+  filterMaxItems.value = null
+  filterEstado.value = ''
+  filterHoraInicioFrom.value = ''
+  filterHoraInicioTo.value = ''
+  filterHoraActive.value = false
+  // do not automatically close the panel when clearing — allow user to adjust further
+}
+
+function applyFilters() {
+  // Currently filters are reactive; applying just closes the panel to show results
+  showMoreFilters.value = false
+}
+
+function addEditItem() {
+  if (!editingOrder.value) return
+  const copy = JSON.parse(JSON.stringify(newEditItem.value))
+  if (!editingOrder.value.equiposEntrada) editingOrder.value.equiposEntrada = []
+  editingOrder.value.equiposEntrada.push(copy)
+  // reset
+  newEditItem.value = { tipo: '', cantidad: 1, descripcion: '', marca: '', modelo: '', serie: '', lote: '', referencia: '', claveHRAEI: '', unidades: [] }
+}
+
+function removeEditItem(idx) {
+  if (!editingOrder.value) return
+  if (!confirm('¿Eliminar este artículo de la orden?')) return
+  editingOrder.value.equiposEntrada.splice(idx, 1)
+}
+
+function toggleEditItem(idx) {
+  editingItemIndex.value = editingItemIndex.value === idx ? -1 : idx
 }
 
 // Simular carga de órdenes desde API
 function loadOrders() {
   loading.value = true
-  
-  // Datos de ejemplo - reemplazar con llamada a API
+  // Datos por defecto: se intenta obtener desde el backend y localStorage
   const mockOrders = [
     {
       id: 1,
@@ -447,10 +766,47 @@ function loadOrders() {
     }
   ]
   
-  setTimeout(() => {
-    allOrders.value = mockOrders
-    loading.value = false
-  }, 800)
+  // Try to fetch from backend list endpoint
+  setTimeout(async () => {
+    try {
+      const res = await fetch('/api/ops/entrada/list')
+      if (res.ok) {
+        const body = await res.json()
+        const items = Array.isArray(body.items) ? body.items.map(it => it.payload || it) : []
+        allOrders.value = items.map((p, idx) => ({ id: p.id || idx + 1, ...p }))
+        // Merge local 'orders_list' as well, avoid duplicates
+        try {
+          const rawLocal = localStorage.getItem('orders_list')
+          if (rawLocal) {
+            const localArr = JSON.parse(rawLocal) || []
+            localArr.forEach(localItem => {
+              if (!allOrders.value.some(o => String(o.id) === String(localItem.id))) {
+                allOrders.value.push(localItem)
+              }
+            })
+          }
+        } catch (e) {}
+      } else {
+        // fallback to mock
+        allOrders.value = mockOrders
+      }
+    } catch (err) {
+      // If backend not available, try to load localStorage orders
+      try {
+        const localOrdersRaw = localStorage.getItem('orders_list')
+        if (localOrdersRaw) {
+          const arr = JSON.parse(localOrdersRaw)
+          allOrders.value = Array.isArray(arr) ? arr : mockOrders
+        } else {
+          allOrders.value = mockOrders
+        }
+      } catch (e) {
+        allOrders.value = mockOrders
+      }
+    } finally {
+      loading.value = false
+    }
+  }, 300)
 }
 
 onMounted(() => {
@@ -1036,4 +1392,107 @@ onMounted(() => {
     width: 100%;
   }
 }
+
+/* Compact checklist and dynamic inputs */
+.checkbox-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+.checkbox-list label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.85);
+}
+.active-filters-row { margin-top: 12px; grid-column: 1 / -1 }
+.active-filters-grid {
+  display: grid;
+  /* use narrower min width so multiple chips fit per row on typical screens */
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+.filter-chip {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  padding: 10px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 10px;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  min-height: 72px;
+}
+.chip-label { font-size:0.78rem; font-weight:700; color:rgba(255,255,255,0.85); text-transform:uppercase }
+.chip-control { width:100%; display:flex; align-items:center }
+.chip-control .control, .chip-control select {
+  width:100%;
+  box-sizing: border-box;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.chip-control .hora-range { display:flex; gap:8px; width:100% }
+.chip-control .hora-range input { flex:1 }
+
+/* Ensure select and input visual consistency inside chips */
+.chip-control .control,
+.chip-control select,
+.chip-control input {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: #fff;
+}
+.dynamic-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+.dynamic-filters .filter-group {
+  margin: 0;
+}
+.time-range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Make table more compact when only minimal columns are shown */
+/* removed static hiding of table columns: columns now render conditionally */
+
+/* Filter button and panel styles */
+.btn-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.06);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn-filter svg { opacity: 0.9 }
+.filter-panel {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(10,15,25,0.6);
+  border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+.panel-actions {
+  display:flex;
+  gap:8px;
+  justify-content:flex-end;
+  margin-top:12px;
+}
+.btn-filter-label { font-weight:700; font-size:0.9rem }
 </style>

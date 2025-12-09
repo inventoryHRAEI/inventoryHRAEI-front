@@ -1,24 +1,7 @@
 <template>
   <div>
     <FormShell>
-      <template #title>
-        <div class="title-with-back">
-          <span>Órdenes de Entrada</span>
-          <button 
-            v-if="comeFromOrderManagement"
-            type="button"
-            class="btn-back-to-management"
-            @click="goBackToManagement"
-            title="Volver al panel de gestión"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
-            </svg>
-            Volver al panel
-          </button>
-        </div>
-      </template>
+      <template #title>Órdenes de Entrada</template>
 
       <template #body>
   <div class="op-card insumos op-entrada-form" ref="rootRef">
@@ -558,7 +541,7 @@
 
 <script setup>
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import FormShell from '@/components/FormShell.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
 import DatePicker from '@/components/DatePicker.vue'
@@ -578,28 +561,17 @@ import { HashtagIcon } from '@heroicons/vue/24/outline'
 import TrashButton from '@/components/TrashButton.vue'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
+import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 
 const LOCAL_KEY = 'op-entrada'
+const ORDERS_LIST_KEY = 'orders_list'
 
 // Router para navegación
 const router = useRouter()
-const route = useRoute()
-
-// Detectar si viene desde el panel de gestión de órdenes
-const comeFromOrderManagement = computed(() => route.query.from === 'order-management')
 
 // Opciones del select de motivo de entrada
-const motivoEntradaOptions = [
-  { value: '', label: 'Seleccionar motivo' },
-  { value: 'mantenimiento-preventivo-externo', label: 'MANTENIMIENTO PREVENTIVO EXTERNO' },
-  { value: 'mantenimiento-correctivo-externo', label: 'MANTENIMIENTO CORRECTIVO EXTERNO' },
-  { value: 'calibracion-externa', label: 'CALIBRACIÓN EXTERNA' },
-  { value: 'diagnostico', label: 'DIAGNOSTICO' },
-  { value: 'inicio-contrato', label: 'INICIO DE CONTRATO' },
-  { value: 'inicio-demostracion', label: 'INICIO DE DEMOSTRACIÓN' },
-  { value: 'reemplazo-equipo', label: 'REEMPLAZO DE EQUIPO' },
-  { value: 'otro', label: 'OTRO; ESPECIFICAR' }
-]
+// Opciones del select de motivo de entrada (importadas desde data)
+// motivoEntradaOptions importado arriba
 
 // Opciones del select de tipo de entrada
 const tipoEntradaOptions = [
@@ -957,21 +929,13 @@ const onCancel = async () => {
   if (result.isConfirmed) {
     // Limpiar localStorage antes de regresar
     try { localStorage.removeItem(LOCAL_KEY) } catch {}
-    // Regresar al panel de gestión o dashboard
+    // Regresar al dashboard con refresco forzado
     try { 
-      if (comeFromOrderManagement.value) {
-        await router.push({ name: 'order-management' })
-      } else {
-        await router.push({ name: 'dashboard' })
-      }
+      await router.push({ name: 'dashboard' })
     } catch { 
       try { await router.push('/') } catch {}
     }
   }
-}
-
-const goBackToManagement = () => {
-  router.push({ name: 'order-management' }).catch(() => {})
 }
 
 const scrollToTop = () => {
@@ -2255,22 +2219,30 @@ async function onSubmit() {
       }
     } else {
       notifier.success('Orden guardada en el servidor')
+      // Also persist to local orders list for quick consumption by frontend
+      try {
+        const raw = localStorage.getItem(ORDERS_LIST_KEY)
+        const arr = raw ? JSON.parse(raw) : []
+        arr.push({ id: Date.now(), ...payload })
+        localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
+      } catch (e) {}
       // clearForm se realiza tras generar el Excel para que la descarga se pueda llevar a cabo
       // (no queremos limpiar antes de la generación)
       await generarExcelEntrada()
       clearForm()
       loading.value = false
-      // Regresar al panel de gestión si viene de allá
-      if (comeFromOrderManagement.value) {
-        setTimeout(() => {
-          router.push({ name: 'order-management' }).catch(() => {})
-        }, 1000)
-      }
       return
     }
   } catch (err) {
     try {
       localStorage.setItem(LOCAL_KEY, JSON.stringify(payload))
+      // Also add to 'orders_list' to make it visible in OrderManagement when offline
+      try {
+        const raw = localStorage.getItem(ORDERS_LIST_KEY)
+        const arr = raw ? JSON.parse(raw) : []
+        arr.push({ id: Date.now(), ...payload })
+        localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
+      } catch (e) {}
     } catch {
       // ignore storage errors
     }
@@ -4695,41 +4667,6 @@ html {
   /* Solo configuraciones específicas del componente aquí */
   position: relative;
   z-index: 1;
-}
-
-/* Estilos para el titulo con botón de retorno */
-.title-with-back {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.btn-back-to-management {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  color: rgba(255, 255, 255, 0.9);
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-back-to-management:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  transform: translateX(-2px);
-}
-
-.btn-back-to-management:active {
-  transform: translateX(-1px);
 }
 
 </style>
