@@ -83,7 +83,7 @@ import imgInventario from '@/images/Inventario.png'
 import imgConsumibles from '@/images/Consumibles_bajo_pedido.png'
 
 const operations = [
-  { name: 'op-entrada', label: 'Órdenes de Entrada', desc: 'Captura de entradas de equipo/material.', img: imgEntrada, icon: ArrowDownTrayIcon },
+  { name: 'order-management', label: 'Órdenes de Entrada', desc: 'Gestión y administración de órdenes de entrada.', img: imgEntrada, icon: ArrowDownTrayIcon },
   { name: 'op-salida', label: 'Órdenes de Salida', desc: 'Registro de salidas y egresos.', img: imgSalida, icon: ArrowUpTrayIcon },
   { name: 'op-resguardo', label: 'Resguardo', desc: 'Asignaciones y resguardos.', img: imgResguardo, icon: ShieldCheckIcon },
   { name: 'op-servicio', label: 'Servicio', desc: 'Órdenes de servicio y mantenimiento.', img: imgServicio, icon: WrenchScrewdriverIcon },

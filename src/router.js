@@ -17,6 +17,7 @@ const OpResguardo = () => import('./views/operations/OpResguardo.vue')
 const OpServicio = () => import('./views/operations/OpServicio.vue')
 const OpInventarioBiomedica = () => import('./views/operations/OpInventarioBiomedica.vue')
 const OpInsumosConsumibles = () => import('./views/operations/OpInsumosConsumibles.vue')
+const OrderManagement = () => import('./views/operations/OrderManagement.vue')
 
 const routes = [
   { path: '/', name: 'home', component: Home },
@@ -30,6 +31,7 @@ const routes = [
   { path: '/add-account', name: 'add-account', component: AddAccount, meta: { addAccount: true } },
 
   // Rutas de operaciones (accesibles desde los dashboards)
+  { path: '/op/order-management', name: 'order-management', component: OrderManagement, meta: { requiresAuth: true } },
   { path: '/op/entrada', name: 'op-entrada', component: OpEntrada, meta: { requiresAuth: true } },
   { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
   { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
