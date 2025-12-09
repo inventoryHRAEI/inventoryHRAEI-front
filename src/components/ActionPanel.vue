@@ -47,16 +47,16 @@ const panelRootClass = computed(() => ({
 
 
 .panel-surface {
-  position: relative;
-  z-index: 1;
-  border-radius: inherit;
-  padding: clamp(18px, 4vw, 26px);
-  background: rgba(13, 20, 35, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px) saturate(120%);
-  color: #e6ebf5;
-  overflow: hidden;
+   position: relative;
+   z-index: 1;
+   border-radius: inherit;
+   padding: clamp(18px, 4vw, 26px);
+   background: rgba(13, 20, 35, 0.65);
+   border: 1px solid rgba(255, 255, 255, 0.1);
+   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+   backdrop-filter: blur(8px) saturate(120%);
+   color: #e6ebf5;
+   overflow: visible;
 }
 
 .panel-header {

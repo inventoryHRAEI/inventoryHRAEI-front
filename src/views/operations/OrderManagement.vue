@@ -20,104 +20,34 @@
             <!-- Filtros: estructura elegante con 3 columnas -->
             <div class="filters-section">
                 <!-- Filtros principales (siempre visibles) -->
-                <div class="filter-group">
+                <div class="filter-group filter-group-narrow">
                     <label>Folio de operación:</label>
                     <input v-model="filterFolio" class="control filter-input" placeholder="Ej. 5-011" />
                 </div>
-                <div class="filter-group">
+                <div class="filter-group filter-group-narrow">
                     <label>Nombre del solicitante:</label>
                     <input v-model="filterSolicitante" class="control filter-input" placeholder="Ej. Dr. Juan Pérez" />
                 </div>
-                <div class="filter-group">
+                <div class="filter-group filter-group-compact">
                     <label>Filtrar por fecha:</label>
-                    <input v-model="filterDate" type="date" class="control filter-input" />
-                </div>
-
-                <!-- Filtros activos en el mismo grid (respeta las 3 columnas) -->
-                <template v-for="(f, idx) in activeFiltersList" :key="f.key">
-                    <div class="filter-group active-filter-inline">
-                        <label>{{ f.label }}</label>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <div style="flex: 1;">
-                                <template v-if="f.key === 'service'">
-                                    <input v-model="filterService" class="control filter-input"
-                                        placeholder="Ej. Urgencias..." />
-                                </template>
-                                <template v-else-if="f.key === 'especialidad'">
-                                    <input v-model="filterEspecialidad" class="control filter-input"
-                                        placeholder="Ej. Traumatología..." />
-                                </template>
-                                <template v-else-if="f.key === 'motivo'">
-                                    <select v-model="filterMotivo" class="control filter-input">
-                                        <option value="">(Seleccionar)</option>
-                                        <option v-for="opt in motivoEntradaOptions" :key="opt.value"
-                                            :value="opt.value">{{ opt.label }}</option>
-                                    </select>
-                                </template>
-                                <template v-else-if="f.key === 'obs'">
-                                    <input v-model="filterObservaciones" class="control filter-input"
-                                        placeholder="Buscar en observaciones" />
-                                </template>
-                                <template v-else-if="f.key === 'ing'">
-                                    <input v-model="filterIngeniero" class="control filter-input"
-                                        placeholder="Buscar nombre" />
-                                </template>
-                                <template v-else-if="f.key === 'tipo'">
-                                    <select v-model="filterTipo" class="control filter-input">
-                                        <option value="">Todos</option>
-                                        <option value="equipo-medico">Equipo Médico</option>
-                                        <option value="mobiliario">Mobiliario</option>
-                                        <option value="accesorio">Accesorio</option>
-                                        <option value="consumible">Consumible</option>
-                                        <option value="refaccion">Refacción</option>
-                                    </select>
-                                </template>
-                                <template v-else-if="f.key === 'itemText'">
-                                    <input v-model="filterItemText" class="control filter-input"
-                                        placeholder="Nombre, modelo, serie..." />
-                                </template>
-                                <template v-else-if="f.key === 'hora'">
-                                    <div class="hora-range">
-                                        <input v-model="filterHoraInicioFrom" type="time"
-                                            class="control filter-input" />
-                                        <input v-model="filterHoraInicioTo" type="time"
-                                            class="control filter-input" />
-                                    </div>
-                                </template>
-                            </div>
-                            <button type="button" class="btn-remove-filter" @click="removeActiveFilter(f.key)" title="Remover filtro">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-                </template>
-
-                <!-- Grupo de controles: Añadir filtros + Limpiar todos -->
-                <div class="filters-controls-group">
-                    <div class="filter-group dropdown-filter-group" @click.self="showMoreFilters = false">
-                        <div class="dropdown-container">
-                            <button class="btn-add-filters" @click="showMoreFilters = !showMoreFilters"
+                    <div style="display: flex; gap: 8px; align-items: flex-end;">
+                        <input v-model="filterDate" type="date" class="control filter-input" style="flex: 1;" />
+                        <!-- Botón Añadir filtros aquí -->
+                        <div class="dropdown-container" @click.stop
+                            style="min-width: fit-content;" ref="filterDropdownRef">
+                            <button class="btn-add-filters compact" @click="showMoreFilters = !showMoreFilters"
                                 :aria-expanded="showMoreFilters"
                                 :class="{ 'has-active-filters': hasActiveAdvancedFilters }">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                                     xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                                     <path d="M22 3H2l8 9v7l4 2v-9l8-9z" fill="currentColor" />
                                 </svg>
-                                <span>Añadir filtros</span>
                                 <span v-if="hasActiveAdvancedFilters" class="filter-badge">{{ activeFiltersList.length
-                                }}</span>
-                                <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
+                                    }}</span>
                             </button>
 
                             <!-- Dropdown de filtros disponibles -->
-                            <div v-if="showMoreFilters" class="filters-dropdown" @click.stop>
+                            <div v-if="showMoreFilters" class="filters-dropdown">
                                 <div class="dropdown-header">
                                     <span class="dropdown-title">Seleccionar filtros</span>
                                 </div>
@@ -162,10 +92,76 @@
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Botón Limpiar todos (junto a Añadir filtros) -->
-                    <transition name="fade-in">
-                        <button v-if="activeFiltersList.length > 0" type="button" class="btn-clear-filters" @click="clearAllFilters">
+                <!-- Filtros activos en el mismo grid (respeta las 3 columnas) -->
+                <template v-for="(f, idx) in activeFiltersList" :key="f.key">
+                    <div class="filter-group active-filter-inline">
+                        <label>{{ f.label }}</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <div style="flex: 1;">
+                                <template v-if="f.key === 'service'">
+                                    <input v-model="filterService" class="control filter-input"
+                                        placeholder="Ej. Urgencias..." />
+                                </template>
+                                <template v-else-if="f.key === 'especialidad'">
+                                    <input v-model="filterEspecialidad" class="control filter-input"
+                                        placeholder="Ej. Traumatología..." />
+                                </template>
+                                <template v-else-if="f.key === 'motivo'">
+                                    <select v-model="filterMotivo" class="control filter-input">
+                                        <option value="">(Seleccionar)</option>
+                                        <option v-for="opt in motivoEntradaOptions" :key="opt.value" :value="opt.value">
+                                            {{ opt.label }}</option>
+                                    </select>
+                                </template>
+                                <template v-else-if="f.key === 'obs'">
+                                    <input v-model="filterObservaciones" class="control filter-input"
+                                        placeholder="Buscar en observaciones" />
+                                </template>
+                                <template v-else-if="f.key === 'ing'">
+                                    <input v-model="filterIngeniero" class="control filter-input"
+                                        placeholder="Buscar nombre" />
+                                </template>
+                                <template v-else-if="f.key === 'tipo'">
+                                    <select v-model="filterTipo" class="control filter-input">
+                                        <option value="">Todos</option>
+                                        <option value="equipo-medico">Equipo Médico</option>
+                                        <option value="mobiliario">Mobiliario</option>
+                                        <option value="accesorio">Accesorio</option>
+                                        <option value="consumible">Consumible</option>
+                                        <option value="refaccion">Refacción</option>
+                                    </select>
+                                </template>
+                                <template v-else-if="f.key === 'itemText'">
+                                    <input v-model="filterItemText" class="control filter-input"
+                                        placeholder="Nombre, modelo, serie..." />
+                                </template>
+                                <template v-else-if="f.key === 'hora'">
+                                    <div class="hora-range">
+                                        <input v-model="filterHoraInicioFrom" type="time"
+                                            class="control filter-input" />
+                                        <input v-model="filterHoraInicioTo" type="time" class="control filter-input" />
+                                    </div>
+                                </template>
+                            </div>
+                            <button type="button" class="btn-remove-filter" @click="removeActiveFilter(f.key)"
+                                title="Remover filtro">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Botón Limpiar todos (debajo de filtros si hay activos) -->
+                <transition name="fade-in">
+                    <div v-if="activeFiltersList.length > 0"
+                        style="grid-column: 1 / -1; display: flex; justify-content: flex-end;">
+                        <button type="button" class="btn-clear-filters" @click="clearAllFilters">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
@@ -175,8 +171,8 @@
                             </svg>
                             <span>Limpiar</span>
                         </button>
-                    </transition>
-                </div>
+                    </div>
+                </transition>
             </div>
 
             <!-- Datatable -->
@@ -510,6 +506,7 @@ import Breadcrumbs from '@/components/Breadcrumbs.vue'
 
 const router = useRouter()
 
+
 const allOrders = ref([])
 const filterFolio = ref('')
 const filterSolicitante = ref('')
@@ -541,6 +538,7 @@ const showEditModal = ref(false)
 const editingOrder = ref(null)
 const newEditItem = ref({ tipo: '', cantidad: 1, descripcion: '', marca: '', modelo: '', serie: '', lote: '', referencia: '', claveHRAEI: '', unidades: [] })
 const editingItemIndex = ref(-1)
+const filterDropdownRef = ref(null)
 
 // Columns visibility computed from active filters
 const showColumnService = computed(() => filterServiceActive.value)
@@ -647,6 +645,10 @@ function formatDate(dateStr) {
 
 function goToCreateOrder() {
     router.push({ name: 'op-entrada', query: { from: 'order-management' } })
+}
+
+function closeFiltersDropdown() {
+    showMoreFilters.value = false
 }
 
 function openEditModal(order) {
@@ -908,6 +910,20 @@ function loadOrders() {
 
 onMounted(() => {
     loadOrders()
+    
+    // Cerrar dropdown cuando se hace click fuera
+    function handleDocumentClick(event) {
+        if (filterDropdownRef.value && !filterDropdownRef.value.contains(event.target)) {
+            showMoreFilters.value = false
+        }
+    }
+    
+    document.addEventListener('click', handleDocumentClick)
+    
+    // Limpiar listener cuando se desmonta el componente
+    return () => {
+        document.removeEventListener('click', handleDocumentClick)
+    }
 })
 </script>
 
@@ -950,7 +966,7 @@ onMounted(() => {
 
 .filters-section {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: 0.75fr 0.75fr 1fr;
     gap: 16px;
     margin: 24px 0;
     padding: 16px;
@@ -959,12 +975,22 @@ onMounted(() => {
     border: 1px solid rgba(255, 255, 255, 0.08);
     animation: fadeIn 0.3s ease;
     transition: all 0.3s ease;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
 }
 
 .filter-group {
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+.filter-group-compact {
+    gap: 4px;
+    overflow: visible;
+    position: relative;
+    z-index: 10;
 }
 
 .filter-group label {
@@ -1571,6 +1597,13 @@ onMounted(() => {
 .dropdown-container {
     position: relative;
     width: 100%;
+    overflow: visible;
+    z-index: 100;
+}
+
+.filter-group-compact .dropdown-container {
+    min-width: fit-content;
+    overflow: visible;
 }
 
 .btn-add-filters {
@@ -1587,6 +1620,13 @@ onMounted(() => {
     font-size: 0.9rem;
     transition: all 0.2s ease;
     white-space: nowrap;
+}
+
+.btn-add-filters.compact {
+    padding: 8px 10px;
+    gap: 6px;
+    font-size: 0;
+    border-radius: 8px;
 }
 
 .btn-add-filters:hover {
@@ -1633,15 +1673,16 @@ onMounted(() => {
     position: absolute;
     top: 100%;
     left: 0;
-    margin-top: 8px;
+    margin-top: 6px;
     background: rgba(13, 20, 35, 0.98);
     border: 1px solid rgba(46, 221, 90, 0.2);
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(10px);
-    z-index: 100;
-    min-width: 280px;
+    z-index: 1000;
+    min-width: 240px;
     animation: slideDownDropdown 0.2s ease;
+    overflow: visible;
 }
 
 @keyframes slideDownDropdown {
@@ -1667,7 +1708,7 @@ onMounted(() => {
 }
 
 .dropdown-header {
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
     display: flex;
     align-items: center;
@@ -1675,32 +1716,32 @@ onMounted(() => {
 }
 
 .dropdown-title {
-    font-size: 0.85rem;
+    font-size: 0.80rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.85);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.4px;
 }
 
 .filters-checkboxes {
-    padding: 12px;
+    padding: 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    max-height: 360px;
+    gap: 4px;
+    max-height: 220px;
     overflow-y: auto;
 }
 
 .checkbox-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-radius: 8px;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
     cursor: pointer;
     transition: all 0.2s ease;
     color: rgba(255, 255, 255, 0.85);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 .checkbox-item:hover {
@@ -1719,20 +1760,20 @@ onMounted(() => {
 }
 
 .dropdown-actions {
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     display: flex;
     justify-content: flex-end;
 }
 
 .btn-close-dropdown {
-    padding: 8px 16px;
+    padding: 6px 12px;
     background: rgba(46, 221, 90, 0.15);
     border: 1px solid rgba(46, 221, 90, 0.3);
     color: rgba(46, 221, 90, 0.9);
-    border-radius: 8px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.80rem;
     font-weight: 600;
     transition: all 0.2s ease;
 }
