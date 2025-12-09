@@ -17,8 +17,9 @@
 
             <Breadcrumbs />
 
-            <!-- Filtros: mostrar solo lo esencial por defecto (Folio, Solicitante, Fecha). -->
+            <!-- Filtros: estructura elegante con 3 columnas -->
             <div class="filters-section">
+                <!-- Filtros principales (siempre visibles) -->
                 <div class="filter-group">
                     <label>Folio de operación:</label>
                     <input v-model="filterFolio" class="control filter-input" placeholder="Ej. 5-011" />
@@ -32,141 +33,149 @@
                     <input v-model="filterDate" type="date" class="control filter-input" />
                 </div>
 
-                <div class="filter-group dropdown-filter-group" @click.self="showMoreFilters = false">
-                    <div class="dropdown-container">
-                        <button class="btn-add-filters" @click="showMoreFilters = !showMoreFilters"
-                            :aria-expanded="showMoreFilters"
-                            :class="{ 'has-active-filters': hasActiveAdvancedFilters }">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                                <path d="M22 3H2l8 9v7l4 2v-9l8-9z" fill="currentColor" />
-                            </svg>
-                            <span>Añadir filtros</span>
-                            <span v-if="hasActiveAdvancedFilters" class="filter-badge">{{ activeFiltersList.length
-                                }}</span>
-                            <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                        </button>
+                <!-- Filtros activos en el mismo grid (respeta las 3 columnas) -->
+                <template v-for="(f, idx) in activeFiltersList" :key="f.key">
+                    <div class="filter-group active-filter-inline">
+                        <label>{{ f.label }}</label>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <div style="flex: 1;">
+                                <template v-if="f.key === 'service'">
+                                    <input v-model="filterService" class="control filter-input"
+                                        placeholder="Ej. Urgencias..." />
+                                </template>
+                                <template v-else-if="f.key === 'especialidad'">
+                                    <input v-model="filterEspecialidad" class="control filter-input"
+                                        placeholder="Ej. Traumatología..." />
+                                </template>
+                                <template v-else-if="f.key === 'motivo'">
+                                    <select v-model="filterMotivo" class="control filter-input">
+                                        <option value="">(Seleccionar)</option>
+                                        <option v-for="opt in motivoEntradaOptions" :key="opt.value"
+                                            :value="opt.value">{{ opt.label }}</option>
+                                    </select>
+                                </template>
+                                <template v-else-if="f.key === 'obs'">
+                                    <input v-model="filterObservaciones" class="control filter-input"
+                                        placeholder="Buscar en observaciones" />
+                                </template>
+                                <template v-else-if="f.key === 'ing'">
+                                    <input v-model="filterIngeniero" class="control filter-input"
+                                        placeholder="Buscar nombre" />
+                                </template>
+                                <template v-else-if="f.key === 'tipo'">
+                                    <select v-model="filterTipo" class="control filter-input">
+                                        <option value="">Todos</option>
+                                        <option value="equipo-medico">Equipo Médico</option>
+                                        <option value="mobiliario">Mobiliario</option>
+                                        <option value="accesorio">Accesorio</option>
+                                        <option value="consumible">Consumible</option>
+                                        <option value="refaccion">Refacción</option>
+                                    </select>
+                                </template>
+                                <template v-else-if="f.key === 'itemText'">
+                                    <input v-model="filterItemText" class="control filter-input"
+                                        placeholder="Nombre, modelo, serie..." />
+                                </template>
+                                <template v-else-if="f.key === 'hora'">
+                                    <div class="hora-range">
+                                        <input v-model="filterHoraInicioFrom" type="time"
+                                            class="control filter-input" />
+                                        <input v-model="filterHoraInicioTo" type="time"
+                                            class="control filter-input" />
+                                    </div>
+                                </template>
+                            </div>
+                            <button type="button" class="btn-remove-filter" @click="removeActiveFilter(f.key)" title="Remover filtro">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </template>
 
-                        <!-- Dropdown de filtros disponibles -->
-                        <div v-if="showMoreFilters" class="filters-dropdown" @click.stop>
-                            <div class="dropdown-header">
-                                <span class="dropdown-title">Seleccionar filtros</span>
-                            </div>
-                            <div class="filters-checkboxes">
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="filterServiceActive" />
-                                    <span>Servicio</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="filterEspecialidadActive" />
-                                    <span>Especialidad</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="filterMotivoActive" />
-                                    <span>Motivo de entrada</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="filterObservacionesActive" />
-                                    <span>Observaciones</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="filterIngenieroActive" />
-                                    <span>Ingeniero residente</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="filterTipoActive" />
-                                    <span>Tipo de artículo</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="filterItemTextActive" />
-                                    <span>Buscar en artículos</span>
-                                </label>
-                                <label class="checkbox-item">
-                                    <input type="checkbox" v-model="filterHoraActive" />
-                                    <span>Rango de horas</span>
-                                </label>
-                            </div>
-                            <div class="dropdown-actions">
-                                <button type="button" class="btn-close-dropdown"
-                                    @click="showMoreFilters = false">Listo</button>
+                <!-- Grupo de controles: Añadir filtros + Limpiar todos -->
+                <div class="filters-controls-group">
+                    <div class="filter-group dropdown-filter-group" @click.self="showMoreFilters = false">
+                        <div class="dropdown-container">
+                            <button class="btn-add-filters" @click="showMoreFilters = !showMoreFilters"
+                                :aria-expanded="showMoreFilters"
+                                :class="{ 'has-active-filters': hasActiveAdvancedFilters }">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                    xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                    <path d="M22 3H2l8 9v7l4 2v-9l8-9z" fill="currentColor" />
+                                </svg>
+                                <span>Añadir filtros</span>
+                                <span v-if="hasActiveAdvancedFilters" class="filter-badge">{{ activeFiltersList.length
+                                }}</span>
+                                <svg class="dropdown-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+
+                            <!-- Dropdown de filtros disponibles -->
+                            <div v-if="showMoreFilters" class="filters-dropdown" @click.stop>
+                                <div class="dropdown-header">
+                                    <span class="dropdown-title">Seleccionar filtros</span>
+                                </div>
+                                <div class="filters-checkboxes">
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" v-model="filterServiceActive" />
+                                        <span>Servicio</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" v-model="filterEspecialidadActive" />
+                                        <span>Especialidad</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" v-model="filterMotivoActive" />
+                                        <span>Motivo de entrada</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" v-model="filterObservacionesActive" />
+                                        <span>Observaciones</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" v-model="filterIngenieroActive" />
+                                        <span>Ingeniero residente</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" v-model="filterTipoActive" />
+                                        <span>Tipo de artículo</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" v-model="filterItemTextActive" />
+                                        <span>Buscar en artículos</span>
+                                    </label>
+                                    <label class="checkbox-item">
+                                        <input type="checkbox" v-model="filterHoraActive" />
+                                        <span>Rango de horas</span>
+                                    </label>
+                                </div>
+                                <div class="dropdown-actions">
+                                    <button type="button" class="btn-close-dropdown"
+                                        @click="showMoreFilters = false">Listo</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-                <!-- Active filters row: muestra los filtros seleccionados inmediatamente debajo de los inputs principales -->
-                <div v-if="activeFiltersList.length > 0" class="active-filters-row">
-                    <div class="active-filters-header">
-                        <span class="filters-count">{{ activeFiltersList.length }} filtro{{ activeFiltersList.length > 1
-                            ? 's' : ''
-                        }} activo{{ activeFiltersList.length > 1 ? 's' : '' }}</span>
-                        <button type="button" class="btn-clear-all" @click="clearAllFilters">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+
+                    <!-- Botón Limpiar todos (junto a Añadir filtros) -->
+                    <transition name="fade-in">
+                        <button v-if="activeFiltersList.length > 0" type="button" class="btn-clear-filters" @click="clearAllFilters">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <polyline points="3 6 5 6 21 6"></polyline>
                                 <path
                                     d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
                                 </path>
                             </svg>
-                            Limpiar todos
+                            <span>Limpiar</span>
                         </button>
-                    </div>
-                    <div class="active-filters-grid">
-                        <template v-for="(f, idx) in activeFiltersList" :key="f.key">
-                            <div class="filter-chip">
-                                <label class="chip-label">{{ f.label }}</label>
-                                <div class="chip-control">
-                                    <template v-if="f.key === 'service'">
-                                        <input v-model="filterService" class="control filter-input"
-                                            placeholder="Ej. Urgencias..." />
-                                    </template>
-                                    <template v-else-if="f.key === 'especialidad'">
-                                        <input v-model="filterEspecialidad" class="control filter-input"
-                                            placeholder="Ej. Traumatología..." />
-                                    </template>
-                                    <template v-else-if="f.key === 'motivo'">
-                                        <select v-model="filterMotivo" class="control filter-input">
-                                            <option value="">(Seleccionar)</option>
-                                            <option v-for="opt in motivoEntradaOptions" :key="opt.value"
-                                                :value="opt.value">{{ opt.label }}</option>
-                                        </select>
-                                    </template>
-                                    <template v-else-if="f.key === 'obs'">
-                                        <input v-model="filterObservaciones" class="control filter-input"
-                                            placeholder="Buscar en observaciones" />
-                                    </template>
-                                    <template v-else-if="f.key === 'ing'">
-                                        <input v-model="filterIngeniero" class="control filter-input"
-                                            placeholder="Buscar nombre" />
-                                    </template>
-                                    <template v-else-if="f.key === 'tipo'">
-                                        <select v-model="filterTipo" class="control filter-input">
-                                            <option value="">Todos</option>
-                                            <option value="equipo-medico">Equipo Médico</option>
-                                            <option value="mobiliario">Mobiliario</option>
-                                            <option value="accesorio">Accesorio</option>
-                                            <option value="consumible">Consumible</option>
-                                            <option value="refaccion">Refacción</option>
-                                        </select>
-                                    </template>
-                                    <template v-else-if="f.key === 'itemText'">
-                                        <input v-model="filterItemText" class="control filter-input"
-                                            placeholder="Nombre, modelo, serie..." />
-                                    </template>
-                                    <template v-else-if="f.key === 'hora'">
-                                        <div class="hora-range">
-                                            <input v-model="filterHoraInicioFrom" type="time"
-                                                class="control filter-input" />
-                                            <input v-model="filterHoraInicioTo" type="time"
-                                                class="control filter-input" />
-                                        </div>
-                                    </template>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
+                    </transition>
                 </div>
             </div>
 
@@ -403,7 +412,7 @@
                                         <span class="badge">#{{ index + 1 }}</span>
                                         <span style="font-weight: 700;">{{ item.tipo }}</span>
                                         <span style="margin-left: 10px; color: rgba(255,255,255,0.6);">x{{ item.cantidad
-                                        }}</span>
+                                            }}</span>
                                     </div>
                                     <div style="display:flex; gap:8px;">
                                         <div
@@ -773,6 +782,17 @@ function clearAllFilters() {
     showMoreFilters.value = false
 }
 
+function removeActiveFilter(key) {
+    if (key === 'service') filterServiceActive.value = false
+    else if (key === 'especialidad') filterEspecialidadActive.value = false
+    else if (key === 'motivo') filterMotivoActive.value = false
+    else if (key === 'obs') filterObservacionesActive.value = false
+    else if (key === 'ing') filterIngenieroActive.value = false
+    else if (key === 'tipo') filterTipoActive.value = false
+    else if (key === 'itemText') filterItemTextActive.value = false
+    else if (key === 'hora') filterHoraActive.value = false
+}
+
 function applyFilters() {
     // Currently filters are reactive; applying just closes the panel to show results
     showMoreFilters.value = false
@@ -930,13 +950,15 @@ onMounted(() => {
 
 .filters-section {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 16px;
     margin: 24px 0;
     padding: 16px;
     background: rgba(10, 15, 25, 0.6);
     border-radius: 12px;
     border: 1px solid rgba(255, 255, 255, 0.08);
+    animation: fadeIn 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .filter-group {
@@ -974,20 +996,44 @@ onMounted(() => {
     box-shadow: 0 0 0 3px rgba(46, 221, 90, 0.1);
 }
 
+/* Grupo de controles de filtros */
+.filters-controls-group {
+    grid-column: 2 / 4;
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.filters-controls-group .filter-group {
+    flex: 1;
+}
+
+.filters-controls-group .dropdown-filter-group {
+    position: relative;
+}
+
+/* Botón Limpiar filtros */
 .btn-clear-filters {
     padding: 10px 16px;
-    background: rgba(255, 71, 71, 0.15);
-    border: 1px solid rgba(255, 71, 71, 0.4);
-    color: #ff6b6b;
-    border-radius: 6px;
+    background: rgba(255, 107, 107, 0.12);
+    border: 1px solid rgba(255, 107, 107, 0.25);
+    color: rgba(255, 107, 107, 0.8);
+    border-radius: 8px;
     cursor: pointer;
+    font-size: 0.9rem;
     font-weight: 600;
-    transition: all 0.3s ease;
-    align-self: flex-end;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
 }
 
 .btn-clear-filters:hover {
-    background: rgba(255, 71, 71, 0.25);
+    background: rgba(255, 107, 107, 0.2);
+    border-color: rgba(255, 107, 107, 0.4);
+    color: rgba(255, 107, 107, 0.95);
+    transform: translateY(-1px);
 }
 
 .table-wrapper {
@@ -996,6 +1042,8 @@ onMounted(() => {
     border-radius: 12px;
     overflow: hidden;
     margin: 24px 0;
+    animation: fadeIn 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .orders-table {
@@ -1107,6 +1155,7 @@ onMounted(() => {
     padding: 60px 20px;
     text-align: center;
     color: rgba(255, 255, 255, 0.6);
+    animation: fadeIn 0.3s ease;
 }
 
 .empty-icon {
@@ -1149,6 +1198,8 @@ onMounted(() => {
     padding: 16px 0;
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.5);
+    animation: fadeIn 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 /* Modal Styles */
@@ -1230,6 +1281,12 @@ onMounted(() => {
     border-radius: 12px;
     padding: 24px;
     transition: all 0.3s ease;
+    animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.op-entrada-modal-full .section-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(46, 221, 90, 0.15);
 }
 
 .op-entrada-modal-full .section-card.combined-card {
@@ -1339,6 +1396,13 @@ onMounted(() => {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 10px;
     padding: 16px;
+    animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: all 0.3s ease;
+}
+
+.item-row-edit:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(46, 221, 90, 0.2);
 }
 
 .item-head-edit {
@@ -1375,6 +1439,18 @@ onMounted(() => {
 .save-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(46, 221, 90, 0.3);
+}
+
+/* Transiciones */
+.fade-in-enter-active,
+.fade-in-leave-active {
+    transition: all 0.2s ease;
+}
+
+.fade-in-enter-from,
+.fade-in-leave-to {
+    opacity: 0;
+    transform: translateX(-10px);
 }
 
 /* Transición Modal */
@@ -1423,6 +1499,21 @@ onMounted(() => {
 @media (max-width: 768px) {
     .filters-section {
         grid-template-columns: 1fr;
+    }
+
+    .filters-controls-group {
+        grid-column: 1;
+        flex-direction: column;
+    }
+
+    .filters-controls-group .filter-group {
+        width: 100%;
+    }
+
+    .btn-add-filters,
+    .btn-clear-filters {
+        width: 100%;
+        justify-content: center;
     }
 
     .orders-table {
@@ -1565,6 +1656,16 @@ onMounted(() => {
     }
 }
 
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
 .dropdown-header {
     padding: 12px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
@@ -1641,111 +1742,63 @@ onMounted(() => {
     border-color: rgba(46, 221, 90, 0.5);
 }
 
-/* Active Filters Row */
-.active-filters-row {
-    margin-top: 24px;
-    grid-column: 1 / -1;
-    animation: slideDown 0.2s ease;
-    padding: 16px;
-    background: linear-gradient(135deg, rgba(46, 221, 90, 0.05), rgba(74, 144, 226, 0.03));
-    border: 1px solid rgba(46, 221, 90, 0.15);
-    border-radius: 12px;
+/* Active Filters Inline */
+.active-filter-inline {
+    animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.active-filters-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(46, 221, 90, 0.1);
-}
-
-.filters-count {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: rgba(46, 221, 90, 0.85);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.btn-clear-all {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
-    background: rgba(255, 107, 107, 0.15);
-    border: 1px solid rgba(255, 107, 107, 0.2);
-    color: rgba(255, 107, 107, 0.8);
+.btn-remove-filter {
+    padding: 8px 8px;
+    background: transparent;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: rgba(255, 107, 107, 0.6);
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.8rem;
-    font-weight: 600;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-.btn-clear-all:hover {
+.btn-remove-filter:hover {
+    background: rgba(255, 107, 107, 0.15);
+    border-color: rgba(255, 107, 107, 0.5);
+    color: rgba(255, 107, 107, 0.9);
+}
+
+.btn-clear-all-filters {
+    width: 100%;
+    padding: 10px 16px;
+    background: rgba(255, 107, 107, 0.15);
+    border: 1px solid rgba(255, 107, 107, 0.3);
+    color: rgba(255, 107, 107, 0.8);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.btn-clear-all-filters:hover {
     background: rgba(255, 107, 107, 0.25);
-    border-color: rgba(255, 107, 107, 0.4);
+    border-color: rgba(255, 107, 107, 0.5);
     color: rgba(255, 107, 107, 0.95);
 }
 
-.active-filters-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 12px;
-    align-items: start;
-}
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
 
-.filter-chip {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.chip-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: rgba(46, 221, 90, 0.8);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.chip-control {
-    width: 100%;
-    display: flex;
-    align-items: center;
-}
-
-.chip-control .control,
-.chip-control select,
-.chip-control input {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 12px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.85rem;
-    transition: all 0.2s ease;
-}
-
-.chip-control .control:focus,
-.chip-control select:focus,
-.chip-control input:focus {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(46, 221, 90, 0.4);
-    box-shadow: 0 0 0 2px rgba(46, 221, 90, 0.1);
-}
-
-.chip-control .hora-range {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-}
-
-.chip-control .hora-range input {
-    flex: 1;
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
 }
 </style>
