@@ -2441,6 +2441,40 @@ onMounted(async () => {
     startTimer()
 })
 
+// Zoom forzado del sitio al 80% cuando el viewport es ~380x636 (móviles pequeños)
+const ZOOM_SCALE = 0.8
+let zoomApplied = false
+
+const applyForcedZoomIfSmallMobile = () => {
+    const w = window.innerWidth
+    const h = window.innerHeight
+    const isSmallMobile = w <= 400 && h >= 620
+    if (isSmallMobile && !zoomApplied) {
+        try {
+            document.documentElement.style.zoom = String(ZOOM_SCALE)
+            zoomApplied = true
+        } catch (e) { /* noop */ }
+    } else if (!isSmallMobile && zoomApplied) {
+        try {
+            document.documentElement.style.zoom = ''
+        } catch (e) { /* noop */ }
+        zoomApplied = false
+    }
+}
+
+onMounted(() => {
+    applyForcedZoomIfSmallMobile()
+    window.addEventListener('resize', applyForcedZoomIfSmallMobile)
+    window.addEventListener('orientationchange', applyForcedZoomIfSmallMobile)
+})
+
+onBeforeUnmount(() => {
+    try { document.documentElement.style.zoom = '' } catch (e) { }
+    window.removeEventListener('resize', applyForcedZoomIfSmallMobile)
+    window.removeEventListener('orientationchange', applyForcedZoomIfSmallMobile)
+    zoomApplied = false
+})
+
 // Tooltip portal for Hora de término (avoid layout shifts)
 const tooltipVisible = ref(false)
 const tooltipStyle = ref({})
@@ -3376,34 +3410,38 @@ onBeforeUnmount(() => {
 
     .quantity-field-centered .ctr-input,
     .section-grid.combined .quantity-field .ctr-input {
-        width: 56px !important;
-        min-width: 48px !important;
+        width: 60px !important;
+        min-width: 56px !important;
     }
 
     .quantity-field-centered .ctr-btn,
     .ctr-btn {
         flex-shrink: 0 !important;
-        min-width: 36px !important;
-        width: 36px !important;
-        height: 36px !important;
+        min-width: 38px !important;
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 0.9rem !important;
     }
 
-    /* Mantener contador como cápsula sin flex-wrap */
+    /* Contador con escala adaptativa para pantallas muy pequeñas */
     .counter {
         display: flex !important;
         gap: 0 !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
         justify-content: center !important;
-        border-radius: 1.3rem !important;
-        padding: 3px !important;
+        border-radius: 1.5rem !important;
+        padding: 4px !important;
         background: rgba(255, 255, 255, 0.25) !important;
         backdrop-filter: blur(12px) !important;
         border: 1px solid rgba(255, 255, 255, 0.3) !important;
         width: fit-content !important;
         margin: 0 auto !important;
         box-sizing: border-box !important;
-        overflow: hidden !important;
+        overflow: visible !important;
+        max-width: 100% !important;
+        transform: scale(0.88);
+        transform-origin: center;
     }
 
     .section-grid.combined .field {
@@ -3494,6 +3532,82 @@ onBeforeUnmount(() => {
     .field.field--cantidad label {
         text-align: center;
         width: 100%;
+    }
+}
+
+/* Media query para dispositivos pequeños (380px y mayores) */
+@media (max-width: 480px) {
+
+    /* Escalar todo el formulario al 80% para que quepa mejor */
+    .form-grid {
+        zoom: 0.85;
+        transform-origin: top left;
+    }
+
+    .add-item-controls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+        padding: 0 12px;
+        justify-content: center;
+    }
+
+    .add-item-controls .field {
+        width: 100%;
+        text-align: center;
+    }
+
+    .field.field--tipo {
+        width: 100%;
+        max-width: 100%;
+        flex-basis: auto;
+        z-index: 1005;
+        margin: 0;
+        text-align: center;
+        transform: none !important;
+    }
+
+    .field.field--tipo label {
+        text-align: center;
+        width: 100%;
+        font-size: 0.9rem;
+    }
+
+    .field.field--cantidad {
+        width: 100%;
+        max-width: 100%;
+        flex-basis: auto;
+        margin: 0;
+        text-align: center;
+    }
+
+    .field.field--cantidad label {
+        text-align: center;
+        width: 100%;
+        font-size: 0.85rem;
+    }
+
+    .counter {
+        width: 100%;
+        gap: 0.3rem;
+    }
+
+    .ctr-btn {
+        height: 2rem;
+        width: 32px;
+        min-width: 32px;
+        font-size: 0.85rem;
+        padding: 0.3rem 0.5rem;
+    }
+
+    .ctr-btn.wide {
+        width: 40px;
+        min-width: 40px;
+    }
+
+    .ctr-input {
+        font-size: 0.9rem;
+        height: 2.2rem;
     }
 }
 
@@ -3804,15 +3918,16 @@ input[type="text"],
 
 .add-item-controls {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
+    gap: 60px;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     z-index: 1000;
     width: 100%;
     box-sizing: border-box;
+    padding: 0 16px;
 }
 
 .add-item-controls .field {
@@ -3825,15 +3940,19 @@ input[type="text"],
 }
 
 .field.field--tipo {
-    width: 280px;
-    flex-basis: 280px;
+    width: 100%;
+    max-width: 320px;
+    flex: 0 0 auto;
     margin: 0 auto;
+    text-align: center;
 }
 
 .field.field--cantidad {
-    width: 160px;
-    flex-basis: 160px;
-    margin: 0 auto;
+    width: 100%;
+    max-width: 320px;
+    flex: 0 0 auto;
+    margin: 20px auto 0 auto;
+    text-align: center;
 }
 
 .field.field--tipo.is-shifted {
@@ -3857,6 +3976,8 @@ input[type="text"],
     font-size: 0.88rem;
     font-weight: 600
 }
+
+/* (El reescalado ahora se maneja por JS para evitar doble escala) */
 
 /* Estilos para CustomSelect dropdown - asegurar que aparezca por encima SIN TRANSPARENCIA */
 .field.field--tipo :deep(.custom-select),
@@ -4068,7 +4189,7 @@ input[type="text"],
         width: 100% !important
     }
 
-    /* Mantener contador en forma de cápsula sin quebrar */
+    /* Mantener contador en forma de cápsula sin quebrar - con escala */
     .counter {
         display: flex;
         gap: 0;
@@ -4083,7 +4204,9 @@ input[type="text"],
         width: fit-content;
         margin: 0 auto;
         box-sizing: border-box;
-        overflow: hidden;
+        overflow: visible;
+        transform: scale(0.92);
+        transform-origin: center;
     }
 
     .counter>* {
@@ -4092,24 +4215,24 @@ input[type="text"],
     }
 
     .ctr-btn {
-        width: 28px !important;
-        height: 28px !important;
+        width: 32px !important;
+        height: 32px !important;
         padding: 0 !important;
-        font-size: 0.75rem !important;
-        min-width: 28px !important;
+        font-size: 0.8rem !important;
+        min-width: 32px !important;
     }
 
     .ctr-btn.wide {
-        width: 28px !important;
-        min-width: 28px !important;
+        width: 38px !important;
+        min-width: 38px !important;
     }
 
     .ctr-input {
-        width: 50px !important;
-        min-width: 50px !important;
-        height: 28px !important;
-        padding: 0.2rem 0.3rem !important;
-        font-size: 0.8rem !important;
+        width: 60px !important;
+        min-width: 56px !important;
+        height: 32px !important;
+        padding: 0.3rem 0.4rem !important;
+        font-size: 0.85rem !important;
     }
 
     .control.w-38ch,
@@ -4124,47 +4247,7 @@ input[type="text"],
         gap: 12px
     }
 
-    /* Campos apilados verticalmente en pantallas pequeñas - CENTRADOS */
-    .add-item-controls {
-        flex-direction: column;
-        align-items: center;
-        gap: 12px;
-        padding: 0 16px;
-        justify-content: center;
-    }
 
-    .add-item-controls .field {
-        width: 100%;
-        text-align: center;
-    }
-
-    .field.field--tipo {
-        width: 100%;
-        max-width: 300px;
-        flex-basis: auto;
-        z-index: 1005;
-        margin: 0 auto;
-        text-align: center;
-        transform: none !important;
-    }
-
-    .field.field--tipo label {
-        text-align: center;
-        width: 100%;
-    }
-
-    .field.field--cantidad {
-        width: 100%;
-        max-width: 200px;
-        flex-basis: auto;
-        margin: 0 auto;
-        text-align: center;
-    }
-
-    .field.field--cantidad label {
-        text-align: center;
-        width: 100%;
-    }
 }
 
 @media (max-width: 520px) {

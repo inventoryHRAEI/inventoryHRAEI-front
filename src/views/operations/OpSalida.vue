@@ -1882,6 +1882,26 @@ onBeforeUnmount(() => {
                   .field.field--cantidad label { text-align: center; width: 100%; }
                 }
 
+                @media (max-width: 480px) {
+                  .form-grid { zoom: 0.85; transform-origin: top left; }
+                  .add-item-controls {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 8px;
+                    padding: 0 12px;
+                    justify-content: center;
+                  }
+                  .add-item-controls .field { width: 100%; text-align: center; }
+                  .field.field--tipo { width: 100%; max-width: 100%; flex-basis: auto; z-index: 1005; margin: 0; text-align: center; transform: none !important; }
+                  .field.field--tipo label { text-align: center; width: 100%; font-size: 0.9rem; }
+                  .field.field--cantidad { width: 100%; max-width: 100%; flex-basis: auto; margin: 0; text-align: center; }
+                  .field.field--cantidad label { text-align: center; width: 100%; font-size: 0.85rem; }
+                  .counter { width: 100%; gap: 0.3rem; }
+                  .ctr-btn { height: 2rem; width: 32px; min-width: 32px; font-size: 0.85rem; padding: 0.3rem 0.5rem; }
+                  .ctr-btn.wide { width: 40px; min-width: 40px; }
+                  .ctr-input { font-size: 0.9rem; height: 2.2rem; }
+                }
+
                 .control::placeholder {
                   color: #6b7280;
                   opacity: 1;

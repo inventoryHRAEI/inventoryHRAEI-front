@@ -67,7 +67,7 @@ const breadcrumbsComputed = computed(() => {
     'op-entrada': [
       { label: 'Inicio', to: '/dashboard', icon: HomeIcon },
       { label: 'Dashboard', to: '/dashboard', icon: CheckCircleIcon },
-      { label: 'Gestión de Órdenes de Entrada', to: '/order-management', icon: DocumentCheckIcon },
+      { label: 'Gestión de Órdenes de Entrada', to: '/op/order-management', icon: DocumentCheckIcon },
       { label: 'Creación de Órdenes de Entrada', to: currentPath, icon: PlusIcon }
     ],
     'op-salida': [
@@ -117,12 +117,12 @@ const breadcrumbsComputed = computed(() => {
     'order-management': [
       { label: 'Inicio', to: '/dashboard', icon: HomeIcon },
       { label: 'Dashboard', to: '/dashboard', icon: CheckCircleIcon },
-      { label: 'Gestión de Órdenes de Entrada', to: '/order-management', icon: DocumentCheckIcon }
+      { label: 'Gestión de Órdenes de Entrada', to: '/op/order-management', icon: DocumentCheckIcon }
     ],
     'create-order': [
       { label: 'Inicio', to: '/dashboard', icon: HomeIcon },
       { label: 'Dashboard', to: '/dashboard', icon: CheckCircleIcon },
-      { label: 'Gestión de Órdenes de Entrada', to: '/order-management', icon: DocumentCheckIcon },
+      { label: 'Gestión de Órdenes de Entrada', to: '/op/order-management', icon: DocumentCheckIcon },
       { label: 'Crear Orden de Entrada', to: currentPath, icon: PlusIcon }
     ]
   }

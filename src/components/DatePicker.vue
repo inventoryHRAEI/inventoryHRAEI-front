@@ -494,4 +494,52 @@ onUnmounted(() => {
   background: rgba(0, 255, 106, 0.2);
   border-color: rgba(0, 255, 106, 0.6);
 }
+
+/* Responsive fixes for small mobile devices (405px width) */
+@media (max-width: 420px) {
+  .datepicker-dropdown {
+    min-width: 95vw;
+    max-width: 95vw;
+    left: 50% !important;
+    transform: translateX(-50%);
+    padding: 10px;
+  }
+
+  .datepicker-header {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .nav-section {
+    width: 100%;
+    justify-content: space-between;
+    padding: 6px 10px;
+  }
+
+  .current-label {
+    font-size: 0.9rem;
+    min-width: auto;
+    flex: 1;
+  }
+
+  .nav-btn {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+  }
+
+  .day-btn {
+    width: 100%;
+    height: 38px;
+    font-size: 0.9rem;
+  }
+
+  .datepicker-days {
+    gap: 4px;
+  }
+
+  .weekday {
+    font-size: 0.8rem;
+  }
+}
 </style>

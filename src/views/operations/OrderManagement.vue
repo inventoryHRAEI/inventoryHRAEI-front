@@ -1746,6 +1746,21 @@ onMounted(() => {
 @media (max-width: 768px) {
     .filters-section {
         grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-group-compact {
+        width: 100%;
+    }
+
+    .filter-group-compact > div {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
     }
 
     .filters-controls-group {
@@ -1761,6 +1776,12 @@ onMounted(() => {
     .btn-clear-filters {
         width: 100%;
         justify-content: center;
+    }
+
+    .btn-add-filters.compact {
+        width: 100%;
+        font-size: 0.85rem;
+        padding: 10px 14px;
     }
 
     .orders-table {
@@ -1783,6 +1804,7 @@ onMounted(() => {
     .title-row {
         flex-direction: column;
         align-items: flex-start;
+        gap: 10px;
     }
 
     .btn-create-order {
@@ -1807,6 +1829,22 @@ onMounted(() => {
     .btn-save,
     .btn-download-excel {
         width: 100%;
+    }
+
+    /* Ensure DatePicker and CustomSelect inputs have full width */
+    .filter-input,
+    .control.filter-input {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    .hora-range {
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .hora-range .filter-input {
+        width: 100% !important;
     }
 }
 
