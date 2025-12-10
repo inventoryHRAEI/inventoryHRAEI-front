@@ -163,6 +163,7 @@
                       v-model="newItem.tipo" 
                       :options="tipoEntradaOptions"
                       placeholder="Seleccionar tipo"
+                      @toggle="tipoDropdownOpen = $event"
                     />
                   </div>
                   <transition
@@ -481,7 +482,11 @@
                 </div>
               </div>
             </div>
-            <p v-if="form.equiposEntrada.length === 0" style="color: rgba(100, 116, 139, 0.7); font-style: italic; text-align: center; margin: 20px 0;">
+            <p
+              v-if="form.equiposEntrada.length === 0"
+              class="section-empty-hint"
+              :class="{ 'is-covered': tipoDropdownOpen }"
+            >
               No se han agregado equipos, accesorios, consumibles o refacciones
             </p>
           </div>
@@ -637,6 +642,8 @@ const newItem = reactive({
   claveHRAEI: '',
   unidades: [] // Para equipos médicos/mobiliario con info individual
 })
+
+const tipoDropdownOpen = ref(false)
 
 const resetNewItem = () => {
   newItem.tipo = ''

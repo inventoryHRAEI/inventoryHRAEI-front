@@ -12,19 +12,21 @@
       </svg>
     </button>
 
-    <transition name="dropdown-fade">
-      <div v-if="isOpen" class="custom-select-dropdown" @click.stop>
-        <div
-          v-for="option in options"
-          :key="option.value"
-          class="dropdown-option"
-          :class="{ 'is-selected': modelValue === option.value }"
-          @click.stop="selectOption(option.value)"
-        >
-          {{ option.label }}
+    <teleport to="body">
+      <transition name="dropdown-fade">
+        <div v-if="isOpen" class="custom-select-dropdown" :style="dropdownStyles" @click.stop>
+          <div
+            v-for="option in options"
+            :key="option.value"
+            class="dropdown-option"
+            :class="{ 'is-selected': modelValue === option.value }"
+            @click.stop="selectOption(option.value)"
+          >
+            {{ option.label }}
+          </div>
         </div>
-      </div>
-    </transition>
+      </transition>
+    </teleport>
   </div>
 </template>
 
@@ -46,10 +48,11 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'toggle'])
 
 const isOpen = ref(false)
 const selectRef = ref(null)
+const dropdownStyles = ref({})
 
 const displayValue = computed(() => {
   if (!props.modelValue) return props.placeholder
@@ -57,12 +60,29 @@ const displayValue = computed(() => {
   return option ? option.label : props.placeholder
 })
 
+const updateDropdownPosition = () => {
+  if (!isOpen.value || !selectRef.value) return
+  const rect = selectRef.value.getBoundingClientRect()
+  dropdownStyles.value = {
+    position: 'absolute',
+    top: `${rect.bottom + window.scrollY + 8}px`,
+    left: `${rect.left + window.scrollX}px`,
+    width: `${rect.width}px`
+  }
+}
+
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value
+  if (isOpen.value) {
+    updateDropdownPosition()
+  }
 }
 
 watch(isOpen, (open) => {
   emit('toggle', open)
+  if (open) {
+    updateDropdownPosition()
+  }
 })
 
 const selectOption = (value) => {
@@ -78,14 +98,18 @@ const handleClickOutside = (event) => {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', updateDropdownPosition)
+  window.addEventListener('scroll', updateDropdownPosition, true)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', updateDropdownPosition)
+  window.removeEventListener('scroll', updateDropdownPosition, true)
 })
 </script>
 
-<style scoped>
+<style>
 .custom-select-wrapper {
   position: relative;
   width: 100%;
@@ -139,11 +163,8 @@ onBeforeUnmount(() => {
 }
 
 .custom-select-dropdown {
+  box-sizing: border-box;
   position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 8px;
   background: rgb(17, 24, 39);
   border-radius: 10px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
