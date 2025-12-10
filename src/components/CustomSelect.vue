@@ -1,16 +1,23 @@
 <template>
-  <div class="custom-select" ref="selectRef">
-    <div class="select-trigger" :class="{ 'is-open': isOpen }" @click.stop="toggleDropdown">
-      <span class="selected-text">{{ displayValue }}</span>
-      <span class="arrow" :class="{ 'is-open': isOpen }">▼</span>
-    </div>
-    
-    <transition name="dropdown">
-      <div v-if="isOpen" class="dropdown-list" @click.stop>
+  <div class="custom-select-wrapper" ref="selectRef">
+    <button
+      type="button"
+      class="custom-select-button"
+      :class="{ 'is-open': isOpen }"
+      @click.stop="toggleDropdown"
+    >
+      <span class="select-value">{{ displayValue }}</span>
+      <svg class="select-arrow" :class="{ 'is-open': isOpen }" width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+    <transition name="dropdown-fade">
+      <div v-if="isOpen" class="custom-select-dropdown" @click.stop>
         <div
           v-for="option in options"
           :key="option.value"
-          class="dropdown-item"
+          class="dropdown-option"
           :class="{ 'is-selected': modelValue === option.value }"
           @click.stop="selectOption(option.value)"
         >
@@ -22,7 +29,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -43,7 +50,6 @@ const emit = defineEmits(['update:modelValue'])
 
 const isOpen = ref(false)
 const selectRef = ref(null)
-const isSelecting = ref(false)
 
 const displayValue = computed(() => {
   if (!props.modelValue) return props.placeholder
@@ -52,20 +58,16 @@ const displayValue = computed(() => {
 })
 
 const toggleDropdown = () => {
-  if (isSelecting.value) return
   isOpen.value = !isOpen.value
 }
 
+watch(isOpen, (open) => {
+  emit('toggle', open)
+})
+
 const selectOption = (value) => {
-  if (isSelecting.value) return
-  
-  isSelecting.value = true
   emit('update:modelValue', value)
   isOpen.value = false
-  
-  setTimeout(() => {
-    isSelecting.value = false
-  }, 200)
 }
 
 const handleClickOutside = (event) => {
@@ -84,161 +86,119 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.custom-select {
+.custom-select-wrapper {
   position: relative;
   width: 100%;
-  user-select: none;
+  border-radius: 9999px;
+  background: transparent;
 }
 
-.select-trigger {
+.custom-select-button {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1.5px solid rgba(148, 163, 184, 0.25);
-  border-radius: 25px;
+  padding: 12px 18px;
+  background: rgba(15, 20, 40, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.2s ease;
   font-size: 0.95rem;
-  color: rgba(15, 23, 42, 0.85);
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+  font-family: inherit;
 }
 
-.select-trigger:hover {
-  border-color: rgba(14, 165, 233, 0.4);
-  background: rgba(255, 255, 255, 1);
+.custom-select-button:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.select-trigger.is-open {
-  border-color: rgba(14, 165, 233, 0.6);
-  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+.custom-select-button:active,
+.custom-select-button.is-open {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.selected-text {
+.select-value {
   flex: 1;
+  text-align: left;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.arrow {
+.select-arrow {
   margin-left: 12px;
-  font-size: 0.7rem;
-  color: rgba(100, 116, 139, 0.7);
+  color: rgba(255, 255, 255, 0.5);
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
-.arrow.is-open {
+.select-arrow.is-open {
   transform: rotate(180deg);
 }
 
-.dropdown-list {
+.custom-select-dropdown {
   position: absolute;
-  top: calc(100% + 8px);
+  top: 100%;
   left: 0;
   right: 0;
-  background: rgb(30, 41, 59);
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(148, 163, 184, 0.2);
-  max-height: 160px;
+  margin-top: 8px;
+  background: rgb(17, 24, 39);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  max-height: 200px;
   overflow-y: auto;
-  overflow-x: hidden;
-  z-index: 99999;
-  backdrop-filter: blur(10px);
+  z-index: 9999;
 }
 
-.dropdown-item {
-  padding: 12px 16px;
-  color: rgba(255, 255, 255, 0.9);
+.dropdown-option {
+  padding: 12px 18px;
+  color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
-  transition: all 0.15s ease;
-  font-size: 0.92rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  transition: background 0.15s ease;
+  font-size: 0.95rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.dropdown-item:last-child {
+.dropdown-option:last-child {
   border-bottom: none;
 }
 
-.dropdown-item:hover {
-  background: rgba(6, 182, 212, 0.85);
-  color: rgba(255, 255, 255, 1);
+.dropdown-option:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.95);
 }
 
-.dropdown-item.is-selected {
-  background: rgba(14, 116, 144, 0.6);
-  color: rgba(255, 255, 255, 1);
-  font-weight: 500;
+.dropdown-option.is-selected {
+  background: rgba(46, 221, 90, 0.15);
+  color: rgba(46, 221, 90, 0.95);
+  font-weight: 600;
 }
 
-.dropdown-item.is-selected:hover {
-  background: rgba(6, 182, 212, 0.85);
+.dropdown-option.is-selected:hover {
+  background: rgba(46, 221, 90, 0.25);
 }
 
-/* Small screens - ensure the select triggers and dropdown stay usable */
-@media (max-width: 420px) {
-  .select-trigger { font-size: 0.92rem !important; padding: 10px 12px !important; }
-  .dropdown-list { max-width: calc(100vw - 32px); left: 0; right: 0; }
-  .selected-text { white-space: normal; overflow: visible; text-overflow: clip; }
-}
-
-/* Scrollbar personalizado - solo aparece al hacer scroll */
-.dropdown-list {
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color 0.3s ease;
-}
-
-.dropdown-list:hover {
-  scrollbar-color: rgba(100, 116, 139, 0.5) rgba(15, 23, 42, 0.3);
-}
-
-.dropdown-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.dropdown-list::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 8px;
-}
-
-.dropdown-list::-webkit-scrollbar-thumb {
-  background: transparent;
-  border-radius: 8px;
-  transition: background 0.3s ease;
-}
-
-.dropdown-list:hover::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.5);
-}
-
-.dropdown-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.7);
-}
-
-/* Animación del dropdown */
-.dropdown-enter-active,
-.dropdown-leave-active {
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-.dropdown-enter-from {
+.dropdown-fade-enter-from {
   opacity: 0;
-  transform: translateY(-10px) scale(0.95);
+  transform: translateY(-10px);
 }
 
-.dropdown-enter-to {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.dropdown-leave-from {
-  opacity: 1;
-  transform: translateY(0) scale(1);
-}
-
-.dropdown-leave-to {
+.dropdown-fade-leave-to {
   opacity: 0;
-  transform: translateY(-5px) scale(0.98);
+  transform: translateY(-10px);
+}
+
+@media (max-width: 420px) {
+  .custom-select-button {
+    font-size: 0.92rem;
+    padding: 10px 14px;
+  }
 }
 </style>

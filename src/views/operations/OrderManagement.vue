@@ -3,6 +3,13 @@
         <ActionPanel class="order-management-main">
             <template #title>
                 <div class="title-row">
+                    <button class="btn-back-to-dashboard" @click="goToDashboard" title="Volver al dashboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
+                    </button>
                     <span>Gestión de Órdenes de Entrada</span>
                     <button class="btn-create-order" @click="goToCreateOrder">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -31,7 +38,7 @@
                 <div class="filter-group filter-group-compact">
                     <label>Filtrar por fecha:</label>
                     <div style="display: flex; gap: 8px; align-items: flex-end;">
-                        <input v-model="filterDate" type="date" class="control filter-input" style="flex: 1;" />
+                        <DatePicker v-model="filterDateDisplay" placeholder="Seleccionar fecha" />
                         <!-- Botón Añadir filtros aquí -->
                         <div class="dropdown-container" @click.stop
                             style="min-width: fit-content;" ref="filterDropdownRef">
@@ -109,11 +116,7 @@
                                         placeholder="Ej. Traumatología..." />
                                 </template>
                                 <template v-else-if="f.key === 'motivo'">
-                                    <select v-model="filterMotivo" class="control filter-input">
-                                        <option value="">(Seleccionar)</option>
-                                        <option v-for="opt in motivoEntradaOptions" :key="opt.value" :value="opt.value">
-                                            {{ opt.label }}</option>
-                                    </select>
+                                    <CustomSelect v-model="filterMotivo" :options="motivoEntradaOptions" placeholder="(Seleccionar)" class="filter-input" />
                                 </template>
                                 <template v-else-if="f.key === 'obs'">
                                     <input v-model="filterObservaciones" class="control filter-input"
@@ -124,14 +127,7 @@
                                         placeholder="Buscar nombre" />
                                 </template>
                                 <template v-else-if="f.key === 'tipo'">
-                                    <select v-model="filterTipo" class="control filter-input">
-                                        <option value="">Todos</option>
-                                        <option value="equipo-medico">Equipo Médico</option>
-                                        <option value="mobiliario">Mobiliario</option>
-                                        <option value="accesorio">Accesorio</option>
-                                        <option value="consumible">Consumible</option>
-                                        <option value="refaccion">Refacción</option>
-                                    </select>
+                                    <CustomSelect v-model="filterTipo" :options="tipoOptions" placeholder="Todos" class="filter-input" />
                                 </template>
                                 <template v-else-if="f.key === 'itemText'">
                                     <input v-model="filterItemText" class="control filter-input"
@@ -443,14 +439,9 @@
                                 No hay artículos agregados en esta orden
                             </p>
                             <div style="display:flex; gap:12px; margin-top:12px; align-items:center;">
-                                <select v-model="newEditItem.tipo" class="control" style="width:220px;">
-                                    <option value="">Seleccionar tipo</option>
-                                    <option value="equipo-medico">Equipo Médico</option>
-                                    <option value="mobiliario">Mobiliario</option>
-                                    <option value="accesorio">Accesorio</option>
-                                    <option value="consumible">Consumible</option>
-                                    <option value="refaccion">Refacción</option>
-                                </select>
+                                <div style="width:220px;">
+                                    <CustomSelect v-model="newEditItem.tipo" :options="tipoOptions" placeholder="Seleccionar tipo" />
+                                </div>
                                 <input class="control" v-model="newEditItem.descripcion" placeholder="Descripción" />
                                 <input class="control" v-model.number="newEditItem.cantidad" type="number" min="1"
                                     style="width:100px;" />
@@ -466,11 +457,7 @@
                             <div class="section-grid combined">
                                 <div class="field">
                                     <label>Estado</label>
-                                    <select v-model="editingOrder.estado" class="control">
-                                        <option value="pendiente">Pendiente</option>
-                                        <option value="en-proceso">En Proceso</option>
-                                        <option value="completado">Completado</option>
-                                    </select>
+                                    <CustomSelect v-model="editingOrder.estado" :options="estadoOptions" />
                                 </div>
                             </div>
                         </div>
@@ -498,11 +485,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 import { useRouter } from 'vue-router'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import DatePicker from '@/components/DatePicker.vue'
+import CustomSelect from '@/components/CustomSelect.vue'
 
 const router = useRouter()
 
@@ -510,9 +499,24 @@ const router = useRouter()
 const allOrders = ref([])
 const filterFolio = ref('')
 const filterSolicitante = ref('')
+const tipoOptions = [
+    { label: 'Todos', value: '' },
+    { label: 'Equipo Médico', value: 'equipo-medico' },
+    { label: 'Mobiliario', value: 'mobiliario' },
+    { label: 'Accesorio', value: 'accesorio' },
+    { label: 'Consumible', value: 'consumible' },
+    { label: 'Refacción', value: 'refaccion' }
+]
+
+const estadoOptions = [
+    { label: 'Pendiente', value: 'pendiente' },
+    { label: 'En Proceso', value: 'en-proceso' },
+    { label: 'Completado', value: 'completado' }
+]
 const searchTerm = ref('') // keep general fallback search
 const showMoreFilters = ref(false)
 const filterDate = ref('')
+const filterDateDisplay = ref('')
 const filterService = ref('')
 const filterEspecialidad = ref('')
 const filterMotivo = ref('')
@@ -539,6 +543,37 @@ const editingOrder = ref(null)
 const newEditItem = ref({ tipo: '', cantidad: 1, descripcion: '', marca: '', modelo: '', serie: '', lote: '', referencia: '', claveHRAEI: '', unidades: [] })
 const editingItemIndex = ref(-1)
 const filterDropdownRef = ref(null)
+
+// Keep a normalized ISO-like date in `filterDate` for comparisons (YYYY-MM-DD)
+watch(filterDateDisplay, (val) => {
+    if (!val) {
+        filterDate.value = ''
+        return
+    }
+    // Expecting DatePicker display in dd/mm/yyyy
+    const parts = String(val).split('/')
+    if (parts.length === 3) {
+        const dd = parts[0].padStart(2, '0')
+        const mm = parts[1].padStart(2, '0')
+        const yyyy = parts[2]
+        filterDate.value = `${yyyy}-${mm}-${dd}`
+    } else {
+        // fallback: try to parse native ISO
+        try {
+            const d = new Date(val)
+            if (!isNaN(d.getTime())) {
+                const yyyy = d.getFullYear()
+                const mm = String(d.getMonth() + 1).padStart(2, '0')
+                const dd = String(d.getDate()).padStart(2, '0')
+                filterDate.value = `${yyyy}-${mm}-${dd}`
+            } else {
+                filterDate.value = ''
+            }
+        } catch {
+            filterDate.value = ''
+        }
+    }
+}, { immediate: true })
 
 // Columns visibility computed from active filters
 const showColumnService = computed(() => filterServiceActive.value)
@@ -645,6 +680,10 @@ function formatDate(dateStr) {
 
 function goToCreateOrder() {
     router.push({ name: 'op-entrada', query: { from: 'order-management' } })
+}
+
+function goToDashboard() {
+    router.push({ name: 'dashboard' })
 }
 
 function closeFiltersDropdown() {
@@ -964,6 +1003,172 @@ onMounted(() => {
     box-shadow: 0 8px 16px rgba(46, 221, 90, 0.3);
 }
 
+.btn-back-to-dashboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: linear-gradient(135deg, rgba(46, 221, 90, 0.15), rgba(74, 144, 226, 0.15));
+    color: rgba(76, 186, 150, 0.9);
+    border: 1px solid rgba(76, 186, 150, 0.4);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.btn-back-to-dashboard:hover {
+    background: linear-gradient(135deg, rgba(46, 221, 90, 0.25), rgba(74, 144, 226, 0.25));
+    border-color: rgba(76, 186, 150, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 186, 150, 0.2);
+}
+
+.btn-back-to-dashboard:active {
+    transform: translateY(0);
+}
+
+/* ===== INPUT DE FECHA CON GLASSMORPHISM ===== */
+:deep(input[type="date"]) {
+    position: relative !important;
+    background: rgba(15, 20, 40, 0.65) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 14px !important;
+    color: rgba(255, 255, 255, 0.95) !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
+    transition: all 0.3s ease !important;
+    font-weight: 500 !important;
+    color-scheme: dark !important;
+    padding: 12px 18px !important;
+}
+
+:deep(input[type="date"]:hover) {
+    border-color: #06b6d4 !important;
+    box-shadow: 
+        0 6px 8px -1px rgba(6, 182, 212, 0.1),
+        0 3px 6px -1px rgba(6, 182, 212, 0.06),
+        0 0 0 1px rgba(6, 182, 212, 0.3) !important;
+    transform: translateY(-1px) !important;
+}
+
+:deep(input[type="date"]:focus) {
+    border-color: #22d3ee !important;
+    box-shadow: 
+        0 0 0 4px rgba(34, 211, 238, 0.25),
+        0 8px 10px -2px rgba(34, 211, 238, 0.1) !important;
+    background: linear-gradient(135deg, #0c1220 0%, #1e293b 100%) !important;
+    outline: none !important;
+    transform: translateY(-2px) !important;
+}
+
+:deep(input[type="date"]::-webkit-calendar-picker-indicator) {
+    background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2300ff6a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 18px !important;
+    cursor: pointer !important;
+    opacity: 0.9 !important;
+    transition: all 0.3s ease !important;
+    filter: drop-shadow(0 2px 4px rgba(0, 255, 106, 0.3)) !important;
+    margin-right: 4px !important;
+    width: 24px !important;
+    height: 24px !important;
+}
+
+:deep(input[type="date"]::-webkit-calendar-picker-indicator:hover) {
+    opacity: 1 !important;
+    transform: scale(1.15) rotate(5deg) !important;
+    filter: drop-shadow(0 4px 8px rgba(0, 255, 106, 0.5)) !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit) {
+    color: #f1f5f9 !important;
+    font-weight: 600 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit-fields-wrapper) {
+    background: rgba(6, 182, 212, 0.08) !important;
+    padding: 4px 8px !important;
+    border-radius: 8px !important;
+    margin-right: 8px !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit-text) {
+    color: #64748b !important;
+    padding: 0 4px !important;
+    font-weight: 500 !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit-month-field),
+:deep(input[type="date"]::-webkit-datetime-edit-day-field),
+:deep(input[type="date"]::-webkit-datetime-edit-year-field) {
+    color: #e2e8f0 !important;
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(34, 211, 238, 0.1) 100%) !important;
+    border-radius: 6px !important;
+    padding: 3px 6px !important;
+    margin: 0 2px !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease !important;
+    border: 1px solid rgba(6, 182, 212, 0.2) !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+:deep(input[type="date"]::-webkit-datetime-edit-month-field:focus),
+:deep(input[type="date"]::-webkit-datetime-edit-day-field:focus),
+:deep(input[type="date"]::-webkit-datetime-edit-year-field:focus) {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.3) 0%, rgba(6, 182, 212, 0.2) 100%) !important;
+    color: #22d3ee !important;
+    border-color: #22d3ee !important;
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.2) !important;
+    transform: scale(1.05) !important;
+}
+
+/* ===== SELECT Y INPUTS GENERALES ===== */
+:deep(input[type="text"]),
+:deep(input[type="number"]),
+:deep(input[type="time"]),
+:deep(textarea),
+:deep(select.filter-input) {
+    padding: 12px 18px !important;
+    background: rgba(15, 20, 40, 0.65) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 10px !important;
+    color: rgba(255, 255, 255, 0.95) !important;
+    transition: all 0.3s ease !important;
+    font-weight: 500 !important;
+}
+
+:deep(input[type="text"]:hover),
+:deep(input[type="number"]:hover),
+:deep(input[type="time"]:hover),
+:deep(textarea:hover),
+:deep(select.filter-input:hover) {
+    border-color: rgba(6, 182, 212, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.15) !important;
+}
+
+:deep(input[type="text"]:focus),
+:deep(input[type="number"]:focus),
+:deep(input[type="time"]:focus),
+:deep(textarea:focus),
+:deep(select.filter-input:focus) {
+    border-color: #22d3ee !important;
+    box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.25) !important;
+    background: linear-gradient(135deg, rgba(12, 18, 32, 0.8) 0%, rgba(30, 41, 59, 0.8) 100%) !important;
+    outline: none !important;
+}
+
+:deep(input::placeholder),
+:deep(textarea::placeholder) {
+    color: rgba(255, 255, 255, 0.4) !important;
+}
+
 .filters-section {
     display: grid;
     grid-template-columns: 0.75fr 0.75fr 1fr;
@@ -984,10 +1189,11 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    height: fit-content;
 }
 
 .filter-group-compact {
-    gap: 4px;
+    gap: 8px;
     overflow: visible;
     position: relative;
     z-index: 10;
@@ -999,17 +1205,34 @@ onMounted(() => {
     color: rgba(255, 255, 255, 0.8);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    height: 22px;
+    line-height: 22px;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .filter-input {
-    padding: 10px 12px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
-    color: white;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
+    height: 46px;
+    padding: 12px 18px;
+    border: none;
+    border-radius: 10px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.95rem;
+    transition: background 0.2s ease;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
 }
+
+/* Only apply background to actual input elements, not CustomSelect */
+.filter-group input.filter-input,
+.active-filter-inline input.filter-input {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Removed custom-select-button.filter-input styling to prevent visual bugs */
 
 .filter-input::placeholder {
     color: rgba(255, 255, 255, 0.4);
@@ -1017,9 +1240,7 @@ onMounted(() => {
 
 .filter-input:focus {
     outline: none;
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(46, 221, 90, 0.5);
-    box-shadow: 0 0 0 3px rgba(46, 221, 90, 0.1);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* Grupo de controles de filtros */

@@ -46,7 +46,9 @@ const routeLabels = {
   'admin-users': 'Gestión de Usuarios',
   'admin-user-detail': 'Detalle de Usuario',
   'forgot': 'Recuperar Contraseña',
-  'reset': 'Restablecer Contraseña'
+  'reset': 'Restablecer Contraseña',
+  'order-management': 'Gestión de Órdenes de Entrada',
+  'create-order': 'Crear Orden de Entrada'
 }
 
 const breadcrumbsComputed = computed(() => {
@@ -61,7 +63,7 @@ const breadcrumbsComputed = computed(() => {
   
   breadcrumbs.push({ label: 'Inicio', to: '/dashboard', icon: HomeIcon })
   
-  if (name.startsWith('op-')) {
+  if (name.startsWith('op-') || name === 'order-management' || name === 'create-order') {
     breadcrumbs.push({ label: 'Dashboard', to: '/dashboard' })
   }
   

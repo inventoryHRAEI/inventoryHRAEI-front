@@ -1,7 +1,18 @@
 <template>
   <div>
     <FormShell>
-      <template #title>Órdenes de Entrada</template>
+      <template #title>
+        <div class="entrada-title-row">
+          <button class="btn-back-to-orders" @click="goToOrderManagement" title="Volver a gestión de órdenes">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+          </button>
+          <span>Órdenes de Entrada</span>
+        </div>
+      </template>
 
       <template #body>
   <div class="op-card insumos op-entrada-form" ref="rootRef">
@@ -929,13 +940,20 @@ const onCancel = async () => {
   if (result.isConfirmed) {
     // Limpiar localStorage antes de regresar
     try { localStorage.removeItem(LOCAL_KEY) } catch {}
-    // Regresar al dashboard con refresco forzado
+    // Regresar a order-management en lugar de dashboard
     try { 
-      await router.push({ name: 'dashboard' })
+      await router.push({ name: 'order-management' })
     } catch { 
-      try { await router.push('/') } catch {}
+      try { await router.push('/op/order-management') } catch {}
     }
   }
+}
+
+const goToOrderManagement = () => {
+  // Limpiar localStorage antes de regresar
+  try { localStorage.removeItem(LOCAL_KEY) } catch {}
+  // Regresar a order-management sin confirmación
+  router.push({ name: 'order-management' })
 }
 
 const scrollToTop = () => {
@@ -2404,6 +2422,41 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* Title row with back button */
+.entrada-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.btn-back-to-orders {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(6, 182, 212, 0.1));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: rgba(59, 130, 246, 0.9);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-back-to-orders:hover {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25), rgba(6, 182, 212, 0.15));
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateX(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
+}
+
+.btn-back-to-orders svg {
+  display: block;
+  stroke: currentColor;
+}
+
 /* Help icon button - styled popover trigger */
 .help-icon-btn {
   width: 34px;

@@ -18,7 +18,7 @@ import { useRoute } from 'vue-router'
 defineProps({ title: { type: String, default: '' } })
 
 const route = useRoute()
-const dashboardRoutes = ['dashboard', 'admin-dashboard', 'user-dashboard', 'admin-users', 'op-entrada','op-salida','op-resguardo','op-servicio','op-inventario-biomedica','op-insumos-consumibles']
+const dashboardRoutes = ['dashboard', 'admin-dashboard', 'user-dashboard', 'admin-users', 'op-entrada','op-salida','op-resguardo','op-servicio','op-inventario-biomedica','op-insumos-consumibles', 'order-management', 'create-order']
 
 const isDashboard = computed(() => {
   try {
