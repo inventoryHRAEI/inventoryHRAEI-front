@@ -15,7 +15,8 @@
       </template>
 
       <template #body>
-  <div class="op-card insumos op-entrada-form" ref="rootRef">
+        <Breadcrumbs />
+        <div class="op-card insumos op-entrada-form" ref="rootRef">
         <form @submit.prevent="onSubmit" class="form-grid" id="entrada-form" novalidate>
           <div class="section-card combined-card observaciones-support">
             <div class="section-head">
@@ -559,6 +560,7 @@
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import FormShell from '@/components/FormShell.vue'
+import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
 import DatePicker from '@/components/DatePicker.vue'
 import TimePicker from '@/components/TimePicker.vue'
