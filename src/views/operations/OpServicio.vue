@@ -866,14 +866,27 @@ function clearForm() {
 async function onSubmit() {
   if (!isValid.value) { notifier.error('Completa los campos obligatorios'); return }
   loading.value = true
+  // Formatear fecha para MySQL (dd/mm/yyyy -> yyyy-mm-dd)
+  let fechaFormatted = form.fecha
+  if (form.fecha && typeof form.fecha === 'string' && form.fecha.includes('/')) {
+      const [d, m, y] = form.fecha.split('/')
+      fechaFormatted = `${y}-${m}-${d}`
+  }
+
+  // Formatear hora para MySQL (HH:MM -> HH:MM:SS)
+  let horaInicioFormatted = form.horaInicio
+  if (form.horaInicio && typeof form.horaInicio === 'string' && form.horaInicio.length === 5) {
+      horaInicioFormatted = `${form.horaInicio}:00`
+  }
+
   const payload = {
     nombreSolicitante: form.nombreSolicitante,
     servicio: form.servicio,
     especialidad: form.especialidad,
     folio: form.folio,
     folioAsociado: form.folioAsociado,
-    fecha: form.fecha,
-    horaInicio: form.horaInicio,
+    fecha: fechaFormatted,
+    horaInicio: horaInicioFormatted,
     horaTermino: form.horaTermino,
     motivoEntrada: form.motivoEntrada,
     otroMotivo: form.otroMotivo,

@@ -85,8 +85,8 @@ const dropdown = ref(null)
 const isOpen = ref(false)
 const dropdownPosition = ref({ top: 0, left: 0 })
 
-const selectedHour = ref(12)
-const selectedMinute = ref(0)
+const selectedHour = ref(null)
+const selectedMinute = ref(null)
 
 const displayValue = computed(() => {
   if (selectedHour.value === null) return ''
@@ -116,6 +116,10 @@ const handleScroll = () => {
 
 const openPicker = () => {
   if (!isOpen.value) {
+    if (selectedHour.value === null) {
+      selectedHour.value = 12
+      selectedMinute.value = 0
+    }
     updateDropdownPosition()
     isOpen.value = true
     // focus input to keep keyboard accessibility
@@ -125,6 +129,10 @@ const openPicker = () => {
 
 const togglePicker = () => {
   if (!isOpen.value) {
+    if (selectedHour.value === null) {
+      selectedHour.value = 12
+      selectedMinute.value = 0
+    }
     updateDropdownPosition()
   }
   isOpen.value = !isOpen.value
@@ -189,8 +197,25 @@ watch(() => props.modelValue, (val) => {
   if (parsed) {
     selectedHour.value = parsed.hour
     selectedMinute.value = parsed.minute
+  } else {
+    selectedHour.value = null
+    selectedMinute.value = null
   }
 }, { immediate: true })
+
+watch(isOpen, (val) => {
+  if (!val) {
+    // When closing without confirming, revert to model value
+    const parsed = parseTime(props.modelValue)
+    if (parsed) {
+      selectedHour.value = parsed.hour
+      selectedMinute.value = parsed.minute
+    } else {
+      selectedHour.value = null
+      selectedMinute.value = null
+    }
+  }
+})
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)

@@ -653,6 +653,9 @@ import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 
 const LOCAL_KEY = 'op-entrada'
 const ORDERS_LIST_KEY = 'orders_list'
+// Props y eventos para modo edición en modal
+const props = defineProps({ ordenId: { type: [String, Number], default: null }, modo: { type: String, default: 'crear' } })
+const emit = defineEmits(['actualizado', 'close'])
 
 // Router para navegación
 const router = useRouter()
@@ -672,6 +675,7 @@ const tipoEntradaOptions = [
 ]
 
 const form = reactive({
+    id: null,
     // Datos del solicitante
     nombreSolicitante: '',
     servicio: '',
@@ -2282,13 +2286,26 @@ async function onSubmit() {
 
     loading.value = true
 
+    // Formatear fecha para MySQL (dd/mm/yyyy -> yyyy-mm-dd)
+    let fechaFormatted = form.fecha
+    if (form.fecha && typeof form.fecha === 'string' && form.fecha.includes('/')) {
+        const [d, m, y] = form.fecha.split('/')
+        fechaFormatted = `${y}-${m}-${d}`
+    }
+
+    // Formatear hora para MySQL (HH:MM -> HH:MM:SS)
+    let horaInicioFormatted = form.horaInicio
+    if (form.horaInicio && typeof form.horaInicio === 'string' && form.horaInicio.length === 5) {
+        horaInicioFormatted = `${form.horaInicio}:00`
+    }
+
     const payload = {
         nombreSolicitante: form.nombreSolicitante,
         servicio: form.servicio,
         especialidad: form.especialidad,
         folio: form.folio,
-        fecha: form.fecha,
-        horaInicio: form.horaInicio,
+        fecha: fechaFormatted,
+        horaInicio: horaInicioFormatted,
         horaTermino: form.horaTermino,
         motivoEntrada: form.motivoEntrada,
         otroMotivo: form.otroMotivo,
@@ -2301,11 +2318,22 @@ async function onSubmit() {
     }
 
     try {
-        const res = await fetch('/api/ops/entrada', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
+        let res
+        if (props.modo === 'editar' && (props.ordenId || form.id)) {
+            const id = form.id || props.ordenId
+            payload.id = id
+            res = await fetch(`/api/ops/entrada/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+        } else {
+            res = await fetch('/api/ops/entrada', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+        }
 
         if (!res.ok) {
             if (res.status === 404) {
@@ -2315,20 +2343,49 @@ async function onSubmit() {
                 throw new Error('No se pudo guardar en el servidor')
             }
         } else {
+            const body = await res.json().catch(() => ({}))
+            form.id = body.id || form.id || props.ordenId || Date.now()
             notifier.success('Orden guardada en el servidor')
             // Also persist to local orders list for quick consumption by frontend
             try {
                 const raw = localStorage.getItem(ORDERS_LIST_KEY)
                 const arr = raw ? JSON.parse(raw) : []
-                arr.push({ id: Date.now(), ...payload })
+                // Upsert local list
+                const idx = arr.findIndex(o => String(o.id) === String(form.id))
+                const record = { id: form.id, ...payload }
+                if (idx === -1) arr.push(record)
+                else arr[idx] = record
                 localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
             } catch (e) { }
-            // clearForm se realiza tras generar el Excel para que la descarga se pueda llevar a cabo
-            // (no queremos limpiar antes de la generación)
-            await generarExcelEntrada()
-            clearForm()
-            loading.value = false
-            return
+            // Emitir evento para refrescar tabla en OrderManagement
+            emit('actualizado', { id: form.id, ...payload })
+            // En modo modal, no redirigir ni limpiar por completo
+            if (props.modo === 'editar') {
+                loading.value = false
+                return
+            } else {
+                // Descargar Excel desde backend
+                try {
+                    const excelRes = await fetch(`/api/ops/entrada/${form.id}/excel`, { method: 'POST' })
+                    if (excelRes.ok) {
+                        const blob = await excelRes.blob()
+                        const url = window.URL.createObjectURL(blob)
+                        const a = document.createElement('a')
+                        a.href = url
+                        a.download = `Orden_${form.folio}_${new Date().toISOString().slice(0, 10)}.xlsx`
+                        document.body.appendChild(a)
+                        a.click()
+                        window.URL.revokeObjectURL(url)
+                        document.body.removeChild(a)
+                        notifier.success('Excel descargado')
+                    }
+                } catch (e) {
+                    console.warn('Error descargando Excel:', e)
+                }
+                clearForm()
+                loading.value = false
+                return
+            }
         }
     } catch (err) {
         try {
@@ -2337,7 +2394,11 @@ async function onSubmit() {
             try {
                 const raw = localStorage.getItem(ORDERS_LIST_KEY)
                 const arr = raw ? JSON.parse(raw) : []
-                arr.push({ id: Date.now(), ...payload })
+                const id = form.id || Date.now()
+                const idx = arr.findIndex(o => String(o.id) === String(id))
+                const record = { id, ...payload }
+                if (idx === -1) arr.push(record)
+                else arr[idx] = record
                 localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
             } catch (e) { }
         } catch {
@@ -2351,6 +2412,8 @@ async function onSubmit() {
             console.error('Error generando Excel tras fallback:', e)
             notifier.error('No se pudo generar el Excel')
         }
+        // Emitir para refrescar en padre aunque sea offline
+        emit('actualizado', { id: form.id || Date.now(), ...payload })
     } finally {
         loading.value = false
     }
@@ -5352,9 +5415,16 @@ html {
 }
 
 .field:has(input[placeholder*="5-011"]) label::before {
-    content: '📋';
+    content: '';
     width: auto;
     opacity: 0.7;
     margin-right: 4px;
+}
+tbody{
+    user-select: none;
+    unicode-range: unset;
+    white-space-collapse: normal;
+    font-language-override: calc();
+
 }
 </style>
