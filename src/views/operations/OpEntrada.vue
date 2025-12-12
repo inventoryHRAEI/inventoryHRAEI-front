@@ -635,7 +635,7 @@ import CustomSelect from '@/components/CustomSelect.vue'
 import DatePicker from '@/components/DatePicker.vue'
 import TimePicker from '@/components/TimePicker.vue'
 import notifier from '@/utils/notifier'
-import Swal from 'sweetalert2'
+import { confirmDelete, showSuccess, showError, showLoading, closeModal, darkThemeConfig } from '@/utils/sweetAlertConfig'
 import {
     IdentificationIcon,
     TagIcon,
@@ -1011,17 +1011,7 @@ const stopTimer = () => {
 }
 
 const onCancel = async () => {
-    const result = await Swal.fire({
-        title: '¿Estás seguro?',
-        text: 'Se perderán todos los datos del formulario',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#0bb828',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: 'Sí, regresar',
-        cancelButtonText: 'Cancelar',
-        reverseButtons: true
-    })
+    const result = await confirmDelete('¿Estás seguro?', 'Se perderán todos los datos del formulario', 1, 'Sí, regresar', 'Cancelar')
 
     if (result.isConfirmed) {
         // Limpiar localStorage antes de regresar
@@ -2413,13 +2403,15 @@ async function onSubmit() {
     </div>
   `
 
-    const result = await Swal.fire({
+    const result = await showAlert({
         title: 'Confirma y genera Excel',
         html,
         showCancelButton: true,
         confirmButtonText: 'Generar y Guardar',
         cancelButtonText: 'Cancelar',
-        width: '800px'
+        width: '800px',
+        confirmButtonColor: '#4ade80',
+        cancelButtonColor: 'rgba(255, 255, 255, 0.08)'
     })
 
     if (!result.isConfirmed) return

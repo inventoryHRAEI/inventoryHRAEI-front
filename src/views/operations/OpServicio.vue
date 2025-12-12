@@ -515,7 +515,7 @@ import CustomSelect from '@/components/CustomSelect.vue'
 import DatePickerModern from '@/components/DatePickerModern.vue'
 import TimePickerModern from '@/components/TimePickerModern.vue'
 import notifier from '@/utils/notifier'
-import Swal from 'sweetalert2'
+import { confirmDelete, showSuccess, showError, showLoading, closeModal } from '@/utils/sweetAlertConfig'
 import {
   IdentificationIcon,
   TagIcon,
@@ -771,13 +771,7 @@ const isAnimatingOut = ref(false)
 let hideTimeout = null
 
 const onCancel = async () => {
-  const result = await Swal.fire({
-    title: '¿Estás seguro?',
-    text: 'Se perderán todos los datos del formulario',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#0bb828',
-    cancelButtonColor: '#6b7280',
+  const result = await confirmDelete('¿Estás seguro?', 'Se perderán todos los datos del formulario', 1, 'Sí, regresar', 'Cancelar')
     confirmButtonText: 'Sí, regresar',
     cancelButtonText: 'Cancelar',
     reverseButtons: true

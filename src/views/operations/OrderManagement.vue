@@ -40,8 +40,8 @@
                     <div style="display: flex; gap: 8px; align-items: flex-end;">
                         <DatePicker v-model="filterDateDisplay" placeholder="Seleccionar fecha" />
                         <!-- Botón Añadir filtros aquí -->
-                        <div class="dropdown-container" @click.stop
-                            style="min-width: fit-content;" ref="filterDropdownRef">
+                        <div class="dropdown-container" @click.stop style="min-width: fit-content;"
+                            ref="filterDropdownRef">
                             <button class="btn-add-filters compact" @click="showMoreFilters = !showMoreFilters"
                                 :aria-expanded="showMoreFilters"
                                 :class="{ 'has-active-filters': hasActiveAdvancedFilters }">
@@ -54,46 +54,79 @@
                             </button>
 
                             <!-- Dropdown de filtros disponibles -->
-                            <div v-if="showMoreFilters" class="filters-dropdown">
-                                <div class="dropdown-header">
-                                    <span class="dropdown-title">Seleccionar filtros</span>
+                            <div v-if="showMoreFilters" class="filters-dropdown-new">
+                                <div class="dropdown-header-new">
+                                    <h4 class="dropdown-title-new">Filtros Disponibles</h4>
+                                    <button type="button" class="btn-close-dropdown-new"
+                                        @click="showMoreFilters = false" aria-label="Cerrar">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
                                 </div>
-                                <div class="filters-checkboxes">
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" v-model="filterServiceActive" />
-                                        <span>Servicio</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" v-model="filterEspecialidadActive" />
-                                        <span>Especialidad</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" v-model="filterMotivoActive" />
-                                        <span>Motivo de entrada</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" v-model="filterObservacionesActive" />
-                                        <span>Observaciones</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" v-model="filterIngenieroActive" />
-                                        <span>Ingeniero residente</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" v-model="filterTipoActive" />
-                                        <span>Tipo de artículo</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" v-model="filterItemTextActive" />
-                                        <span>Buscar en artículos</span>
-                                    </label>
-                                    <label class="checkbox-item">
-                                        <input type="checkbox" v-model="filterHoraActive" />
-                                        <span>Rango de horas</span>
-                                    </label>
+                                <div class="dropdown-content-new">
+                                    <div class="filter-group-section">
+                                        <div class="section-label">Información de Solicitud</div>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterServiceActive" />
+                                            <span>Servicio</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterEspecialidadActive" />
+                                            <span>Especialidad</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterIngenieroActive" />
+                                            <span>Ingeniero residente</span>
+                                        </label>
+                                    </div>
+                                    <div class="filter-group-section">
+                                        <div class="section-label">Detalles de Orden</div>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterMotivoActive" />
+                                            <span>Motivo de entrada</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterObservacionesActive" />
+                                            <span>Observaciones</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterHoraActive" />
+                                            <span>Rango de horas</span>
+                                        </label>
+                                    </div>
+                                    <div class="filter-group-section">
+                                        <div class="section-label">Características de Equipos</div>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterTipoActive" />
+                                            <span>Tipo de artículo</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterMarcaActive" />
+                                            <span>Marca</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterModeloActive" />
+                                            <span>Modelo</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterUbicacionActive" />
+                                            <span>Ubicación</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterClaveHRAEIActive" />
+                                            <span>Clave HRAEI</span>
+                                        </label>
+                                        <label class="checkbox-item-new">
+                                            <input type="checkbox" v-model="filterItemTextActive" />
+                                            <span>Búsqueda en artículos</span>
+                                        </label>
+                                    </div>
                                 </div>
-                                <div class="dropdown-actions">
-                                    <button type="button" class="btn-close-dropdown"
+                                <div class="dropdown-footer-new">
+                                    <button type="button" class="btn-listo-new"
                                         @click="showMoreFilters = false">Listo</button>
                                 </div>
                             </div>
@@ -116,7 +149,8 @@
                                         placeholder="Ej. Traumatología..." />
                                 </template>
                                 <template v-else-if="f.key === 'motivo'">
-                                    <CustomSelect v-model="filterMotivo" :options="motivoEntradaOptions" placeholder="(Seleccionar)" class="filter-input" />
+                                    <CustomSelect v-model="filterMotivo" :options="motivoEntradaOptions"
+                                        placeholder="(Seleccionar)" class="filter-input" />
                                 </template>
                                 <template v-else-if="f.key === 'obs'">
                                     <input v-model="filterObservaciones" class="control filter-input"
@@ -127,7 +161,8 @@
                                         placeholder="Buscar nombre" />
                                 </template>
                                 <template v-else-if="f.key === 'tipo'">
-                                    <CustomSelect v-model="filterTipo" :options="tipoOptions" placeholder="Todos" class="filter-input" />
+                                    <CustomSelect v-model="filterTipo" :options="tipoOptions" placeholder="Todos"
+                                        class="filter-input" />
                                 </template>
                                 <template v-else-if="f.key === 'itemText'">
                                     <input v-model="filterItemText" class="control filter-input"
@@ -139,6 +174,22 @@
                                             class="control filter-input" />
                                         <input v-model="filterHoraInicioTo" type="time" class="control filter-input" />
                                     </div>
+                                </template>
+                                <template v-else-if="f.key === 'marca'">
+                                    <input v-model="filterMarca" class="control filter-input"
+                                        placeholder="Ej. Philips..." />
+                                </template>
+                                <template v-else-if="f.key === 'modelo'">
+                                    <input v-model="filterModelo" class="control filter-input"
+                                        placeholder="Ej. MX40..." />
+                                </template>
+                                <template v-else-if="f.key === 'ubicacion'">
+                                    <input v-model="filterUbicacion" class="control filter-input"
+                                        placeholder="Ej. UCIA..." />
+                                </template>
+                                <template v-else-if="f.key === 'claveHRAEI'">
+                                    <input v-model="filterClaveHRAEI" class="control filter-input"
+                                        placeholder="Ej. COMODATO..." />
                                 </template>
                             </div>
                             <button type="button" class="btn-remove-filter" @click="removeActiveFilter(f.key)"
@@ -172,30 +223,21 @@
             </div>
 
             <!-- Datatable -->
-            <OrdersTable
-              :filtered-orders="filteredOrders"
-              :show-column-service="showColumnService"
-              :show-column-especialidad="showColumnEspecialidad"
-              :show-column-motivo="showColumnMotivo"
-              :show-column-descripcion="showColumnDescripcion"
-              :show-column-observaciones="showColumnObservaciones"
-              :show-column-ingeniero="showColumnIngeniero"
-              :show-column-hora="showColumnHora"
-              :show-column-tipo="showColumnTipo"
-              :show-column-items="showColumnItems"
-              :show-column-estado="showColumnEstado"
-              :empty-state-message="searchTerm || filterDate || filterService ? 'No se encontraron órdenes con los filtros seleccionados.' : 'Comienza creando una nueva orden.'"
-              @edit="openEditModal"
-              @excel="downloadExcel"
-              @delete="deleteOrder"
-              @deleteMultiple="deleteMultipleOrders"
-              @create="goToCreateOrder"
-            />
+            <OrdersTable :filtered-orders="filteredOrders" :show-column-service="showColumnService"
+                :show-column-especialidad="showColumnEspecialidad" :show-column-motivo="showColumnMotivo"
+                :show-column-descripcion="showColumnDescripcion" :show-column-observaciones="showColumnObservaciones"
+                :show-column-ingeniero="showColumnIngeniero" :show-column-hora="showColumnHora"
+                :show-column-tipo="showColumnTipo" :show-column-items="showColumnItems"
+                :show-column-estado="showColumnEstado"
+                :empty-state-message="searchTerm || filterDate || filterService ? 'No se encontraron órdenes con los filtros seleccionados.' : 'Comienza creando una nueva orden.'"
+                @edit="openEditModal" @excel="downloadExcel" @delete="deleteOrder"
+                @deleteMultiple="handleDeleteMultipleWithModal" @create="goToCreateOrder" />
         </ActionPanel>
 
         <!-- Modal embebiendo OpEntrada con todas sus funcionalidades -->
         <ModalBase :open="showEditModal" @close="closeEditModal" :maxWidth="1100" :height="'92vh'">
-            <OpEntrada :ordenId="selectedOrderId" :modo="'editar'" @actualizado="onOrderUpdated" @close="closeEditModal" />
+            <OpEntrada :ordenId="selectedOrderId" :modo="'editar'" @actualizado="onOrderUpdated"
+                @close="closeEditModal" />
         </ModalBase>
     </div>
 </template>
@@ -210,10 +252,10 @@ import DatePicker from '@/components/DatePicker.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
 import OrdersTable from '@/components/OrdersTable.vue'
 import ModalBase from '@/components/ModalBase.vue'
+import { confirmDelete, showSuccess } from '@/utils/sweetAlertConfig'
 const OpEntrada = defineAsyncComponent(() => import('@/views/operations/OpEntrada.vue'))
 
 const router = useRouter()
-
 
 const allOrders = ref([])
 const filterFolio = ref('')
@@ -249,9 +291,17 @@ const filterIngenieroActive = ref(false)
 const filterTipoActive = ref(false)
 const filterItemTextActive = ref(false)
 const filterHoraActive = ref(false)
+const filterMarcaActive = ref(false)
+const filterModeloActive = ref(false)
+const filterUbicacionActive = ref(false)
+const filterClaveHRAEIActive = ref(false)
 const filterEstado = ref('')
 const filterHoraInicioFrom = ref('')
 const filterHoraInicioTo = ref('')
+const filterMarca = ref('')
+const filterModelo = ref('')
+const filterUbicacion = ref('')
+const filterClaveHRAEI = ref('')
 const filterMinItems = ref(null)
 const filterMaxItems = ref(null)
 const filterTipo = ref('')
@@ -318,6 +368,10 @@ const activeFiltersList = computed(() => {
     if (filterTipoActive.value) list.push({ key: 'tipo', label: 'Tipo de artículo', type: 'select', bindings: { modelValue: filterTipo, 'onUpdate:modelValue': val => filterTipo.value = val, class: 'control filter-input' } })
     if (filterItemTextActive.value) list.push({ key: 'itemText', label: 'Buscar en artículos', type: 'input', bindings: { modelValue: filterItemText, 'onUpdate:modelValue': val => filterItemText.value = val, class: 'control filter-input', placeholder: 'Nombre, modelo, serie...' } })
     if (filterHoraActive.value) list.push({ key: 'hora', label: 'Hora inicio (rango)', type: 'hora-range', bindings: {} })
+    if (filterMarcaActive.value) list.push({ key: 'marca', label: 'Marca de equipos', type: 'input', bindings: { modelValue: filterMarca, 'onUpdate:modelValue': val => filterMarca.value = val, class: 'control filter-input', placeholder: 'Ej. Philips...' } })
+    if (filterModeloActive.value) list.push({ key: 'modelo', label: 'Modelo de equipos', type: 'input', bindings: { modelValue: filterModelo, 'onUpdate:modelValue': val => filterModelo.value = val, class: 'control filter-input', placeholder: 'Ej. MX40...' } })
+    if (filterUbicacionActive.value) list.push({ key: 'ubicacion', label: 'Ubicación de equipos', type: 'input', bindings: { modelValue: filterUbicacion, 'onUpdate:modelValue': val => filterUbicacion.value = val, class: 'control filter-input', placeholder: 'Ej. UCIA...' } })
+    if (filterClaveHRAEIActive.value) list.push({ key: 'claveHRAEI', label: 'Clave HRAEI', type: 'input', bindings: { modelValue: filterClaveHRAEI, 'onUpdate:modelValue': val => filterClaveHRAEI.value = val, class: 'control filter-input', placeholder: 'Ej. COMODATO...' } })
     return list
 })
 
@@ -330,7 +384,11 @@ const hasActiveAdvancedFilters = computed(() => {
         filterIngenieroActive.value ||
         filterTipoActive.value ||
         filterItemTextActive.value ||
-        filterHoraActive.value
+        filterHoraActive.value ||
+        filterMarcaActive.value ||
+        filterModeloActive.value ||
+        filterUbicacionActive.value ||
+        filterClaveHRAEIActive.value
     )
 })
 
@@ -352,7 +410,15 @@ const hasActiveFilters = computed(() => {
         filterIngenieroActive.value ||
         filterTipoActive.value ||
         filterItemTextActive.value ||
-        filterHoraActive.value
+        filterHoraActive.value ||
+        filterMarcaActive.value ||
+        filterModeloActive.value ||
+        filterUbicacionActive.value ||
+        filterClaveHRAEIActive.value ||
+        filterMarca.value ||
+        filterModelo.value ||
+        filterUbicacion.value ||
+        filterClaveHRAEI.value
     )
 })
 
@@ -381,10 +447,26 @@ const filteredOrders = computed(() => {
                 || String(e.serie || e.lote || '').toLowerCase().includes(search)
                 || String(e.marca || '').toLowerCase().includes(search)
         })
+        const matchMarca = !filterMarcaActive.value || !filterMarca.value || (order.equiposEntrada || []).some(e => {
+            const search = filterMarca.value.toLowerCase()
+            return String(e.marca || '').toLowerCase().includes(search)
+        })
+        const matchModelo = !filterModeloActive.value || !filterModelo.value || (order.equiposEntrada || []).some(e => {
+            const search = filterModelo.value.toLowerCase()
+            return String(e.modelo || '').toLowerCase().includes(search)
+        })
+        const matchUbicacion = !filterUbicacionActive.value || !filterUbicacion.value || (order.equiposEntrada || []).some(e => {
+            const search = filterUbicacion.value.toLowerCase()
+            return String(e.ubicacion || '').toLowerCase().includes(search)
+        })
+        const matchClaveHRAEI = !filterClaveHRAEIActive.value || !filterClaveHRAEI.value || (order.equiposEntrada || []).some(e => {
+            const search = filterClaveHRAEI.value.toLowerCase()
+            return String(e.claveHRAEI || '').toLowerCase().includes(search)
+        })
         const itemCount = (order.equiposEntrada || []).length || 0
         const matchMin = filterMinItems.value == null || filterMinItems.value === '' || itemCount >= Number(filterMinItems.value)
         const matchMax = filterMaxItems.value == null || filterMaxItems.value === '' || itemCount <= Number(filterMaxItems.value)
-        return matchFolio && matchSolicitante && matchSearch && matchDate && matchService && matchEspecialidad && matchMotivo && matchObservaciones && matchIngeniero && matchTipo && matchItemText && matchEstado && matchHoraFrom && matchHoraTo && matchMin && matchMax
+        return matchFolio && matchSolicitante && matchSearch && matchDate && matchService && matchEspecialidad && matchMotivo && matchObservaciones && matchIngeniero && matchTipo && matchItemText && matchEstado && matchHoraFrom && matchHoraTo && matchMin && matchMax && matchMarca && matchModelo && matchUbicacion && matchClaveHRAEI
     })
 })
 
@@ -465,8 +547,10 @@ function downloadExcelWithData(order) {
     console.log('Excel descargado:', fileName)
 }
 
-function deleteOrder(orderId) {
-    if (confirm('¿Estás seguro de que deseas eliminar esta orden? Esta acción no se puede deshacer.')) {
+async function deleteOrder(orderId) {
+    const result = await confirmDelete('¿Estás seguro de que deseas eliminar esta orden? Esta acción no se puede deshacer.')
+
+    if (result.isConfirmed) {
         allOrders.value = allOrders.value.filter(o => o.id !== orderId)
         console.log('Orden eliminada:', orderId)
         try {
@@ -477,6 +561,22 @@ function deleteOrder(orderId) {
                 localStorage.setItem('orders_list', JSON.stringify(updated))
             }
         } catch (e) { }
+        
+        showSuccess('Eliminado', 'La orden ha sido eliminada correctamente.')
+    }
+}
+
+async function handleDeleteMultipleWithModal(orderIds) {
+    const count = orderIds.length
+    const msg = `¿Está seguro de que deseas eliminar ${count} orden${count !== 1 ? 'es' : ''}? Esta acción no se puede deshacer.`
+    
+    const result = await confirmDelete(msg, count)
+    
+    if (result.isConfirmed) {
+        await deleteMultipleOrders(orderIds)
+        
+        const successMsg = `${count} orden${count !== 1 ? 'es' : ''} ha${count !== 1 ? 'n' : ''} sido eliminada${count !== 1 ? 's' : ''} correctamente.`
+        showSuccess('Eliminado', successMsg)
     }
 }
 
@@ -485,7 +585,7 @@ function deleteMultipleOrders(orderIds) {
     // Eliminar del estado local
     allOrders.value = allOrders.value.filter(o => !orderIds.includes(o.id))
     console.log(`${count} orden${count !== 1 ? 'es' : ''} eliminada${count !== 1 ? 's' : ''}:`, orderIds)
-    
+
     // Actualizar localStorage
     try {
         const raw = localStorage.getItem('orders_list')
@@ -573,6 +673,14 @@ function clearFilters() {
     filterHoraInicioFrom.value = ''
     filterHoraInicioTo.value = ''
     filterHoraActive.value = false
+    filterMarca.value = ''
+    filterMarcaActive.value = false
+    filterModelo.value = ''
+    filterModeloActive.value = false
+    filterUbicacion.value = ''
+    filterUbicacionActive.value = false
+    filterClaveHRAEI.value = ''
+    filterClaveHRAEIActive.value = false
     // do not automatically close the panel when clearing — allow user to adjust further
 }
 
@@ -590,6 +698,10 @@ function removeActiveFilter(key) {
     else if (key === 'tipo') filterTipoActive.value = false
     else if (key === 'itemText') filterItemTextActive.value = false
     else if (key === 'hora') filterHoraActive.value = false
+    else if (key === 'marca') filterMarcaActive.value = false
+    else if (key === 'modelo') filterModeloActive.value = false
+    else if (key === 'ubicacion') filterUbicacionActive.value = false
+    else if (key === 'claveHRAEI') filterClaveHRAEIActive.value = false
 }
 
 function applyFilters() {
@@ -606,10 +718,12 @@ function addEditItem() {
     newEditItem.value = { tipo: '', cantidad: 1, descripcion: '', marca: '', modelo: '', serie: '', lote: '', referencia: '', claveHRAEI: '', unidades: [] }
 }
 
-function removeEditItem(idx) {
+async function removeEditItem(idx) {
     if (!editingOrder.value) return
-    if (!confirm('¿Eliminar este artículo de la orden?')) return
-    editingOrder.value.equiposEntrada.splice(idx, 1)
+    const result = await confirmDelete('Eliminar artículo', '¿Eliminar este artículo de la orden?')
+    if (result.isConfirmed) {
+        editingOrder.value.equiposEntrada.splice(idx, 1)
+    }
 }
 
 function toggleEditItem(idx) {
@@ -707,16 +821,16 @@ function loadOrders() {
 
 onMounted(() => {
     loadOrders()
-    
+
     // Cerrar dropdown cuando se hace click fuera
     function handleDocumentClick(event) {
         if (filterDropdownRef.value && !filterDropdownRef.value.contains(event.target)) {
             showMoreFilters.value = false
         }
     }
-    
+
     document.addEventListener('click', handleDocumentClick)
-    
+
     // Limpiar listener cuando se desmonta el componente
     return () => {
         document.removeEventListener('click', handleDocumentClick)
@@ -806,7 +920,7 @@ onMounted(() => {
 
 :deep(input[type="date"]:hover) {
     border-color: #06b6d4 !important;
-    box-shadow: 
+    box-shadow:
         0 6px 8px -1px rgba(6, 182, 212, 0.1),
         0 3px 6px -1px rgba(6, 182, 212, 0.06),
         0 0 0 1px rgba(6, 182, 212, 0.3) !important;
@@ -815,7 +929,7 @@ onMounted(() => {
 
 :deep(input[type="date"]:focus) {
     border-color: #22d3ee !important;
-    box-shadow: 
+    box-shadow:
         0 0 0 4px rgba(34, 211, 238, 0.25),
         0 8px 10px -2px rgba(34, 211, 238, 0.1) !important;
     background: linear-gradient(135deg, #0c1220 0%, #1e293b 100%) !important;
@@ -963,12 +1077,13 @@ onMounted(() => {
     color: rgba(255, 255, 255, 0.8);
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    height: 22px;
-    line-height: 22px;
+    height: auto;
+    min-height: 22px;
+    line-height: 1.3;
     display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-wrap: break-word;
+    padding-bottom: 4px;
 }
 
 .filter-input {
@@ -1515,7 +1630,7 @@ onMounted(() => {
         width: 100%;
     }
 
-    .filter-group-compact > div {
+    .filter-group-compact>div {
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
@@ -1540,6 +1655,15 @@ onMounted(() => {
         width: 100%;
         font-size: 0.85rem;
         padding: 10px 14px;
+    }
+
+    .filters-dropdown-new {
+        position: fixed;
+        left: 20px;
+        right: 20px;
+        max-width: none;
+        min-width: auto;
+        width: auto;
     }
 
     .orders-table {
@@ -1616,6 +1740,8 @@ onMounted(() => {
     width: 100%;
     overflow: visible;
     z-index: 100;
+    display: flex;
+    justify-content: flex-end;
 }
 
 .filter-group-compact .dropdown-container {
@@ -1644,6 +1770,7 @@ onMounted(() => {
     gap: 6px;
     font-size: 0;
     border-radius: 8px;
+    flex-shrink: 0;
 }
 
 .btn-add-filters:hover {
@@ -1686,113 +1813,220 @@ onMounted(() => {
     transform: rotate(180deg);
 }
 
-.filters-dropdown {
+/* ===== NUEVO DISEÑO DEL DROPDOWN DE FILTROS ===== */
+.filters-dropdown-new {
     position: absolute;
     top: 100%;
-    left: 0;
-    margin-top: 6px;
-    background: rgba(13, 20, 35, 0.98);
-    border: 1px solid rgba(46, 221, 90, 0.2);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(10px);
+    right: 0;
+    margin-top: 8px;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 12px;
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.6),
+        0 0 40px rgba(59, 130, 246, 0.1);
+    backdrop-filter: blur(12px);
     z-index: 1000;
-    min-width: 240px;
-    animation: slideDownDropdown 0.2s ease;
-    overflow: visible;
+    min-width: 360px;
+    max-width: calc(100vw - 40px);
+    width: auto;
+    animation: slideDownDropdownNew 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
-@keyframes slideDownDropdown {
+@keyframes slideDownDropdownNew {
     from {
         opacity: 0;
-        transform: translateY(-8px);
+        transform: translateY(-12px) scale(0.95);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
     }
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-.dropdown-header {
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+.dropdown-header-new {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(59, 130, 246, 0.15);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(30, 41, 59, 0.5));
 }
 
-.dropdown-title {
-    font-size: 0.80rem;
+.dropdown-title-new {
+    margin: 0;
+    font-size: 0.95rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.85);
+    color: rgba(226, 232, 240, 0.95);
+    letter-spacing: 0.3px;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
 }
 
-.filters-checkboxes {
-    padding: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    max-height: 220px;
-    overflow-y: auto;
-}
-
-.checkbox-item {
+.btn-close-dropdown-new {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 6px;
+    color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
     transition: all 0.2s ease;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.85rem;
+    flex-shrink: 0;
 }
 
-.checkbox-item:hover {
-    background: rgba(46, 221, 90, 0.1);
+.btn-close-dropdown-new:hover {
+    background: rgba(255, 107, 107, 0.15);
+    border-color: rgba(255, 107, 107, 0.3);
+    color: rgba(255, 107, 107, 0.8);
 }
 
-.checkbox-item input[type="checkbox"] {
+.dropdown-content-new {
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-height: 380px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
+    flex: 1;
+}
+
+.dropdown-content-new::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-content-new::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dropdown-content-new::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 3px;
+}
+
+.dropdown-content-new::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+.filter-group-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 6px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.section-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: rgba(96, 165, 250, 0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 0 8px;
+    margin-bottom: 4px;
+}
+
+.checkbox-item-new {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
     cursor: pointer;
-    accent-color: #2edd5a;
+    transition: all 0.15s ease;
+    color: rgba(226, 232, 240, 0.9);
+    font-size: 0.85rem;
+    font-weight: 500;
+    user-select: none;
+    position: relative;
+    white-space: nowrap;
+    flex-wrap: nowrap;
+}
+
+.checkbox-item-new:hover {
+    background: rgba(59, 130, 246, 0.12);
+    color: rgba(226, 232, 240, 1);
+}
+
+.checkbox-item-new input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #3b82f6;
     width: 16px;
     height: 16px;
+    flex-shrink: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid rgba(59, 130, 246, 0.5);
+    border-radius: 4px;
+    background: transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
 }
 
-.checkbox-item span {
-    user-select: none;
+.checkbox-item-new input[type="checkbox"]:hover {
+    border-color: rgba(59, 130, 246, 0.8);
+    background: rgba(59, 130, 246, 0.1);
 }
 
-.dropdown-actions {
-    padding: 10px 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+.checkbox-item-new input[type="checkbox"]:checked {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border-color: #1e40af;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.checkbox-item-new input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-weight: bold;
+    font-size: 12px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.dropdown-footer-new {
+    padding: 12px 14px;
+    border-top: 1px solid rgba(59, 130, 246, 0.15);
+    background: rgba(30, 41, 59, 0.5);
     display: flex;
     justify-content: flex-end;
 }
 
-.btn-close-dropdown {
-    padding: 6px 12px;
-    background: rgba(46, 221, 90, 0.15);
-    border: 1px solid rgba(46, 221, 90, 0.3);
-    color: rgba(46, 221, 90, 0.9);
+.btn-listo-new {
+    padding: 8px 16px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(37, 99, 235, 0.1));
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: rgba(96, 165, 250, 0.95);
     border-radius: 6px;
     cursor: pointer;
-    font-size: 0.80rem;
+    font-size: 0.85rem;
     font-weight: 600;
     transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-listo-new:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(37, 99, 235, 0.2));
+    border-color: rgba(59, 130, 246, 0.6);
+    color: rgba(226, 232, 240, 1);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-listo-new:active {
+    transform: scale(0.98);
 }
 
 .btn-close-dropdown:hover {

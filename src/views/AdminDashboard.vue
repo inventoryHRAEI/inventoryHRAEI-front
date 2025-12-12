@@ -56,7 +56,7 @@ import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 import { ref, onMounted, computed } from 'vue'
 import pendingStore from '@/stores/pendingRequestsStore'
 import notifier from '@/utils/notifier'
-import Swal from 'sweetalert2'
+import { confirmDelete, showSuccess, showError, showLoading, closeModal as closeSwalModal } from '@/utils/sweetAlertConfig'
 import { useRouter, useRoute } from 'vue-router'
 import { 
   ArrowDownTrayIcon,
@@ -158,13 +158,13 @@ function closeModal() { showRequestsModal.value = false; modalRequests.value = [
 
 async function approveRequest(id) {
   try {
-    const confirm = await Swal.fire({ title: 'Aprobar solicitud', text: '¿Confirmas que deseas aprobar esta solicitud y actualizar el rol del usuario?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, aprobar', cancelButtonText: 'Cancelar' })
+    const confirm = await confirmDelete('Aprobar solicitud', '¿Confirmas que deseas aprobar esta solicitud y actualizar el rol del usuario?', 1, 'Sí, aprobar', 'Cancelar')
     if (!confirm.isConfirmed) return
-    Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), showConfirmButton: false, allowOutsideClick: false })
+    showLoading()
     const res = await fetch(`/api/auth/permission-requests/${id}/approve`, { method: 'POST' })
-    Swal.close()
+    closeSwalModal()
     if (!res.ok) throw new Error('Error al aprobar')
-    notifier.success('Solicitud aprobada')
+    showSuccess('Éxito', 'Solicitud aprobada')
     await loadPermissionRequests()
     try { const ures = await fetch('/api/auth/users'); users.value = await ures.json() } catch (e) { console.warn('No se pudo refrescar la lista de usuarios:', e) }
     modalRequests.value = modalRequests.value.map(r => r.id === id ? { ...r, status: 'approved' } : r)

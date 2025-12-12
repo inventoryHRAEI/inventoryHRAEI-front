@@ -34,7 +34,7 @@
 <script setup>
 import DashboardShell from '@/components/DashboardShell.vue'
 import FormShell from '@/components/FormShell.vue'
-import Swal from 'sweetalert2'
+import { confirmDelete } from '@/utils/sweetAlertConfig'
 import UserHeader from '@/components/UserHeader.vue'
 import { ref } from 'vue'
 import notifier from '@/utils/notifier'
@@ -46,14 +46,7 @@ if (localStorage.getItem('user')) {
 }
 async function goHome(){
   try {
-    const res = await Swal.fire({
-      title: 'Ir al inicio',
-      text: '¿Deseas volver al panel principal? Se cerrará esta pantalla.',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Ir al inicio',
-      cancelButtonText: 'Cancelar'
-    })
+    const res = await confirmDelete('Ir al inicio', '¿Deseas volver al panel principal? Se cerrará esta pantalla.', 1, 'Ir al inicio', 'Cancelar')
     if (!res.isConfirmed) return
     router.push({ name: 'dashboard' })
   } catch (e) { console.error(e) }

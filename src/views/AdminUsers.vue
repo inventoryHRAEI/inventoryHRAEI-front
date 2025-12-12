@@ -85,7 +85,7 @@
 import ActionPanel from '@/components/ActionPanel.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import Swal from 'sweetalert2'
+import { confirmDelete, showSuccess, showError, showLoading, closeModal as closeSwalModal } from '@/utils/sweetAlertConfig'
 import notifier from '@/utils/notifier'
 import pendingRequestsStore from '@/stores/pendingRequestsStore'
 import { formatRole, actionLabelFor } from '@/utils/roles'
@@ -166,16 +166,16 @@ async function loadUsers(){
 
 async function changeRole(userObj, newRole){
   try {
-    const confirm = await Swal.fire({ title: 'Cambiar rol', text: `Cambiar rol de ${userObj.nombre} a ${newRole}?`, icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, cambiar', cancelButtonText: 'Cancelar' })
+    const confirm = await confirmDelete('Cambiar rol', `Cambiar rol de ${userObj.nombre} a ${newRole}?`, 1, 'Sí, cambiar', 'Cancelar')
     if (!confirm.isConfirmed) return
-    Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), showConfirmButton: false, allowOutsideClick: false })
+    showLoading()
     const res = await fetch(`/api/auth/users/${userObj.id}/role`, { method: 'PATCH', headers: { 'Content-Type':'application/json' }, body: JSON.stringify({ role: newRole }) })
-    Swal.close()
+    closeSwalModal()
     if (!res.ok) throw new Error('Error actualizando role')
-    notifier.success('Role actualizado')
+    showSuccess('Éxito', 'Role actualizado')
     await loadUsers()
     await loadPermissionRequests()
-  } catch (e) { notifier.error(e.message || 'No se pudo actualizar role') }
+  } catch (e) { showError('Error', e.message || 'No se pudo actualizar role') }
 }
 
 async function loadPermissionRequests(){
@@ -199,31 +199,31 @@ function closeModal(){ showRequestsModal.value = false; modalRequests.value = []
 
 async function approveRequest(id){
   try {
-    const confirm = await Swal.fire({ title: 'Aprobar solicitud', text: '¿Confirmas que deseas aprobar esta solicitud y actualizar el rol del usuario?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, aprobar', cancelButtonText: 'Cancelar' })
+    const confirm = await confirmDelete('Aprobar solicitud', '¿Confirmas que deseas aprobar esta solicitud y actualizar el rol del usuario?', 1, 'Sí, aprobar', 'Cancelar')
     if (!confirm.isConfirmed) return
-    Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), showConfirmButton: false, allowOutsideClick: false })
+    showLoading()
     const res = await fetch(`/api/auth/permission-requests/${id}/approve`, { method: 'POST' })
-    Swal.close()
+    closeSwalModal()
     if (!res.ok) throw new Error('Error al aprobar')
-    notifier.success('Solicitud aprobada')
+    showSuccess('Éxito', 'Solicitud aprobada')
     await loadPermissionRequests()
     await loadUsers()
     modalRequests.value = modalRequests.value.map(r => r.id===id ? { ...r, status: 'approved' } : r)
-  } catch (e) { notifier.error(e.message || 'No se pudo aprobar') }
+  } catch (e) { showError('Error', e.message || 'No se pudo aprobar') }
 }
 
 async function rejectRequest(id){
   try {
-    const confirm = await Swal.fire({ title: 'Rechazar solicitud', text: '¿Deseas rechazar esta solicitud?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sí, rechazar', cancelButtonText: 'Cancelar' })
+    const confirm = await confirmDelete('Rechazar solicitud', '¿Deseas rechazar esta solicitud?', 1, 'Sí, rechazar', 'Cancelar')
     if (!confirm.isConfirmed) return
-    Swal.fire({ title: 'Procesando...', didOpen: () => Swal.showLoading(), showConfirmButton: false, allowOutsideClick: false })
+    showLoading()
     const res = await fetch(`/api/auth/permission-requests/${id}/reject`, { method: 'POST' })
-    Swal.close()
+    closeSwalModal()
     if (!res.ok) throw new Error('Error al rechazar')
-    notifier.success('Solicitud rechazada')
+    showSuccess('Éxito', 'Solicitud rechazada')
     await loadPermissionRequests()
     modalRequests.value = modalRequests.value.map(r => r.id===id ? { ...r, status: 'rejected' } : r)
-  } catch (e) { notifier.error(e.message || 'No se pudo rechazar') }
+  } catch (e) { showError('Error', e.message || 'No se pudo rechazar') }
 }
 
 onMounted(async () => {

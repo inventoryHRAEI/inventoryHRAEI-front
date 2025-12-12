@@ -83,7 +83,7 @@
   import MobileModal from '@/components/MobileModal.vue'
   import InactiveWindowOverlay from '@/components/InactiveWindowOverlay.vue'
   import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
-  import Swal from 'sweetalert2'
+  import { confirmDelete, showSuccess, showError, showLoading, closeModal } from '@/utils/sweetAlertConfig'
   import { useRouter, useRoute } from 'vue-router'
   import pendingRequestsStore from '@/stores/pendingRequestsStore'
   import { validateSession, logout } from '@/utils/auth'
@@ -288,14 +288,7 @@
 
     async function goToProfile() {
       try {
-        const res = await Swal.fire({
-          title: 'Cerrar sesión',
-          text: '¿Cerrar sesión? Se cerrará tu sesión actual y volverás al acceso.',
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonText: 'Cerrar sesión',
-          cancelButtonText: 'Cancelar'
-        })
+        const res = await confirmDelete('Cerrar sesión', '¿Cerrar sesión? Se cerrará tu sesión actual y volverás al acceso.', 1, 'Cerrar sesión', 'Cancelar')
         if (!res.isConfirmed) return
         closeMenu()
         await logout()
@@ -306,14 +299,7 @@
     async function switchAccount() {
       try {
         closeMenu()
-        const res = await Swal.fire({
-          title: 'Añadir otra cuenta',
-          text: 'Añadir otra cuenta reemplazará tu sesión actual. ¿Continuar?',
-          icon: 'question',
-          showCancelButton: true,
-          confirmButtonText: 'Continuar',
-          cancelButtonText: 'Cancelar'
-        })
+        const res = await confirmDelete('Añadir cuenta', 'Añadir otra cuenta reemplazará tu sesión actual. ¿Continuar?', 1, 'Continuar', 'Cancelar')
         if (!res.isConfirmed) return
         router.push({ name: 'add-account' })
       } catch (e) { console.error(e) }
@@ -327,14 +313,7 @@
     async function goHome() {
       try {
         closeMenu()
-        const res = await Swal.fire({
-            title: 'Ir al inicio',
-            text: '¿Ir al inicio? Se cerrará este panel y volverás a tu inicio.',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Ir al inicio',
-            cancelButtonText: 'Cancelar'
-          })
+        const res = await confirmDelete('Ir al inicio', '¿Ir al inicio? Se cerrará este panel y volverás a tu inicio.', 1, 'Ir al inicio', 'Cancelar')
         if (!res.isConfirmed) return
         router.push({ name: 'dashboard' })
       } catch (e) { console.error(e) }

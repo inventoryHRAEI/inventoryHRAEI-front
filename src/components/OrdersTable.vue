@@ -355,10 +355,7 @@ function deleteSelected() {
   const orderIdsToDelete = Array.from(selectedForDelete.value)
   if (orderIdsToDelete.length === 0) return
   
-  // Confirmar eliminación
-  const confirmMessage = `¿Eliminar ${orderIdsToDelete.length} orden${orderIdsToDelete.length !== 1 ? 'es' : ''}?`
-  if (!window.confirm(confirmMessage)) return
-  
+  // Emitir evento al padre (OrderManagement) que mostrará la modal
   emit('deleteMultiple', orderIdsToDelete)
   selectedForDelete.value.clear()
   multiDeleteMode.value = false
