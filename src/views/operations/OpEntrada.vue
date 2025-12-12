@@ -647,15 +647,14 @@ import {
 } from '@heroicons/vue/24/outline'
 import { HashtagIcon } from '@heroicons/vue/24/outline'
 import TrashButton from '@/components/TrashButton.vue'
-import ExcelJS from 'exceljs'
+// Nota: cargamos ExcelJS dinámicamente dentro de generarExcelEntrada para evitar
+// que la librería (que tiene partes orientadas a node) sea importada al cargar
+// el componente; esto previene fallos en el dev server y reduce el bundle inicial.
 import { saveAs } from 'file-saver'
 import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 
 const LOCAL_KEY = 'op-entrada'
 const ORDERS_LIST_KEY = 'orders_list'
-// Props y eventos para modo edición en modal
-const props = defineProps({ ordenId: { type: [String, Number], default: null }, modo: { type: String, default: 'crear' } })
-const emit = defineEmits(['actualizado', 'close'])
 
 // Router para navegación
 const router = useRouter()
@@ -675,7 +674,6 @@ const tipoEntradaOptions = [
 ]
 
 const form = reactive({
-    id: null,
     // Datos del solicitante
     nombreSolicitante: '',
     servicio: '',
@@ -829,25 +827,30 @@ const agregarItem = () => {
         ubicacion: newItem.ubicacion
     }
 
-    // Para equipos médicos/mobiliario, guardar las unidades individuales
+    itemData.unidades = [...newItem.unidades]
+
+    // Para equipos médicos/mobiliario, ajustar descripción
     if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-        itemData.unidades = [...newItem.unidades]
         if (!itemData.descripcion && itemData.unidades.length && itemData.unidades[0].nombre) {
             itemData.descripcion = itemData.unidades[0].nombre
         }
-        form.equiposEntrada.push(itemData)
     } else {
-        // Para accesorios/consumibles/refacciones: guardar como un solo item con array de unidades
-        itemData.modelo = newItem.modelo
-        itemData.serie = newItem.serie
-        itemData.lote = newItem.lote
-        itemData.referencia = newItem.referencia
-        itemData.claveHRAEI = newItem.claveHRAEI
-
-        // Mantener las unidades generadas en el formulario para editar cada una
-        itemData.unidades = Array.isArray(newItem.unidades) ? [...newItem.unidades] : []
+        // Para accesorios/consumibles/refacciones
         itemData.cantidad = Number(newItem.cantidad) || (itemData.unidades.length || 1)
-        form.equiposEntrada.push(itemData)
+    }
+
+    form.equiposEntrada.push(itemData)
+
+    // Asignar campos adicionales desde la primera unidad si existen
+    if (itemData.unidades.length) {
+        const first = itemData.unidades[0]
+        if (first.marca) itemData.marca = first.marca
+        if (first.modelo) itemData.modelo = first.modelo
+        if (first.serie) itemData.serie = first.serie
+        if (first.lote) itemData.lote = first.lote
+        if (first.referencia) itemData.referencia = first.referencia
+        if (first.ubicacion) itemData.ubicacion = first.ubicacion
+        if (first.claveHRAEI) itemData.claveHRAEI = first.claveHRAEI
     }
 
     notifier.success('Item agregado correctamente')
@@ -1108,6 +1111,8 @@ async function generarExcelEntrada() {
         const response = await fetch(plantillaUrl)
         if (!response.ok) throw new Error(`Error al obtener plantilla (${response.status} ${response.statusText})`)
         const arrayBuffer = await response.arrayBuffer()
+        // Carga dinámica de exceljs para prevenir problemas en dev server y reducir bundle
+        const ExcelJS = (await import('exceljs')).default
         const workbook = new ExcelJS.Workbook()
         await workbook.xlsx.load(arrayBuffer)
         const worksheet = workbook.getWorksheet('ENTRADA')
@@ -1117,6 +1122,88 @@ async function generarExcelEntrada() {
             const originalStyle = JSON.parse(JSON.stringify(c.style || {}))
             c.value = val
             try { c.style = originalStyle } catch (e) { /* ignore style reapply errors */ }
+        }
+
+        // Helper: Aplica estilo de encabezado azul y asegura merge A:I en la fila indicada
+        const applyHeaderStyle = (ws, rowNum) => {
+            try {
+                // Asegurar que esté combinada A:I
+                try { ws.mergeCells(`A${rowNum}:I${rowNum}`) } catch (e) { /* ignore */ }
+                const row = ws.getRow(rowNum)
+                const cellA = row.getCell(1)
+                if (!cellA) return false
+                cellA.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
+                cellA.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } }
+                cellA.alignment = { horizontal: 'left', vertical: 'middle' }
+                return true
+            } catch (err) {
+                console.warn('[Excel] applyHeaderStyle error for row', rowNum, err)
+                return false
+            }
+        }
+
+        // Helper: convertir columna letra a número (A -> 1)
+        const colLetterToNumber = (letters) => {
+            let num = 0
+            for (let i = 0; i < letters.length; i++) {
+                num = num * 26 + (letters.charCodeAt(i) - 64)
+            }
+            return num
+        }
+
+        // Helper: parsear un rango Excel como 'D36:I36' a { startCol, startRow, endCol, endRow }
+        const parseRange = (range) => {
+            const m = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(range)
+            if (!m) return null
+            return {
+                startCol: colLetterToNumber(m[1]),
+                startRow: Number(m[2]),
+                endCol: colLetterToNumber(m[3]),
+                endRow: Number(m[4])
+            }
+        }
+
+        // Helper: encontrar un merge range que contenga una dirección (ej. 'D36')
+        const findMergeRangeContaining = (ws, address) => {
+            const merges = Array.from(ws._merges || [])
+            for (const entry of merges) {
+                const range = entry && entry[0] ? entry[0] : entry
+                if (!range) continue
+                if (typeof range === 'string' && range.includes(address)) return range
+            }
+            return null
+        }
+
+        // Helper: limpiar y descombinar un rango (si existe) o una celda
+        const clearCellOrMergeContaining = (ws, cell) => {
+            try {
+                const addr = cell.address
+                const mergeRange = findMergeRangeContaining(ws, addr)
+                if (mergeRange) {
+                    const parsed = parseRange(mergeRange)
+                    if (parsed) {
+                        // Unmerge primero
+                        try { ws.unMergeCells(mergeRange) } catch (e) { }
+                        // Limpiar todas las celdas del rango
+                        for (let r = parsed.startRow; r <= parsed.endRow; r++) {
+                            for (let c = parsed.startCol; c <= parsed.endCol; c++) {
+                                const cc = ws.getCell(r, c)
+                                cc.value = null
+                                try { cc.style = null } catch (e) { }
+                            }
+                        }
+                        return true
+                    }
+                }
+
+                // Si no está mergeada, limpiar la celda individual
+                cell.value = null
+                try { cell.style = null } catch (e) { }
+                return true
+            } catch (err) {
+                console.warn('[Excel] Error limpiando celda/merge:', err)
+                return false
+            }
         }
 
         setCellValuePreserveStyle(worksheet, 'C1', form.nombreSolicitante || '')
@@ -1523,41 +1610,41 @@ async function generarExcelEntrada() {
                     if (section.key === 'refacciones') {
                         console.log(`[REFACCIONES-FIX] 🔧 REFUERZO ESPECIAL para encabezado de refacciones en fila ${titleRow}`)
 
-                        // Forzar combinación y formato azul para refacciones
+                        // Forzar recombinación y reaplicar estilo azul para refacciones
                         try {
-                            // Primero deshacer cualquier combinación existente en esa fila
+                            // Descombinar el rango completo A:I de esa fila (más seguro)
+                            try { worksheet.unMergeCells(`A${titleRow}:I${titleRow}`) } catch (e) { /* ignore */ }
+
+                            // Limpiar todas las celdas antes de recombinar
                             for (let col = 1; col <= 9; col++) {
                                 const cell = worksheet.getCell(titleRow, col)
-                                if (cell.master && cell.master !== cell) {
-                                    // Esta celda está combinada, deshacerla
-                                    worksheet.unMergeCells(cell.master.address, cell.address)
-                                }
+                                cell.value = null
+                                try { cell.fill = null } catch (e) { }
+                                try { cell.font = null } catch (e) { }
+                                try { cell.border = null } catch (e) { }
+                                try { cell.alignment = null } catch (e) { }
                             }
 
-                            // Ahora combinar de nuevo limpiamente
+                            // Combinar de nuevo limpiamente
                             worksheet.mergeCells(`A${titleRow}:I${titleRow}`)
-                            console.log(`[REFACCIONES-FIX] ✅ Refacciones FORZADAMENTE combinado en fila ${titleRow}`)
+                            const newTitleCell = worksheet.getCell(`A${titleRow}`)
 
+                            // Aplicar estilo azul destacado y texto blanco en negrita
+                            newTitleCell.fill = {
+                                type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' }
+                            }
+                            newTitleCell.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } }
+                            newTitleCell.alignment = { horizontal: 'left', vertical: 'middle' }
+
+                            console.log(`[REFACCIONES-FIX] ✅ Refacciones FORZADAMENTE combinado y estilizado en fila ${titleRow}`)
                         } catch (error) {
-                            console.log(`[REFACCIONES-FIX] ⚠️ Error al forzar combinación de refacciones:`, error.message)
+                            console.log(`[REFACCIONES-FIX] ⚠️ Error al forzar combinación/estilo de refacciones:`, error && error.message ? error.message : error)
                         }
                     }
 
-                    // Aplicar formato azul al encabezado primario
-                    titleCell.fill = {
-                        type: 'pattern',
-                        pattern: 'solid',
-                        fgColor: { argb: 'FF4472C4' }
-                    }
-                    titleCell.font = {
-                        name: 'Calibri',
-                        size: 11,
-                        bold: true,
-                        color: { argb: 'FFFFFFFF' }
-                    }
-                    titleCell.alignment = {
-                        horizontal: 'center',
-                        vertical: 'middle'
+                    // Aplicar formato azul al encabezado primario de forma robusta
+                    if (!applyHeaderStyle(worksheet, titleRow)) {
+                        console.warn(`[FORMATO-AZUL] No se pudo aplicar estilo a encabezado fila ${titleRow} para ${section.key}`)
                     }
                     titleCell.border = {
                         top: { style: 'thin', color: { argb: 'FF000000' } },
@@ -1687,15 +1774,15 @@ async function generarExcelEntrada() {
             celda.alignment = null
         }
 
-        // PASO 3: COMBINAR A:I
-        worksheet.mergeCells(FILA_ENCABEZADO_OBS, 1, FILA_ENCABEZADO_OBS, 9)
-
-        // PASO 4: APLICAR FORMATO Y VALOR
-        const celdaEncabezadoObs = worksheet.getCell(FILA_ENCABEZADO_OBS, 1)
+        // PASO 3: COMBINAR A:I Y APLICAR FORMATO Y VALOR (uso helper para robustez)
+        try { worksheet.unMergeCells(`A${FILA_ENCABEZADO_OBS}:I${FILA_ENCABEZADO_OBS}`) } catch (e) { }
+        try { worksheet.mergeCells(`A${FILA_ENCABEZADO_OBS}:I${FILA_ENCABEZADO_OBS}`) } catch (e) { }
+        // Aplicar valor y estilo usando helper
+        const celdaEncabezadoObsRow = worksheet.getRow(FILA_ENCABEZADO_OBS)
+        const celdaEncabezadoObs = celdaEncabezadoObsRow.getCell(1)
         celdaEncabezadoObs.value = 'OBSERVACIONES'
-        celdaEncabezadoObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
-        celdaEncabezadoObs.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } }
-        celdaEncabezadoObs.alignment = { horizontal: 'center', vertical: 'middle' }
+        applyHeaderStyle(worksheet, FILA_ENCABEZADO_OBS)
+        // Aplicar bordes y altura
         celdaEncabezadoObs.border = {
             top: { style: 'thin', color: { argb: 'FF000000' } },
             left: { style: 'thin', color: { argb: 'FF000000' } },
@@ -1703,7 +1790,6 @@ async function generarExcelEntrada() {
             right: { style: 'thin', color: { argb: 'FF000000' } }
         }
         worksheet.getRow(FILA_ENCABEZADO_OBS).height = 25
-
         console.log(` ENCABEZADO "OBSERVACIONES" CREADO EN FILA ${FILA_ENCABEZADO_OBS}`)
 
         // ══════════════════════════════════════════════════════════════════════════
@@ -1807,12 +1893,38 @@ async function generarExcelEntrada() {
             bottom: { style: 'thin', color: { argb: 'FF000000' } },
             right: { style: 'thin', color: { argb: 'FF000000' } }
         }
+        // Eliminar duplicados accidentales de la etiqueta de ingeniero en otras filas
+        try {
+            let removed = 0
+            const ingNameToMatch = (form.nombreIngeniero || '').toString().trim()
+            for (let r = 1; r <= worksheet.rowCount; r++) {
+                if (r === FILA_INGENIERO) continue
+                for (let c = 1; c <= 9; c++) {
+                    const cell = worksheet.getCell(r, c)
+                    if (typeof cell.value === 'string') {
+                        const valTrim = cell.value.trim()
+                        if (
+                            valTrim === 'NOMBRE DE INGENIERO RESIDENTE DE APOYO' ||
+                            (ingNameToMatch && valTrim === ingNameToMatch) ||
+                            /ing\.apoyo\.entrada/.test(valTrim) ||
+                            /\{\{\s*ing\.apoyo\.entrada\s*\}\}/i.test(valTrim)
+                        ) {
+                            // Limpiar contenido y estilo para evitar duplicados (caso reportado: 5 items)
+                            if (clearCellOrMergeContaining(worksheet, cell)) removed++
+                        }
+                    }
+                }
+            }
+            if (removed > 0) console.log(`[Excel] Eliminados ${removed} duplicados de etiqueta ingeniero (paso intermedio)`)
+        } catch (errDup) {
+            console.warn('[Excel] Error limpiando duplicados de etiqueta ingeniero:', errDup)
+        }
         worksheet.getRow(FILA_INGENIERO).height = 25
 
-        // Re-forzar encabezado azul una última vez
-        celdaEncabezadoObs.value = 'OBSERVACIONES'
-        celdaEncabezadoObs.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4472C4' } }
-        celdaEncabezadoObs.font = { name: 'Calibri', size: 12, bold: true, color: { argb: 'FFFFFFFF' } }
+        // Re-forzar encabezado azul una última vez (re-obtener referencia para evitar objetos stale)
+        const celdaEncabezadoObsRef = worksheet.getRow(FILA_ENCABEZADO_OBS).getCell(1)
+        celdaEncabezadoObsRef.value = 'OBSERVACIONES'
+        applyHeaderStyle(worksheet, FILA_ENCABEZADO_OBS)
 
         console.log(`[ OBSERVACIONES BLINDADAS]  COMPLETADO PERFECTAMENTE`)
 
@@ -1955,7 +2067,7 @@ async function generarExcelEntrada() {
                 if (cell.value || cell.style) isCorrupted = false
             })
 
-            if (isCorrupted || !currentRow.height) {
+                if (isCorrupted || !currentRow.height) {
                 console.warn(`[REPARACIÓN] Fila ${rowNum} corrupta - restaurando desde snapshot`)
                 repairsNeeded++
 
@@ -1964,11 +2076,16 @@ async function generarExcelEntrada() {
                 currentRow.hidden = snapshot.hidden || false
 
                 // Restaurar cada celda (con validación)
-                if (snapshot.cells) {
+                    if (snapshot.cells) {
                     Object.keys(snapshot.cells).forEach(colNum => {
                         const cellData = snapshot.cells[colNum]
                         if (cellData) {
                             const cell = currentRow.getCell(Number(colNum))
+                            // Evitar restaurar la etiqueta de "INGENIERO RESIDENTE" desde el snapshot
+                            if (typeof cellData.value === 'string' && cellData.value.includes('NOMBRE DE INGENIERO RESIDENTE DE APOYO')) {
+                                // Saltar restauración de esta celda para evitar duplicados (se escribirá en la fila final calculada)
+                                return
+                            }
 
                             cell.value = cellData.value
                             if (cellData.style) {
@@ -2058,6 +2175,29 @@ async function generarExcelEntrada() {
                 }
             })
         })
+
+        // Limpieza final: asegurar que no queden duplicados de la etiqueta de ingeniero
+        try {
+            let removedFinal = 0
+            const ingNameToMatch = (form.nombreIngeniero || '').toString().trim()
+            for (let r = 1; r <= worksheet.rowCount; r++) {
+                for (let c = 1; c <= 9; c++) {
+                    const cell = worksheet.getCell(r, c)
+                    if (typeof cell.value === 'string') {
+                        const valTrim = cell.value.trim()
+                        if (
+                            (valTrim === 'NOMBRE DE INGENIERO RESIDENTE DE APOYO' || (ingNameToMatch && valTrim === ingNameToMatch) || /ing\.apoyo\.entrada/.test(valTrim) || /\{\{\s*ing\.apoyo\.entrada\s*\}\}/i.test(valTrim))
+                            && r !== FILA_INGENIERO
+                        ) {
+                            if (clearCellOrMergeContaining(worksheet, cell)) removedFinal++
+                        }
+                    }
+                }
+            }
+            if (removedFinal > 0) console.log(`[Excel] Eliminados ${removedFinal} duplicados de etiqueta ingeniero (paso final)`)
+        } catch (err) {
+            console.warn('[Excel] Error en limpieza final de duplicados de etiqueta ingeniero:', err)
+        }
 
         console.log(`[FORMATO-MÁXIMO] ✅ ${formatRepairs} filas procesadas con ARTILLERÍA MÁXIMA`)
 
@@ -2286,26 +2426,13 @@ async function onSubmit() {
 
     loading.value = true
 
-    // Formatear fecha para MySQL (dd/mm/yyyy -> yyyy-mm-dd)
-    let fechaFormatted = form.fecha
-    if (form.fecha && typeof form.fecha === 'string' && form.fecha.includes('/')) {
-        const [d, m, y] = form.fecha.split('/')
-        fechaFormatted = `${y}-${m}-${d}`
-    }
-
-    // Formatear hora para MySQL (HH:MM -> HH:MM:SS)
-    let horaInicioFormatted = form.horaInicio
-    if (form.horaInicio && typeof form.horaInicio === 'string' && form.horaInicio.length === 5) {
-        horaInicioFormatted = `${form.horaInicio}:00`
-    }
-
     const payload = {
         nombreSolicitante: form.nombreSolicitante,
         servicio: form.servicio,
         especialidad: form.especialidad,
         folio: form.folio,
-        fecha: fechaFormatted,
-        horaInicio: horaInicioFormatted,
+        fecha: form.fecha,
+        horaInicio: form.horaInicio,
         horaTermino: form.horaTermino,
         motivoEntrada: form.motivoEntrada,
         otroMotivo: form.otroMotivo,
@@ -2318,22 +2445,11 @@ async function onSubmit() {
     }
 
     try {
-        let res
-        if (props.modo === 'editar' && (props.ordenId || form.id)) {
-            const id = form.id || props.ordenId
-            payload.id = id
-            res = await fetch(`/api/ops/entrada/${id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-        } else {
-            res = await fetch('/api/ops/entrada', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            })
-        }
+        const res = await fetch('/api/ops/entrada', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
 
         if (!res.ok) {
             if (res.status === 404) {
@@ -2343,49 +2459,20 @@ async function onSubmit() {
                 throw new Error('No se pudo guardar en el servidor')
             }
         } else {
-            const body = await res.json().catch(() => ({}))
-            form.id = body.id || form.id || props.ordenId || Date.now()
             notifier.success('Orden guardada en el servidor')
             // Also persist to local orders list for quick consumption by frontend
             try {
                 const raw = localStorage.getItem(ORDERS_LIST_KEY)
                 const arr = raw ? JSON.parse(raw) : []
-                // Upsert local list
-                const idx = arr.findIndex(o => String(o.id) === String(form.id))
-                const record = { id: form.id, ...payload }
-                if (idx === -1) arr.push(record)
-                else arr[idx] = record
+                arr.push({ id: Date.now(), ...payload })
                 localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
             } catch (e) { }
-            // Emitir evento para refrescar tabla en OrderManagement
-            emit('actualizado', { id: form.id, ...payload })
-            // En modo modal, no redirigir ni limpiar por completo
-            if (props.modo === 'editar') {
-                loading.value = false
-                return
-            } else {
-                // Descargar Excel desde backend
-                try {
-                    const excelRes = await fetch(`/api/ops/entrada/${form.id}/excel`, { method: 'POST' })
-                    if (excelRes.ok) {
-                        const blob = await excelRes.blob()
-                        const url = window.URL.createObjectURL(blob)
-                        const a = document.createElement('a')
-                        a.href = url
-                        a.download = `Orden_${form.folio}_${new Date().toISOString().slice(0, 10)}.xlsx`
-                        document.body.appendChild(a)
-                        a.click()
-                        window.URL.revokeObjectURL(url)
-                        document.body.removeChild(a)
-                        notifier.success('Excel descargado')
-                    }
-                } catch (e) {
-                    console.warn('Error descargando Excel:', e)
-                }
-                clearForm()
-                loading.value = false
-                return
-            }
+            // clearForm se realiza tras generar el Excel para que la descarga se pueda llevar a cabo
+            // (no queremos limpiar antes de la generación)
+            await generarExcelEntrada()
+            clearForm()
+            loading.value = false
+            return
         }
     } catch (err) {
         try {
@@ -2394,11 +2481,7 @@ async function onSubmit() {
             try {
                 const raw = localStorage.getItem(ORDERS_LIST_KEY)
                 const arr = raw ? JSON.parse(raw) : []
-                const id = form.id || Date.now()
-                const idx = arr.findIndex(o => String(o.id) === String(id))
-                const record = { id, ...payload }
-                if (idx === -1) arr.push(record)
-                else arr[idx] = record
+                arr.push({ id: Date.now(), ...payload })
                 localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
             } catch (e) { }
         } catch {
@@ -2412,8 +2495,6 @@ async function onSubmit() {
             console.error('Error generando Excel tras fallback:', e)
             notifier.error('No se pudo generar el Excel')
         }
-        // Emitir para refrescar en padre aunque sea offline
-        emit('actualizado', { id: form.id || Date.now(), ...payload })
     } finally {
         loading.value = false
     }
@@ -3446,6 +3527,68 @@ onBeforeUnmount(() => {
     }
 
     .control.w-38ch,
+
+/* Franja de estado rápida arriba del formulario */
+.form-status-strip {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 12px 0 18px;
+    flex-wrap: wrap;
+}
+
+.status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    color: rgba(15, 23, 42, 0.8);
+    font-weight: 700;
+    font-size: 0.9rem;
+    letter-spacing: 0.1px;
+}
+
+.status-chip--primary {
+    background: linear-gradient(120deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12));
+    border-color: rgba(59, 130, 246, 0.25);
+    color: rgba(30, 64, 175, 0.95);
+}
+
+.status-chip--ok {
+    background: linear-gradient(120deg, rgba(34, 197, 94, 0.12), rgba(52, 211, 153, 0.12));
+    border-color: rgba(52, 211, 153, 0.25);
+    color: rgba(22, 101, 52, 0.9);
+}
+
+.status-chip--warn {
+    background: linear-gradient(120deg, rgba(234, 179, 8, 0.15), rgba(251, 191, 36, 0.15));
+    border-color: rgba(234, 179, 8, 0.3);
+    color: rgba(133, 77, 14, 0.95);
+}
+
+.chip-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+
+@media (max-width: 520px) {
+    .form-status-strip {
+        margin-top: 8px;
+        gap: 8px;
+    }
+
+    .status-chip {
+        width: 100%;
+        justify-content: center;
+    }
+}
     .control.w-20ch,
     .control.w-12ch {
         width: 100% !important;
@@ -5420,11 +5563,5 @@ html {
     opacity: 0.7;
     margin-right: 4px;
 }
-tbody{
-    user-select: none;
-    unicode-range: unset;
-    white-space-collapse: normal;
-    font-language-override: calc();
 
-}
 </style>
