@@ -73,8 +73,10 @@
                                 <!-- Segunda fila -->
                                 <div class="field">
                                     <label>Fecha</label>
-                                    <DatePicker v-model="form.fechaISO" :forceFlowbite="true"
-                                        placeholder="Seleccionar fecha" />
+                                    <div style="display:flex; flex-direction:column; gap:6px">
+                                        <DatePicker v-model="form.fechaISO" :forceFlowbite="true" placeholder="Seleccionar fecha" />
+                                        <small class="hint" style="font-size:0.9rem">Seleccionado: <strong>{{ formatDate(form.fecha) }}</strong></small>
+                                    </div>
                                 </div>
 
                                 <div class="field">
@@ -617,10 +619,12 @@
 
                     <div class="form-actions">
                         <button class="btn secondary cancel-btn" type="button" @click="onCancel" :disabled="loading">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             Cancelar
                         </button>
                         <button class="btn primary save-btn" type="submit" form="entrada-form"
                             :disabled="loading || !isValid">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="M20 6L9 17l-5-5"></path></svg>
                             {{ loading ? (props.modo === 'editar' ? 'Actualizando...' : 'Guardando...') : (props.modo
                                 === 'editar' ? 'Actualizar orden' : 'Guardar orden') }}
                         </button>
@@ -755,6 +759,41 @@ function toISO(dateStr) {
   }
 
   return ''
+}
+
+// Mostrar fecha en DD/MM/YYYY (uso en UI)
+function formatDate(dateStr) {
+  if (!dateStr) return '-'
+  const s = String(dateStr).trim()
+
+  // DD/MM/YYYY
+  if (s.match(/^\d{2}\/\d{2}\/\d{4}$/)) return s
+  // DD-MM-YYYY -> DD/MM/YYYY
+  if (s.match(/^\d{2}-\d{2}-\d{4}$/)) return s.replace(/-/g, '/')
+  // YYYY-MM-DD -> DD/MM/YYYY
+  if (s.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [y, m, d] = s.split('-')
+    return `${d}/${m}/${y}`
+  }
+  // YYYY/MM/DD -> DD/MM/YYYY
+  if (s.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+    const [y, m, d] = s.split('/')
+    return `${d}/${m}/${y}`
+  }
+
+  // Intentar parsear con Date (fallback)
+  try {
+    const date = new Date(s)
+    if (!isNaN(date.getTime())) {
+      const dd = String(date.getDate()).padStart(2, '0')
+      const mm = String(date.getMonth() + 1).padStart(2, '0')
+      const yyyy = date.getFullYear()
+      return `${dd}/${mm}/${yyyy}`
+    }
+  } catch {
+    // ignore
+  }
+  return s
 }
 
 // Opciones del select de motivo de entrada
@@ -2574,11 +2613,6 @@ async function onSubmit() {
         })
 
         if (!res.ok) {
-            // En modo editar, hacer rollback si hay error
-            if (props.modo === 'editar') {
-                throw new Error(`Error al actualizar la orden: ${res.status} ${res.statusText}`)
-            }
-            
             if (res.status === 404) {
                 // Endpoint no disponible: guardar local y generar Excel igualmente
                 notifier.info('API de guardado no disponible (404), se guardará como borrador localmente')
@@ -2586,35 +2620,12 @@ async function onSubmit() {
                 throw new Error('No se pudo guardar en el servidor')
             }
         } else {
-            // Respuesta exitosa
             if (props.modo === 'editar') {
-                // Recargar la orden actualizada desde el servidor
-                try {
-                    const reloadRes = await fetch(`/api/ops/entrada/${props.ordenId}`)
-                    if (reloadRes.ok) {
-                        const reloadData = await reloadRes.json()
-                        const updatedOrder = reloadData.orden || reloadData
-                        
-                        notifier.success('Orden actualizada correctamente')
-                        // Emitir evento de actualización con los datos actualizados
-                        emit('actualizado', updatedOrder)
-                        
-                        // Cerrar el modal con pequeño delay para que se procese el evento
-                        setTimeout(() => {
-                            emit('close')
-                        }, 300)
-                    } else {
-                        throw new Error('No se pudo recargar la orden')
-                    }
-                } catch (reloadErr) {
-                    console.warn('Error recargando orden después de actualizar:', reloadErr)
-                    notifier.success('Orden actualizada (no se pudo recargar)')
-                    // Aun así, cerrar el modal
-                    emit('actualizado')
-                    setTimeout(() => {
-                        emit('close')
-                    }, 300)
-                }
+                notifier.success('Orden actualizada correctamente')
+                // Emitir evento de actualización
+                emit('actualizado')
+                // Cerrar el modal
+                emit('close')
             } else {
                 notifier.success('Orden guardada en el servidor')
                 // Also persist to local orders list for quick consumption by frontend
@@ -2624,7 +2635,8 @@ async function onSubmit() {
                     arr.push({ id: Date.now(), ...payload })
                     localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
                 } catch (e) { }
-                // Generar Excel solo en modo crear
+                // clearForm se realiza tras generar el Excel para que la descarga se pueda llevar a cabo
+                // (no queremos limpiar antes de la generación)
                 await generarExcelEntrada()
                 clearForm()
             }
@@ -2632,16 +2644,6 @@ async function onSubmit() {
             return
         }
     } catch (err) {
-        console.error('Error en onSubmit:', err)
-        
-        // En modo editar, no guardar local ni generar Excel - simplemente fallar
-        if (props.modo === 'editar') {
-            notifier.error('No se pudo actualizar la orden: ' + String(err))
-            loading.value = false
-            return
-        }
-        
-        // En modo crear, intentar guardar local
         try {
             localStorage.setItem(LOCAL_KEY, JSON.stringify(payload))
             // Also add to 'orders_list' to make it visible in OrderManagement when offline
@@ -5962,4 +5964,57 @@ html {
     color: rgb(59, 130, 246);
     font-weight: 700;
 }
+
+/* ========= Mejoras visuales adicionales específicas para OpEntrada ========= */
+.op-entrada-form {
+    padding: 8px;
+}
+
+.op-entrada-form .section-card {
+    background: linear-gradient(180deg, rgba(8, 12, 20, 0.74), rgba(12, 18, 28, 0.7));
+    color: #e6eef8;
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 12px 32px rgba(0, 6, 22, 0.6);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.op-entrada-form .section-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 22px 44px rgba(0, 6, 22, 0.72);
+}
+
+.op-entrada-form .section-head h4 { color: #eef6ff }
+.op-entrada-form .section-head svg { background: rgba(255,255,255,0.03); padding:6px; border-radius:8px }
+
+.op-entrada-form .field label { color: rgba(230,238,248,0.86); font-weight:700; font-size:0.86rem }
+
+.op-entrada-form .control {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 10px 12px;
+    border-radius: 12px !important;
+    color: #e6eef8 !important;
+}
+
+.op-entrada-form .control:focus { box-shadow: 0 8px 24px rgba(34, 211, 238, 0.08); border-color: rgba(34,211,238,0.7) }
+
+.form-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:18px }
+.form-actions .btn { padding:10px 14px; border-radius:12px }
+.form-actions .btn.primary { background: linear-gradient(90deg,#06b6d4,#7c3aed); box-shadow: 0 10px 28px rgba(64, 49, 255, 0.12) }
+.form-actions .btn.secondary { background: transparent; color: rgba(230,238,248,0.88); border:1px solid rgba(255,255,255,0.06) }
+
+@media (max-width: 640px) {
+  .form-actions { flex-direction: column-reverse; align-items: stretch }
+  .form-actions .btn { width: 100% }
+}
+
+/* Mejor apariencia del DatePicker nativo cuando el usuario abre el calendario */
+.op-entrada-form input[type="date"]::-webkit-calendar-picker-indicator { filter: drop-shadow(0 6px 16px rgba(0,0,0,0.5)) }
+
+/* pequeños tweaks para los iconos dentro de las secciones */
+.section-title-with-icon svg { width:28px; height:28px }
+
+/* Ajustes de accesibilidad: mayor contraste para placeholders */
+:where(.op-entrada-form) .control::placeholder { color: rgba(255,255,255,0.55) }
+
 </style>
