@@ -62,81 +62,138 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="order in paginatedOrders" :key="order.id" class="table-row" :class="{ 'row-selected': selectedForDelete.has(order.id) }">
-            <td v-if="multiDeleteMode" class="checkbox-cell">
-              <input 
-                type="checkbox" 
-                :checked="selectedForDelete.has(order.id)"
-                @change="toggleOrderSelection(order.id)"
-                class="row-checkbox"
-              />
-            </td>
-            <td class="cell-folio">{{ order.folio }}</td>
-            <td>{{ order.nombreSolicitante }}</td>
-            <td>{{ formatDate(order.fecha) }}</td>
-            <td v-if="showColumnService">{{ order.servicio }}</td>
-            <td v-if="showColumnEspecialidad">{{ order.especialidad || '-' }}</td>
-            <td v-if="showColumnMotivo">{{ order.motivoEntrada || '-' }}</td>
-            <td v-if="showColumnDescripcion" class="truncate-cell">
-              {{ (order.descripcion || '').slice(0, 60) || '-' }}
-            </td>
-            <td v-if="showColumnObservaciones" class="truncate-cell">
-              {{ (order.observaciones || '').slice(0, 60) || '-' }}
-            </td>
-            <td v-if="showColumnIngeniero">{{ order.nombreIngeniero || '-' }}</td>
-            <td v-if="showColumnHora">{{ order.horaInicio || '-' }}</td>
-            <td v-if="showColumnHora">{{ order.horaTermino || '-' }}</td>
-            <td v-if="showColumnTipo">{{ order.tipo || '-' }}</td>
-            <td v-if="showColumnItems" class="items-count">
-              <span class="count-badge">{{ (order.equiposEntrada || []).length }}</span>
-            </td>
-            <td v-if="showColumnEstado">
-              <span class="status-badge" :class="`status-${(order.estado || 'pendiente').toLowerCase()}`">
-                {{ order.estado || 'Pendiente' }}
-              </span>
-            </td>
-            <td class="cell-actions">
-              <button
-                @click="$emit('edit', order)"
-                class="action-btn edit-btn"
-                title="Editar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round">
-                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-                </svg>
-              </button>
-              <button
-                @click="$emit('excel', order)"
-                class="action-btn excel-btn"
-                title="Descargar Excel"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                </svg>
-              </button>
-              <button
-                @click="$emit('delete', order.id)"
-                class="action-btn delete-btn"
-                title="Eliminar"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                  stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path
-                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
-                  </path>
-                  <line x1="10" y1="11" x2="10" y2="17"></line>
-                  <line x1="14" y1="11" x2="14" y2="17"></line>
-                </svg>
-              </button>
-            </td>
-          </tr>
+          <template v-for="order in paginatedOrders" :key="order.id">
+            <!-- Fila principal de la orden con botón de accordion -->
+            <tr class="table-row" :class="{ 'row-selected': selectedForDelete.has(order.id) }">
+              <td v-if="multiDeleteMode" class="checkbox-cell">
+                <input 
+                  type="checkbox" 
+                  :checked="selectedForDelete.has(order.id)"
+                  @change="toggleOrderSelection(order.id)"
+                  class="row-checkbox"
+                />
+              </td>
+              <td class="cell-folio">
+                <div class="folio-with-accordion">
+                  <button 
+                    v-if="(order.equiposEntrada || []).length > 0"
+                    @click="toggleAccordion(order.id)"
+                    class="accordion-toggle"
+                    :class="{ 'expanded': expandedAccordions.has(order.id) }"
+                    title="Ver artículos"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
+                  <span>{{ order.folio }}</span>
+                </div>
+              </td>
+              <td>{{ order.nombreSolicitante }}</td>
+              <td>{{ formatDate(order.fecha) }}</td>
+              <td v-if="showColumnService">{{ order.servicio }}</td>
+              <td v-if="showColumnEspecialidad">{{ order.especialidad || '-' }}</td>
+              <td v-if="showColumnMotivo">{{ order.motivoEntrada || '-' }}</td>
+              <td v-if="showColumnDescripcion" class="truncate-cell">
+                {{ (order.descripcion || '').slice(0, 60) || '-' }}
+              </td>
+              <td v-if="showColumnObservaciones" class="truncate-cell">
+                {{ (order.observaciones || '').slice(0, 60) || '-' }}
+              </td>
+              <td v-if="showColumnIngeniero">{{ order.nombreIngeniero || '-' }}</td>
+              <td v-if="showColumnHora">{{ order.horaInicio || '-' }}</td>
+              <td v-if="showColumnHora">{{ order.horaTermino || '-' }}</td>
+              <td v-if="showColumnTipo">{{ order.tipo || '-' }}</td>
+              <td v-if="showColumnItems" class="items-count">
+                <span class="count-badge">{{ (order.equiposEntrada || []).length }}</span>
+              </td>
+              <td v-if="showColumnEstado">
+                <span class="status-badge" :class="`status-${(order.estado || 'pendiente').toLowerCase()}`">
+                  {{ order.estado || 'Pendiente' }}
+                </span>
+              </td>
+              <td class="cell-actions">
+                <button
+                  @click="$emit('edit', order)"
+                  class="action-btn edit-btn"
+                  title="Editar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+                  </svg>
+                </button>
+                <button
+                  @click="$emit('excel', order)"
+                  class="action-btn excel-btn"
+                  title="Descargar Excel"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                  </svg>
+                </button>
+                <button
+                  @click="$emit('delete', order.id)"
+                  class="action-btn delete-btn"
+                  title="Eliminar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path
+                      d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                    </path>
+                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+            
+            <!-- Accordion con items (se despliega debajo de la orden) -->
+            <tr v-if="expandedAccordions.has(order.id) && (order.equiposEntrada || []).length > 0" class="accordion-row">
+              <td :colspan="getColSpan()">
+                <div class="accordion-content">
+                  <div class="items-list">
+                    <div v-for="item in order.equiposEntrada" :key="item.id" class="item-list-row">
+                      <div class="item-type-badge">{{ item.tipo }}</div>
+                      <div class="item-details-col">
+                        <div class="item-main">
+                          <span class="item-description">{{ item.descripcion || '-' }}</span>
+                          <span class="item-qty-badge">x{{ item.cantidad }}</span>
+                        </div>
+                        <div class="item-specs">
+                          <span v-if="item.marca" class="spec">
+                            <strong>Marca:</strong> {{ item.marca }}
+                          </span>
+                          <span v-if="item.modelo" class="spec">
+                            <strong>Modelo:</strong> {{ item.modelo }}
+                          </span>
+                          <span v-if="item.serie" class="spec">
+                            <strong>Serie:</strong> {{ item.serie }}
+                          </span>
+                          <span v-if="item.lote" class="spec">
+                            <strong>Lote:</strong> {{ item.lote }}
+                          </span>
+                          <span v-if="item.ubicacion" class="spec">
+                            <strong>Ubicación:</strong> {{ item.ubicacion }}
+                          </span>
+                          <span v-if="item.claveHRAEI" class="spec">
+                            <strong>Clave HRAEI:</strong> {{ item.claveHRAEI }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
 
@@ -253,6 +310,7 @@ const currentPage = ref(1)
 const itemsPerPage = 10
 const multiDeleteMode = ref(false)
 const selectedForDelete = ref(new Set())
+const expandedAccordions = ref(new Set())  // Estado para acordeones expandidos
 
 const totalPages = computed(() => Math.ceil(props.filteredOrders.length / itemsPerPage))
 
@@ -312,11 +370,69 @@ function goToPage(page) {
 
 function formatDate(dateStr) {
   if (!dateStr) return '-'
+
+  const dateStrTrimmed = String(dateStr).trim()
+
+  // Si ya está en formato DD/MM/YYYY, devolver tal cual (usuario puso con '/').
+  if (dateStrTrimmed.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+    return dateStrTrimmed
+  }
+
+  // Si ya está en formato DD-MM-YYYY, convertir a DD/MM/YYYY
+  if (dateStrTrimmed.match(/^\d{2}-\d{2}-\d{4}$/)) {
+    return dateStrTrimmed.replace(/-/g, '/')
+  }
+
   try {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('es-MX')
+    // Si viene en formato YYYY-MM-DD, convertir a DD/MM/YYYY
+    if (dateStrTrimmed.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [year, month, day] = dateStrTrimmed.split('-')
+      return `${day}/${month}/${year}`
+    }
+
+    // Si viene en formato YYYY/MM/DD
+    if (dateStrTrimmed.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+      const [year, month, day] = dateStrTrimmed.split('/')
+      return `${day}/${month}/${year}`
+    }
+
+    // Como fallback, intentar parsear como fecha (solo si no contiene '/'), evita parsing ambiguo cuando hay '/'
+    if (dateStrTrimmed.includes('/')) return dateStrTrimmed
+
+    const date = new Date(dateStrTrimmed)
+    if (isNaN(date.getTime())) return dateStrTrimmed
+
+    // Formatear como DD/MM/YYYY
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}/${month}/${year}`
   } catch {
-    return dateStr
+    return dateStrTrimmed
+  }
+}
+
+function getColSpan() {
+  let colCount = 5 // Folio, Solicitante, Fecha, Items, Acciones
+  if (props.showColumnService) colCount++
+  if (props.showColumnEspecialidad) colCount++
+  if (props.showColumnMotivo) colCount++
+  if (props.showColumnDescripcion) colCount++
+  if (props.showColumnObservaciones) colCount++
+  if (props.showColumnIngeniero) colCount++
+  if (props.showColumnHora) colCount += 2
+  if (props.showColumnTipo) colCount++
+  if (props.showColumnItems) colCount++
+  if (props.showColumnEstado) colCount++
+  if (multiDeleteMode.value) colCount++
+  return colCount
+}
+
+function toggleAccordion(orderId) {
+  if (expandedAccordions.value.has(orderId)) {
+    expandedAccordions.value.delete(orderId)
+  } else {
+    expandedAccordions.value.add(orderId)
   }
 }
 
@@ -819,7 +935,228 @@ function deleteSelected() {
   padding: 0 4px;
 }
 
+/* Accordion Styles */
+.folio-with-accordion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 
+.accordion-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: rgba(46, 221, 90, 0.1);
+  border: 1px solid rgba(46, 221, 90, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  color: rgba(46, 221, 90, 0.7);
+  transition: all 0.2s ease;
+}
+
+.accordion-toggle:hover {
+  background: rgba(46, 221, 90, 0.2);
+  border-color: rgba(46, 221, 90, 0.4);
+}
+
+.accordion-toggle svg {
+  transition: transform 0.2s ease;
+}
+
+.accordion-toggle.expanded svg {
+  transform: rotate(180deg);
+}
+
+/* Accordion Row */
+.accordion-row {
+  background: rgba(46, 221, 90, 0.02);
+  border-top: 1px solid rgba(46, 221, 90, 0.08);
+  border-bottom: 1px solid rgba(46, 221, 90, 0.08);
+}
+
+.accordion-row td {
+  padding: 16px 20px;
+}
+
+.accordion-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item-list-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(46, 221, 90, 0.12);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.item-list-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(46, 221, 90, 0.2);
+}
+
+.item-type-badge {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  background: rgba(46, 221, 90, 0.15);
+  color: rgba(46, 221, 90, 0.9);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.item-details-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item-main {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.item-description {
+  color: rgba(230, 235, 245, 0.9);
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.item-qty-badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  background: rgba(46, 221, 90, 0.2);
+  color: rgba(46, 221, 90, 0.8);
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.item-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.8rem;
+  padding-top: 6px;
+  border-top: 1px solid rgba(46, 221, 90, 0.08);
+}
+
+.spec {
+  color: rgba(230, 235, 245, 0.7);
+  display: flex;
+  gap: 4px;
+}
+
+.spec strong {
+  color: rgba(230, 235, 245, 0.5);
+  font-weight: 600;
+}
+
+/* Old Styles - Keep for compatibility if needed */
+.items-expanded-row {
+  background: rgba(46, 221, 90, 0.03);
+  border-top: 1px solid rgba(46, 221, 90, 0.1);
+}
+
+.items-expanded-row td {
+  padding: 20px;
+}
+
+.items-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.items-header {
+  font-weight: 600;
+  color: rgba(230, 235, 245, 0.9);
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.item-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(46, 221, 90, 0.15);
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+}
+
+.item-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(46, 221, 90, 0.3);
+}
+
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(46, 221, 90, 0.1);
+}
+
+.item-tipo {
+  font-weight: 600;
+  color: rgba(46, 221, 90, 0.9);
+  font-size: 0.9rem;
+}
+
+.item-qty {
+  background: rgba(46, 221, 90, 0.15);
+  color: rgba(46, 221, 90, 0.8);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.item-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+}
+
+.field-label {
+  color: rgba(230, 235, 245, 0.6);
+  font-weight: 500;
+}
+
+.field-value {
+  color: rgba(230, 235, 245, 0.85);
+  word-break: break-word;
+}
 
 /* RESPONSIVE */
 @media (max-width: 768px) {

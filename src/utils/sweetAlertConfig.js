@@ -4,8 +4,7 @@ import Swal from 'sweetalert2'
 export const darkThemeConfig = {
   background: 'rgba(13, 20, 35, 0.98)',
   color: 'rgba(255, 255, 255, 0.95)',
-  backdrop: 'rgba(2, 8, 18, 0.7)',
-  borderRadius: '16px',
+  backdrop: 'rgba(2, 8, 18, 0.7)'
 }
 
 // Confirmación de eliminación

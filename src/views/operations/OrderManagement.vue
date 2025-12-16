@@ -50,7 +50,7 @@
                                     <path d="M22 3H2l8 9v7l4 2v-9l8-9z" fill="currentColor" />
                                 </svg>
                                 <span v-if="hasActiveAdvancedFilters" class="filter-badge">{{ activeFiltersList.length
-                                    }}</span>
+                                }}</span>
                             </button>
 
                             <!-- Dropdown de filtros disponibles -->
@@ -235,8 +235,8 @@
         </ActionPanel>
 
         <!-- Modal embebiendo OpEntrada con todas sus funcionalidades -->
-        <ModalBase :open="showEditModal" @close="closeEditModal" :maxWidth="1100" :height="'92vh'">
-            <OpEntrada :ordenId="selectedOrderId" :modo="'editar'" @actualizado="onOrderUpdated"
+        <ModalBase :open="showEditModal" @close="handleModalClose" :maxWidth="1100" :height="'92vh'">
+            <OpEntrada ref="opEntradaRef" :ordenId="selectedOrderId" :modo="'editar'" @actualizado="onOrderUpdated"
                 @close="closeEditModal" />
         </ModalBase>
     </div>
@@ -288,7 +288,7 @@ const filterEspecialidadActive = ref(false)
 const filterMotivoActive = ref(false)
 const filterObservacionesActive = ref(false)
 const filterIngenieroActive = ref(false)
-const filterTipoActive = ref(false)
+const filterTipoActive = ref(true)  // Activado por defecto
 const filterItemTextActive = ref(false)
 const filterHoraActive = ref(false)
 const filterMarcaActive = ref(false)
@@ -313,29 +313,43 @@ const selectedOrderId = ref(null)
 const newEditItem = ref({ tipo: '', cantidad: 1, descripcion: '', marca: '', modelo: '', serie: '', lote: '', referencia: '', claveHRAEI: '', unidades: [] })
 const editingItemIndex = ref(-1)
 const filterDropdownRef = ref(null)
+const opEntradaRef = ref(null)
 
-// Keep a normalized ISO-like date in `filterDate` for comparisons (YYYY-MM-DD)
+// Keep a normalized date in `filterDate` for comparisons (DD-MM-YYYY format from database)
 watch(filterDateDisplay, (val) => {
+    console.log('=== WATCH filterDateDisplay ===')
+    console.log('Raw value:', val)
+    console.log('Type:', typeof val)
+    console.log('String representation:', String(val))
+    
     if (!val) {
         filterDate.value = ''
         return
     }
+    
     // Expecting DatePicker display in dd/mm/yyyy
     const parts = String(val).split('/')
+    console.log('Split by /:', parts)
+    
     if (parts.length === 3) {
         const dd = parts[0].padStart(2, '0')
         const mm = parts[1].padStart(2, '0')
         const yyyy = parts[2]
-        filterDate.value = `${yyyy}-${mm}-${dd}`
+        filterDate.value = `${dd}-${mm}-${yyyy}`
+        console.log('Result (from /):', filterDate.value)
     } else {
+        console.log('No / found, trying Date object...')
         // fallback: try to parse native ISO
         try {
             const d = new Date(val)
+            console.log('Date object:', d)
+            console.log('Is valid:', !isNaN(d.getTime()))
             if (!isNaN(d.getTime())) {
                 const yyyy = d.getFullYear()
                 const mm = String(d.getMonth() + 1).padStart(2, '0')
                 const dd = String(d.getDate()).padStart(2, '0')
-                filterDate.value = `${yyyy}-${mm}-${dd}`
+                filterDate.value = `${dd}-${mm}-${yyyy}`
+                console.log('Result (from Date):', filterDate.value)
             } else {
                 filterDate.value = ''
             }
@@ -429,6 +443,9 @@ const filteredOrders = computed(() => {
         const matchSearch = !searchTerm.value || order.folio?.toLowerCase().includes(searchTerm.value.toLowerCase()) || order.nombreSolicitante?.toLowerCase().includes(searchTerm.value.toLowerCase())
 
         const matchDate = !filterDate.value || order.fecha === filterDate.value
+        if (filterDate.value && order.folio) {
+            console.log(`Comparando fecha para ${order.folio}: BD="${order.fecha}" vs Filtro="${filterDate.value}" => ${matchDate ? 'MATCH' : 'NO MATCH'}`)
+        }
 
         const matchService = !filterServiceActive.value || !filterService.value || order.servicio?.toLowerCase().includes(filterService.value.toLowerCase())
         const matchEspecialidad = !filterEspecialidadActive.value || !filterEspecialidad.value || order.especialidad?.toLowerCase().includes(filterEspecialidad.value.toLowerCase())
@@ -504,6 +521,16 @@ function closeEditModal() {
     selectedOrderId.value = null
 }
 
+// Maneja el intento de cierre del modal (botón X o overlay)
+async function handleModalClose() {
+    // Si hay una referencia a OpEntrada, llamar a handleCloseAttempt
+    if (opEntradaRef.value && opEntradaRef.value.handleCloseAttempt) {
+        await opEntradaRef.value.handleCloseAttempt()
+    } else {
+        closeEditModal()
+    }
+}
+
 function onOrderUpdated(updated) {
     // Actualiza la lista y cierra modal
     if (!updated) {
@@ -561,7 +588,7 @@ async function deleteOrder(orderId) {
                 localStorage.setItem('orders_list', JSON.stringify(updated))
             }
         } catch (e) { }
-        
+
         showSuccess('Eliminado', 'La orden ha sido eliminada correctamente.')
     }
 }
@@ -569,12 +596,12 @@ async function deleteOrder(orderId) {
 async function handleDeleteMultipleWithModal(orderIds) {
     const count = orderIds.length
     const msg = `¿Está seguro de que deseas eliminar ${count} orden${count !== 1 ? 'es' : ''}? Esta acción no se puede deshacer.`
-    
+
     const result = await confirmDelete(msg, count)
-    
+
     if (result.isConfirmed) {
         await deleteMultipleOrders(orderIds)
-        
+
         const successMsg = `${count} orden${count !== 1 ? 'es' : ''} ha${count !== 1 ? 'n' : ''} sido eliminada${count !== 1 ? 's' : ''} correctamente.`
         showSuccess('Eliminado', successMsg)
     }
@@ -733,86 +760,62 @@ function toggleEditItem(idx) {
 // Simular carga de órdenes desde API
 function loadOrders() {
     loading.value = true
-    // Datos por defecto: se intenta obtener desde el backend y localStorage
-    const mockOrders = [
-        {
-            id: 1,
-            folio: '5-011',
-            nombreSolicitante: 'Dr. Juan Pérez',
-            servicio: 'Urgencias',
-            especialidad: 'Medicina General',
-            fecha: '2024-12-09',
-            horaInicio: '08:00',
-            horaTermino: '10:00',
-            motivoEntrada: 'Compra',
-            descripcion: 'Ingreso de equipos médicos nuevos',
-            estado: 'completado'
-        },
-        {
-            id: 2,
-            folio: '5-012',
-            nombreSolicitante: 'Dra. María González',
-            servicio: 'Quirófano',
-            especialidad: 'Cirugía',
-            fecha: '2024-12-08',
-            horaInicio: '14:00',
-            horaTermino: '16:00',
-            motivoEntrada: 'Reparación',
-            descripcion: 'Equipo retornado después de mantenimiento',
-            estado: 'completado'
-        },
-        {
-            id: 3,
-            folio: '5-013',
-            nombreSolicitante: 'Dr. Carlos López',
-            servicio: 'Urgencias',
-            especialidad: 'Traumatología',
-            fecha: '2024-12-10',
-            horaInicio: '09:30',
-            horaTermino: null,
-            motivoEntrada: 'Donación',
-            descripcion: 'Equipos donados por institución externa',
-            estado: 'pendiente'
-        }
-    ]
-
-    // Try to fetch from backend list endpoint
+    
+    // Try to fetch from backend - solo órdenes reales de la BD
     setTimeout(async () => {
         try {
             const res = await fetch('/api/ops/entrada/list')
             if (res.ok) {
                 const body = await res.json()
-                const items = Array.isArray(body.items) ? body.items.map(it => it.payload || it) : []
-                allOrders.value = items.map((p, idx) => ({ id: p.id || idx + 1, ...p }))
-                // Merge local 'orders_list' as well, avoid duplicates
-                try {
-                    const rawLocal = localStorage.getItem('orders_list')
-                    if (rawLocal) {
-                        const localArr = JSON.parse(rawLocal) || []
-                        localArr.forEach(localItem => {
-                            if (!allOrders.value.some(o => String(o.id) === String(localItem.id))) {
-                                allOrders.value.push(localItem)
-                            }
-                        })
+                // body.items es un array de { orden, items: [...] }
+                const items = Array.isArray(body.items) ? body.items : []
+                // Extraer órdenes reales de la BD CON sus items
+                allOrders.value = items.map((wrapper) => {
+                    const orden = wrapper.orden || {}
+                    const orderItems = Array.isArray(wrapper.items) ? wrapper.items : []
+                    
+                    // Mapear items a estructura de equiposEntrada
+                    const equiposEntrada = orderItems.map(item => ({
+                        id: item.id,
+                        tipo: item.tipo || 'N/A',
+                        cantidad: item.cantidad || 1,
+                        descripcion: item.descripcion || 'N/A',
+                        marca: item.marca || 'N/A',
+                        modelo: item.modelo || 'N/A',
+                        serie: item.serie || 'N/A',
+                        lote: item.lote || 'N/A',
+                        referencia: item.referencia || 'N/A',
+                        ubicacion: item.ubicacion || 'N/A',
+                        claveHRAEI: item.clave_hraei || 'N/A'
+                    }))
+                    
+                    console.log(`Orden cargada - folio: ${orden.folio}, fecha raw: "${orden.fecha}"`)
+                    
+                    return {
+                        id: orden.id,
+                        folio: orden.folio || 'N/A',
+                        nombreSolicitante: orden.nombre_solicitante || 'N/A',
+                        servicio: orden.servicio || 'N/A',
+                        especialidad: orden.especialidad || 'N/A',
+                        fecha: orden.fecha || 'N/A',
+                        horaInicio: orden.hora_inicio || 'N/A',
+                        horaTermino: orden.hora_termino || 'N/A',
+                        motivoEntrada: orden.motivo_entrada || 'N/A',
+                        descripcion: orden.descripcion || 'N/A',
+                        observaciones: orden.observaciones || 'N/A',
+                        nombreIngeniero: orden.nombre_ingeniero || 'N/A',
+                        equiposEntrada: equiposEntrada,
+                        estado: 'completado'
                     }
-                } catch (e) { }
+                })
             } else {
-                // fallback to mock
-                allOrders.value = mockOrders
+                // Si no hay órdenes en BD, mostrar lista vacía
+                allOrders.value = []
             }
         } catch (err) {
-            // If backend not available, try to load localStorage orders
-            try {
-                const localOrdersRaw = localStorage.getItem('orders_list')
-                if (localOrdersRaw) {
-                    const arr = JSON.parse(localOrdersRaw)
-                    allOrders.value = Array.isArray(arr) ? arr : mockOrders
-                } else {
-                    allOrders.value = mockOrders
-                }
-            } catch (e) {
-                allOrders.value = mockOrders
-            }
+            console.warn('Error cargando órdenes:', err)
+            // Si hay error en el backend, mostrar lista vacía en lugar de datos mock
+            allOrders.value = []
         } finally {
             loading.value = false
         }

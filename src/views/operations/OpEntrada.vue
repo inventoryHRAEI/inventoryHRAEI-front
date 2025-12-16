@@ -1,7 +1,7 @@
 <template>
     <div>
         <FormShell>
-            <template #title>
+            <template #title v-if="props.modo !== 'editar'">
                 <div class="entrada-title-row">
                     <button class="btn-back-to-orders" @click="goToOrderManagement" title="Volver a gestión de órdenes">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
@@ -14,8 +14,23 @@
                 </div>
             </template>
 
+            <template #title v-else>
+                <div class="edit-title-header">
+                    <div class="edit-title-badge">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        <span>Editando</span>
+                    </div>
+                    <h2 class="edit-title">Editando orden de entrada</h2>
+                    <p class="edit-subtitle" v-if="ordenInfo.folio">Folio: <strong>{{ ordenInfo.folio }}</strong></p>
+                </div>
+            </template>
+
             <template #body>
-                <Breadcrumbs />
+                <Breadcrumbs v-if="props.modo !== 'editar'" />
                 <div class="op-card insumos op-entrada-form" ref="rootRef">
                     <form @submit.prevent="onSubmit" class="form-grid" id="entrada-form" novalidate>
                         <div class="section-card combined-card observaciones-support">
@@ -58,7 +73,7 @@
                                 <!-- Segunda fila -->
                                 <div class="field">
                                     <label>Fecha</label>
-                                    <DatePicker v-model="form.fecha" :forceFlowbite="true"
+                                    <DatePicker v-model="form.fechaISO" :forceFlowbite="true"
                                         placeholder="Seleccionar fecha" />
                                 </div>
 
@@ -203,7 +218,7 @@
                                                     <div class="field field-compact">
                                                         <label
                                                             style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">{{
-                                                            getNombreLabel() }}</label>
+                                                                getNombreLabel() }}</label>
                                                         <input class="control" v-model.trim="unidad.nombre"
                                                             :placeholder="getNombrePlaceholder()"
                                                             style="font-size: 0.9rem; padding: 10px 14px;" />
@@ -276,7 +291,7 @@
                                                     <div class="field field-medium">
                                                         <label
                                                             style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">{{
-                                                            getNombreLabel() }}</label>
+                                                                getNombreLabel() }}</label>
                                                         <input class="control" v-model.trim="unidad.nombre"
                                                             :placeholder="getNombrePlaceholder()"
                                                             style="font-size: 0.9rem; padding: 10px 14px;" />
@@ -365,7 +380,7 @@
                                         Items Agregados
                                         <span
                                             style="display: inline-block; background: rgb(59, 130, 246); color: white; padding: 2px 10px; border-radius: 12px; font-size: 0.85rem; margin-left: 8px;">{{
-                                            form.equiposEntrada.length }}</span>
+                                                form.equiposEntrada.length }}</span>
                                     </h5>
                                     <div
                                         style="flex: 1; height: 2px; background: linear-gradient(to left, rgb(59, 130, 246), transparent);">
@@ -413,7 +428,7 @@
                                                 <ul
                                                     style="margin:0; padding-left: 18px; font-weight:600; color: rgba(15,23,42,0.78);">
                                                     <li v-for="(u, ui) in item.unidades" :key="ui">{{ (u.nombre ||
-                                                        'Unidad ' + (ui+1)) }} — x{{ u.cantidad || 1 }}</li>
+                                                        'Unidad ' + (ui + 1)) }} — x{{ u.cantidad || 1 }}</li>
                                                 </ul>
                                             </div>
                                         </div>
@@ -606,7 +621,8 @@
                         </button>
                         <button class="btn primary save-btn" type="submit" form="entrada-form"
                             :disabled="loading || !isValid">
-                            {{ loading ? 'Guardando...' : 'Guardar orden' }}
+                            {{ loading ? (props.modo === 'editar' ? 'Actualizando...' : 'Guardando...') : (props.modo
+                                === 'editar' ? 'Actualizar orden' : 'Guardar orden') }}
                         </button>
                     </div>
                 </div>
@@ -635,7 +651,8 @@ import CustomSelect from '@/components/CustomSelect.vue'
 import DatePicker from '@/components/DatePicker.vue'
 import TimePicker from '@/components/TimePicker.vue'
 import notifier from '@/utils/notifier'
-import { confirmDelete, showSuccess, showError, showLoading, closeModal, darkThemeConfig } from '@/utils/sweetAlertConfig'
+import { confirmDelete, showSuccess, showError, showLoading, closeModal, darkThemeConfig, showAlert } from '@/utils/sweetAlertConfig'
+import Swal from 'sweetalert2'
 import {
     IdentificationIcon,
     TagIcon,
@@ -659,6 +676,87 @@ const ORDERS_LIST_KEY = 'orders_list'
 // Router para navegación
 const router = useRouter()
 
+// Props para el componente
+const props = defineProps({
+    modo: { type: String, default: 'crear', validator: v => ['crear', 'editar'].includes(v) },
+    ordenId: { type: [String, Number], default: null }
+})
+
+// Emit para comunicación con el padre (order-management)
+const emit = defineEmits(['close', 'actualizado'])
+
+// Función para normalizar fecha a formato DD-MM-YYYY
+function normalizeFecha(dateStr) {
+  if (!dateStr) return ''
+  const dateStrTrimmed = String(dateStr).trim()
+
+  // Si ya está en formato DD/MM/YYYY -> convertir a DD-MM-YYYY (usuario puso con '/').
+  if (dateStrTrimmed.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+    const [day, month, year] = dateStrTrimmed.split('/')
+    return `${day}-${month}-${year}`
+  }
+
+  // Si ya está en formato DD-MM-YYYY, devolverlo tal cual
+  if (dateStrTrimmed.match(/^\d{2}-\d{2}-\d{4}$/)) {
+    return dateStrTrimmed
+  }
+
+  // Si viene en formato YYYY-MM-DD, convertir a DD-MM-YYYY
+  if (dateStrTrimmed.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const [year, month, day] = dateStrTrimmed.split('-')
+    return `${day}-${month}-${year}`
+  }
+
+  // Soporte adicional: YYYY/MM/DD
+  if (dateStrTrimmed.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+    const [year, month, day] = dateStrTrimmed.split('/')
+    return `${day}-${month}-${year}`
+  }
+
+  // Como fallback, intentar parsear (solo si no hay '/'), evitar parsing ambiguo con '/'
+  try {
+    if (dateStrTrimmed.includes('/')) {
+      // Si llegó con '/', pero no coincide con DD/MM/YYYY, devolver como está (no confiar en Date)
+      return dateStrTrimmed.replace(/\//g, '-')
+    }
+
+    const date = new Date(dateStrTrimmed)
+    if (isNaN(date.getTime())) return dateStrTrimmed
+
+    const day = String(date.getDate()).padStart(2, '0')
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const year = date.getFullYear()
+    return `${day}-${month}-${year}`
+  } catch {
+    return dateStrTrimmed
+  }
+}
+
+// Convierte una fecha tipo 'DD-MM-YYYY' o 'DD/MM/YYYY' a 'YYYY-MM-DD' (ISO) para el DatePicker
+function toISO(dateStr) {
+  if (!dateStr) return ''
+  const s = String(dateStr).trim()
+
+  if (s.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+    const [d, m, y] = s.split('/')
+    return `${y}-${m}-${d}`
+  }
+
+  if (s.match(/^\d{2}-\d{2}-\d{4}$/)) {
+    const [d, m, y] = s.split('-')
+    return `${y}-${m}-${d}`
+  }
+
+  // Soporte YYYY-MM-DD y YYYY/MM/DD
+  if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return s
+  if (s.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+    const [y, m, d] = s.split('/')
+    return `${y}-${m}-${d}`
+  }
+
+  return ''
+}
+
 // Opciones del select de motivo de entrada
 // Opciones del select de motivo de entrada (importadas desde data)
 // motivoEntradaOptions importado arriba
@@ -680,6 +778,7 @@ const form = reactive({
     especialidad: '',
     folio: '',
     fecha: '',
+    fechaISO: '',
     horaInicio: '',
     horaTermino: '',
     motivoEntrada: '',
@@ -971,6 +1070,14 @@ let hideTimeout = null
 // Root reference for focus/click detection to start the timer
 const rootRef = ref(null)
 
+// Para mostrar info de la orden en modo editar
+const ordenInfo = reactive({
+    folio: '',
+    nombreSolicitante: '',
+    fecha: ''
+})
+const loadingOrden = ref(false)
+
 // Timer for capturing hora de término
 const timerStartedAt = ref(null) // timestamp ms
 const elapsedSeconds = ref(0)
@@ -1011,16 +1118,36 @@ const stopTimer = () => {
 }
 
 const onCancel = async () => {
-    const result = await confirmDelete('¿Estás seguro?', 'Se perderán todos los datos del formulario', 1, 'Sí, regresar', 'Cancelar')
-
-    if (result.isConfirmed) {
-        // Limpiar localStorage antes de regresar
-        try { localStorage.removeItem(LOCAL_KEY) } catch { }
-        // Regresar a order-management en lugar de dashboard
-        try {
-            await router.push({ name: 'order-management' })
-        } catch {
-            try { await router.push('/op/order-management') } catch { }
+    // Si estamos en modo editar (modal), emitir evento close
+    if (props.modo === 'editar') {
+        const result = await Swal.fire({
+            title: '¿Estás seguro?',
+            text: '¿Seguro que quieres dejar de editar la orden seleccionada?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, cerrar',
+            cancelButtonText: 'Cancelar',
+            background: 'rgba(15, 23, 42, 0.9)',
+            color: 'rgba(241, 245, 249, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+        })
+        if (result.isConfirmed) {
+            emit('close')
+        }
+    } else {
+        // En modo crear, mostrar confirmación y navegar
+        const result = await confirmDelete('¿Estás seguro?', 'Se perderán todos los datos del formulario', 1, 'Sí, regresar', 'Cancelar')
+        if (result.isConfirmed) {
+            // Limpiar localStorage antes de regresar
+            try { localStorage.removeItem(LOCAL_KEY) } catch { }
+            // Regresar a order-management en lugar de dashboard
+            try {
+                await router.push({ name: 'order-management' })
+            } catch {
+                try { await router.push('/op/order-management') } catch { }
+            }
         }
     }
 }
@@ -2057,7 +2184,7 @@ async function generarExcelEntrada() {
                 if (cell.value || cell.style) isCorrupted = false
             })
 
-                if (isCorrupted || !currentRow.height) {
+            if (isCorrupted || !currentRow.height) {
                 console.warn(`[REPARACIÓN] Fila ${rowNum} corrupta - restaurando desde snapshot`)
                 repairsNeeded++
 
@@ -2066,7 +2193,7 @@ async function generarExcelEntrada() {
                 currentRow.hidden = snapshot.hidden || false
 
                 // Restaurar cada celda (con validación)
-                    if (snapshot.cells) {
+                if (snapshot.cells) {
                     Object.keys(snapshot.cells).forEach(colNum => {
                         const cellData = snapshot.cells[colNum]
                         if (cellData) {
@@ -2423,7 +2550,7 @@ async function onSubmit() {
         servicio: form.servicio,
         especialidad: form.especialidad,
         folio: form.folio,
-        fecha: form.fecha,
+        fecha: normalizeFecha(form.fecha),  // Normalizar a DD-MM-YYYY
         horaInicio: form.horaInicio,
         horaTermino: form.horaTermino,
         motivoEntrada: form.motivoEntrada,
@@ -2437,13 +2564,21 @@ async function onSubmit() {
     }
 
     try {
-        const res = await fetch('/api/ops/entrada', {
-            method: 'POST',
+        const url = props.modo === 'editar' ? `/api/ops/entrada/${props.ordenId}` : '/api/ops/entrada'
+        const method = props.modo === 'editar' ? 'PUT' : 'POST'
+
+        const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
 
         if (!res.ok) {
+            // En modo editar, hacer rollback si hay error
+            if (props.modo === 'editar') {
+                throw new Error(`Error al actualizar la orden: ${res.status} ${res.statusText}`)
+            }
+            
             if (res.status === 404) {
                 // Endpoint no disponible: guardar local y generar Excel igualmente
                 notifier.info('API de guardado no disponible (404), se guardará como borrador localmente')
@@ -2451,22 +2586,62 @@ async function onSubmit() {
                 throw new Error('No se pudo guardar en el servidor')
             }
         } else {
-            notifier.success('Orden guardada en el servidor')
-            // Also persist to local orders list for quick consumption by frontend
-            try {
-                const raw = localStorage.getItem(ORDERS_LIST_KEY)
-                const arr = raw ? JSON.parse(raw) : []
-                arr.push({ id: Date.now(), ...payload })
-                localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
-            } catch (e) { }
-            // clearForm se realiza tras generar el Excel para que la descarga se pueda llevar a cabo
-            // (no queremos limpiar antes de la generación)
-            await generarExcelEntrada()
-            clearForm()
+            // Respuesta exitosa
+            if (props.modo === 'editar') {
+                // Recargar la orden actualizada desde el servidor
+                try {
+                    const reloadRes = await fetch(`/api/ops/entrada/${props.ordenId}`)
+                    if (reloadRes.ok) {
+                        const reloadData = await reloadRes.json()
+                        const updatedOrder = reloadData.orden || reloadData
+                        
+                        notifier.success('Orden actualizada correctamente')
+                        // Emitir evento de actualización con los datos actualizados
+                        emit('actualizado', updatedOrder)
+                        
+                        // Cerrar el modal con pequeño delay para que se procese el evento
+                        setTimeout(() => {
+                            emit('close')
+                        }, 300)
+                    } else {
+                        throw new Error('No se pudo recargar la orden')
+                    }
+                } catch (reloadErr) {
+                    console.warn('Error recargando orden después de actualizar:', reloadErr)
+                    notifier.success('Orden actualizada (no se pudo recargar)')
+                    // Aun así, cerrar el modal
+                    emit('actualizado')
+                    setTimeout(() => {
+                        emit('close')
+                    }, 300)
+                }
+            } else {
+                notifier.success('Orden guardada en el servidor')
+                // Also persist to local orders list for quick consumption by frontend
+                try {
+                    const raw = localStorage.getItem(ORDERS_LIST_KEY)
+                    const arr = raw ? JSON.parse(raw) : []
+                    arr.push({ id: Date.now(), ...payload })
+                    localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
+                } catch (e) { }
+                // Generar Excel solo en modo crear
+                await generarExcelEntrada()
+                clearForm()
+            }
             loading.value = false
             return
         }
     } catch (err) {
+        console.error('Error en onSubmit:', err)
+        
+        // En modo editar, no guardar local ni generar Excel - simplemente fallar
+        if (props.modo === 'editar') {
+            notifier.error('No se pudo actualizar la orden: ' + String(err))
+            loading.value = false
+            return
+        }
+        
+        // En modo crear, intentar guardar local
         try {
             localStorage.setItem(LOCAL_KEY, JSON.stringify(payload))
             // Also add to 'orders_list' to make it visible in OrderManagement when offline
@@ -2522,6 +2697,45 @@ watch(
     }
 )
 
+// Sincronizar DatePicker (ISO) al campo de display y viceversa
+watch(() => form.fechaISO, (val) => {
+    if (!val) { form.fecha = ''; return }
+    const v = String(val).trim()
+    // Esperamos YYYY-MM-DD desde DatePicker
+    if (v.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = v.split('-')
+        form.fecha = `${day}-${month}-${year}`
+        return
+    }
+    // Si no es ISO, intentar convertir
+    const iso = toISO(v)
+    if (iso && iso.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = iso.split('-')
+        form.fecha = `${day}-${month}-${year}`
+    } else {
+        form.fecha = v
+    }
+})
+
+watch(() => form.fecha, (val) => {
+    if (!val) { form.fechaISO = ''; return }
+    const s = String(val).trim()
+
+    // Si usuario escribe con slashes DD/MM/YYYY o con guiones DD-MM-YYYY -> convertir a ISO
+    if (s.match(/^\d{2}\/\d{2}\/\d{4}$/) || s.match(/^\d{2}-\d{2}-\d{4}$/)) {
+        const iso = toISO(s)
+        if (iso) form.fechaISO = iso
+        return
+    }
+
+    // Si ingresó ISO directamente
+    if (s.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        form.fechaISO = s
+        return
+    }
+    // Dejar fechaISO sin tocar en otros casos
+})
+
 // Iniciar el temporizador automáticamente cuando el usuario seleccione la hora de inicio
 watch(() => form.horaInicio, (val) => {
     if (val && !timerStartedAt.value) {
@@ -2529,37 +2743,148 @@ watch(() => form.horaInicio, (val) => {
     }
 })
 
-onMounted(async () => {
-    // Cargar datos guardados localmente
+// Cargar datos de la orden cuando está en modo editar
+const loadOrderData = async () => {
+    if (props.modo !== 'editar' || !props.ordenId) return
+
+    loadingOrden.value = true
     try {
-        const raw = localStorage.getItem(LOCAL_KEY)
-        if (raw) {
-            const data = JSON.parse(raw)
-            form.descripcion = data.descripcion || ''
-            form.cantidad = normalizedCount(data.cantidad ?? 0)
-            form.fechaRecibo = data.fechaRecibo || ''
-            form.solicitante = data.solicitante || ''
-            form.unidad = data.unidad || ''
-            form.turno = data.turno || ''
-            form.observaciones = data.observaciones || ''
-            form.nombreIngeniero = data.nombreIngeniero || ''
-            const storedItems = Array.isArray(data.items) ? data.items : []
-            form.items = []
-            syncItemsToCantidad()
-            for (let i = 0; i < form.items.length && i < storedItems.length; i += 1) {
-                const it = storedItems[i] || {}
-                form.items[i].descripcion = it.descripcion || ''
-                form.items[i].claveHRAEI = it.claveHRAEI || ''
-                form.items[i].cantidad = it.cantidad ?? null
-            }
-            savedAt.value = new Date().toLocaleTimeString()
+        const ordenIdStr = String(props.ordenId)
+        const res = await fetch(`/api/ops/entrada/${ordenIdStr}`)
+        
+        if (res.status === 404) {
+            console.warn(`Orden no encontrada (404): ${ordenIdStr}`)
+            notifier.warn('La orden solicitada no existe en el servidor. Los campos estarán vacíos.')
+            loadingOrden.value = false
+            return
+        }
+        
+        if (!res.ok) {
+            throw new Error(`Error ${res.status}: ${res.statusText}`)
+        }
+        
+        const response = await res.json()
+        // La respuesta viene como { ok: true, orden, items }
+        const data = response.orden || response
+
+        // Mapear campos de snake_case (BD) a camelCase (Frontend)
+        form.nombreSolicitante = data.nombre_solicitante || data.nombreSolicitante || ''
+        form.servicio = data.servicio || ''
+        form.especialidad = data.especialidad || ''
+        form.folio = data.folio || ''
+        form.fecha = data.fecha || ''
+        form.fechaISO = data.fecha ? toISO(data.fecha) : ''
+        form.horaInicio = data.hora_inicio || data.horaInicio || ''
+        form.horaTermino = data.hora_termino || data.horaTermino || ''
+        form.motivoEntrada = data.motivo_entrada || data.motivoEntrada || ''
+        form.otroMotivo = data.otro_motivo || data.otroMotivo || ''
+        form.descripcion = data.descripcion || ''
+        form.observaciones = data.observaciones || ''
+        form.nombreIngeniero = data.nombre_ingeniero || data.nombreIngeniero || ''
+        
+        // Procesar items que vienen de la BD
+        if (response.items && Array.isArray(response.items)) {
+            // Agrupar items por tipo para reconstruir la estructura esperada
+            const equiposByType = {}
+            response.items.forEach(item => {
+                if (!equiposByType[item.tipo]) {
+                    equiposByType[item.tipo] = {
+                        tipo: item.tipo,
+                        cantidad: 0,
+                        descripcion: item.descripcion || '',
+                        marca: item.marca || '',
+                        modelo: item.modelo || '',
+                        serie: item.serie || '',
+                        lote: item.lote || '',
+                        referencia: item.referencia || '',
+                        ubicacion: item.ubicacion || '',
+                        claveHRAEI: item.clave_hraei || '',
+                        unidades: []
+                    }
+                }
+                equiposByType[item.tipo].cantidad++
+                
+                // Agregar unidades si existen
+                if (item.unidades && Array.isArray(item.unidades)) {
+                    item.unidades.forEach(unidad => {
+                        equiposByType[item.tipo].unidades.push({
+                            nombre: unidad.nombre || '',
+                            cantidad: unidad.cantidad || 1,
+                            marca: unidad.marca || '',
+                            modelo: unidad.modelo || '',
+                            serie: unidad.serie || '',
+                            lote: unidad.lote || '',
+                            referencia: unidad.referencia || '',
+                            ubicacion: unidad.ubicacion || '',
+                            claveHRAEI: unidad.clave_hraei || ''
+                        })
+                    })
+                }
+            })
+            form.equiposEntrada = Object.values(equiposByType)
         } else {
+            form.equiposEntrada = Array.isArray(data.equiposEntrada) ? data.equiposEntrada : []
+        }
+
+        // Cargar imagen si existe
+        if (data.observaciones_img_path) {
+            form.observacionesImg = {
+                dataUrl: data.observaciones_img_path,
+                name: 'Imagen de observaciones',
+                extension: 'jpg'
+            }
+        }
+
+        // Actualizar info de la orden para el título
+        ordenInfo.folio = data.folio || ''
+        ordenInfo.nombreSolicitante = data.nombre_solicitante || data.nombreSolicitante || ''
+        ordenInfo.fecha = data.fecha || ''
+
+        notifier.info('Datos de la orden cargados exitosamente')
+    } catch (err) {
+        console.error('Error cargando orden:', err)
+        notifier.error(`Error al cargar los datos de la orden: ${err.message}`)
+    } finally {
+        loadingOrden.value = false
+    }
+}
+
+onMounted(async () => {
+    // Si es modo editar, cargar los datos de la orden
+    if (props.modo === 'editar') {
+        await loadOrderData()
+    } else {
+        // Cargar datos guardados localmente en modo crear
+        try {
+            const raw = localStorage.getItem(LOCAL_KEY)
+            if (raw) {
+                const data = JSON.parse(raw)
+                form.descripcion = data.descripcion || ''
+                form.cantidad = normalizedCount(data.cantidad ?? 0)
+                form.fechaRecibo = data.fechaRecibo || ''
+                form.solicitante = data.solicitante || ''
+                form.unidad = data.unidad || ''
+                form.turno = data.turno || ''
+                form.observaciones = data.observaciones || ''
+                form.nombreIngeniero = data.nombreIngeniero || ''
+                const storedItems = Array.isArray(data.items) ? data.items : []
+                form.items = []
+                syncItemsToCantidad()
+                for (let i = 0; i < form.items.length && i < storedItems.length; i += 1) {
+                    const it = storedItems[i] || {}
+                    form.items[i].descripcion = it.descripcion || ''
+                    form.items[i].claveHRAEI = it.claveHRAEI || ''
+                    form.items[i].cantidad = it.cantidad ?? null
+                }
+                savedAt.value = new Date().toLocaleTimeString()
+            } else {
+                form.items = []
+                syncItemsToCantidad()
+            }
+        } catch {
             form.items = []
             syncItemsToCantidad()
         }
-    } catch {
-        form.items = []
-        syncItemsToCantidad()
     }
     hydrated.value = true
 
@@ -2665,6 +2990,37 @@ onBeforeUnmount(() => {
         clearTimeout(hideTimeout)
     }
     window.removeEventListener('scroll', handleScroll)
+})
+
+// Función expuesta para que el padre pueda solicitar el cierre con confirmación
+const handleCloseAttempt = async () => {
+    if (props.modo === 'editar') {
+        const result = await Swal.fire({
+            title: '¿Estás seguro?',
+            text: '¿Seguro que quieres dejar de editar la orden seleccionada?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3b82f6',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Sí, cerrar',
+            cancelButtonText: 'Cancelar',
+            background: 'rgba(15, 23, 42, 0.9)',
+            color: 'rgba(241, 245, 249, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+        })
+        if (result.isConfirmed) {
+            emit('close')
+            return true
+        }
+        return false
+    }
+    emit('close')
+    return true
+}
+
+// Exponer función para que OrderManagement pueda usarla
+defineExpose({
+    handleCloseAttempt
 })
 
 
@@ -3520,67 +3876,68 @@ onBeforeUnmount(() => {
 
     .control.w-38ch,
 
-/* Franja de estado rápida arriba del formulario */
-.form-status-strip {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-    margin: 12px 0 18px;
-    flex-wrap: wrap;
-}
-
-.status-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 14px;
-    border-radius: 999px;
-    background: rgba(15, 23, 42, 0.06);
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    color: rgba(15, 23, 42, 0.8);
-    font-weight: 700;
-    font-size: 0.9rem;
-    letter-spacing: 0.1px;
-}
-
-.status-chip--primary {
-    background: linear-gradient(120deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12));
-    border-color: rgba(59, 130, 246, 0.25);
-    color: rgba(30, 64, 175, 0.95);
-}
-
-.status-chip--ok {
-    background: linear-gradient(120deg, rgba(34, 197, 94, 0.12), rgba(52, 211, 153, 0.12));
-    border-color: rgba(52, 211, 153, 0.25);
-    color: rgba(22, 101, 52, 0.9);
-}
-
-.status-chip--warn {
-    background: linear-gradient(120deg, rgba(234, 179, 8, 0.15), rgba(251, 191, 36, 0.15));
-    border-color: rgba(234, 179, 8, 0.3);
-    color: rgba(133, 77, 14, 0.95);
-}
-
-.chip-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: currentColor;
-    opacity: 0.6;
-    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
-}
-
-@media (max-width: 520px) {
+    /* Franja de estado rápida arriba del formulario */
     .form-status-strip {
-        margin-top: 8px;
-        gap: 8px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 12px 0 18px;
+        flex-wrap: wrap;
     }
 
     .status-chip {
-        width: 100%;
-        justify-content: center;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.06);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        color: rgba(15, 23, 42, 0.8);
+        font-weight: 700;
+        font-size: 0.9rem;
+        letter-spacing: 0.1px;
     }
-}
+
+    .status-chip--primary {
+        background: linear-gradient(120deg, rgba(59, 130, 246, 0.12), rgba(16, 185, 129, 0.12));
+        border-color: rgba(59, 130, 246, 0.25);
+        color: rgba(30, 64, 175, 0.95);
+    }
+
+    .status-chip--ok {
+        background: linear-gradient(120deg, rgba(34, 197, 94, 0.12), rgba(52, 211, 153, 0.12));
+        border-color: rgba(52, 211, 153, 0.25);
+        color: rgba(22, 101, 52, 0.9);
+    }
+
+    .status-chip--warn {
+        background: linear-gradient(120deg, rgba(234, 179, 8, 0.15), rgba(251, 191, 36, 0.15));
+        border-color: rgba(234, 179, 8, 0.3);
+        color: rgba(133, 77, 14, 0.95);
+    }
+
+    .chip-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.6;
+        box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
+    }
+
+    @media (max-width: 520px) {
+        .form-status-strip {
+            margin-top: 8px;
+            gap: 8px;
+        }
+
+        .status-chip {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
     .control.w-20ch,
     .control.w-12ch {
         width: 100% !important;
@@ -5556,4 +5913,53 @@ html {
     margin-right: 4px;
 }
 
+/* ===== ESTILOS PARA MODO EDITAR - TÍTULO EN MODAL ===== */
+.edit-title-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 0;
+}
+
+.edit-title-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: fit-content;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(34, 211, 238, 0.1) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(59, 130, 246);
+    backdrop-filter: blur(8px);
+}
+
+.edit-title-badge svg {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2.5;
+    opacity: 0.9;
+}
+
+.edit-title {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.95);
+    letter-spacing: -0.3px;
+}
+
+.edit-subtitle {
+    margin: 4px 0 0;
+    font-size: 0.95rem;
+    color: rgba(71, 85, 105, 0.8);
+    font-weight: 500;
+}
+
+.edit-subtitle strong {
+    color: rgb(59, 130, 246);
+    font-weight: 700;
+}
 </style>

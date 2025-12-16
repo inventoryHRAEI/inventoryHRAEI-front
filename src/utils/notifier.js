@@ -44,6 +44,10 @@ export const notifier = {
   info(msg, opts = {}) {
     if (isMobile()) mobileSwal(msg, 'info')
     else push.info(typeof msg === 'string' ? msg : (msg.text || msg.message || ''), { ...baseWebOpts, ...opts })
+  },
+  warn(msg, opts = {}) {
+    if (isMobile()) mobileSwal(msg, 'warning')
+    else push.warning(typeof msg === 'string' ? msg : (msg.text || msg.message || ''), { ...baseWebOpts, ...opts })
   }
 }
 

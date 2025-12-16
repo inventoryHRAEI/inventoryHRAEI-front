@@ -107,6 +107,7 @@ const displayValue = computed(() => {
   const day = String(d.getDate()).padStart(2, '0')
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const year = d.getFullYear()
+  // Mostrar en formato DD/MM/YYYY al usuario
   return `${day}/${month}/${year}`
 })
 
@@ -219,20 +220,31 @@ const nextYear = () => {
 }
 
 const selectDate = (day) => {
-  selectedDate.value = new Date(day.date)
-  selectedDate.value.setHours(0, 0, 0, 0)
-  emit('update:modelValue', displayValue.value)
-  isOpen.value = false
+   selectedDate.value = new Date(day.date)
+   selectedDate.value.setHours(0, 0, 0, 0)
+   // Emitir en formato DD/MM/YYYY (matching database format with slashes)
+   const d = selectedDate.value
+   const year = d.getFullYear()
+   const month = String(d.getMonth() + 1).padStart(2, '0')
+   const dayStr = String(d.getDate()).padStart(2, '0')
+   console.log('selectDate emit:', `${dayStr}/${month}/${year}`)
+   emit('update:modelValue', `${dayStr}/${month}/${year}`)
+   isOpen.value = false
 }
 
 const selectToday = () => {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  selectedDate.value = today
-  currentMonth.value = today.getMonth()
-  currentYear.value = today.getFullYear()
-  emit('update:modelValue', displayValue.value)
-  isOpen.value = false
+   const today = new Date()
+   today.setHours(0, 0, 0, 0)
+   selectedDate.value = today
+   currentMonth.value = today.getMonth()
+   currentYear.value = today.getFullYear()
+   // Emitir en formato DD/MM/YYYY (matching database format with slashes)
+   const year = today.getFullYear()
+   const month = String(today.getMonth() + 1).padStart(2, '0')
+   const dayStr = String(today.getDate()).padStart(2, '0')
+   console.log('selectToday emit:', `${dayStr}/${month}/${year}`)
+   emit('update:modelValue', `${dayStr}/${month}/${year}`)
+   isOpen.value = false
 }
 
 const handleClickOutside = (e) => {
@@ -245,18 +257,55 @@ const handleClickOutside = (e) => {
 
 // Parse initial value
 const parseDate = (val) => {
-  if (!val) return null
-  if (val instanceof Date) return val
-  // Try to parse dd/mm/yyyy format
-  const parts = val.split('/')
-  if (parts.length === 3) {
-    const d = new Date(parts[2], parts[1] - 1, parts[0])
-    if (!isNaN(d.getTime())) return d
-  }
-  // Try native parsing
-  const d = new Date(val)
-  if (!isNaN(d.getTime())) return d
-  return null
+   if (!val) return null
+   if (val instanceof Date) return val
+   
+   const str = String(val).trim()
+   console.log('parseDate input:', str)
+   
+   // Try to parse dd/mm/yyyy format first (matching emit format)
+   const slashParts = str.split('/')
+   if (slashParts.length === 3 && slashParts[0].length === 2 && slashParts[1].length === 2 && slashParts[2].length === 4) {
+     const d = new Date(Number(slashParts[2]), Number(slashParts[1]) - 1, Number(slashParts[0]))
+     d.setHours(0, 0, 0, 0)
+     if (!isNaN(d.getTime())) {
+       console.log('parseDate result (from dd/mm/yyyy):', d)
+       return d
+     }
+   }
+   
+   // Try ISO format YYYY-MM-DD
+   if (str.match(/^\d{4}-\d{2}-\d{2}$/)) {
+     const [year, month, day] = str.split('-')
+     const d = new Date(Number(year), Number(month) - 1, Number(day))
+     d.setHours(0, 0, 0, 0)
+     if (!isNaN(d.getTime())) {
+       console.log('parseDate result (from YYYY-MM-DD):', d)
+       return d
+     }
+   }
+   
+   // Try to parse dd-mm-yyyy format
+   const dashParts = str.split('-')
+   if (dashParts.length === 3 && dashParts[2].length === 4) {
+     const d = new Date(Number(dashParts[2]), Number(dashParts[1]) - 1, Number(dashParts[0]))
+     d.setHours(0, 0, 0, 0)
+     if (!isNaN(d.getTime())) {
+       console.log('parseDate result (from dd-mm-yyyy):', d)
+       return d
+     }
+   }
+   
+   // Try native parsing as fallback
+   const d = new Date(str)
+   if (!isNaN(d.getTime())) {
+     d.setHours(0, 0, 0, 0)
+     console.log('parseDate result (from native):', d)
+     return d
+   }
+   
+   console.log('parseDate failed')
+   return null
 }
 
 watch(() => props.modelValue, (val) => {
