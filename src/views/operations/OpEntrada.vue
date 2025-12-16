@@ -67,7 +67,10 @@
 
                                 <div class="field">
                                     <label>Folio</label>
-                                    <input class="control" v-model.trim="form.folio" placeholder="Ej. 5-011" />
+                                    <div style="display:flex; flex-direction:column; gap:6px">
+                                        <FolioInput v-model="form.folio" />
+                                        <small class="hint">Formato requerido: <code>E-001</code></small>
+                                    </div>
                                 </div>
 
                                 <!-- Segunda fila -->
@@ -668,6 +671,7 @@ import {
 } from '@heroicons/vue/24/outline'
 import { HashtagIcon } from '@heroicons/vue/24/outline'
 import TrashButton from '@/components/TrashButton.vue'
+import FolioInput from '@/components/FolioInput.vue'
 // Nota: cargamos ExcelJS dinámicamente dentro de generarExcelEntrada para evitar
 // que la librería (que tiene partes orientadas a node) sea importada al cargar
 // el componente; esto previene fallos en el dev server y reduce el bundle inicial.
@@ -799,6 +803,17 @@ function formatDate(dateStr) {
 // Opciones del select de motivo de entrada
 // Opciones del select de motivo de entrada (importadas desde data)
 // motivoEntradaOptions importado arriba
+
+// Sanitizar folio a formato E-XXX
+function sanitizeFolio(f) {
+  if (!f) return ''
+  const s = String(f).trim()
+  // extraer números
+  const m = s.match(/(\d+)$/)
+  if (!m) return ''
+  const digits = m[1].slice(0,6)
+  return `E-${digits.padStart(6, '0')}`
+}
 
 // Opciones del select de tipo de entrada
 const tipoEntradaOptions = [
@@ -2588,7 +2603,7 @@ async function onSubmit() {
         nombreSolicitante: form.nombreSolicitante,
         servicio: form.servicio,
         especialidad: form.especialidad,
-        folio: form.folio,
+        folio: sanitizeFolio(form.folio),
         fecha: normalizeFecha(form.fecha),  // Normalizar a DD-MM-YYYY
         horaInicio: form.horaInicio,
         horaTermino: form.horaTermino,

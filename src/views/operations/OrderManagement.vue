@@ -258,6 +258,40 @@ const OpEntrada = defineAsyncComponent(() => import('@/views/operations/OpEntrad
 const router = useRouter()
 
 const allOrders = ref([])
+
+// Función para normalizar folios para búsqueda flexible
+// Convierte "E-000912" -> "E-912" y "E-912" -> "E-912" para comparación
+function normalizeFolio(folio) {
+    if (!folio || typeof folio !== 'string') return ''
+    
+    // Si parece un folio (E- seguido de números)
+    const folioMatch = folio.match(/^(E-)?(\d+)$/i)
+    if (folioMatch) {
+        const prefix = 'E-'
+        const number = parseInt(folioMatch[2], 10) // Elimina ceros a la izquierda
+        return `${prefix}${number}`
+    }
+    
+    return folio.toLowerCase()
+}
+
+// Función para verificar si una búsqueda coincide con un folio (flexible)
+function folioMatches(orderFolio, searchTerm) {
+    if (!orderFolio || !searchTerm) return false
+    
+    const searchLower = searchTerm.toLowerCase()
+    const orderFolioLower = orderFolio.toLowerCase()
+    
+    // Búsqueda exacta (case-insensitive)
+    if (orderFolioLower.includes(searchLower)) return true
+    
+    // Búsqueda normalizada (para casos como E-912 vs E-000912)
+    const normalizedSearch = normalizeFolio(searchTerm)
+    const normalizedOrder = normalizeFolio(orderFolio)
+    
+    return normalizedOrder.includes(normalizedSearch)
+}
+
 const filterFolio = ref('')
 const filterSolicitante = ref('')
 const tipoOptions = [
@@ -438,9 +472,16 @@ const hasActiveFilters = computed(() => {
 
 const filteredOrders = computed(() => {
     return allOrders.value.filter(order => {
-        const matchFolio = !filterFolio.value || order.folio?.toLowerCase().includes(filterFolio.value.toLowerCase())
+        // Filtrado flexible de folio - permite buscar E-912 para encontrar E-000912
+        const matchFolio = !filterFolio.value || folioMatches(order.folio, filterFolio.value)
+        
         const matchSolicitante = !filterSolicitante.value || order.nombreSolicitante?.toLowerCase().includes(filterSolicitante.value.toLowerCase())
-        const matchSearch = !searchTerm.value || order.folio?.toLowerCase().includes(searchTerm.value.toLowerCase()) || order.nombreSolicitante?.toLowerCase().includes(searchTerm.value.toLowerCase())
+        
+        // Búsqueda general también con normalización de folios
+        const matchSearch = !searchTerm.value || (
+            folioMatches(order.folio, searchTerm.value) || 
+            order.nombreSolicitante?.toLowerCase().includes(searchTerm.value.toLowerCase())
+        )
 
         const matchDate = !filterDate.value || order.fecha === filterDate.value
         if (filterDate.value && order.folio) {
@@ -512,7 +553,8 @@ function closeFiltersDropdown() {
 function openEditModal(order) {
     editingOrder.value = JSON.parse(JSON.stringify(order))
     showEditModal.value = true
-    selectedOrderId.value = order?.id ?? null
+    // Preferir folio como identificador; fallback a id por compatibilidad
+    selectedOrderId.value = order?.folio ?? order?.id ?? null
 }
 
 function closeEditModal() {
@@ -776,7 +818,7 @@ function loadOrders() {
                     
                     // Mapear items a estructura de equiposEntrada
                     const equiposEntrada = orderItems.map(item => ({
-                        id: item.id,
+                        id: `${item.orden_folio}-${item.line}`, // ID compuesto para compatibilidad
                         tipo: item.tipo || 'N/A',
                         cantidad: item.cantidad || 1,
                         descripcion: item.descripcion || 'N/A',
@@ -792,7 +834,7 @@ function loadOrders() {
                     console.log(`Orden cargada - folio: ${orden.folio}, fecha raw: "${orden.fecha}"`)
                     
                     return {
-                        id: orden.id,
+                        id: orden.folio || orden.id, // Usar folio como ID primario
                         folio: orden.folio || 'N/A',
                         nombreSolicitante: orden.nombre_solicitante || 'N/A',
                         servicio: orden.servicio || 'N/A',
