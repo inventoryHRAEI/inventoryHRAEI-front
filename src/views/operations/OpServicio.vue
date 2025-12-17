@@ -772,10 +772,6 @@ let hideTimeout = null
 
 const onCancel = async () => {
   const result = await confirmDelete('¿Estás seguro?', 'Se perderán todos los datos del formulario', 1, 'Sí, regresar', 'Cancelar')
-    confirmButtonText: 'Sí, regresar',
-    cancelButtonText: 'Cancelar',
-    reverseButtons: true
-  })
 
   if (result.isConfirmed) {
     // Limpiar localStorage antes de regresar

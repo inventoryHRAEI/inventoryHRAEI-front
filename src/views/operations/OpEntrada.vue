@@ -636,9 +636,9 @@
             </template>
         </FormShell>
 
-        <!-- Botón Scroll to Top - Fuera de todos los contenedores -->
+        <!-- Botón Scroll to Top - Fuera de todos los contenedores - Solo si NO está en modal -->
         <Transition name="scroll-btn">
-            <button v-show="showScrollTop" @click="scrollToTop" @mouseenter="onHoverStart" @mouseleave="onHoverEnd"
+            <button v-show="showScrollTop && !props.enModal" @click="scrollToTop" @mouseenter="onHoverStart" @mouseleave="onHoverEnd"
                 :class="['scroll-to-top-btn', {
                     'animating-out': isAnimatingOut
                 }]" aria-label="Volver al inicio">
@@ -687,7 +687,8 @@ const router = useRouter()
 // Props para el componente
 const props = defineProps({
     modo: { type: String, default: 'crear', validator: v => ['crear', 'editar'].includes(v) },
-    ordenId: { type: [String, Number], default: null }
+    ordenId: { type: [String, Number], default: null },
+    enModal: { type: Boolean, default: false }
 })
 
 // Emit para comunicación con el padre (order-management)
@@ -1536,7 +1537,10 @@ async function generarExcelEntrada() {
         // ═══════════════════════════════════════════════════════════════
         console.log('[PROTECCIÓN] Creando snapshot de filas críticas...')
 
-        const CRITICAL_ROWS = [16, 17, 21, 22, 26, 27, 31, 32, 35, 36, 37, 38, 39, 40] // Todos los encabezados + observaciones + firmas
+        // NOTA: se han eliminado las filas 35-40 (OBSERVACIONES / INGENIERO)
+        // porque estas secciones se crean dinámicamente y su snapshot
+        // original puede interferir con las filas dinámicas insertadas.
+        const CRITICAL_ROWS = [16, 17, 21, 22, 26, 27, 31, 32] // Encabezados fijos y firmas
         const rowSnapshots = {}
 
         CRITICAL_ROWS.forEach(rowNum => {
@@ -1702,6 +1706,23 @@ async function generarExcelEntrada() {
                 CRITICAL_ROWS.forEach(row => {
                     newCriticalRows.push(row > lastDataRow ? row + sec.extraRowsNeeded : row)
                 })
+
+                // ACTUALIZAR SNAPSHOT DE FILAS CRÍTICAS: remapear keys de rowSnapshots
+                try {
+                    const newRowSnapshots = {}
+                    Object.keys(rowSnapshots).forEach(k => {
+                        const orig = Number(k)
+                        if (Number.isNaN(orig)) return
+                        const mapped = orig > lastDataRow ? orig + sec.extraRowsNeeded : orig
+                        newRowSnapshots[mapped] = rowSnapshots[orig]
+                    })
+                    // Reemplazar snapshot por el remapeado
+                    Object.keys(rowSnapshots).forEach(k => delete rowSnapshots[k])
+                    Object.keys(newRowSnapshots).forEach(k => { rowSnapshots[k] = newRowSnapshots[k] })
+                    console.log('[SNAPSHOT] rowSnapshots remapeado tras inserción:', sec.extraRowsNeeded, 'filas después de', lastDataRow)
+                } catch (errSnap) {
+                    console.warn('[SNAPSHOT] Error remapeando rowSnapshots:', errSnap)
+                }
 
                 // Reemplazar estructuras globales
                 PROTECTED_ROWS.clear()
@@ -1927,6 +1948,47 @@ async function generarExcelEntrada() {
         console.log(`[🔒] Encabezado azul: Fila ${FILA_ENCABEZADO_OBS}`)
         console.log(`[🔒] Contenido texto+imagen: Fila ${FILA_CONTENIDO_OBS}`)
         console.log(`[🔒] Ingeniero: Fila ${FILA_INGENIERO}`)
+
+        // Asegurar que las filas dinámicas de Observaciones/Ingeniero estén marcadas como protegidas
+        try {
+            if (typeof PROTECTED_ROWS !== 'undefined' && PROTECTED_ROWS instanceof Set) {
+                PROTECTED_ROWS.add(FILA_ENCABEZADO_OBS)
+                PROTECTED_ROWS.add(FILA_CONTENIDO_OBS)
+                PROTECTED_ROWS.add(FILA_INGENIERO)
+                console.log('[PROTECCIÓN] Filas dinámicas Observaciones/Ingeniero añadidas a PROTECTED_ROWS:', FILA_ENCABEZADO_OBS, FILA_CONTENIDO_OBS, FILA_INGENIERO)
+            }
+
+            // Tomar snapshot inmediato de estas filas para la fase de reparación
+            ;[FILA_ENCABEZADO_OBS, FILA_CONTENIDO_OBS, FILA_INGENIERO].forEach(rowNum => {
+                try {
+                    const row = worksheet.getRow(rowNum)
+                    const snapshot = { height: row.height, hidden: row.hidden, cells: {} }
+                    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
+                        snapshot.cells[colNum] = {
+                            value: cell.value,
+                            style: cell.style ? JSON.parse(JSON.stringify(cell.style)) : null,
+                            merge: cell.isMerged
+                        }
+                    })
+                    rowSnapshots[rowNum] = snapshot
+                    console.log('[SNAPSHOT] Dinámico fila respaldada:', rowNum)
+                } catch (e) {
+                    console.warn('[SNAPSHOT] Error respaldando fila dinámica', rowNum, e)
+                }
+            })
+
+            // Añadir filas dinámicas a CRITICAL_ROWS (si no existen)
+            try {
+                ;[FILA_ENCABEZADO_OBS, FILA_CONTENIDO_OBS, FILA_INGENIERO].forEach(r => {
+                    if (!CRITICAL_ROWS.includes(r)) CRITICAL_ROWS.push(r)
+                })
+                console.log('[CRITICAL_ROWS] Actualizados con filas dinámicas:', CRITICAL_ROWS)
+            } catch (errAddCrit) {
+                console.warn('[CRITICAL_ROWS] Error añadiendo filas dinámicas a CRITICAL_ROWS:', errAddCrit)
+            }
+        } catch (errProtect) {
+            console.warn('[PROTECCIÓN] Error al marcar filas dinámicas protegidas:', errProtect)
+        }
 
         // ══════════════════════════════════════════════════════════════════════════
         // FILA 1: ENCABEZADO AZUL "OBSERVACIONES" - A:I COMBINADO
@@ -2226,17 +2288,33 @@ async function generarExcelEntrada() {
             const currentRow = worksheet.getRow(rowNum)
             const snapshot = rowSnapshots[rowNum]
 
-            // VALIDACIÓN: Verificar que existe el snapshot
-            if (!snapshot) {
-                console.warn(`[REPARACIÓN] No hay snapshot para fila ${rowNum} - saltando validación`)
-                return
-            }
+                // VALIDACIÓN: Verificar que existe el snapshot
+                if (!snapshot) {
+                    console.warn(`[REPARACIÓN] No hay snapshot para fila ${rowNum} - saltando validación`)
+                    return
+                }
 
-            // Verificar si la fila está corrupta (vacía o sin estilo)
-            let isCorrupted = true
-            currentRow.eachCell({ includeEmpty: false }, (cell) => {
-                if (cell.value || cell.style) isCorrupted = false
-            })
+                // Si la fila está protegida y tiene contenido válido, OMITIR restauración
+                if (PROTECTED_ROWS.has(rowNum)) {
+                    let hasContent = false
+                    try {
+                        currentRow.eachCell({ includeEmpty: false }, (cell) => {
+                            if (cell.value) hasContent = true
+                        })
+                    } catch (e) { /* ignore */ }
+
+                    if (hasContent) {
+                        console.log(`[REPARACIÓN] Fila protegida ${rowNum} tiene contenido - omitiendo restauración`)
+                        return
+                    }
+                    // si no tiene contenido, dejaremos que la restauración continúe
+                }
+
+                // Verificar si la fila está corrupta (vacía o sin estilo)
+                let isCorrupted = true
+                currentRow.eachCell({ includeEmpty: false }, (cell) => {
+                    if (cell.value || cell.style) isCorrupted = false
+                })
 
             if (isCorrupted || !currentRow.height) {
                 console.warn(`[REPARACIÓN] Fila ${rowNum} corrupta - restaurando desde snapshot`)
@@ -2252,10 +2330,13 @@ async function generarExcelEntrada() {
                         const cellData = snapshot.cells[colNum]
                         if (cellData) {
                             const cell = currentRow.getCell(Number(colNum))
-                            // Evitar restaurar la etiqueta de "INGENIERO RESIDENTE" desde el snapshot
-                            if (typeof cellData.value === 'string' && cellData.value.includes('NOMBRE DE INGENIERO RESIDENTE DE APOYO')) {
-                                // Saltar restauración de esta celda para evitar duplicados (se escribirá en la fila final calculada)
-                                return
+                            // Evitar restaurar etiquetas críticas desde el snapshot (ingeniero u observaciones)
+                            if (typeof cellData.value === 'string') {
+                                const v = cellData.value
+                                if (v.includes('NOMBRE DE INGENIERO RESIDENTE DE APOYO') || v.includes('OBSERVACIONES')) {
+                                    // Saltar restauración de esta celda para evitar sobrescribir el encabezado dinámico
+                                    return
+                                }
                             }
 
                             cell.value = cellData.value
@@ -2383,18 +2464,30 @@ async function generarExcelEntrada() {
 
             // Limpiar fondo de TODAS las columnas de esta fila (A-I)
             for (let col = 1; col <= 9; col++) {
-                const celda = fila.getCell(col)
+                let celda = null
+                try {
+                    celda = fila.getCell(col)
+                } catch (e) {
+                    celda = null
+                }
 
-                // Quitar cualquier fondo (fill) que pueda tener
-                celda.fill = null
+                if (!celda) {
+                    console.warn(`[LIMPIEZA-MOTIVOS] Celda inexistente en fila ${filaMotivo} col ${col}, se omite`)
+                    continue
+                }
+
+                // Quitar cualquier fondo (fill) que pueda tener (safe)
+                try { celda.fill = null } catch (e) { /* ignore */ }
 
                 // Asegurar que el texto sea negro (no blanco)
-                if (celda.font) {
-                    celda.font = {
-                        ...celda.font,
-                        color: { argb: 'FF000000' }  // Negro
+                try {
+                    if (celda.font) {
+                        celda.font = {
+                            ...celda.font,
+                            color: { argb: 'FF000000' }  // Negro
+                        }
                     }
-                }
+                } catch (e) { /* ignore */ }
             }
 
             console.log(`[LIMPIEZA-MOTIVOS] ✓ Fila ${filaMotivo} limpiada (sin fondo azul)`)
@@ -2406,6 +2499,80 @@ async function generarExcelEntrada() {
         // ═══════════════════════════════════════════════════════════════
         // FASE 4: GENERAR Y DESCARGAR ARCHIVO
         // ═══════════════════════════════════════════════════════════════
+        // Re-aplicar de forma definitiva las filas dinámicas de OBSERVACIONES e INGENIERO
+        try {
+            const refSeccionFinal = sections.find(s => s.key === 'refacciones') || sections[sections.length - 1]
+            const lastRows = (refSeccionFinal && (refSeccionFinal.actualDataRows && refSeccionFinal.actualDataRows.length) ? refSeccionFinal.actualDataRows : refSeccionFinal.dataRows) || [31, 32]
+            const ultimaFilaRefacciones = Math.max(...lastRows)
+
+            const FILA_ESPACIO_BLANCO_1 = ultimaFilaRefacciones + 1
+            const FILA_ESPACIO_BLANCO_2 = ultimaFilaRefacciones + 2
+            const FILA_ENCABEZADO_OBS = FILA_ESPACIO_BLANCO_2 + 1
+            const FILA_CONTENIDO_OBS = FILA_ENCABEZADO_OBS + 1
+            const FILA_INGENIERO = FILA_CONTENIDO_OBS + 1
+
+            // Encabezado OBSERVACIONES (A:I)
+            try { worksheet.unMergeCells(`A${FILA_ENCABEZADO_OBS}:I${FILA_ENCABEZADO_OBS}`) } catch (e) { }
+            try { worksheet.mergeCells(`A${FILA_ENCABEZADO_OBS}:I${FILA_ENCABEZADO_OBS}`) } catch (e) { }
+            const hdr = worksheet.getCell(`A${FILA_ENCABEZADO_OBS}`)
+            hdr.value = 'OBSERVACIONES'
+            try { applyHeaderStyle(worksheet, FILA_ENCABEZADO_OBS) } catch (e) { }
+            hdr.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            }
+            worksheet.getRow(FILA_ENCABEZADO_OBS).height = 25
+
+            // Contenido OBSERVACIONES (A:F) + IMAGEN (G:I)
+            try { worksheet.unMergeCells(FILA_CONTENIDO_OBS, 1, FILA_CONTENIDO_OBS, 9) } catch (e) { }
+            // Texto
+            try { worksheet.mergeCells(FILA_CONTENIDO_OBS, 1, FILA_CONTENIDO_OBS, 6) } catch (e) { }
+            const txt = worksheet.getCell(FILA_CONTENIDO_OBS, 1)
+            txt.value = form.observaciones || ''
+            txt.alignment = { horizontal: 'left', vertical: 'top', wrapText: true }
+            txt.font = { name: 'Calibri', size: 11, color: { argb: 'FF000000' } }
+            txt.border = {
+                top: { style: 'thin', color: { argb: 'FF000000' } },
+                left: { style: 'thin', color: { argb: 'FF000000' } },
+                bottom: { style: 'thin', color: { argb: 'FF000000' } },
+                right: { style: 'thin', color: { argb: 'FF000000' } }
+            }
+            // Imagen área (G:I)
+            try { worksheet.mergeCells(FILA_CONTENIDO_OBS, 7, FILA_CONTENIDO_OBS, 9) } catch (e) { }
+            worksheet.getRow(FILA_CONTENIDO_OBS).height = 100
+            if (form.observacionesImg && form.observacionesImg.dataUrl) {
+                try {
+                    const base64Img = String(form.observacionesImg.dataUrl).replace(/^data:image\/\w+;base64,/, '')
+                    const extImg = (form.observacionesImg.extension || 'png').replace('jpeg', 'jpg')
+                    const idImagen = workbook.addImage({ base64: base64Img, extension: extImg })
+                    worksheet.addImage(idImagen, {
+                        tl: { col: 6, row: FILA_CONTENIDO_OBS - 1 },
+                        br: { col: 9, row: FILA_CONTENIDO_OBS },
+                        editAs: 'oneCell'
+                    })
+                } catch (errImg) { console.warn('[FINAL-OBS] Error insertando imagen:', errImg) }
+            }
+
+            // Ingeniero
+            try { worksheet.unMergeCells(FILA_INGENIERO, 1, FILA_INGENIERO, 9) } catch (e) { }
+            try { worksheet.mergeCells(FILA_INGENIERO, 1, FILA_INGENIERO, 3) } catch (e) { }
+            try { worksheet.mergeCells(FILA_INGENIERO, 4, FILA_INGENIERO, 9) } catch (e) { }
+            const lab = worksheet.getCell(FILA_INGENIERO, 1)
+            lab.value = 'NOMBRE DE INGENIERO RESIDENTE DE APOYO'
+            lab.font = { name: 'Calibri', size: 10, bold: true }
+            lab.alignment = { horizontal: 'left', vertical: 'middle' }
+            const valIng = worksheet.getCell(FILA_INGENIERO, 4)
+            valIng.value = form.nombreIngeniero || ''
+            valIng.alignment = { horizontal: 'center', vertical: 'middle' }
+            worksheet.getRow(FILA_INGENIERO).height = 25
+
+            console.log('[FINAL-OBS] Observaciones/Ingeniero re-aplicados en filas', FILA_ENCABEZADO_OBS, FILA_CONTENIDO_OBS, FILA_INGENIERO)
+        } catch (errFinalObs) {
+            console.warn('[FINAL-OBS] Error re-aplicando Observaciones/Ingeniero:', errFinalObs)
+        }
+
         console.log('[GENERACIÓN] Creando archivo final...')
         const buffer = await workbook.xlsx.writeBuffer()
         // MIME corregido: spreadsheetml (antes había un typo)
@@ -2815,14 +2982,14 @@ const loadOrderData = async () => {
                         lote: item.lote || '',
                         referencia: item.referencia || '',
                         ubicacion: item.ubicacion || '',
-                        claveHRAEI: item.clave_hraei || '',
+                        claveHRAEI: item.clave_hraei || item.claveHRAEI || '',
                         unidades: []
                     }
                 }
-                equiposByType[item.tipo].cantidad++
-                
-                // Agregar unidades si existen
-                if (item.unidades && Array.isArray(item.unidades)) {
+
+                // Si el item trae una propiedad 'unidades' (antigua estructura), usarla
+                if (item.unidades && Array.isArray(item.unidades) && item.unidades.length) {
+                    equiposByType[item.tipo].cantidad += item.unidades.length
                     item.unidades.forEach(unidad => {
                         equiposByType[item.tipo].unidades.push({
                             nombre: unidad.nombre || '',
@@ -2833,9 +3000,32 @@ const loadOrderData = async () => {
                             lote: unidad.lote || '',
                             referencia: unidad.referencia || '',
                             ubicacion: unidad.ubicacion || '',
-                            claveHRAEI: unidad.clave_hraei || ''
+                            claveHRAEI: unidad.clave_hraei || unidad.claveHRAEI || ''
                         })
                     })
+
+                } else if (item.cantidad && Number(item.cantidad) > 1 && !item.descripcion) {
+                    // Fila agrupada sin descripción: sumar la cantidad
+                    equiposByType[item.tipo].cantidad += Number(item.cantidad || 0)
+
+                } else if (item.cantidad && Number(item.cantidad) > 1 && item.descripcion) {
+                    // Fila agrupada con cantidad >1 y descripción -> tratar como grupo
+                    equiposByType[item.tipo].cantidad += Number(item.cantidad || 0)
+                } else {
+                    // Caso: registros por unidad (cada fila representa una unidad)
+                    const unidadFromRow = {
+                        nombre: item.descripcion || '',
+                        cantidad: item.cantidad || 1,
+                        marca: item.marca || '',
+                        modelo: item.modelo || '',
+                        serie: item.serie || '',
+                        lote: item.lote || '',
+                        referencia: item.referencia || '',
+                        ubicacion: item.ubicacion || '',
+                        claveHRAEI: item.clave_hraei || item.claveHRAEI || ''
+                    }
+                    equiposByType[item.tipo].unidades.push(unidadFromRow)
+                    equiposByType[item.tipo].cantidad += Number(item.cantidad || 1)
                 }
             })
             form.equiposEntrada = Object.values(equiposByType)
