@@ -87,6 +87,7 @@
                     </svg>
                   </button>
                   <span>{{ order.folio }}</span>
+                  <button v-if="order.histCount > 0" class="history-badge" :title="`Versiones: ${order.histCount}`" @click.stop="$emit('openHistory', order)">{{ order.histCount }}</button>
                 </div>
               </td>
               <td>{{ order.nombreSolicitante }}</td>
@@ -1247,4 +1248,15 @@ function deleteSelected() {
   }
 }
 
+.history-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, rgba(59,130,246,0.18), rgba(99,102,241,0.14));
+  color: #0442a6;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  margin-left: 8px;
+  border: 1px solid rgba(59,130,246,0.12);
+}
 </style>

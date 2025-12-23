@@ -234,11 +234,68 @@
                 @deleteMultiple="handleDeleteMultipleWithModal" @create="goToCreateOrder" />
         </ActionPanel>
 
-        <!-- Modal embebiendo OpEntrada con todas sus funcionalidades -->
-        <ModalBase :open="showEditModal" @close="handleModalClose" :maxWidth="1100" :height="'92vh'">
-            <OpEntrada ref="opEntradaRef" :ordenId="selectedOrderId" :modo="'editar'" @actualizado="onOrderUpdated"
-                @close="closeEditModal" />
+        <!-- Modal: edición única (no permite múltiples) + tabs de versiones (ramas) -->
+        <ModalBase :open="showEditModal" @close="handleModalClose" @close-request="handleModalClose" :maxWidth="1100"
+            :height="'92vh'" :hideInternalClose="true" :externalClose="true">
+            <div class="om-edit-shell">
+                <div class="om-edit-tabs" role="tablist" aria-label="Versiones de la orden">
+                    <button v-if="!branchTabs.length" class="om-tab" :class="{ active: activeTab === 'main' }"
+                        @click="activeTab = 'main'" role="tab" :aria-selected="activeTab === 'main'">
+                        {{ selectedOrderId || '—' }}
+                    </button>
+                    <button v-for="v in branchTabs" :key="v" class="om-tab" :class="{ active: activeTab === v, newest: v === newestVersion }"
+                        @click="activeTab = v" role="tab" :aria-selected="activeTab === v">
+                        {{ v === 1 ? selectedOrderId : `${selectedOrderId} v${v}` }}
+                    </button>
+                    <div style="flex:1"></div>
+                    <div class="om-help-wrap" ref="legendWrapRef">
+                        <button type="button" class="om-tab-help" @mouseenter="showLegend = true"
+                            @mouseleave="showLegend = false" aria-label="Ayuda de colores">?</button>
+                        <div v-if="showLegend" class="om-legend-popover" role="tooltip" aria-label="Leyenda de colores">
+                            <div class="om-legend-row"><span
+                                    class="om-legend-dot is-green"></span><strong>Verde</strong>:
+                                agregado o rellenado.</div>
+                            <div class="om-legend-row"><span
+                                    class="om-legend-dot is-yellow"></span><strong>Amarillo</strong>:
+                                editado/modificado.</div>
+                            <div class="om-legend-row"><span class="om-legend-dot is-red"></span><strong>Rojo</strong>:
+                                eliminado o vaciado (se muestra como N/A).</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="activeTab !== 'main'" class="om-version-panel" role="tabpanel">
+                    <!-- SOLO la versión más reciente (golden/newest) es editable -->
+                    <OpEntrada
+                        v-if="isActiveTabEditable"
+                        :key="`edit-${selectedOrderId}-${activeTab}`"
+                        :modo="'editar'"
+                        :ordenId="selectedOrderId"
+                        :enModal="true"
+                        :read-only="false"
+                        @actualizado="onOrderUpdated"
+                        @close="closeEditModal" />
+
+                    <!-- Versiones anteriores: snapshot + solo lectura + resaltados -->
+                    <OpEntrada
+                        v-else
+                        :key="`snap-${selectedOrderId}-${activeTab}`"
+                        :modo="'editar'"
+                        :ordenId="selectedOrderId"
+                        :enModal="true"
+                        :read-only="true"
+                        :snapshot="snapshotForActiveVersion"
+                        :diffHighlights="highlightsForActiveVersion"
+                        @close="closeEditModal" />
+                </div>
+
+                <div v-show="activeTab === 'main' && !branchTabs.length" role="tabpanel" class="om-main-panel">
+                    <OpEntrada :key="mainEditorKey" ref="opEntradaRef" :ordenId="selectedOrderId" :modo="'editar'"
+                        :enModal="true" :read-only="false" @actualizado="onOrderUpdated" @close="closeEditModal" />
+                </div>
+            </div>
         </ModalBase>
+
     </div>
 </template>
 
@@ -253,6 +310,8 @@ import CustomSelect from '@/components/CustomSelect.vue'
 import OrdersTable from '@/components/OrdersTable.vue'
 import ModalBase from '@/components/ModalBase.vue'
 import { confirmDelete, showSuccess } from '@/utils/sweetAlertConfig'
+import Swal from 'sweetalert2'
+import { darkThemeConfig } from '@/utils/sweetAlertConfig'
 const OpEntrada = defineAsyncComponent(() => import('@/views/operations/OpEntrada.vue'))
 
 const router = useRouter()
@@ -263,7 +322,7 @@ const allOrders = ref([])
 // Convierte "E-000912" -> "E-912" y "E-912" -> "E-912" para comparación
 function normalizeFolio(folio) {
     if (!folio || typeof folio !== 'string') return ''
-    
+
     // Si parece un folio (E- seguido de números)
     const folioMatch = folio.match(/^(E-)?(\d+)$/i)
     if (folioMatch) {
@@ -271,24 +330,24 @@ function normalizeFolio(folio) {
         const number = parseInt(folioMatch[2], 10) // Elimina ceros a la izquierda
         return `${prefix}${number}`
     }
-    
+
     return folio.toLowerCase()
 }
 
 // Función para verificar si una búsqueda coincide con un folio (flexible)
 function folioMatches(orderFolio, searchTerm) {
     if (!orderFolio || !searchTerm) return false
-    
+
     const searchLower = searchTerm.toLowerCase()
     const orderFolioLower = orderFolio.toLowerCase()
-    
+
     // Búsqueda exacta (case-insensitive)
     if (orderFolioLower.includes(searchLower)) return true
-    
+
     // Búsqueda normalizada (para casos como E-912 vs E-000912)
     const normalizedSearch = normalizeFolio(searchTerm)
     const normalizedOrder = normalizeFolio(orderFolio)
-    
+
     return normalizedOrder.includes(normalizedSearch)
 }
 
@@ -344,6 +403,106 @@ const loading = ref(true)
 const showEditModal = ref(false)
 const editingOrder = ref(null)
 const selectedOrderId = ref(null)
+const activeTab = ref('main')
+const branchTabs = ref([])
+const diffByVersion = ref({})
+const snapshotByVersion = ref({})
+const mainEditorKey = ref(0)
+const showLegend = ref(false)
+const legendWrapRef = ref(null)
+
+/**
+ * Almacena la versión máxima de forma explícita y sincronizada
+ * Esto evita problemas de timing en la evaluación del template
+ */
+const maxVersionNumber = ref(null)
+
+/**
+ * Calcula la versión más reciente (la de mayor número)
+ * Retorna null si no hay versiones disponibles
+ */
+const newestVersion = computed(() => {
+    if (!Array.isArray(branchTabs.value) || !branchTabs.value.length) return null
+    return Math.max(...branchTabs.value)
+})
+
+/**
+ * Calcula si el tab actualmente seleccionado es la versión más reciente
+ * Solo retorna true si:
+ * 1. activeTab no es 'main'
+ * 2. Hay versiones disponibles en branchTabs
+ * 3. activeTab es igual al máximo de branchTabs
+ */
+const isNewestVersionTab = computed(() => {
+    if (activeTab.value === 'main' || activeTab.value === null) return false
+    if (!Array.isArray(branchTabs.value) || !branchTabs.value.length) return false
+    const newest = Math.max(...branchTabs.value)
+    return activeTab.value === newest
+})
+
+// Regla de UX: solo la versión más reciente (vN) es editable.
+const isActiveTabEditable = computed(() => {
+    if (activeTab.value === 'main' || activeTab.value === null) return false
+    if (maxVersionNumber.value == null) return false
+    return Number(activeTab.value) === Number(maxVersionNumber.value)
+})
+
+/**
+ * Obtiene la versión más antigua disponible
+ */
+const oldestVersion = computed(() => {
+    if (!Array.isArray(branchTabs.value) || !branchTabs.value.length) return null
+    return Math.min(...branchTabs.value)
+})
+
+/**
+ * Obtiene el número total de versiones disponibles
+ */
+const totalVersions = computed(() => {
+    return Array.isArray(branchTabs.value) ? branchTabs.value.length : 0
+})
+
+/**
+ * Obtiene el índice de la versión actual dentro de branchTabs
+ * Útil para navegación entre versiones
+ */
+const currentVersionIndex = computed(() => {
+    if (!Array.isArray(branchTabs.value) || activeTab.value === 'main') return -1
+    return branchTabs.value.indexOf(activeTab.value)
+})
+
+const snapshotForActiveVersion = computed(() => {
+    const v = activeTab.value
+    if (v === 'main') return null
+    const snap = snapshotByVersion.value[String(v)] || null
+    if (!snap) return null
+
+    // Para mostrar eliminaciones en la vista, agregamos "ghost" items al final (solo en pestaña de versión)
+    const rows = diffByVersion.value[String(v)] || []
+    const deleted = []
+    for (const r of rows) {
+        if (r && r.action === 'delete_item' && r.old_json) {
+            try {
+                const obj = typeof r.old_json === 'string' ? JSON.parse(r.old_json) : r.old_json
+                deleted.push({ ...obj, line: r.line, __diffGhost: true, __diffStatus: 'red' })
+            } catch {
+                // ignore parse error
+            }
+        }
+    }
+    if (!deleted.length) return snap
+    return {
+        ...snap,
+        items: [...(Array.isArray(snap.items) ? snap.items : []), ...deleted]
+    }
+})
+
+const highlightsForActiveVersion = computed(() => {
+    const v = activeTab.value
+    if (v === 'main') return null
+    const rows = diffByVersion.value[String(v)] || []
+    return buildHighlights(rows)
+})
 const newEditItem = ref({ tipo: '', cantidad: 1, descripcion: '', marca: '', modelo: '', serie: '', lote: '', referencia: '', claveHRAEI: '', unidades: [] })
 const editingItemIndex = ref(-1)
 const filterDropdownRef = ref(null)
@@ -355,16 +514,16 @@ watch(filterDateDisplay, (val) => {
     console.log('Raw value:', val)
     console.log('Type:', typeof val)
     console.log('String representation:', String(val))
-    
+
     if (!val) {
         filterDate.value = ''
         return
     }
-    
+
     // Expecting DatePicker display in dd/mm/yyyy
     const parts = String(val).split('/')
     console.log('Split by /:', parts)
-    
+
     if (parts.length === 3) {
         const dd = parts[0].padStart(2, '0')
         const mm = parts[1].padStart(2, '0')
@@ -474,12 +633,12 @@ const filteredOrders = computed(() => {
     return allOrders.value.filter(order => {
         // Filtrado flexible de folio - permite buscar E-912 para encontrar E-000912
         const matchFolio = !filterFolio.value || folioMatches(order.folio, filterFolio.value)
-        
+
         const matchSolicitante = !filterSolicitante.value || order.nombreSolicitante?.toLowerCase().includes(filterSolicitante.value.toLowerCase())
-        
+
         // Búsqueda general también con normalización de folios
         const matchSearch = !searchTerm.value || (
-            folioMatches(order.folio, searchTerm.value) || 
+            folioMatches(order.folio, searchTerm.value) ||
             order.nombreSolicitante?.toLowerCase().includes(searchTerm.value.toLowerCase())
         )
 
@@ -550,44 +709,444 @@ function closeFiltersDropdown() {
     showMoreFilters.value = false
 }
 
-function openEditModal(order) {
+/**
+ * Abre el modal de edición para una orden
+ * Carga automáticamente el historial de versiones
+ * y posiciona en la versión más reciente
+ */
+async function openEditModal(order) {
     editingOrder.value = JSON.parse(JSON.stringify(order))
     showEditModal.value = true
+    showLegend.value = false
+
     // Preferir folio como identificador; fallback a id por compatibilidad
     selectedOrderId.value = order?.folio ?? order?.id ?? null
+
+    // Reset de estado para evitar arrastre de tabs anteriores
+    activeTab.value = 'main'
+    branchTabs.value = []
+    diffByVersion.value = {}
+    snapshotByVersion.value = {}
+
+    // Cargar historial/versions y posicionar en la versión más reciente
+    try {
+        await loadOrderHistoryAndVersions(selectedOrderId.value)
+        // Posicionar en la versión más reciente si existe
+        if (Array.isArray(branchTabs.value) && branchTabs.value.length) {
+            const newest = Math.max(...branchTabs.value)
+            activeTab.value = Number(newest)
+            console.log('[ORDER_MANAGEMENT] activeTab establecido a:', activeTab.value, 'tipo:', typeof activeTab.value)
+            console.log('[ORDER_MANAGEMENT] maxVersionNumber es:', maxVersionNumber.value)
+        }
+    } catch (e) {
+        console.error('Error al cargar historial de versiones:', e)
+        // si falla, quedarse en main
+    }
+}
+
+// Nota: se removió el computed invertido (read-only al revés) para evitar confusión.
+
+/**
+ * Navega a la versión anterior (número menor)
+ */
+function goToPreviousVersion() {
+    if (currentVersionIndex.value <= 0) return
+    const prevVersion = branchTabs.value[currentVersionIndex.value + 1]
+    if (prevVersion !== undefined) {
+        activeTab.value = prevVersion
+    }
+}
+
+/**
+ * Navega a la versión siguiente (número mayor)
+ */
+function goToNextVersion() {
+    if (currentVersionIndex.value >= branchTabs.value.length - 1) return
+    const nextVersion = branchTabs.value[currentVersionIndex.value - 1]
+    if (nextVersion !== undefined) {
+        activeTab.value = nextVersion
+    }
+}
+
+/**
+ * Navega directamente a la versión más reciente
+ */
+function goToLatestVersion() {
+    if (newestVersion.value !== null) {
+        activeTab.value = newestVersion.value
+    }
+}
+
+/**
+ * Navega directamente a la versión más antigua
+ */
+function goToOldestVersion() {
+    if (oldestVersion.value !== null) {
+        activeTab.value = oldestVersion.value
+    }
 }
 
 function closeEditModal() {
     showEditModal.value = false
     editingOrder.value = null
     selectedOrderId.value = null
+    activeTab.value = 'main'
+    branchTabs.value = []
+    diffByVersion.value = {}
 }
 
 // Maneja el intento de cierre del modal (botón X o overlay)
 async function handleModalClose() {
-    // Si hay una referencia a OpEntrada, llamar a handleCloseAttempt
-    if (opEntradaRef.value && opEntradaRef.value.handleCloseAttempt) {
-        await opEntradaRef.value.handleCloseAttempt()
-    } else {
+    const result = await Swal.fire({
+        title: '¿Cerrar edición?',
+        text: '¿Estás seguro de que quieres cerrar la edición sin guardar los cambios?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cerrar',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
+        ...darkThemeConfig,
+    })
+
+    if (result.isConfirmed) {
         closeEditModal()
     }
 }
 
 function onOrderUpdated(updated) {
-    // Actualiza la lista y cierra modal
+    // Centralizar persistencia aquí: PUT al backend y luego refrescar desde fuente real.
     if (!updated) {
         closeEditModal()
         return
     }
-    const index = allOrders.value.findIndex(o => String(o.id) === String(updated.id))
-    if (index !== -1) {
-        allOrders.value[index] = updated
-    } else {
-        allOrders.value.unshift(updated)
+    persistEditedOrder(updated)
+}
+
+function safeShort(v) {
+    try {
+        const s = typeof v === 'string' ? v : JSON.stringify(v)
+        return s.length > 240 ? s.slice(0, 240) + '…' : s
+    } catch {
+        return String(v)
     }
-    // Persistencia ligera
-    tryPersistUpdatedOrder(updated)
-    closeEditModal()
+}
+
+function formatTimestamp(v) {
+    if (!v) return ''
+    try {
+        const d = new Date(v)
+        if (isNaN(d.getTime())) return String(v)
+        return d.toLocaleString('es-MX', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        })
+    } catch {
+        return String(v)
+    }
+}
+
+function actionLabel(a) {
+    const s = String(a || '')
+    const map = {
+        add_item: 'Item agregado',
+        delete_item: 'Item eliminado',
+        edit_item: 'Item editado',
+        edit_field: 'Campo editado',
+        clear_field: 'Campo vaciado',
+        fill_field: 'Campo rellenado'
+    }
+    return map[s] || s || 'Cambio'
+}
+
+function fieldLabel(f) {
+    const s = String(f || '')
+    const map = {
+        nombre_solicitante: 'Solicitante',
+        servicio: 'Servicio',
+        especialidad: 'Especialidad',
+        fecha: 'Fecha',
+        hora_inicio: 'Hora inicio',
+        hora_termino: 'Hora término',
+        motivo_entrada: 'Motivo de entrada',
+        otro_motivo: 'Otro motivo',
+        descripcion: 'Descripción',
+        observaciones: 'Observaciones',
+        nombre_ingeniero: 'Ingeniero',
+        observaciones_img_path: 'Imagen de observaciones'
+    }
+    return map[s] || s || ''
+}
+
+function parseMaybeJson(v) {
+    if (v === undefined || v === null) return null
+    if (typeof v !== 'string') return v
+    const s = v.trim()
+    if (!s) return ''
+    try {
+        return JSON.parse(s)
+    } catch {
+        return v
+    }
+}
+
+function itemSummary(obj) {
+    if (!obj || typeof obj !== 'object') return ''
+    const get = (k) => {
+        const raw = obj[k]
+        const val = (raw === undefined || raw === null) ? '' : String(raw)
+        return val.trim() ? val.trim() : 'N/A'
+    }
+    const parts = []
+    if ('tipo' in obj) parts.push(`tipo: ${get('tipo')}`)
+    if ('descripcion' in obj) parts.push(`desc: ${get('descripcion')}`)
+    if ('marca' in obj) parts.push(`marca: ${get('marca')}`)
+    if ('modelo' in obj) parts.push(`modelo: ${get('modelo')}`)
+    if ('serie' in obj) parts.push(`serie: ${get('serie')}`)
+    if ('lote' in obj) parts.push(`lote: ${get('lote')}`)
+    if ('referencia' in obj) parts.push(`ref: ${get('referencia')}`)
+    if ('ubicacion' in obj) parts.push(`ubicación: ${get('ubicacion')}`)
+    if ('clave_hraei' in obj || 'claveHRAEI' in obj) parts.push(`clave: ${get('clave_hraei') || get('claveHRAEI')}`)
+
+    // Detectar item vacío (solo N/A)
+    const meaningful = parts.some(p => !p.endsWith(': N/A'))
+    if (!meaningful) return 'Item vacío (todos los campos N/A)'
+    return parts.join(' | ')
+}
+
+function formatDiffValue(v, row) {
+    const parsed = parseMaybeJson(v)
+    if (parsed === null) return ''
+    if (typeof parsed === 'string') {
+        const s = parsed.trim()
+        return s ? s : 'N/A'
+    }
+    if (typeof parsed === 'object') {
+        // Para items, mostrar resumen en vez de JSON
+        if (row && (row.action === 'add_item' || row.action === 'edit_item' || row.action === 'delete_item')) {
+            return itemSummary(parsed)
+        }
+        return safeShort(parsed)
+    }
+    return String(parsed)
+}
+
+function diffClass(row) {
+    const a = String(row.action || '')
+    if (a === 'delete_item' || a === 'clear_field') return 'is-red'
+    if (a === 'fill_field' || a === 'add_item') return 'is-green'
+    if (a === 'edit_item' || a === 'edit_field') return 'is-yellow'
+    return 'is-yellow'
+}
+
+async function loadOrderHistoryAndVersions(folio) {
+    const f = folio ? String(folio) : ''
+    if (!f) return
+    try {
+        const [histRes, versRes] = await Promise.all([
+            fetch(`/api/ops/entrada/${encodeURIComponent(f)}/history`, { cache: 'no-store' }),
+            fetch(`/api/ops/entrada/${encodeURIComponent(f)}/versions?limit=6`, { cache: 'no-store' })
+        ])
+
+        if (versRes.ok) {
+            const vers = await versRes.json()
+            const items = Array.isArray(vers.items) ? vers.items : []
+            // branches: exclude latest? we show all versions >=2 as tabs.
+            const versions = items
+                .map(r => Number(r.version))
+                .filter(v => !isNaN(v) && v >= 1)
+                .sort((a, b) => b - a)
+            branchTabs.value = versions
+            
+            // Establecer explícitamente la versión máxima
+            if (versions.length > 0) {
+                maxVersionNumber.value = Math.max(...versions)
+                console.log('[ORDER_MANAGEMENT] Versiones cargadas:', versions)
+                console.log('[ORDER_MANAGEMENT] Versión máxima:', maxVersionNumber.value)
+            } else {
+                maxVersionNumber.value = null
+            }
+
+            // snapshots por versión (para render tipo OpEntrada)
+            const snapMap = {}
+            for (const r of items) {
+                const v = String(r.version)
+                if (!r || r.snapshot_json == null) continue
+                try {
+                    snapMap[v] = typeof r.snapshot_json === 'string' ? JSON.parse(r.snapshot_json) : r.snapshot_json
+                } catch {
+                    // ignore parse error
+                }
+            }
+            snapshotByVersion.value = snapMap
+        } else {
+            branchTabs.value = []
+            snapshotByVersion.value = {}
+        }
+
+        if (histRes.ok) {
+            const hist = await histRes.json()
+            const rows = Array.isArray(hist.items) ? hist.items : []
+            const map = {}
+            for (const r of rows) {
+                const v = String(r.version)
+                if (!map[v]) map[v] = []
+                map[v].push(r)
+            }
+            diffByVersion.value = map
+        } else {
+            diffByVersion.value = {}
+        }
+    } catch (e) {
+        console.warn('No se pudo cargar history/versions:', e)
+        branchTabs.value = []
+        diffByVersion.value = {}
+        snapshotByVersion.value = {}
+    }
+}
+
+function buildHighlights(rows) {
+    const out = { fields: {}, items: {} }
+    const fieldMap = {
+        nombre_solicitante: 'nombreSolicitante',
+        servicio: 'servicio',
+        especialidad: 'especialidad',
+        fecha: 'fecha',
+        hora_inicio: 'horaInicio',
+        hora_termino: 'horaTermino',
+        motivo_entrada: 'motivoEntrada',
+        otro_motivo: 'otroMotivo',
+        descripcion: 'descripcion',
+        observaciones: 'observaciones',
+        nombre_ingeniero: 'nombreIngeniero',
+        observaciones_img_path: 'observacionesImg'
+    }
+
+    const priority = { red: 3, green: 2, yellow: 1 }
+    const setField = (k, color) => {
+        if (!k) return
+        const prev = out.fields[k]
+        if (!prev || priority[color] > priority[prev]) out.fields[k] = color
+    }
+    const setItem = (line, color) => {
+        if (line == null) return
+        const key = String(line)
+        const prev = out.items[key]
+        if (!prev || priority[color] > priority[prev]) out.items[key] = color
+    }
+
+    for (const r of rows || []) {
+        const a = String(r && r.action || '')
+        if (a === 'clear_field') setField(fieldMap[String(r.field_name)] || String(r.field_name), 'red')
+        else if (a === 'fill_field') setField(fieldMap[String(r.field_name)] || String(r.field_name), 'green')
+        else if (a === 'edit_field') setField(fieldMap[String(r.field_name)] || String(r.field_name), 'yellow')
+        else if (a === 'add_item') setItem(r.line, 'green')
+        else if (a === 'delete_item') setItem(r.line, 'red')
+        else if (a === 'edit_item') setItem(r.line, 'yellow')
+    }
+    return out
+}
+
+async function persistEditedOrder(payload) {
+    try {
+        const folio = payload.folio || payload.id
+        if (!folio) {
+            throw new Error('Folio inválido')
+        }
+
+        const prevBranchTabs = Array.isArray(branchTabs.value) ? [...branchTabs.value] : []
+        const res = await fetch(`/api/ops/entrada/${encodeURIComponent(String(folio))}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        if (!res.ok) {
+            const err = await (async () => { try { return await res.json() } catch { return null } })()
+            throw new Error(err?.msg || `No se pudo actualizar (${res.status})`)
+        }
+        // Refrescar lista desde la fuente actual (sin caché)
+        await reloadOrdersFromServer()
+        // Recargar diffs/versions para que aparezcan inmediatamente las tabs
+        await loadOrderHistoryAndVersions(String(folio))
+
+        // Abrir (activar) la pestaña de la versión nueva si existe
+        const nextTabs = Array.isArray(branchTabs.value) ? branchTabs.value : []
+        const newest = nextTabs.length ? Math.max(...nextTabs) : null // Obtener la versión más alta
+        // Forzar que el editor principal recargue (siempre edita la versión más reciente del servidor)
+        mainEditorKey.value += 1
+        if (newest != null && (!prevBranchTabs.includes(newest) || activeTab.value === 'main')) {
+            activeTab.value = newest
+        }
+        showSuccess('Actualizado', 'La orden se actualizó correctamente.')
+    } catch (e) {
+        console.error('Error guardando orden (centralizado):', e)
+        Swal.fire({
+            title: 'Error',
+            text: e.message || 'No se pudo actualizar la orden',
+            icon: 'error',
+            ...darkThemeConfig
+        })
+    }
+}
+
+function toggleLegend() {
+    showLegend.value = !showLegend.value
+}
+
+async function reloadOrdersFromServer() {
+    loading.value = true
+    try {
+        const res = await fetch('/api/ops/entrada/list', { cache: 'no-store' })
+        if (!res.ok) {
+            allOrders.value = []
+            return
+        }
+        const body = await res.json()
+        const items = Array.isArray(body.items) ? body.items : []
+        allOrders.value = items.map((wrapper) => {
+            const orden = wrapper.orden || {}
+            const orderItems = Array.isArray(wrapper.items) ? wrapper.items : []
+            const equiposEntrada = orderItems.map(item => ({
+                id: `${item.orden_folio}-${item.line}`,
+                line: item.line,
+                tipo: item.tipo || 'N/A',
+                cantidad: item.cantidad || 1,
+                descripcion: item.descripcion || 'N/A',
+                marca: item.marca || 'N/A',
+                modelo: item.modelo || 'N/A',
+                serie: item.serie || 'N/A',
+                lote: item.lote || 'N/A',
+                referencia: item.referencia || 'N/A',
+                ubicacion: item.ubicacion || 'N/A',
+                claveHRAEI: item.clave_hraei || 'N/A'
+            }))
+            return {
+                id: orden.folio || orden.id,
+                folio: orden.folio || 'N/A',
+                nombreSolicitante: orden.nombre_solicitante || 'N/A',
+                servicio: orden.servicio || 'N/A',
+                especialidad: orden.especialidad || 'N/A',
+                fecha: orden.fecha || 'N/A',
+                horaInicio: orden.hora_inicio || 'N/A',
+                horaTermino: orden.hora_termino || 'N/A',
+                motivoEntrada: orden.motivo_entrada || 'N/A',
+                descripcion: orden.descripcion || 'N/A',
+                observaciones: orden.observaciones || 'N/A',
+                nombreIngeniero: orden.nombre_ingeniero || 'N/A',
+                equiposEntrada,
+                estado: 'completado'
+            }
+        })
+    } catch (e) {
+        console.warn('Error recargando órdenes:', e)
+        allOrders.value = []
+    } finally {
+        loading.value = false
+    }
 }
 
 function updateAndDownloadExcel() {
@@ -801,67 +1360,8 @@ function toggleEditItem(idx) {
 
 // Simular carga de órdenes desde API
 function loadOrders() {
-    loading.value = true
-    
-    // Try to fetch from backend - solo órdenes reales de la BD
-    setTimeout(async () => {
-        try {
-            const res = await fetch('/api/ops/entrada/list')
-            if (res.ok) {
-                const body = await res.json()
-                // body.items es un array de { orden, items: [...] }
-                const items = Array.isArray(body.items) ? body.items : []
-                // Extraer órdenes reales de la BD CON sus items
-                allOrders.value = items.map((wrapper) => {
-                    const orden = wrapper.orden || {}
-                    const orderItems = Array.isArray(wrapper.items) ? wrapper.items : []
-                    
-                    // Mapear items a estructura de equiposEntrada
-                    const equiposEntrada = orderItems.map(item => ({
-                        id: `${item.orden_folio}-${item.line}`, // ID compuesto para compatibilidad
-                        tipo: item.tipo || 'N/A',
-                        cantidad: item.cantidad || 1,
-                        descripcion: item.descripcion || 'N/A',
-                        marca: item.marca || 'N/A',
-                        modelo: item.modelo || 'N/A',
-                        serie: item.serie || 'N/A',
-                        lote: item.lote || 'N/A',
-                        referencia: item.referencia || 'N/A',
-                        ubicacion: item.ubicacion || 'N/A',
-                        claveHRAEI: item.clave_hraei || 'N/A'
-                    }))
-                    
-                    console.log(`Orden cargada - folio: ${orden.folio}, fecha raw: "${orden.fecha}"`)
-                    
-                    return {
-                        id: orden.folio || orden.id, // Usar folio como ID primario
-                        folio: orden.folio || 'N/A',
-                        nombreSolicitante: orden.nombre_solicitante || 'N/A',
-                        servicio: orden.servicio || 'N/A',
-                        especialidad: orden.especialidad || 'N/A',
-                        fecha: orden.fecha || 'N/A',
-                        horaInicio: orden.hora_inicio || 'N/A',
-                        horaTermino: orden.hora_termino || 'N/A',
-                        motivoEntrada: orden.motivo_entrada || 'N/A',
-                        descripcion: orden.descripcion || 'N/A',
-                        observaciones: orden.observaciones || 'N/A',
-                        nombreIngeniero: orden.nombre_ingeniero || 'N/A',
-                        equiposEntrada: equiposEntrada,
-                        estado: 'completado'
-                    }
-                })
-            } else {
-                // Si no hay órdenes en BD, mostrar lista vacía
-                allOrders.value = []
-            }
-        } catch (err) {
-            console.warn('Error cargando órdenes:', err)
-            // Si hay error en el backend, mostrar lista vacía en lugar de datos mock
-            allOrders.value = []
-        } finally {
-            loading.value = false
-        }
-    }, 300)
+    // Wrapper histórico: mantener API actual pero delegar a recarga real (sin caché)
+    reloadOrdersFromServer()
 }
 
 onMounted(() => {
@@ -871,6 +1371,10 @@ onMounted(() => {
     function handleDocumentClick(event) {
         if (filterDropdownRef.value && !filterDropdownRef.value.contains(event.target)) {
             showMoreFilters.value = false
+        }
+
+        if (legendWrapRef.value && !legendWrapRef.value.contains(event.target)) {
+            showLegend.value = false
         }
     }
 
@@ -886,6 +1390,182 @@ onMounted(() => {
 <style scoped>
 .order-management-container {
     width: 100%;
+}
+
+.om-edit-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.om-edit-tabs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 23, 42, 0.28);
+}
+
+.om-tab {
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(241, 245, 249, 0.92);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.om-tab.active {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.35);
+}
+
+.om-tab.newest {
+    background: rgba(217, 119, 6, 0.22);
+    border-color: rgba(217, 119, 6, 0.5);
+    color: rgba(252, 211, 77, 0.95);
+}
+
+.om-tab.newest.active {
+    background: rgba(217, 119, 6, 0.28);
+    border-color: rgba(217, 119, 6, 0.6);
+    color: rgba(253, 224, 71, 1);
+}
+
+.om-tab-help {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(241, 245, 249, 0.95);
+    font-weight: 900;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.om-tab-help:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+
+
+.om-help-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.om-legend-popover {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: 280px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(15, 23, 42, 0.92);
+    color: rgba(241, 245, 249, 0.95);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.45);
+    z-index: 20;
+}
+
+.om-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 0.92rem;
+}
+
+.om-legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    display: inline-block;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.om-legend-dot.is-green {
+    background: rgba(34, 197, 94, 0.75);
+}
+
+.om-legend-dot.is-yellow {
+    background: rgba(245, 158, 11, 0.75);
+}
+
+.om-legend-dot.is-red {
+    background: rgba(239, 68, 68, 0.75);
+}
+
+.om-main-panel {
+    flex: 1;
+    overflow: auto;
+}
+
+.om-diff-panel {
+    padding: 12px;
+    overflow: auto;
+    flex: 1;
+}
+
+.om-diff-hint {
+    font-weight: 700;
+    color: rgba(241, 245, 249, 0.88);
+    margin-bottom: 10px;
+}
+
+.om-diff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.om-diff-row {
+    border-radius: 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.om-diff-row.is-yellow {
+    border-color: rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.10);
+}
+
+.om-diff-row.is-red {
+    border-color: rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.10);
+}
+
+.om-diff-row.is-green {
+    border-color: rgba(34, 197, 94, 0.35);
+    background: rgba(34, 197, 94, 0.10);
+}
+
+.om-diff-title {
+    color: rgba(248, 250, 252, 0.95);
+    margin-bottom: 4px;
+}
+
+.om-diff-meta {
+    color: rgba(148, 163, 184, 0.9);
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+}
+
+.om-diff-body {
+    color: rgba(241, 245, 249, 0.9);
+    font-size: 0.92rem;
+    line-height: 1.35;
+}
+
+.om-diff-empty {
+    color: rgba(148, 163, 184, 0.95);
+    padding: 10px;
 }
 
 .order-management-main {

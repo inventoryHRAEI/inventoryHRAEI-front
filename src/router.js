@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { validateSession, clearStoredSessionData, isActiveWindow } from '@/utils/auth'
+import { validateSession, clearStoredSessionData, isActiveWindow } from './utils/auth.js'
 
 const Home = () => import('./views/Home.vue')
 const Login = () => import('./views/Login.vue')

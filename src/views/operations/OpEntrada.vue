@@ -1,5 +1,8 @@
 <template>
-    <div>
+    <div :class="{ 'opentrada-readonly': isReadOnly }" :aria-readonly="isReadOnly ? 'true' : 'false'"
+        @beforeinput.capture="onReadOnlyBeforeInput" @input.capture="onReadOnlyInput" @change.capture="onReadOnlyChange"
+        @paste.capture="onReadOnlyPaste" @keydown.capture="onReadOnlyKeydown" @focusin.capture="onReadOnlyFocusIn"
+        @mousedown.capture="onReadOnlyMouseDown">
         <FormShell>
             <template #title v-if="props.modo !== 'editar'">
                 <div class="entrada-title-row">
@@ -48,24 +51,24 @@
                             </div>
                             <div class="section-grid combined">
                                 <!-- Primera fila -->
-                                <div class="field">
+                                <div :class="['field', diffFieldClass('nombreSolicitante')]">
                                     <label>Nombre del Solicitante</label>
                                     <input class="control" v-model.trim="form.nombreSolicitante"
                                         placeholder="Ej. Dr. Juan Pérez" />
                                 </div>
 
-                                <div class="field">
+                                <div :class="['field', diffFieldClass('servicio')]">
                                     <label>Servicio</label>
                                     <input class="control" v-model.trim="form.servicio" placeholder="Ej. Urgencias" />
                                 </div>
 
-                                <div class="field">
+                                <div :class="['field', diffFieldClass('especialidad')]">
                                     <label>Especialidad</label>
                                     <input class="control" v-model.trim="form.especialidad"
                                         placeholder="Ej. Urgencias" />
                                 </div>
 
-                                <div class="field">
+                                <div :class="['field', diffFieldClass('folio')]">
                                     <label>Folio</label>
                                     <div style="display:flex; flex-direction:column; gap:6px">
                                         <FolioInput v-model="form.folio" />
@@ -74,20 +77,22 @@
                                 </div>
 
                                 <!-- Segunda fila -->
-                                <div class="field">
+                                <div :class="['field', diffFieldClass('fecha')]">
                                     <label>Fecha</label>
                                     <div style="display:flex; flex-direction:column; gap:6px">
-                                        <DatePicker v-model="form.fechaISO" :forceFlowbite="true" placeholder="Seleccionar fecha" />
-                                        <small class="hint" style="font-size:0.9rem">Seleccionado: <strong>{{ formatDate(form.fecha) }}</strong></small>
+                                        <DatePicker v-model="form.fechaISO" :forceFlowbite="true"
+                                            placeholder="Seleccionar fecha" />
+                                        <small class="hint" style="font-size:0.9rem">Seleccionado: <strong>{{
+                                            formatDate(form.fecha) }}</strong></small>
                                     </div>
                                 </div>
 
-                                <div class="field">
+                                <div :class="['field', diffFieldClass('horaInicio')]">
                                     <label>Hora de inicio</label>
                                     <TimePicker v-model="form.horaInicio" placeholder="14:00" />
                                 </div>
 
-                                <div class="field">
+                                <div :class="['field', diffFieldClass('horaTermino')]">
                                     <label>Hora de término</label>
                                     <div class="term-input-row">
                                         <input ref="endTimeInputRef" class="control term-input" type="text"
@@ -129,19 +134,20 @@
                                 <small class="hint">Especifica el motivo y una descripción de la entrada</small>
                             </div>
                             <div class="section-grid combined">
-                                <div class="field" style="grid-column: span 6;">
+                                <div :class="['field', diffFieldClass('motivoEntrada')]" style="grid-column: span 6;">
                                     <label>Motivo de Entrada</label>
                                     <CustomSelect v-model="form.motivoEntrada" :options="motivoEntradaOptions"
                                         placeholder="Seleccionar motivo" />
                                 </div>
 
-                                <div v-if="form.motivoEntrada === 'otro'" class="field" style="grid-column: span 6;">
+                                <div v-if="form.motivoEntrada === 'otro'"
+                                    :class="['field', diffFieldClass('otroMotivo')]" style="grid-column: span 6;">
                                     <label>Especifique Motivo de Entrada</label>
                                     <input class="control" v-model.trim="form.otroMotivo"
                                         placeholder="Especifique el motivo" />
                                 </div>
 
-                                <div class="field" style="grid-column: 1 / -1;">
+                                <div :class="['field', diffFieldClass('descripcion')]" style="grid-column: 1 / -1;">
                                     <label>Descripción de Entrada</label>
                                     <textarea class="control" v-model.trim="form.descripcion"
                                         placeholder="Describe los detalles de la entrada"
@@ -167,7 +173,7 @@
                             </div>
 
                             <!-- Formulario para agregar nuevo item -->
-                            <div class="add-item-form">
+                            <div v-if="!isReadOnly" class="add-item-form">
                                 <div class="add-item-form__inner">
                                     <!-- Selector de tipo y cantidad -->
                                     <div class="add-item-controls">
@@ -204,7 +210,7 @@
                                         class="section-card items-card">
                                         <div class="section-head">
                                             <h4>{{ getTipoLabel(newItem.tipo) }} (unidades) - {{ newItem.unidades.length
-                                                }}</h4>
+                                            }}</h4>
                                             <small class="hint">Completa la información individual de cada
                                                 unidad</small>
                                         </div>
@@ -393,7 +399,7 @@
                                 </div>
 
                                 <div v-for="(item, index) in form.equiposEntrada" :key="index"
-                                    :class="['item-row', { 'item-row-exit': exitingItems.includes(item) }]">
+                                    :class="['item-row', diffItemClass(item), { 'item-row-exit': exitingItems.includes(item), 'item-row-readonly': !isItemEditable(index) && props.modo === 'editar' }]">
                                     <div class="item-head">
                                         <span class="badge">#{{ index + 1 }}</span>
                                         <span style="font-weight: 700; color: rgba(15, 23, 42, 0.9);">{{
@@ -449,9 +455,10 @@
                                         <div class="section-list">
                                             <div v-for="(unidad, uIdx) in item.unidades" :key="uIdx"
                                                 :class="['item-unidades-card', { 'unit-exit': exitingUnits.includes(unidad) }]">
-                                                <article class="detalle-card detalle-card--compact">
+                                                <article class="detalle-card detalle-card--compact"
+                                                    :class="diffItemClass(item)">
                                                     <div class="detalle-card__glow"></div>
-                                                    <div class="detalle-card__inner">
+                                                    <div class="detalle-card__inner" :class="diffItemClass(item)">
                                                         <header class="detalle-card__header">
                                                             <span class="detalle-card__badge">#{{ uIdx + 1 }}</span>
                                                             <div>
@@ -462,7 +469,29 @@
                                                             </div>
                                                             <span class="detalle-card__icon"
                                                                 aria-hidden="true">🧾</span>
-                                                            <TrashButton class="detalle-card__trash"
+                                                            <button
+                                                                class="detalle-card__edit"
+                                                                type="button"
+                                                                :disabled="!isItemEditable(index)"
+                                                                :aria-disabled="(!isItemEditable(index)).toString()"
+                                                                title="Editar item"
+                                                                aria-label="Editar item"
+                                                                @click="editUnit(item, unidad, uIdx)">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="18"
+                                                                    height="18" viewBox="0 0 24 24" fill="none"
+                                                                    stroke="currentColor" stroke-width="2"
+                                                                    stroke-linecap="round" stroke-linejoin="round">
+                                                                    <path
+                                                                        d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7">
+                                                                    </path>
+                                                                    <path
+                                                                        d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z">
+                                                                    </path>
+                                                                </svg>
+                                                            </button>
+                                                            <TrashButton
+                                                                class="detalle-card__trash"
+                                                                :disabled="!isItemEditable(index)"
                                                                 :duration="trashAnimationDuration"
                                                                 @done="onUnitTrashDone(item, unidad)" />
                                                         </header>
@@ -585,12 +614,12 @@
                                     apoyo</small>
                             </div>
                             <div class="section-grid combined">
-                                <div class="field" style="grid-column: span 12;">
+                                <div :class="['field', diffFieldClass('observaciones')]" style="grid-column: span 12;">
                                     <label>Observaciones</label>
                                     <textarea class="control" v-model.trim="form.observaciones"
                                         placeholder="Escribe observaciones aquí" style="min-height: 120px;"></textarea>
                                     <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
-                                        <label class="btn secondary"
+                                        <label v-if="!isReadOnly" class="btn secondary"
                                             style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:8px 12px;">
                                             Subir imagen
                                             <input type="file" accept="image/*" @change="onObservacionesImgChange"
@@ -603,14 +632,14 @@
                                             <div style="display:flex; flex-direction:column; gap:6px;">
                                                 <span style="font-weight:700; color:rgba(15,23,42,0.9)">{{
                                                     form.observacionesImg.name }}</span>
-                                                <button type="button" class="btn secondary"
+                                                <button v-if="!isReadOnly" type="button" class="btn secondary"
                                                     @click="removeObservacionesImg"
                                                     style="padding:6px 10px; font-size:0.85rem;">Quitar</button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="field ing-res">
+                                <div :class="['field', 'ing-res', diffFieldClass('nombreIngeniero')]">
                                     <label>Ingeniero residente (apoyo)</label>
                                     <input class="control" v-model.trim="form.nombreIngeniero"
                                         placeholder="Nombre del ingeniero residente" />
@@ -620,14 +649,24 @@
 
                     </form>
 
-                    <div class="form-actions">
-                        <button class="btn secondary cancel-btn" type="button" @click="onCancel" :disabled="loading">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <div v-if="!isReadOnly" class="form-actions">
+                        <button v-if="!(props.modo === 'editar' && props.enModal)" class="btn secondary cancel-btn"
+                            type="button" @click="onCancel" :disabled="loading">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" style="margin-right:8px">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
                             Cancelar
                         </button>
                         <button class="btn primary save-btn" type="submit" form="entrada-form"
                             :disabled="loading || !isValid">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px"><path d="M20 6L9 17l-5-5"></path></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" style="margin-right:8px">
+                                <path d="M20 6L9 17l-5-5"></path>
+                            </svg>
                             {{ loading ? (props.modo === 'editar' ? 'Actualizando...' : 'Guardando...') : (props.modo
                                 === 'editar' ? 'Actualizar orden' : 'Guardar orden') }}
                         </button>
@@ -636,10 +675,80 @@
             </template>
         </FormShell>
 
+        <!-- Edit Unit Modal -->
+        <Teleport v-if="!isReadOnly" to="body">
+            <Transition name="modal-fade">
+                <div v-if="showEditModal" class="edit-modal-overlay" @click="closeEditModal">
+                    <div class="edit-modal" @click.stop>
+                        <div class="edit-modal__header">
+                            <h3>Editar Unidad</h3>
+                            <button type="button" class="edit-modal__close" @click="closeEditModal" aria-label="Cerrar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="edit-modal__body" v-if="editingUnit">
+                            <div class="edit-form-grid">
+                                <div class="field">
+                                    <label>Nombre</label>
+                                    <input class="control" v-model.trim="editingUnit.nombre"
+                                        placeholder="Nombre de la unidad" />
+                                </div>
+                                <div class="field">
+                                    <label>Marca</label>
+                                    <input class="control" v-model.trim="editingUnit.marca" placeholder="Marca" />
+                                </div>
+                                <div class="field">
+                                    <label>Modelo</label>
+                                    <input class="control" v-model.trim="editingUnit.modelo" placeholder="Modelo" />
+                                </div>
+                                <div class="field">
+                                    <label>Ubicación</label>
+                                    <input class="control" v-model.trim="editingUnit.ubicacion"
+                                        placeholder="Ubicación" />
+                                </div>
+                                <div class="field">
+                                    <label>No. Serie</label>
+                                    <input class="control" v-model.trim="editingUnit.serie" placeholder="No. Serie" />
+                                </div>
+                                <div class="field">
+                                    <label>Referencia</label>
+                                    <input class="control" v-model.trim="editingUnit.referencia"
+                                        placeholder="Referencia" />
+                                </div>
+                                <div class="field">
+                                    <label>Lote</label>
+                                    <input class="control" v-model.trim="editingUnit.lote" placeholder="Lote" />
+                                </div>
+                                <div class="field">
+                                    <label>Cantidad</label>
+                                    <input class="control" v-model.number="editingUnit.cantidad" type="number" min="1"
+                                        placeholder="Cantidad" />
+                                </div>
+                                <div class="field" style="grid-column: 1 / -1;">
+                                    <label>Clave HRAEI</label>
+                                    <input class="control" v-model.trim="editingUnit.claveHRAEI"
+                                        placeholder="Clave HRAEI" />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="edit-modal__footer">
+                            <button type="button" class="btn secondary" @click="closeEditModal">Cancelar</button>
+                            <button type="button" class="btn primary" @click="saveEditedUnit">Guardar Cambios</button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+
         <!-- Botón Scroll to Top - Fuera de todos los contenedores - Solo si NO está en modal -->
         <Transition name="scroll-btn">
-            <button v-show="showScrollTop && !props.enModal" @click="scrollToTop" @mouseenter="onHoverStart" @mouseleave="onHoverEnd"
-                :class="['scroll-to-top-btn', {
+            <button v-show="showScrollTop && !props.enModal" @click="scrollToTop" @mouseenter="onHoverStart"
+                @mouseleave="onHoverEnd" :class="['scroll-to-top-btn', {
                     'animating-out': isAnimatingOut
                 }]" aria-label="Volver al inicio">
                 <span class="scroll-icon">↑</span>
@@ -650,7 +759,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
+import { reactive, ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import FormShell from '@/components/FormShell.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
@@ -676,6 +785,7 @@ import FolioInput from '@/components/FolioInput.vue'
 // que la librería (que tiene partes orientadas a node) sea importada al cargar
 // el componente; esto previene fallos en el dev server y reduce el bundle inicial.
 import { saveAs } from 'file-saver'
+import { authedFetch } from '@/utils/api.js'
 import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 
 const LOCAL_KEY = 'op-entrada'
@@ -688,117 +798,314 @@ const router = useRouter()
 const props = defineProps({
     modo: { type: String, default: 'crear', validator: v => ['crear', 'editar'].includes(v) },
     ordenId: { type: [String, Number], default: null },
-    enModal: { type: Boolean, default: false }
+    enModal: { type: Boolean, default: false },
+    // Para vista de versiones/diff: cargar desde snapshot (sin fetch) y bloquear edición
+    snapshot: { type: Object, default: null },
+    readOnly: { type: Boolean, default: false },
+    // Alias defensivo: algunos templates pueden bajar el nombre a "readonly".
+    readonly: { type: Boolean, default: false },
+    // { fields: { nombreSolicitante: 'yellow'|'green'|'red' }, items: { '12': 'yellow'|'green'|'red' } }
+    diffHighlights: { type: Object, default: null }
 })
 
 // Emit para comunicación con el padre (order-management)
 const emit = defineEmits(['close', 'actualizado'])
 
-// Función para normalizar fecha a formato DD-MM-YYYY
-function normalizeFecha(dateStr) {
-  if (!dateStr) return ''
-  const dateStrTrimmed = String(dateStr).trim()
+// Track which is the most recent item (editable) - in edit mode
+const mostRecentItemIndex = ref(null)
 
-  // Si ya está en formato DD/MM/YYYY -> convertir a DD-MM-YYYY (usuario puso con '/').
-  if (dateStrTrimmed.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-    const [day, month, year] = dateStrTrimmed.split('/')
-    return `${day}-${month}-${year}`
-  }
+// Regla fuerte: si hay snapshot (vista de versiones), debe ser solo lectura SIEMPRE.
+// En modo editar, solo el item más reciente es editable
+const isReadOnly = computed(() => !!(props.readOnly || props.readonly || props.snapshot))
 
-  // Si ya está en formato DD-MM-YYYY, devolverlo tal cual
-  if (dateStrTrimmed.match(/^\d{2}-\d{2}-\d{4}$/)) {
-    return dateStrTrimmed
-  }
+const _lockState = new WeakMap()
 
-  // Si viene en formato YYYY-MM-DD, convertir a DD-MM-YYYY
-  if (dateStrTrimmed.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    const [year, month, day] = dateStrTrimmed.split('-')
-    return `${day}-${month}-${year}`
-  }
+function applyDomReadOnlyLock() {
+    if (!isReadOnly.value) return
+    const container = rootRef.value
+    if (!container) return
 
-  // Soporte adicional: YYYY/MM/DD
-  if (dateStrTrimmed.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
-    const [year, month, day] = dateStrTrimmed.split('/')
-    return `${day}-${month}-${year}`
-  }
+    // Bloquear controles nativos y elementos interactivos comunes (roles/combobox).
+    const nodes = container.querySelectorAll(
+        'input, textarea, select, button, [contenteditable=""], [contenteditable="true"], [role="button"], [role="combobox"], [role="textbox"]'
+    )
 
-  // Como fallback, intentar parsear (solo si no hay '/'), evitar parsing ambiguo con '/'
-  try {
-    if (dateStrTrimmed.includes('/')) {
-      // Si llegó con '/', pero no coincide con DD/MM/YYYY, devolver como está (no confiar en Date)
-      return dateStrTrimmed.replace(/\//g, '-')
+    nodes.forEach((el) => {
+        if (!_lockState.has(el)) {
+            _lockState.set(el, {
+                disabled: el.disabled,
+                readOnly: el.readOnly,
+                tabindex: el.getAttribute('tabindex'),
+                contenteditable: el.getAttribute('contenteditable'),
+                ariaDisabled: el.getAttribute('aria-disabled')
+            })
+        }
+
+        // contenteditable
+        if (el.getAttribute && el.getAttribute('contenteditable') != null) {
+            el.setAttribute('contenteditable', 'false')
+        }
+
+        // Asegurar que no reciba foco
+        if (el.setAttribute) {
+            el.setAttribute('tabindex', '-1')
+            el.setAttribute('aria-disabled', 'true')
+        }
+
+        // Nativos
+        const tag = String(el.tagName || '').toLowerCase()
+        if (tag === 'input' || tag === 'textarea') {
+            el.readOnly = true
+            el.disabled = true
+        } else if (tag === 'select' || tag === 'button') {
+            el.disabled = true
+        }
+    })
+}
+
+watch(isReadOnly, async (ro) => {
+    if (!ro) return
+    await nextTick()
+    applyDomReadOnlyLock()
+}, { immediate: true })
+
+function onReadOnlyKeydown(e) {
+    if (!isReadOnly.value) return
+    // Evitar edición por teclado (incluyendo TAB/ENTER) dentro de snapshots
+    e.preventDefault()
+    e.stopPropagation()
+}
+
+function onReadOnlyBeforeInput(e) {
+    if (!isReadOnly.value) return
+    e.preventDefault()
+    e.stopPropagation()
+}
+
+function onReadOnlyInput(e) {
+    if (!isReadOnly.value) return
+    e.preventDefault()
+    e.stopPropagation()
+}
+
+function onReadOnlyChange(e) {
+    if (!isReadOnly.value) return
+    e.preventDefault()
+    e.stopPropagation()
+}
+
+function onReadOnlyPaste(e) {
+    if (!isReadOnly.value) return
+    e.preventDefault()
+    e.stopPropagation()
+}
+
+function onReadOnlyFocusIn(e) {
+    if (!isReadOnly.value) return
+    // Evitar que algún control tome foco (por TAB o programáticamente)
+    const el = e?.target
+    if (el && typeof el.blur === 'function') {
+        el.blur()
+    }
+}
+
+function onReadOnlyMouseDown(e) {
+    if (!isReadOnly.value) return
+    // Doble seguridad ante interacciones accidentales
+    e.preventDefault()
+    e.stopPropagation()
+}
+
+function diffFieldClass(key) {
+    const h = props.diffHighlights && props.diffHighlights.fields ? props.diffHighlights.fields : null
+    const c = h ? h[String(key)] : null
+    if (c === 'red') return 'diff-red'
+    if (c === 'green') return 'diff-green'
+    if (c === 'yellow') return 'diff-yellow'
+    return ''
+}
+
+function diffItemClass(item) {
+     const h = props.diffHighlights && props.diffHighlights.items ? props.diffHighlights.items : null
+     const line = item && (item.line != null ? item.line : item.__line)
+     const c = h && line != null ? h[String(line)] : (item && item.__diffStatus)
+     if (c === 'red') return 'diff-red'
+     if (c === 'green') return 'diff-green'
+     if (c === 'yellow') return 'diff-yellow'
+     return ''
+ }
+
+ // Check if an item at given index is the most recent (editable in edit mode)
+ function isItemEditable(index) {
+     if (props.snapshot || isReadOnly.value) return false
+     // En modo editable real (versión más reciente), todos los items deben poder editarse/eliminarse.
+     return true
+ }
+
+function applySnapshotToForm(snapshot) {
+    const snap = snapshot || {}
+    const orden = snap.orden || {}
+    const items = Array.isArray(snap.items) ? snap.items : []
+
+    form.nombreSolicitante = orden.nombre_solicitante || ''
+    form.servicio = orden.servicio || ''
+    form.especialidad = orden.especialidad || ''
+    form.folio = orden.folio || ''
+    form.fecha = orden.fecha || ''
+    form.fechaISO = orden.fecha ? toISO(orden.fecha) : ''
+    form.horaInicio = orden.hora_inicio || ''
+    form.horaTermino = orden.hora_termino || ''
+    form.motivoEntrada = orden.motivo_entrada || ''
+    form.otroMotivo = orden.otro_motivo || ''
+    form.descripcion = orden.descripcion || ''
+    form.observaciones = orden.observaciones || ''
+    form.nombreIngeniero = orden.nombre_ingeniero || ''
+
+    // Imagen
+    if (orden.observaciones_img_path) {
+        form.observacionesImg = {
+            dataUrl: orden.observaciones_img_path,
+            name: 'Imagen de observaciones',
+            extension: 'jpg'
+        }
+    } else {
+        form.observacionesImg = null
     }
 
-    const date = new Date(dateStrTrimmed)
-    if (isNaN(date.getTime())) return dateStrTrimmed
+    // Items unitarios (snapshot ya está normalizado por backend)
+    const loaded = []
+    for (const it of items) {
+        const isGhost = !!it.__diffGhost
+        const line = it.line != null ? it.line : null
+        loaded.push({
+            line,
+            __diffGhost: isGhost,
+            __diffStatus: it.__diffStatus,
+            tipo: it.tipo || '',
+            cantidad: 1,
+            descripcion: (it.descripcion != null ? it.descripcion : '') || (isGhost ? 'Item eliminado' : ''),
+            marca: it.marca || '',
+            modelo: it.modelo || '',
+            serie: it.serie || '',
+            lote: it.lote || '',
+            referencia: it.referencia || '',
+            ubicacion: it.ubicacion || '',
+            claveHRAEI: it.clave_hraei || it.claveHRAEI || ''
+        })
+    }
+    form.equiposEntrada = loaded
 
-    const day = String(date.getDate()).padStart(2, '0')
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const year = date.getFullYear()
-    return `${day}-${month}-${year}`
-  } catch {
-    return dateStrTrimmed
-  }
+    // Info para el header
+    ordenInfo.folio = orden.folio || ''
+    ordenInfo.nombreSolicitante = orden.nombre_solicitante || ''
+    ordenInfo.fecha = orden.fecha || ''
+}
+
+// Función para normalizar fecha a formato DD-MM-YYYY
+function normalizeFecha(dateStr) {
+    if (!dateStr) return ''
+    const dateStrTrimmed = String(dateStr).trim()
+
+    // Si ya está en formato DD/MM/YYYY -> convertir a DD-MM-YYYY (usuario puso con '/').
+    if (dateStrTrimmed.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        const [day, month, year] = dateStrTrimmed.split('/')
+        return `${day}-${month}-${year}`
+    }
+
+    // Si ya está en formato DD-MM-YYYY, devolverlo tal cual
+    if (dateStrTrimmed.match(/^\d{2}-\d{2}-\d{4}$/)) {
+        return dateStrTrimmed
+    }
+
+    // Si viene en formato YYYY-MM-DD, convertir a DD-MM-YYYY
+    if (dateStrTrimmed.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = dateStrTrimmed.split('-')
+        return `${day}-${month}-${year}`
+    }
+
+    // Soporte adicional: YYYY/MM/DD
+    if (dateStrTrimmed.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+        const [year, month, day] = dateStrTrimmed.split('/')
+        return `${day}-${month}-${year}`
+    }
+
+    // Como fallback, intentar parsear (solo si no hay '/'), evitar parsing ambiguo con '/'
+    try {
+        if (dateStrTrimmed.includes('/')) {
+            // Si llegó con '/', pero no coincide con DD/MM/YYYY, devolver como está (no confiar en Date)
+            return dateStrTrimmed.replace(/\//g, '-')
+        }
+
+        const date = new Date(dateStrTrimmed)
+        if (isNaN(date.getTime())) return dateStrTrimmed
+
+        const day = String(date.getDate()).padStart(2, '0')
+        const month = String(date.getMonth() + 1).padStart(2, '0')
+        const year = date.getFullYear()
+        return `${day}-${month}-${year}`
+    } catch {
+        return dateStrTrimmed
+    }
 }
 
 // Convierte una fecha tipo 'DD-MM-YYYY' o 'DD/MM/YYYY' a 'YYYY-MM-DD' (ISO) para el DatePicker
 function toISO(dateStr) {
-  if (!dateStr) return ''
-  const s = String(dateStr).trim()
+    if (!dateStr) return ''
+    const s = String(dateStr).trim()
 
-  if (s.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-    const [d, m, y] = s.split('/')
-    return `${y}-${m}-${d}`
-  }
+    if (s.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        const [d, m, y] = s.split('/')
+        return `${y}-${m}-${d}`
+    }
 
-  if (s.match(/^\d{2}-\d{2}-\d{4}$/)) {
-    const [d, m, y] = s.split('-')
-    return `${y}-${m}-${d}`
-  }
+    if (s.match(/^\d{2}-\d{2}-\d{4}$/)) {
+        const [d, m, y] = s.split('-')
+        return `${y}-${m}-${d}`
+    }
 
-  // Soporte YYYY-MM-DD y YYYY/MM/DD
-  if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return s
-  if (s.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
-    const [y, m, d] = s.split('/')
-    return `${y}-${m}-${d}`
-  }
+    // Soporte YYYY-MM-DD y YYYY/MM/DD
+    if (s.match(/^\d{4}-\d{2}-\d{2}$/)) return s
+    if (s.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+        const [y, m, d] = s.split('/')
+        return `${y}-${m}-${d}`
+    }
 
-  return ''
+    return ''
 }
 
 // Mostrar fecha en DD/MM/YYYY (uso en UI)
 function formatDate(dateStr) {
-  if (!dateStr) return '-'
-  const s = String(dateStr).trim()
+    if (!dateStr) return '-'
+    const s = String(dateStr).trim()
 
-  // DD/MM/YYYY
-  if (s.match(/^\d{2}\/\d{2}\/\d{4}$/)) return s
-  // DD-MM-YYYY -> DD/MM/YYYY
-  if (s.match(/^\d{2}-\d{2}-\d{4}$/)) return s.replace(/-/g, '/')
-  // YYYY-MM-DD -> DD/MM/YYYY
-  if (s.match(/^\d{4}-\d{2}-\d{2}$/)) {
-    const [y, m, d] = s.split('-')
-    return `${d}/${m}/${y}`
-  }
-  // YYYY/MM/DD -> DD/MM/YYYY
-  if (s.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
-    const [y, m, d] = s.split('/')
-    return `${d}/${m}/${y}`
-  }
-
-  // Intentar parsear con Date (fallback)
-  try {
-    const date = new Date(s)
-    if (!isNaN(date.getTime())) {
-      const dd = String(date.getDate()).padStart(2, '0')
-      const mm = String(date.getMonth() + 1).padStart(2, '0')
-      const yyyy = date.getFullYear()
-      return `${dd}/${mm}/${yyyy}`
+    // DD/MM/YYYY
+    if (s.match(/^\d{2}\/\d{2}\/\d{4}$/)) return s
+    // DD-MM-YYYY -> DD/MM/YYYY
+    if (s.match(/^\d{2}-\d{2}-\d{4}$/)) return s.replace(/-/g, '/')
+    // YYYY-MM-DD -> DD/MM/YYYY
+    if (s.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [y, m, d] = s.split('-')
+        return `${d}/${m}/${y}`
     }
-  } catch {
-    // ignore
-  }
-  return s
+    // YYYY/MM/DD -> DD/MM/YYYY
+    if (s.match(/^\d{4}\/\d{2}\/\d{2}$/)) {
+        const [y, m, d] = s.split('/')
+        return `${d}/${m}/${y}`
+    }
+
+    // Intentar parsear con Date (fallback)
+    try {
+        const date = new Date(s)
+        if (!isNaN(date.getTime())) {
+            const dd = String(date.getDate()).padStart(2, '0')
+            const mm = String(date.getMonth() + 1).padStart(2, '0')
+            const yyyy = date.getFullYear()
+            return `${dd}/${mm}/${yyyy}`
+        }
+    } catch {
+        // ignore
+    }
+    return s
 }
 
 // Opciones del select de motivo de entrada
@@ -807,13 +1114,13 @@ function formatDate(dateStr) {
 
 // Sanitizar folio a formato E-XXX
 function sanitizeFolio(f) {
-  if (!f) return ''
-  const s = String(f).trim()
-  // extraer números
-  const m = s.match(/(\d+)$/)
-  if (!m) return ''
-  const digits = m[1].slice(0,6)
-  return `E-${digits.padStart(6, '0')}`
+    if (!f) return ''
+    const s = String(f).trim()
+    // extraer números
+    const m = s.match(/(\d+)$/)
+    if (!m) return ''
+    const digits = m[1].slice(0, 6)
+    return `E-${digits.padStart(6, '0')}`
 }
 
 // Opciones del select de tipo de entrada
@@ -873,6 +1180,10 @@ const newItem = reactive({
 
 const tipoDropdownOpen = ref(false)
 
+// State for editing units
+const editingUnit = ref(null)
+const showEditModal = ref(false)
+
 const resetNewItem = () => {
     newItem.tipo = ''
     newItem.cantidad = 0
@@ -903,6 +1214,51 @@ const onObservacionesImgChange = (e) => {
 
 const removeObservacionesImg = () => {
     form.observacionesImg = null
+}
+
+async function generarPdfEntrada(payloadParam) {
+    const payloadToSend = payloadParam || {
+        nombreSolicitante: form.nombreSolicitante,
+        servicio: form.servicio,
+        especialidad: form.especialidad,
+        folio: sanitizeFolio(form.folio),
+        fecha: normalizeFecha(form.fecha),
+        fechaISO: form.fechaISO || form.fecha,
+        horaInicio: form.horaInicio,
+        horaTermino: form.horaTermino,
+        motivoEntrada: form.motivoEntrada,
+        otroMotivo: form.otroMotivo,
+        descripcion: form.descripcion,
+        observaciones: form.observaciones,
+        nombreIngeniero: form.nombreIngeniero,
+        equiposEntrada: form.equiposEntrada,
+        observacionesImg: form.observacionesImg ? form.observacionesImg.dataUrl : null,
+        logoDataUrl: null
+    }
+
+    try {
+        const res = await authedFetch('/api/ops/entrada-pdf', {
+            method: 'POST',
+            body: JSON.stringify(payloadToSend)
+        })
+        if (res && res.ok) {
+            const contentDisposition = res.headers.get('content-disposition') || ''
+            let filename = `entrada_${payloadToSend.folio || 'sin_folio'}.pdf`
+            const fnMatch = contentDisposition.match(/filename="?([^";]+)"?/) || contentDisposition.match(/filename\*=UTF-8''([^;\n]+)/)
+            if (fnMatch) filename = decodeURIComponent(fnMatch[1])
+            const blob = await res.blob()
+            saveAs(blob, filename)
+            notifier.success('PDF generado y descargado desde el servidor')
+            return
+        } else {
+            let text = ''
+            try { text = await res.text() } catch (e) { }
+            throw new Error(`Error backend: ${res.status} ${res.statusText} ${text}`)
+        }
+    } catch (err) {
+        notifier.error('Error generando PDF, revisa la consola')
+        console.error('[PDF] Error', err)
+    }
 }
 
 // Ajustar array de unidades cuando cambia la cantidad (para equipos médicos)
@@ -993,21 +1349,85 @@ const agregarItem = () => {
         itemData.cantidad = Number(newItem.cantidad) || (itemData.unidades.length || 1)
     }
 
-    form.equiposEntrada.push(itemData)
-
-    // Asignar campos adicionales desde la primera unidad si existen
-    if (itemData.unidades.length) {
-        const first = itemData.unidades[0]
-        if (first.marca) itemData.marca = first.marca
-        if (first.modelo) itemData.modelo = first.modelo
-        if (first.serie) itemData.serie = first.serie
-        if (first.lote) itemData.lote = first.lote
-        if (first.referencia) itemData.referencia = first.referencia
-        if (first.ubicacion) itemData.ubicacion = first.ubicacion
-        if (first.claveHRAEI) itemData.claveHRAEI = first.claveHRAEI
+    // Para accesorios/consumibles/refacciones: si hay unidades individuales, agregar una entrada por unidad
+    if (['accesorio', 'consumible', 'refaccion'].includes(itemData.tipo)) {
+        if (Array.isArray(itemData.unidades) && itemData.unidades.length > 0) {
+            // Crear una entrada por cada unidad individual
+            for (const unidad of itemData.unidades) {
+                const single = {
+                    tipo: itemData.tipo,
+                    cantidad: 1,
+                    descripcion: unidad.nombre || itemData.descripcion || '',
+                    marca: unidad.marca || itemData.marca,
+                    modelo: unidad.modelo || itemData.modelo,
+                    serie: unidad.serie || itemData.serie || '',
+                    lote: unidad.lote || itemData.lote || '',
+                    referencia: unidad.referencia || itemData.referencia || '',
+                    ubicacion: unidad.ubicacion || itemData.ubicacion || '',
+                    claveHRAEI: unidad.claveHRAEI || itemData.claveHRAEI || '',
+                    unidades: [{ ...unidad, cantidad: 1 }]
+                }
+                form.equiposEntrada.push(single)
+            }
+        } else {
+            // Si no hay unidades detalladas pero cantidad > 1, expandir en entradas individuales
+            const qty = Number(itemData.cantidad) || 1
+            for (let i = 0; i < qty; i++) {
+                const single = {
+                    tipo: itemData.tipo,
+                    cantidad: 1,
+                    descripcion: itemData.descripcion || '',
+                    marca: itemData.marca,
+                    modelo: itemData.modelo,
+                    serie: itemData.serie || '',
+                    lote: itemData.lote || '',
+                    referencia: itemData.referencia || '',
+                    ubicacion: itemData.ubicacion || '',
+                    claveHRAEI: itemData.claveHRAEI || '',
+                    unidades: []
+                }
+                form.equiposEntrada.push(single)
+            }
+        }
+    } else {
+        // Equipos/mobiliario: regla crítica -> cada unidad se guarda como ítem individual.
+        // Crear una entrada por cada unidad (cantidad=1) y conservar el orden.
+        if (Array.isArray(itemData.unidades) && itemData.unidades.length) {
+            for (const unidad of itemData.unidades) {
+                const single = {
+                    tipo: itemData.tipo,
+                    cantidad: 1,
+                    descripcion: unidad.nombre || itemData.descripcion || '',
+                    marca: unidad.marca || itemData.marca || '',
+                    modelo: unidad.modelo || itemData.modelo || '',
+                    serie: unidad.serie || itemData.serie || '',
+                    lote: unidad.lote || itemData.lote || '',
+                    referencia: unidad.referencia || itemData.referencia || '',
+                    ubicacion: unidad.ubicacion || itemData.ubicacion || '',
+                    claveHRAEI: unidad.claveHRAEI || itemData.claveHRAEI || '',
+                    unidades: [{ ...unidad, cantidad: 1 }]
+                }
+                form.equiposEntrada.push(single)
+            }
+        } else {
+            // fallback: si por alguna razón no hay unidades, crear una sola entrada
+            form.equiposEntrada.push({
+                tipo: itemData.tipo,
+                cantidad: 1,
+                descripcion: itemData.descripcion || '',
+                marca: itemData.marca || '',
+                modelo: itemData.modelo || '',
+                serie: itemData.serie || '',
+                lote: itemData.lote || '',
+                referencia: itemData.referencia || '',
+                ubicacion: itemData.ubicacion || '',
+                claveHRAEI: itemData.claveHRAEI || '',
+                unidades: []
+            })
+        }
     }
 
-    notifier.success('Item agregado correctamente')
+    notifier.success('Item(s) agregado(s) correctamente')
     resetNewItem()
 }
 
@@ -1088,6 +1508,57 @@ const onUnitTrashDone = (itemObj, unidadObj) => {
     }
 }
 // item-level trash buttons removed — deletions will be handled per-unidad via TrashButton component
+
+const editUnit = (itemObj, unidadObj, unitIndex) => {
+    try {
+        // Deep copy the unit data to edit
+        const editingData = JSON.parse(JSON.stringify(unidadObj))
+        editingData.parentItem = itemObj
+        editingData.unitIndex = unitIndex
+
+        // Open modal or form to edit the unit
+        editingUnit.value = editingData
+        showEditModal.value = true
+    } catch (err) {
+        console.warn('editUnit error', err)
+        notifier.error('Error al editar la unidad')
+    }
+}
+
+const saveEditedUnit = () => {
+    try {
+        if (!editingUnit.value || !editingUnit.value.parentItem) return
+
+        const parentItem = editingUnit.value.parentItem
+        const unitIndex = editingUnit.value.unitIndex
+
+        // Find the parent item in the form
+        const parentIndex = form.equiposEntrada.findIndex(e => e === parentItem)
+        if (parentIndex === -1) {
+            notifier.error('No se encontró el item padre')
+            return
+        }
+
+        // Update the unit with edited data
+        const updatedUnit = { ...editingUnit.value }
+        delete updatedUnit.parentItem
+        delete updatedUnit.unitIndex
+
+        form.equiposEntrada[parentIndex].unidades[unitIndex] = updatedUnit
+
+        // Close modal
+        closeEditModal()
+        notifier.success('Unidad actualizada correctamente')
+    } catch (err) {
+        console.warn('saveEditedUnit error', err)
+        notifier.error('Error al guardar los cambios')
+    }
+}
+
+const closeEditModal = () => {
+    showEditModal.value = false
+    editingUnit.value = null
+}
 
 const getTipoLabel = (tipo) => {
     const option = tipoEntradaOptions.find(opt => opt.value === tipo)
@@ -1276,7 +1747,52 @@ const isValid = computed(() => {
     return nombreSolicitante.length > 0 && descripcion.length > 0
 })
 
-async function generarExcelEntrada() {
+async function generarExcelEntrada(payloadParam) {
+    // payloadParam optional: if provided, use it; otherwise build from form
+    const payloadToSend = payloadParam || {
+        nombreSolicitante: form.nombreSolicitante,
+        servicio: form.servicio,
+        especialidad: form.especialidad,
+        folio: sanitizeFolio(form.folio),
+        fecha: normalizeFecha(form.fecha),
+        horaInicio: form.horaInicio,
+        horaTermino: form.horaTermino,
+        motivoEntrada: form.motivoEntrada,
+        otroMotivo: form.otroMotivo,
+        descripcion: form.descripcion,
+        observaciones: form.observaciones,
+        nombreIngeniero: form.nombreIngeniero,
+        equiposEntrada: form.equiposEntrada,
+        observacionesImg: form.observacionesImg ? form.observacionesImg.dataUrl : null,
+    }
+
+    // Intentar delegar la generación al backend (Excel COM) — si falla, caer al flujo local con ExcelJS
+    try {
+        const res = await authedFetch('/api/ops/entrada-excel-com', {
+            method: 'POST',
+            body: JSON.stringify(payloadToSend)
+        })
+        if (res && res.ok) {
+            // Obtener filename del header si existe
+            const contentDisposition = res.headers.get('content-disposition') || ''
+            let filename = 'entrada_plantilla_copia.xlsx'
+            const fnMatch = contentDisposition.match(/filename="?([^";]+)"?/) || contentDisposition.match(/filename\*=UTF-8''([^;\n]+)/)
+            if (fnMatch) filename = decodeURIComponent(fnMatch[1])
+            const blob = await res.blob()
+            saveAs(blob, filename)
+            notifier.success('Excel generado y descargado desde el servidor')
+            return
+        } else {
+            // No OK -> leer mensaje y fallar para fallback
+            let text = ''
+            try { text = await res.text() } catch (e) { }
+            throw new Error(`Error backend: ${res.status} ${res.statusText} ${text}`)
+        }
+    } catch (err) {
+        console.warn('[Excel] Backend generation failed, falling back to client ExcelJS generation:', err && err.message ? err.message : err)
+        notifier.info('No fue posible generar el Excel en el servidor; se intentará generar localmente')
+    }
+
     try {
         // Usar ruta relativa a la carpeta `src/plantillas` (Vite no resuelve `@` dentro de new URL)
         const plantillaUrl = new URL('../../plantillas/entrada_plantilla.xlsx', import.meta.url).href
@@ -1288,6 +1804,11 @@ async function generarExcelEntrada() {
         const workbook = new ExcelJS.Workbook()
         await workbook.xlsx.load(arrayBuffer)
         const worksheet = workbook.getWorksheet('ENTRADA')
+
+        // Guardar referencias a media/imagenes/headerFooter de la plantilla para restaurar si se pierden
+        const __saved_workbook_media = workbook.model && workbook.model.media ? workbook.model.media.slice() : (workbook.media ? workbook.media.slice() : null)
+        const __saved_worksheet_images = worksheet._images ? worksheet._images.slice() : (typeof worksheet.getImages === 'function' ? worksheet.getImages().slice() : null)
+        const __saved_header_footer = worksheet.headerFooter ? worksheet.headerFooter : null
 
         const setCellValuePreserveStyle = (ws, addr, val) => {
             const c = ws.getCell(addr)
@@ -1429,6 +1950,42 @@ async function generarExcelEntrada() {
         celdaMotivos.forEach((celda, idx) => {
             setCellValuePreserveStyle(worksheet, celda, idx === indiceMotivo ? 'X' : '')
         })
+
+        // Asegurar estilo consistente de encabezados de motivo (filas 7-14)
+        try {
+            for (let fila = 7; fila <= 14; fila++) {
+                const row = worksheet.getRow(fila)
+                if (!row) continue
+                // Garantizar altura razonable
+                row.height = (row.height && row.height > 6) ? row.height : 20
+
+                // Aplicar estilo célula por célula para evitar que algún formato raro o fondo haga desaparecer texto
+                for (let col = 1; col <= 9; col++) {
+                    try {
+                        const cell = row.getCell(col)
+                        if (!cell) continue
+                        // Alineación y ajuste de texto para que se muestre correctamente
+                        cell.alignment = { horizontal: col === 1 ? 'left' : 'left', vertical: 'middle', wrapText: true }
+                        // Fuente consistente (encabezado en columna A más visible)
+                        cell.font = { name: 'Calibri', size: 10, bold: col === 1 }
+                        // Limpiar rellenos problemáticos (ej. azul fuerte) que ocultan bordes/alto
+                        if (cell.fill && cell.fill.fgColor && cell.fill.fgColor.argb) {
+                            const argb = String(cell.fill.fgColor.argb).toUpperCase()
+                            // si parece un azul agresivo, remover relleno
+                            if (argb === 'FF00B0F0' || argb === 'FF0070C0' || argb === 'FFE6F0FA') {
+                                cell.fill = undefined
+                            }
+                        }
+                        // Asegurar borde inferior para separar visualmente
+                        cell.border = cell.border || {}
+                        cell.border.bottom = { style: 'thin', color: { argb: 'FF000000' } }
+                    } catch (inner) { /* ignorar celdas no existentes */ }
+                }
+            }
+            console.log('[MOTIVOS] ✓ Estilos de encabezados motivos asegurados (filas 7-14)')
+        } catch (errMotivos) {
+            console.warn('[MOTIVOS] Error asegurando estilos de motivos:', errMotivos)
+        }
 
         // Si el motivo es "otro", escribir la especificación en B14
         if (form.motivoEntrada === 'otro' && form.otroMotivo) {
@@ -1958,25 +2515,6 @@ async function generarExcelEntrada() {
                 console.log('[PROTECCIÓN] Filas dinámicas Observaciones/Ingeniero añadidas a PROTECTED_ROWS:', FILA_ENCABEZADO_OBS, FILA_CONTENIDO_OBS, FILA_INGENIERO)
             }
 
-            // Tomar snapshot inmediato de estas filas para la fase de reparación
-            ;[FILA_ENCABEZADO_OBS, FILA_CONTENIDO_OBS, FILA_INGENIERO].forEach(rowNum => {
-                try {
-                    const row = worksheet.getRow(rowNum)
-                    const snapshot = { height: row.height, hidden: row.hidden, cells: {} }
-                    row.eachCell({ includeEmpty: true }, (cell, colNum) => {
-                        snapshot.cells[colNum] = {
-                            value: cell.value,
-                            style: cell.style ? JSON.parse(JSON.stringify(cell.style)) : null,
-                            merge: cell.isMerged
-                        }
-                    })
-                    rowSnapshots[rowNum] = snapshot
-                    console.log('[SNAPSHOT] Dinámico fila respaldada:', rowNum)
-                } catch (e) {
-                    console.warn('[SNAPSHOT] Error respaldando fila dinámica', rowNum, e)
-                }
-            })
-
             // Añadir filas dinámicas a CRITICAL_ROWS (si no existen)
             try {
                 ;[FILA_ENCABEZADO_OBS, FILA_CONTENIDO_OBS, FILA_INGENIERO].forEach(r => {
@@ -2285,36 +2823,44 @@ async function generarExcelEntrada() {
 
         let repairsNeeded = 0
         CRITICAL_ROWS.forEach(rowNum => {
+            // ⚠️ Saltar filas dinámicas (Observaciones/Ingeniero) de la auto-reparación
+            if (rowNum === FILA_ENCABEZADO_OBS ||
+                rowNum === FILA_CONTENIDO_OBS ||
+                rowNum === FILA_INGENIERO) {
+                console.log(`[AUTO-REPARACIÓN] Saltando fila dinámica ${rowNum}`)
+                return
+            }
+
             const currentRow = worksheet.getRow(rowNum)
             const snapshot = rowSnapshots[rowNum]
 
-                // VALIDACIÓN: Verificar que existe el snapshot
-                if (!snapshot) {
-                    console.warn(`[REPARACIÓN] No hay snapshot para fila ${rowNum} - saltando validación`)
+            // VALIDACIÓN: Verificar que existe el snapshot
+            if (!snapshot) {
+                console.warn(`[REPARACIÓN] No hay snapshot para fila ${rowNum} - saltando validación`)
+                return
+            }
+
+            // Si la fila está protegida y tiene contenido válido, OMITIR restauración
+            if (PROTECTED_ROWS.has(rowNum)) {
+                let hasContent = false
+                try {
+                    currentRow.eachCell({ includeEmpty: false }, (cell) => {
+                        if (cell.value) hasContent = true
+                    })
+                } catch (e) { /* ignore */ }
+
+                if (hasContent) {
+                    console.log(`[REPARACIÓN] Fila protegida ${rowNum} tiene contenido - omitiendo restauración`)
                     return
                 }
+                // si no tiene contenido, dejaremos que la restauración continúe
+            }
 
-                // Si la fila está protegida y tiene contenido válido, OMITIR restauración
-                if (PROTECTED_ROWS.has(rowNum)) {
-                    let hasContent = false
-                    try {
-                        currentRow.eachCell({ includeEmpty: false }, (cell) => {
-                            if (cell.value) hasContent = true
-                        })
-                    } catch (e) { /* ignore */ }
-
-                    if (hasContent) {
-                        console.log(`[REPARACIÓN] Fila protegida ${rowNum} tiene contenido - omitiendo restauración`)
-                        return
-                    }
-                    // si no tiene contenido, dejaremos que la restauración continúe
-                }
-
-                // Verificar si la fila está corrupta (vacía o sin estilo)
-                let isCorrupted = true
-                currentRow.eachCell({ includeEmpty: false }, (cell) => {
-                    if (cell.value || cell.style) isCorrupted = false
-                })
+            // Verificar si la fila está corrupta (vacía o sin estilo)
+            let isCorrupted = true
+            currentRow.eachCell({ includeEmpty: false }, (cell) => {
+                if (cell.value || cell.style) isCorrupted = false
+            })
 
             if (isCorrupted || !currentRow.height) {
                 console.warn(`[REPARACIÓN] Fila ${rowNum} corrupta - restaurando desde snapshot`)
@@ -2359,6 +2905,13 @@ async function generarExcelEntrada() {
             console.log('[AUTO-REPARACIÓN] ✓ Todas las filas críticas están intactas')
         }
 
+        // Restaurar altura de fila del ingeniero si es necesario
+        const currentHeight = worksheet.getRow(FILA_INGENIERO).height
+        if (currentHeight <= 0 || isNaN(currentHeight) || currentHeight === undefined) {
+            worksheet.getRow(FILA_INGENIERO).height = 25
+            console.log('[RESTAURACIÓN-ALTURA] Altura de fila del ingeniero restaurada a 25')
+        }
+
         // ═══════════════════════════════════════════════════════════════
         // 💥 ARTILLERÍA MÁXIMA - FORMATO AGRESIVO A TODAS LAS FILAS DE DATOS 💥
         // ═══════════════════════════════════════════════════════════════
@@ -2378,6 +2931,11 @@ async function generarExcelEntrada() {
         // APLICAR A TODAS LAS FILAS DE DATOS SIN EXCEPCIÓN
         sections.forEach(sec => {
             sec.actualDataRows.forEach(row => {
+                // ⚠️ Saltar fila del ingeniero para no cambiar su altura
+                if (row === FILA_INGENIERO) {
+                    console.log(`[FORMATO-MÁXIMO] ⚠️ Saltando fila del ingeniero ${row}`)
+                    return
+                }
                 console.log(`[FORMATO-MÁXIMO] 💥 FORZANDO formato fila ${row}`)
                 formatRepairs++
 
@@ -2410,6 +2968,11 @@ async function generarExcelEntrada() {
         console.log('[FORMATO-MÁXIMO] 💥 SEGUNDA PASADA - Verificando formato aplicado...')
         sections.forEach(sec => {
             sec.actualDataRows.forEach(row => {
+                // ⚠️ Saltar fila del ingeniero para no cambiar su altura
+                if (row === FILA_INGENIERO) {
+                    console.log(`[FORMATO-MÁXIMO] ⚠️ Saltando fila del ingeniero ${row} en segunda pasada`)
+                    return
+                }
                 const excelRow = worksheet.getRow(row)
                 for (let col = 1; col <= 9; col++) {
                     const cell = excelRow.getCell(col)
@@ -2573,6 +3136,192 @@ async function generarExcelEntrada() {
             console.warn('[FINAL-OBS] Error re-aplicando Observaciones/Ingeniero:', errFinalObs)
         }
 
+        // 🔥 HYPER FORZADO MEGA AGRESIVO - GARANTIZAR ALTURA DE FILA INGENIERO 🔥
+        console.log(`[HYPER-FORZADO] 🔥 Aplicando hyper forzado a fila ${FILA_INGENIERO}`)
+        try {
+            // Método 1: Asignación directa
+            const rowIng = worksheet.getRow(FILA_INGENIERO)
+            rowIng.height = 25
+
+            // Método 2: Array interno (índice 0-based)
+            if (worksheet._rows && worksheet._rows[FILA_INGENIERO - 1]) {
+                worksheet._rows[FILA_INGENIERO - 1].height = 25
+            }
+
+            console.log(`[HYPER-FORZADO] ✅ Altura forzada a 25 en fila ${FILA_INGENIERO}`)
+        } catch (hyperError) {
+            console.error('[HYPER-FORZADO] ❌ Error en hyper forzado:', hyperError)
+            // Método de respaldo: manipulación del modelo
+            try {
+                if (worksheet.model && worksheet.model.rows && worksheet.model.rows[FILA_INGENIERO - 1]) {
+                    worksheet.model.rows[FILA_INGENIERO - 1].height = 25
+                }
+                console.log('[HYPER-FORZADO] 🔄 Método de respaldo aplicado')
+            } catch (backupError) {
+                console.error('[HYPER-FORZADO] ❌ Método de respaldo falló:', backupError)
+                // MÉTODO FINAL APOCALÍPTICO: Manipulación del DOM XML interno
+                try {
+                    if (worksheet.worksheet && worksheet.worksheet.sheetData && worksheet.worksheet.sheetData.rows) {
+                        const rows = worksheet.worksheet.sheetData.rows
+                        if (rows[FILA_INGENIERO - 1]) { // índice 0-based
+                            rows[FILA_INGENIERO - 1].ht = 25
+                            rows[FILA_INGENIERO - 1].customHeight = true
+                        }
+                    }
+                    console.log('[HYPER-FORZADO] 💀 Método apocalíptico aplicado')
+                } catch (apocalypseError) {
+                    console.error('[HYPER-FORZADO] ❌ Método apocalíptico falló:', apocalypseError)
+                }
+            }
+        }
+
+        // 🔥 ULTRA FORZADO ESPECÍFICO PARA FILA 45 🔥
+        console.log('[ULTRA-FORZADO] 🔥 Aplicando ultra forzado específico a fila 45')
+        try {
+            // Método 1: Asignación directa
+            const row45 = worksheet.getRow(45)
+            row45.height = 25
+
+            // Método 2: Array interno (índice 0-based: 45-1=44)
+            if (worksheet._rows) {
+                worksheet._rows[44] = worksheet._rows[44] || {}
+                worksheet._rows[44].height = 25
+                worksheet._rows[44].hidden = false
+            }
+
+            // Método 3: Modelo de datos
+            if (worksheet.model && worksheet.model.rows && worksheet.model.rows[44]) {
+                worksheet.model.rows[44].height = 25
+            }
+
+            console.log('[ULTRA-FORZADO] ✅ Altura ultra forzada a 25 en fila 45')
+        } catch (ultraError) {
+            console.error('[ULTRA-FORZADO] ❌ Error en ultra forzado:', ultraError)
+            // Último recurso: manipulación extrema
+            try {
+                const row45 = worksheet.getRow(45)
+                // Eliminar propiedad height si existe y es read-only
+                const descriptor = Object.getOwnPropertyDescriptor(row45, 'height')
+                if (descriptor && !descriptor.writable) {
+                    delete row45.height
+                }
+                row45.height = 25
+                console.log('[ULTRA-FORZADO] 🔧 Último recurso aplicado exitosamente')
+            } catch (lastResortError) {
+                console.error('[ULTRA-FORZADO] ❌ Último recurso falló:', lastResortError)
+                // MÉTODO FINAL APOCALÍPTICO: Manipulación del DOM XML interno
+                try {
+                    if (worksheet.worksheet && worksheet.worksheet.sheetData && worksheet.worksheet.sheetData.rows) {
+                        const rows = worksheet.worksheet.sheetData.rows
+                        if (rows[44]) { // índice 0-based
+                            rows[44].ht = 25
+                            rows[44].customHeight = true
+                        }
+                    }
+                    console.log('[ULTRA-FORZADO] 💀 Método apocalíptico aplicado')
+                } catch (apocalypseError) {
+                    console.error('[ULTRA-FORZADO] ❌ Método apocalíptico falló:', apocalypseError)
+                }
+            }
+        }
+        // LIMPIEZA FINAL: evitar celdas "invisibles" dejando un NBSP cuando están vacías
+        try {
+            const regions = new Set()
+            // filas de motivos (7-14)
+            for (let r = 7; r <= 14; r++) regions.add(r)
+            // filas dinámicas Observaciones/Ingeniero
+            if (typeof FILA_ENCABEZADO_OBS === 'number') regions.add(FILA_ENCABEZADO_OBS)
+            if (typeof FILA_CONTENIDO_OBS === 'number') regions.add(FILA_CONTENIDO_OBS)
+            if (typeof FILA_INGENIERO === 'number') regions.add(FILA_INGENIERO)
+            // filas de datos en secciones (si existe variable sections)
+            try {
+                if (Array.isArray(sections)) {
+                    sections.forEach(sec => {
+                        if (sec && Array.isArray(sec.actualDataRows)) {
+                            sec.actualDataRows.forEach(r => regions.add(r))
+                        }
+                    })
+                }
+            } catch (errSec) { /* ignore */ }
+
+            Array.from(regions).forEach(rowNum => {
+                try {
+                    const row = worksheet.getRow(rowNum)
+                    if (!row) return
+                    for (let col = 1; col <= 9; col++) {
+                        try {
+                            const cell = row.getCell(col)
+                            if (!cell) continue
+                            const v = cell.value
+                            if (v === null || v === undefined || v === '') {
+                                // Usar NBSP para que la celda no quede "colapsada" visualmente
+                                cell.value = '\u00A0'
+                                // asegurar wrap y alineación
+                                cell.alignment = Object.assign({}, cell.alignment || {}, { wrapText: true, vertical: 'middle' })
+                            }
+                        } catch (inner) { /* ignore cell errors */ }
+                    }
+                } catch (rowErr) { /* ignore row errors */ }
+            })
+            console.log('[LIMPIEZA-EMPTY] ✓ Celdas vacías relevantes rellenadas con NBSP')
+        } catch (errClean) {
+            console.warn('[LIMPIEZA-EMPTY] Error en limpieza final:', errClean)
+        }
+
+        // Insertar imagen de membrete en encabezado (si existe)
+        try {
+            // Restaurar media/imagenes/headerFooter guardadas si por alguna manipulación se perdieron
+            try {
+                if (__saved_workbook_media && __saved_workbook_media.length > 0 && (!workbook.model || !workbook.model.media || workbook.model.media.length === 0)) {
+                    workbook.model = workbook.model || {}
+                    workbook.model.media = __saved_workbook_media
+                    console.log('[IMAGEN-RESTORE] Restaurado workbook.model.media desde snapshot')
+                }
+                if (__saved_worksheet_images && __saved_worksheet_images.length > 0 && (!worksheet._images || worksheet._images.length === 0)) {
+                    worksheet._images = __saved_worksheet_images
+                    console.log('[IMAGEN-RESTORE] Restauradas worksheet._images desde snapshot')
+                }
+                if (__saved_header_footer && (!worksheet.headerFooter || Object.keys(worksheet.headerFooter).length === 0)) {
+                    worksheet.headerFooter = __saved_header_footer
+                    console.log('[IMAGEN-RESTORE] Restaurado headerFooter desde snapshot')
+                }
+            } catch (restoreErr) {
+                console.warn('[IMAGEN-RESTORE] Error intentando restaurar media/imagenes/headerFooter:', restoreErr)
+            }
+
+            // Si la plantilla ya contiene imágenes o header/footer, NO insertar nada para preservar la plantilla
+            const hasWorksheetImages = (typeof worksheet.getImages === 'function' && worksheet.getImages().length > 0) || (worksheet._images && worksheet._images.length > 0)
+            const hasWorkbookMedia = (workbook && workbook.model && Array.isArray(workbook.model.media) && workbook.model.media.length > 0) || (workbook && workbook.media && workbook.media.length > 0)
+            const hasHeaderFooter = worksheet.headerFooter && (worksheet.headerFooter.firstHeader || worksheet.headerFooter.oddHeader || worksheet.headerFooter.evenHeader || worksheet.headerFooter.firstFooter || worksheet.headerFooter.oddFooter || worksheet.headerFooter.evenFooter)
+
+            if (hasWorksheetImages || hasWorkbookMedia || hasHeaderFooter) {
+                console.log('[IMAGEN] Plantilla ya contiene imágenes/encabezado - preservando encabezado y pie existentes')
+            } else {
+                const imgUrl = '/images/servicios_salud.png'
+                const resp = await fetch(imgUrl)
+                if (resp && resp.ok) {
+                    const arr = await resp.arrayBuffer()
+                    const imageId = workbook.addImage({ buffer: arr, extension: 'png' })
+                    // Posicionar imagen a la izquierda del encabezado (solo si la plantilla no la contiene)
+                    try {
+                        worksheet.addImage(imageId, { tl: { col: 0, row: 0 }, ext: { width: 160, height: 90 } })
+                        console.log('[IMAGEN] Membrete insertado en encabezado desde', imgUrl)
+                    } catch (posErr) {
+                        try {
+                            worksheet.addImage(imageId, { tl: { col: 0, row: 0 }, br: { col: 2, row: 3 } })
+                            console.log('[IMAGEN] Membrete insertado (rango fallback) desde', imgUrl)
+                        } catch (posErr2) {
+                            console.warn('[IMAGEN] No se pudo posicionar la imagen en el encabezado:', posErr2)
+                        }
+                    }
+                } else {
+                    console.log('[IMAGEN] No se encontró la imagen de membrete en', imgUrl)
+                }
+            }
+        } catch (imgErr) {
+            console.warn('[IMAGEN] Error cargando imagen de membrete:', imgErr)
+        }
+
         console.log('[GENERACIÓN] Creando archivo final...')
         const buffer = await workbook.xlsx.writeBuffer()
         // MIME corregido: spreadsheetml (antes había un typo)
@@ -2678,6 +3427,7 @@ function clearForm() {
 
 
 async function onSubmit() {
+    if (isReadOnly.value) return
     if (!isValid.value) {
         notifier.error('Completa los campos obligatorios')
         return
@@ -2752,10 +3502,10 @@ async function onSubmit() {
   `
 
     const result = await showAlert({
-        title: 'Confirma y genera Excel',
+        title: 'Confirma y genera PDF',
         html,
         showCancelButton: true,
-        confirmButtonText: 'Generar y Guardar',
+        confirmButtonText: 'Generar y Guardar (PDF)',
         cancelButtonText: 'Cancelar',
         width: '800px',
         confirmButtonColor: '#4ade80',
@@ -2785,43 +3535,43 @@ async function onSubmit() {
     }
 
     try {
-        const url = props.modo === 'editar' ? `/api/ops/entrada/${props.ordenId}` : '/api/ops/entrada'
-        const method = props.modo === 'editar' ? 'PUT' : 'POST'
+        // Edit mode: NO persistencia aquí. Centralizar sync en OrderManagement.
+        if (props.modo === 'editar') {
+            if (!payload.id && props.ordenId) payload.id = props.ordenId
+            emit('actualizado', payload)
+            emit('close')
+            loading.value = false
+            return
+        }
 
+        // Normal create flow (POST)
+        const url = '/api/ops/entrada'
         const res = await fetch(url, {
-            method: method,
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
 
         if (!res.ok) {
             if (res.status === 404) {
-                // Endpoint no disponible: guardar local y generar Excel igualmente
+                // Endpoint no disponible: guardar local y generar PDF igualmente
                 notifier.info('API de guardado no disponible (404), se guardará como borrador localmente')
             } else {
                 throw new Error('No se pudo guardar en el servidor')
             }
         } else {
-            if (props.modo === 'editar') {
-                notifier.success('Orden actualizada correctamente')
-                // Emitir evento de actualización
-                emit('actualizado')
-                // Cerrar el modal
-                emit('close')
-            } else {
-                notifier.success('Orden guardada en el servidor')
-                // Also persist to local orders list for quick consumption by frontend
-                try {
-                    const raw = localStorage.getItem(ORDERS_LIST_KEY)
-                    const arr = raw ? JSON.parse(raw) : []
-                    arr.push({ id: Date.now(), ...payload })
-                    localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
-                } catch (e) { }
-                // clearForm se realiza tras generar el Excel para que la descarga se pueda llevar a cabo
-                // (no queremos limpiar antes de la generación)
-                await generarExcelEntrada()
-                clearForm()
-            }
+            notifier.success('Orden guardada en el servidor')
+            // Also persist to local orders list for quick consumption by frontend
+            try {
+                const raw = localStorage.getItem(ORDERS_LIST_KEY)
+                const arr = raw ? JSON.parse(raw) : []
+                arr.push({ id: Date.now(), ...payload })
+                localStorage.setItem(ORDERS_LIST_KEY, JSON.stringify(arr))
+            } catch (e) { }
+            // clearForm se realiza tras generar el Excel para que la descarga se pueda llevar a cabo
+            // (no queremos limpiar antes de la generación)
+            await generarPdfEntrada(payload)
+            clearForm()
             loading.value = false
             return
         }
@@ -2839,12 +3589,12 @@ async function onSubmit() {
             // ignore storage errors
         }
         notifier.success('Orden guardada como borrador (offline)')
-        // Intentar generar Excel igualmente
+        // Intentar generar PDF igualmente
         try {
-            await generarExcelEntrada()
+            await generarPdfEntrada(payload)
         } catch (e) {
-            console.error('Error generando Excel tras fallback:', e)
-            notifier.error('No se pudo generar el Excel')
+            console.error('Error generando PDF tras fallback:', e)
+            notifier.error('No se pudo generar el PDF')
         }
     } finally {
         loading.value = false
@@ -2929,24 +3679,26 @@ watch(() => form.horaInicio, (val) => {
 
 // Cargar datos de la orden cuando está en modo editar
 const loadOrderData = async () => {
+    if (props.snapshot) return
     if (props.modo !== 'editar' || !props.ordenId) return
 
     loadingOrden.value = true
     try {
         const ordenIdStr = String(props.ordenId)
-        const res = await fetch(`/api/ops/entrada/${ordenIdStr}`)
-        
+        // Evitar caché: forzar refresh real
+        const res = await fetch(`/api/ops/entrada/${encodeURIComponent(ordenIdStr)}?t=${Date.now()}`, { cache: 'no-store' })
+
         if (res.status === 404) {
             console.warn(`Orden no encontrada (404): ${ordenIdStr}`)
             notifier.warn('La orden solicitada no existe en el servidor. Los campos estarán vacíos.')
             loadingOrden.value = false
             return
         }
-        
+
         if (!res.ok) {
             throw new Error(`Error ${res.status}: ${res.statusText}`)
         }
-        
+
         const response = await res.json()
         // La respuesta viene como { ok: true, orden, items }
         const data = response.orden || response
@@ -2965,70 +3717,164 @@ const loadOrderData = async () => {
         form.descripcion = data.descripcion || ''
         form.observaciones = data.observaciones || ''
         form.nombreIngeniero = data.nombre_ingeniero || data.nombreIngeniero || ''
-        
+
         // Procesar items que vienen de la BD
         if (response.items && Array.isArray(response.items)) {
-            // Agrupar items por tipo para reconstruir la estructura esperada
-            const equiposByType = {}
-            response.items.forEach(item => {
-                if (!equiposByType[item.tipo]) {
-                    equiposByType[item.tipo] = {
-                        tipo: item.tipo,
-                        cantidad: 0,
-                        descripcion: item.descripcion || '',
-                        marca: item.marca || '',
-                        modelo: item.modelo || '',
-                        serie: item.serie || '',
-                        lote: item.lote || '',
-                        referencia: item.referencia || '',
-                        ubicacion: item.ubicacion || '',
-                        claveHRAEI: item.clave_hraei || item.claveHRAEI || '',
-                        unidades: []
-                    }
-                }
+            // Reconstruir la lista respetando el orden original y expandiendo por unidad cuando sea necesario
+            const loaded = []
+            for (const item of response.items) {
+                const line = item.line
+                const tipo = item.tipo
+                const descripcion = item.descripcion || ''
+                const marca = item.marca || ''
+                const modelo = item.modelo || ''
+                const serie = item.serie || ''
+                const lote = item.lote || ''
+                const referencia = item.referencia || ''
+                const ubicacion = item.ubicacion || ''
+                const claveHRAEI = item.clave_hraei || item.claveHRAEI || ''
 
-                // Si el item trae una propiedad 'unidades' (antigua estructura), usarla
+                // Si el registro trae 'unidades' (estructura antigua o explícita)
                 if (item.unidades && Array.isArray(item.unidades) && item.unidades.length) {
-                    equiposByType[item.tipo].cantidad += item.unidades.length
-                    item.unidades.forEach(unidad => {
-                        equiposByType[item.tipo].unidades.push({
-                            nombre: unidad.nombre || '',
-                            cantidad: unidad.cantidad || 1,
-                            marca: unidad.marca || '',
-                            modelo: unidad.modelo || '',
-                            serie: unidad.serie || '',
-                            lote: unidad.lote || '',
-                            referencia: unidad.referencia || '',
-                            ubicacion: unidad.ubicacion || '',
-                            claveHRAEI: unidad.clave_hraei || unidad.claveHRAEI || ''
+                    if (['accesorio', 'consumible', 'refaccion'].includes(tipo)) {
+                        // Crear una entrada por cada unidad para preservar orden
+                        for (const unidad of item.unidades) {
+                            loaded.push({
+                                tipo,
+                                cantidad: 1,
+                                descripcion: unidad.nombre || descripcion || '',
+                                marca: unidad.marca || marca || '',
+                                modelo: unidad.modelo || modelo || '',
+                                serie: unidad.serie || serie || '',
+                                lote: unidad.lote || lote || '',
+                                referencia: unidad.referencia || referencia || '',
+                                ubicacion: unidad.ubicacion || ubicacion || '',
+                                claveHRAEI: unidad.clave_hraei || unidad.claveHRAEI || claveHRAEI || '',
+                                unidades: [{ ...unidad, cantidad: unidad.cantidad || 1 }]
+                            })
+                        }
+                    } else {
+                        // Equipos / mobiliario: mantener una entrada con su array de unidades
+                        const unidades = item.unidades.map(u => ({
+                            nombre: u.nombre || '',
+                            marca: u.marca || marca || '',
+                            modelo: u.modelo || modelo || '',
+                            serie: u.serie || serie || '',
+                            lote: u.lote || lote || '',
+                            referencia: u.referencia || referencia || '',
+                            ubicacion: u.ubicacion || ubicacion || '',
+                            claveHRAEI: u.clave_hraei || u.claveHRAEI || claveHRAEI || '',
+                            cantidad: u.cantidad || 1
+                        }))
+                        loaded.push({
+                            tipo,
+                            cantidad: unidades.reduce((s, u) => s + (Number(u.cantidad) || 1), 0),
+                            descripcion: descripcion || (unidades[0] && unidades[0].nombre) || '',
+                            marca: marca || (unidades[0] && unidades[0].marca) || '',
+                            modelo: modelo || (unidades[0] && unidades[0].modelo) || '',
+                            serie,
+                            lote,
+                            referencia,
+                            ubicacion,
+                            claveHRAEI,
+                            unidades
                         })
-                    })
-
-                } else if (item.cantidad && Number(item.cantidad) > 1 && !item.descripcion) {
-                    // Fila agrupada sin descripción: sumar la cantidad
-                    equiposByType[item.tipo].cantidad += Number(item.cantidad || 0)
-
-                } else if (item.cantidad && Number(item.cantidad) > 1 && item.descripcion) {
-                    // Fila agrupada con cantidad >1 y descripción -> tratar como grupo
-                    equiposByType[item.tipo].cantidad += Number(item.cantidad || 0)
-                } else {
-                    // Caso: registros por unidad (cada fila representa una unidad)
-                    const unidadFromRow = {
-                        nombre: item.descripcion || '',
-                        cantidad: item.cantidad || 1,
-                        marca: item.marca || '',
-                        modelo: item.modelo || '',
-                        serie: item.serie || '',
-                        lote: item.lote || '',
-                        referencia: item.referencia || '',
-                        ubicacion: item.ubicacion || '',
-                        claveHRAEI: item.clave_hraei || item.claveHRAEI || ''
                     }
-                    equiposByType[item.tipo].unidades.push(unidadFromRow)
-                    equiposByType[item.tipo].cantidad += Number(item.cantidad || 1)
+
+                } else if (item.cantidad && Number(item.cantidad) > 1) {
+                    const qty = Number(item.cantidad)
+                    if (['accesorio', 'consumible', 'refaccion'].includes(tipo)) {
+                        // Expandir en entradas individuales (una por unidad)
+                        for (let i = 0; i < qty; i++) {
+                            loaded.push({
+                                tipo,
+                                cantidad: 1,
+                                descripcion: descripcion || '',
+                                marca,
+                                modelo,
+                                serie,
+                                lote,
+                                referencia,
+                                ubicacion,
+                                claveHRAEI,
+                                unidades: []
+                            })
+                        }
+                    } else {
+                        // Equipos/mobiliario con cantidad >1 -> generar una entrada con unidades vacías de placeholder
+                        const unidades = []
+                        for (let i = 0; i < qty; i++) {
+                            unidades.push({
+                                nombre: '',
+                                marca,
+                                modelo,
+                                serie: '',
+                                lote: '',
+                                referencia: '',
+                                ubicacion,
+                                claveHRAEI,
+                                cantidad: 1
+                            })
+                        }
+                        loaded.push({
+                            tipo,
+                            cantidad: qty,
+                            descripcion,
+                            marca,
+                            modelo,
+                            serie,
+                            lote,
+                            referencia,
+                            ubicacion,
+                            claveHRAEI,
+                            unidades
+                        })
+                    }
+
+                } else {
+                    // Caso simple: una fila que representa una sola unidad
+                    if (['accesorio', 'consumible', 'refaccion'].includes(tipo)) {
+                        loaded.push({
+                            line,
+                            tipo,
+                            cantidad: 1,
+                            descripcion: descripcion || '',
+                            marca,
+                            modelo,
+                            serie,
+                            lote,
+                            referencia,
+                            ubicacion,
+                            claveHRAEI,
+                            unidades: []
+                        })
+                    } else {
+                        // Equipo/mobiliario -> representar como entrada con una unidad
+                        loaded.push({
+                            line,
+                            tipo,
+                            cantidad: 1,
+                            descripcion: descripcion || '',
+                            marca,
+                            modelo,
+                            serie,
+                            lote,
+                            referencia,
+                            ubicacion,
+                            claveHRAEI,
+                            unidades: [{ nombre: descripcion || '', marca, modelo, serie, referencia, lote, ubicacion, claveHRAEI, cantidad: 1 }]
+                        })
+                    }
                 }
-            })
-            form.equiposEntrada = Object.values(equiposByType)
+            }
+
+            form.equiposEntrada = loaded
+             console.info('[OpEntrada] Loaded items (preserving order):', loaded.map((it, idx) => ({ idx, tipo: it.tipo, descripcion: it.descripcion, cantidad: it.cantidad })))
+             
+             // Set the most recent item (last one) as editable
+             if (loaded.length > 0) {
+                 mostRecentItemIndex.value = loaded.length - 1
+             }
         } else {
             form.equiposEntrada = Array.isArray(data.equiposEntrada) ? data.equiposEntrada : []
         }
@@ -3056,10 +3902,30 @@ const loadOrderData = async () => {
     }
 }
 
+// Forzar recarga completa cuando cambie la orden (abrir/cerrar/reabrir) — sin datos en caché.
+watch(
+    () => [props.modo, props.ordenId],
+    async () => {
+        if (props.snapshot) return
+        if (props.modo === 'editar' && props.ordenId) {
+            await loadOrderData()
+        }
+    },
+    { immediate: true }
+)
+
+watch(
+    () => props.snapshot,
+    (snap) => {
+        if (snap) applySnapshotToForm(snap)
+    },
+    { immediate: true }
+)
+
 onMounted(async () => {
     // Si es modo editar, cargar los datos de la orden
     if (props.modo === 'editar') {
-        await loadOrderData()
+        if (!props.snapshot) await loadOrderData()
     } else {
         // Cargar datos guardados localmente en modo crear
         try {
@@ -3085,10 +3951,16 @@ onMounted(async () => {
                 }
                 savedAt.value = new Date().toLocaleTimeString()
             } else {
+                // Inicializar con datos del usuario logueado para nuevas órdenes
+                const loggedUser = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre') }
+                form.nombreIngeniero = loggedUser.nombre || ''
                 form.items = []
                 syncItemsToCantidad()
             }
         } catch {
+            // Inicializar con datos del usuario logueado si hay error al cargar localStorage
+            const loggedUser = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre') }
+            form.nombreIngeniero = loggedUser.nombre || ''
             form.items = []
             syncItemsToCantidad()
         }
@@ -3234,6 +4106,117 @@ defineExpose({
 </script>
 
 <style scoped>
+.opentrada-readonly {
+    cursor: not-allowed !important;
+}
+
+.opentrada-readonly :deep(*) {
+    cursor: not-allowed !important;
+    user-select: none;
+}
+
+.diff-yellow {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35) !important;
+    background: rgba(245, 158, 11, 0.08) !important;
+    border-radius: 12px;
+}
+
+.diff-red {
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35) !important;
+    background: rgba(239, 68, 68, 0.08) !important;
+    border-radius: 12px;
+}
+
+.diff-green {
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35) !important;
+    background: rgba(34, 197, 94, 0.08) !important;
+    border-radius: 12px;
+}
+
+/* Styling for old items (non-editable) in edit mode */
+.item-row-readonly {
+    opacity: 0.75;
+    background: rgba(107, 114, 128, 0.05) !important;
+    cursor: not-allowed !important;
+    position: relative;
+}
+
+.item-row-readonly::after {
+    content: 'Solo lectura - Esta es una entrada anterior';
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    background: rgba(107, 114, 128, 0.9);
+    color: white;
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* Overlay para que el resaltado se vea incluso si los hijos pintan su propio fondo */
+.opentrada-readonly :deep(.field.diff-yellow),
+.opentrada-readonly :deep(.field.diff-red),
+.opentrada-readonly :deep(.field.diff-green),
+.opentrada-readonly :deep(.item-row.diff-yellow),
+.opentrada-readonly :deep(.item-row.diff-red),
+.opentrada-readonly :deep(.item-row.diff-green) {
+    position: relative;
+}
+
+.opentrada-readonly :deep(.field.diff-yellow::before),
+.opentrada-readonly :deep(.field.diff-red::before),
+.opentrada-readonly :deep(.field.diff-green::before),
+.opentrada-readonly :deep(.item-row.diff-yellow::before),
+.opentrada-readonly :deep(.item-row.diff-red::before),
+.opentrada-readonly :deep(.item-row.diff-green::before) {
+    content: '';
+    position: absolute;
+    inset: -6px;
+    border-radius: 14px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.opentrada-readonly :deep(.field.diff-yellow::before),
+.opentrada-readonly :deep(.item-row.diff-yellow::before) {
+    background: rgba(245, 158, 11, 0.08);
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+}
+
+.opentrada-readonly :deep(.field.diff-red::before),
+.opentrada-readonly :deep(.item-row.diff-red::before) {
+    background: rgba(239, 68, 68, 0.08);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35);
+}
+
+.opentrada-readonly :deep(.field.diff-green::before),
+.opentrada-readonly :deep(.item-row.diff-green::before) {
+    background: rgba(34, 197, 94, 0.08);
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
+}
+
+.opentrada-readonly :deep(.field.diff-yellow > *),
+.opentrada-readonly :deep(.field.diff-red > *),
+.opentrada-readonly :deep(.field.diff-green > *),
+.opentrada-readonly :deep(.item-row.diff-yellow > *),
+.opentrada-readonly :deep(.item-row.diff-red > *),
+.opentrada-readonly :deep(.item-row.diff-green > *) {
+    position: relative;
+    z-index: 1;
+}
+
+.opentrada-readonly :deep(input),
+.opentrada-readonly :deep(textarea),
+.opentrada-readonly :deep(button),
+.opentrada-readonly :deep(select) {
+    /* Evitar interacción accidental en vista de diff */
+    pointer-events: none !important;
+}
+
 /* Title row with back button */
 .entrada-title-row {
     display: flex;
@@ -3434,6 +4417,22 @@ defineExpose({
     border: 1px solid rgba(255, 255, 255, 0.6);
     overflow: hidden;
     box-shadow: 0 25px 45px rgba(16, 24, 40, 0.18);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.detalle-card.diff-green {
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 25px 45px rgba(34, 197, 94, 0.15);
+}
+
+.detalle-card.diff-yellow {
+    border-color: rgba(245, 158, 11, 0.5);
+    box-shadow: 0 25px 45px rgba(245, 158, 11, 0.15);
+}
+
+.detalle-card.diff-red {
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow: 0 25px 45px rgba(239, 68, 68, 0.15);
 }
 
 .detalle-card__glow {
@@ -3453,6 +4452,22 @@ defineExpose({
     border-radius: inherit;
     background: rgba(255, 255, 255, 0.9);
     padding: 9px 12px;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.detalle-card__inner.diff-green {
+    background: rgba(34, 197, 94, 0.15) !important;
+    box-shadow: inset 0 0 0 2px rgba(34, 197, 94, 0.4) !important;
+}
+
+.detalle-card__inner.diff-yellow {
+    background: rgba(245, 158, 11, 0.15) !important;
+    box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.4) !important;
+}
+
+.detalle-card__inner.diff-red {
+    background: rgba(239, 68, 68, 0.15) !important;
+    box-shadow: inset 0 0 0 2px rgba(239, 68, 68, 0.4) !important;
 }
 
 .detalle-card__header {
@@ -3497,11 +4512,54 @@ defineExpose({
 }
 
 /* small positioning for TrashButton inside each detalle header */
+.detalle-card__edit {
+    margin-left: 8px;
+    margin-right: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    padding: 6px 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: rgb(59, 130, 246);
+}
+
+.detalle-card__edit:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: scale(1.08);
+}
+
+.detalle-card__edit:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.35);
+}
+
+.detalle-card__edit:disabled:hover {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+    transform: none;
+}
+
+.detalle-card__edit:active {
+    transform: scale(0.95);
+}
+
 .detalle-card__trash {
     margin-left: 10px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+}
+
+.detalle-card__trash :deep(button:disabled) {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .detalle-card__grid {
@@ -6178,7 +7236,7 @@ html {
 .op-entrada-form .section-card {
     background: linear-gradient(180deg, rgba(8, 12, 20, 0.74), rgba(12, 18, 28, 0.7));
     color: #e6eef8;
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(255, 255, 255, 0.04);
     box-shadow: 0 12px 32px rgba(0, 6, 22, 0.6);
     transition: transform .18s ease, box-shadow .18s ease;
 }
@@ -6188,38 +7246,245 @@ html {
     box-shadow: 0 22px 44px rgba(0, 6, 22, 0.72);
 }
 
-.op-entrada-form .section-head h4 { color: #eef6ff }
-.op-entrada-form .section-head svg { background: rgba(255,255,255,0.03); padding:6px; border-radius:8px }
+.op-entrada-form .section-head h4 {
+    color: #eef6ff
+}
 
-.op-entrada-form .field label { color: rgba(230,238,248,0.86); font-weight:700; font-size:0.86rem }
+.op-entrada-form .section-head svg {
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 8px
+}
+
+.op-entrada-form .field label {
+    color: rgba(230, 238, 248, 0.86);
+    font-weight: 700;
+    font-size: 0.86rem
+}
 
 .op-entrada-form .control {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     padding: 10px 12px;
     border-radius: 12px !important;
     color: #e6eef8 !important;
 }
 
-.op-entrada-form .control:focus { box-shadow: 0 8px 24px rgba(34, 211, 238, 0.08); border-color: rgba(34,211,238,0.7) }
+.op-entrada-form .control:focus {
+    box-shadow: 0 8px 24px rgba(34, 211, 238, 0.08);
+    border-color: rgba(34, 211, 238, 0.7)
+}
 
-.form-actions { display:flex; gap:12px; justify-content:flex-end; margin-top:18px }
-.form-actions .btn { padding:10px 14px; border-radius:12px }
-.form-actions .btn.primary { background: linear-gradient(90deg,#06b6d4,#7c3aed); box-shadow: 0 10px 28px rgba(64, 49, 255, 0.12) }
-.form-actions .btn.secondary { background: transparent; color: rgba(230,238,248,0.88); border:1px solid rgba(255,255,255,0.06) }
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 18px
+}
+
+.form-actions .btn {
+    padding: 10px 14px;
+    border-radius: 12px
+}
+
+.form-actions .btn.primary {
+    background: linear-gradient(90deg, #06b6d4, #7c3aed);
+    box-shadow: 0 10px 28px rgba(64, 49, 255, 0.12)
+}
+
+.form-actions .btn.secondary {
+    background: transparent;
+    color: rgba(230, 238, 248, 0.88);
+    border: 1px solid rgba(255, 255, 255, 0.06)
+}
 
 @media (max-width: 640px) {
-  .form-actions { flex-direction: column-reverse; align-items: stretch }
-  .form-actions .btn { width: 100% }
+    .form-actions {
+        flex-direction: column-reverse;
+        align-items: stretch
+    }
+
+    .form-actions .btn {
+        width: 100%
+    }
 }
 
 /* Mejor apariencia del DatePicker nativo cuando el usuario abre el calendario */
-.op-entrada-form input[type="date"]::-webkit-calendar-picker-indicator { filter: drop-shadow(0 6px 16px rgba(0,0,0,0.5)) }
+.op-entrada-form input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5))
+}
 
 /* pequeños tweaks para los iconos dentro de las secciones */
-.section-title-with-icon svg { width:28px; height:28px }
+.section-title-with-icon svg {
+    width: 28px;
+    height: 28px
+}
 
 /* Ajustes de accesibilidad: mayor contraste para placeholders */
-:where(.op-entrada-form) .control::placeholder { color: rgba(255,255,255,0.55) }
+:where(.op-entrada-form) .control::placeholder {
+    color: rgba(255, 255, 255, 0.55)
+}
 
+/* ===== ESTILOS PARA EDIT UNIT MODAL ===== */
+.edit-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    backdrop-filter: blur(4px);
+    padding: 20px;
+}
+
+.edit-modal {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.edit-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.edit-modal__header h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.95);
+}
+
+.edit-modal__close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(71, 85, 105, 0.8);
+    transition: all 0.2s ease;
+    border-radius: 8px;
+}
+
+.edit-modal__close:hover {
+    background: rgba(15, 23, 42, 0.08);
+    color: rgba(15, 23, 42, 0.95);
+}
+
+.edit-modal__body {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.edit-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.edit-form-grid .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.edit-form-grid .field label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: rgba(15, 23, 42, 0.95);
+    text-transform: capitalize;
+}
+
+.edit-form-grid .field[style*="grid-column"] {
+    grid-column: 1 / -1;
+}
+
+.edit-modal__footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 16px 24px;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+    background: rgba(15, 23, 42, 0.02);
+}
+
+.edit-modal__footer .btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Transition animation for modal */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+
+.modal-fade-enter-active .edit-modal {
+    animation: modalSlideIn 0.3s ease;
+}
+
+.modal-fade-leave-active .edit-modal {
+    animation: modalSlideOut 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: scale(0.95) translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes modalSlideOut {
+    from {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: scale(0.95) translateY(20px);
+        opacity: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .edit-modal {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 12px 12px 0 0;
+        margin-top: auto;
+    }
+
+    .edit-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
 </style>
