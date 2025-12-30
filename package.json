@@ -24,6 +24,7 @@
     "liquid-glass-vue": "^0.0.1",
     "lucide-vue-next": "^0.544.0",
     "notivue": "^2.4.5",
+    "pdfjs-dist": "^3.11.174",
     "pdfmake": "^0.2.20",
     "puppeteer": "^24.31.0",
     "sweetalert2": "^11.26.0",

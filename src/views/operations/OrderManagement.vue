@@ -19,6 +19,8 @@
                         </svg>
                         Nueva Orden
                     </button>
+
+
                 </div>
             </template>
 
@@ -50,7 +52,7 @@
                                     <path d="M22 3H2l8 9v7l4 2v-9l8-9z" fill="currentColor" />
                                 </svg>
                                 <span v-if="hasActiveAdvancedFilters" class="filter-badge">{{ activeFiltersList.length
-                                }}</span>
+                                    }}</span>
                             </button>
 
                             <!-- Dropdown de filtros disponibles -->
@@ -230,21 +232,23 @@
                 :show-column-tipo="showColumnTipo" :show-column-items="showColumnItems"
                 :show-column-estado="showColumnEstado"
                 :empty-state-message="searchTerm || filterDate || filterService ? 'No se encontraron órdenes con los filtros seleccionados.' : 'Comienza creando una nueva orden.'"
-                @edit="openEditModal" @excel="downloadExcel" @delete="deleteOrder"
-                @deleteMultiple="handleDeleteMultipleWithModal" @create="goToCreateOrder" />
+                @edit="openEditModal" @delete="deleteOrder" @deleteMultiple="handleDeleteMultipleWithModal"
+                @create="goToCreateOrder" @openHistory="openDocumentModal" />
         </ActionPanel>
 
         <!-- Modal: edición única (no permite múltiples) + tabs de versiones (ramas) -->
         <ModalBase :open="showEditModal" @close="handleModalClose" @close-request="handleModalClose" :maxWidth="1100"
-            :height="'92vh'" :hideInternalClose="true" :externalClose="true">
+            :height="'92vh'" :hideInternalClose="true" :externalClose="true" :externalCloseOffsetTop="0"
+            :externalCloseOffsetRight="0">
             <div class="om-edit-shell">
                 <div class="om-edit-tabs" role="tablist" aria-label="Versiones de la orden">
                     <button v-if="!branchTabs.length" class="om-tab" :class="{ active: activeTab === 'main' }"
                         @click="activeTab = 'main'" role="tab" :aria-selected="activeTab === 'main'">
                         {{ selectedOrderId || '—' }}
                     </button>
-                    <button v-for="v in branchTabs" :key="v" class="om-tab" :class="{ active: activeTab === v, newest: v === newestVersion }"
-                        @click="activeTab = v" role="tab" :aria-selected="activeTab === v">
+                    <button v-for="v in branchTabs" :key="v" class="om-tab"
+                        :class="{ active: activeTab === v, newest: v === newestVersion }" @click="activeTab = v"
+                        role="tab" :aria-selected="activeTab === v">
                         {{ v === 1 ? selectedOrderId : `${selectedOrderId} v${v}` }}
                     </button>
                     <div style="flex:1"></div>
@@ -266,26 +270,14 @@
 
                 <div v-if="activeTab !== 'main'" class="om-version-panel" role="tabpanel">
                     <!-- SOLO la versión más reciente (golden/newest) es editable -->
-                    <OpEntrada
-                        v-if="isActiveTabEditable"
-                        :key="`edit-${selectedOrderId}-${activeTab}`"
-                        :modo="'editar'"
-                        :ordenId="selectedOrderId"
-                        :enModal="true"
-                        :read-only="false"
-                        @actualizado="onOrderUpdated"
+                    <OpEntrada v-if="isActiveTabEditable" :key="`edit-${selectedOrderId}-${activeTab}`" :modo="'editar'"
+                        :ordenId="selectedOrderId" :enModal="true" :read-only="false" @actualizado="onOrderUpdated"
                         @close="closeEditModal" />
 
                     <!-- Versiones anteriores: snapshot + solo lectura + resaltados -->
-                    <OpEntrada
-                        v-else
-                        :key="`snap-${selectedOrderId}-${activeTab}`"
-                        :modo="'editar'"
-                        :ordenId="selectedOrderId"
-                        :enModal="true"
-                        :read-only="true"
-                        :snapshot="snapshotForActiveVersion"
-                        :diffHighlights="highlightsForActiveVersion"
+                    <OpEntrada v-else :key="`snap-${selectedOrderId}-${activeTab}`" :modo="'editar'"
+                        :ordenId="selectedOrderId" :enModal="true" :read-only="true"
+                        :snapshot="snapshotForActiveVersion" :diffHighlights="highlightsForActiveVersion"
                         @close="closeEditModal" />
                 </div>
 
@@ -296,27 +288,374 @@
             </div>
         </ModalBase>
 
+        <!-- Modal: versiones / visor de documento (PDF) -->
+        <ModalBase :open="showDocModal" @close="closeDocumentModal" @close-request="closeDocumentModal" :maxWidth="1200"
+            :height="'90vh'" :externalClose="true" :externalCloseOffsetTop="0" :externalCloseOffsetRight="0">
+            <div class="doc-modal-shell">
+                <aside class="doc-sidebar">
+                    <div class="doc-header">
+                        <div class="doc-title-section">
+                            <svg class="doc-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            <div>
+                                <h3 class="doc-main-title">Documentos</h3>
+                                <p class="doc-subtitle">Folio: <strong>{{ docTitle }}</strong></p>
+                            </div>
+                        </div>
+                        <div class="doc-actions-group">
+                            <button class="btn-doc-action refresh-btn" :class="{ 'is-loading': isLoadingOrders }"
+                                @click="fetchDocVersionsFor(docTitle)" :disabled="isLoadingOrders"
+                                title="Recargar versiones">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" :class="{ 'spin': isLoadingOrders }">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="doc-list-section">
+                        <div v-if="docLoading" class="skeleton-loading">
+                            <div v-for="i in 5" :key="`skeleton-${i}`" class="skeleton-item">
+                                <div class="skeleton-icon"></div>
+                                <div class="skeleton-content">
+                                    <div class="skeleton-title"></div>
+                                    <div class="skeleton-meta"></div>
+                                </div>
+                                <div class="skeleton-button"></div>
+                            </div>
+                        </div>
+                        <div v-else-if="docError" class="error-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <p>{{ docError }}</p>
+                        </div>
+                        <div v-else-if="docVersions.length === 0" class="empty-versions-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                            <p>Sin versiones</p>
+                        </div>
+                        <ul v-else class="doc-list">
+                            <li v-for="v in docVersions" :key="v.id" class="doc-list-item"
+                                :class="{ active: selectedPdfId === v.id }">
+                                <button class="doc-item-btn" @click="selectDocVersion(v)">
+                                    <div class="doc-item-icon">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                            <line x1="12" y1="13" x2="12" y2="17"></line>
+                                            <line x1="9" y1="15" x2="15" y2="15"></line>
+                                        </svg>
+                                    </div>
+                                    <div class="doc-item-content">
+                                        <div class="doc-item-name">{{ v.name || ('entrada ' + docTitle + (v.version ? `
+                                            v${v.version}` : '') + '.pdf') }}</div>
+                                        <div class="doc-item-meta">{{ v.createdBy || '—' }} • {{
+                                            formatTimestamp(v.createdAt) }}
+                                        </div>
+                                    </div>
+                                </button>
+                                <a :href="v.downloadUrl" target="_blank" class="btn-download-doc" title="Descargar"
+                                    @click="playDownloadAnimation(v.id)">
+                                    <svg class="download-icon" :class="{ 'show-checkmark': downloadingId === v.id }"
+                                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                    <svg v-show="downloadingId === v.id" class="checkmark-icon"
+                                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </aside>
+
+                <section class="doc-viewer">
+                    <div class="viewer-content">
+                        <div v-if="currentPreviewUrl" class="pdf-frame">
+                            <template v-if="!isMobileView">
+                                <iframe :src="currentPreviewUrl" title="Previsualización documento" style="width:100%; height:100%; border:0; min-height:360px;"></iframe>
+                            </template>
+                            <template v-else>
+                                <BlobPdfViewer :src="currentPreviewUrl" />
+                            </template>
+                        </div>
+                        <div v-else class="no-preview">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            <p>Selecciona una versión para previsualizar</p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </ModalBase>
+
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, defineAsyncComponent } from 'vue'
 import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import DatePicker from '@/components/DatePicker.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
 import OrdersTable from '@/components/OrdersTable.vue'
 import ModalBase from '@/components/ModalBase.vue'
+import PdfViewer from '@/components/PdfViewer.vue'
+import BlobPdfViewer from '@/components/BlobPdfViewer.vue'
 import { confirmDelete, showSuccess } from '@/utils/sweetAlertConfig'
 import Swal from 'sweetalert2'
 import { darkThemeConfig } from '@/utils/sweetAlertConfig'
 const OpEntrada = defineAsyncComponent(() => import('@/views/operations/OpEntrada.vue'))
 
+// Mock helper para versiones de PDF (se puede reemplazar por API real)
+import { mockFetchVersions } from '@/utils/mockPDFData'
+
 const router = useRouter()
 
+// Detect mobile vs desktop view to choose preview renderer
+const isMobileView = ref(typeof window !== 'undefined' ? window.innerWidth < 720 : false)
+function handleResizeForPreview() {
+    isMobileView.value = window.innerWidth < 720
+}
+onMounted(() => {
+    window.addEventListener('resize', handleResizeForPreview)
+})
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleResizeForPreview)
+})
+const route = useRoute()
+
+// Forzar recarga de órdenes cuando se navega a esta ruta con un timestamp `t` (e.g. after creating an order)
+watch(() => route.query.t, async (newVal, oldVal) => {
+    if (newVal && newVal !== oldVal) {
+        try {
+            await reloadOrdersFromServer()
+        } catch (e) {
+            console.warn('[ORDER_MANAGEMENT] reload on route query.t failed', e)
+        }
+    }
+})
+
 const allOrders = ref([])
+
+// Estado y helpers para modal de edición (offsets ajustables desde acciones)
+const editExternalOffsetTop = ref(0)
+const editExternalOffsetRight = ref(0)
+
+// Estado y helpers para modal de documento (versiones / preview)
+const showDocModal = ref(false)
+const docVersions = ref([])
+const docLoading = ref(false)
+const docTitle = ref('')
+const currentPreviewUrl = ref('')
+const docError = ref('')
+const selectedPdfId = ref(null)
+const downloadingId = ref(null)
+const isLoadingOrders = ref(false)
+
+async function openDocumentModal(order) {
+    console.log('[ORDER_MANAGEMENT] openDocumentModal called:', order)
+    const docId = order?.folio ?? order?.id ?? null
+    if (!docId) {
+        console.warn('[ORDER_MANAGEMENT] openDocumentModal: docId inválido')
+        return
+    }
+    docTitle.value = String(docId)
+    showDocModal.value = true
+
+    // Auto-reload al abrir la modal
+    await fetchDocVersionsFor(docId)
+}
+
+async function fetchDocVersionsFor(folio) {
+    docLoading.value = true
+    isLoadingOrders.value = true
+    docError.value = ''
+    currentPreviewUrl.value = ''
+    docVersions.value = []
+
+    const startTime = Date.now()
+    const minDuration = 1200 // Duración mínima para que se vea la animación (1 vuelta completa)
+
+    try {
+        const res = await fetch(`/api/ops/entrada/${encodeURIComponent(folio)}/pdfs`)
+        if (!res.ok) {
+            const payload = await res.json().catch(() => ({}))
+            throw new Error(payload && (payload.msg || payload.error) ? (payload.msg || payload.error) : 'Error obteniendo versiones')
+        }
+        const json = await res.json()
+        console.debug('[ORDER_MANAGEMENT] fetched pdfs response (refresh):', json)
+        let items = []
+        if (Array.isArray(json)) items = json
+        else if (json && Array.isArray(json.items)) items = json.items
+        else if (json && Array.isArray(json.rows)) items = json.rows
+        else if (json && Array.isArray(json.data)) items = json.data
+
+        docVersions.value = (items || []).map((it, idx) => {
+            const id = it.id || it.pdfId || it.filename || `tmp-${idx}-${Date.now()}`
+            const createdAt = it.createdAt || it.created_at || it.timestamp || null
+            const createdBy = it.createdBy || it.created_by || it.uploader || null
+            const previewUrl = it.previewUrl || it.preview_url || `/api/ops/entrada/${encodeURIComponent(folio)}/pdfs/${encodeURIComponent(id)}/preview`
+            const downloadUrl = it.downloadUrl || it.download_url || `/api/ops/entrada/${encodeURIComponent(folio)}/pdfs/${encodeURIComponent(id)}/download`
+            return {
+                ...it,
+                id,
+                createdAt: createdAt ? new Date(createdAt).toISOString() : null,
+                createdBy: createdBy || '—',
+                previewUrl,
+                downloadUrl
+            }
+        })
+
+        // Also fetch snapshot versions and merge
+        try {
+            const versRes = await fetch(`/api/ops/entrada/${encodeURIComponent(folio)}/versions?limit=50`)
+            if (versRes.ok) {
+                const versJson = await versRes.json()
+                const rows = (versJson && Array.isArray(versJson.items)) ? versJson.items : []
+                const versItems = rows.map(v => {
+                    const ver = v.version || v.v || 0
+                    const createdAt = v.created_at || v.createdAt || null
+                    return {
+                        id: `ver-${ver}`,
+                        name: `entrada ${folio} v${ver}.pdf`,
+                        version: ver,
+                        type: 'version',
+                        createdAt: createdAt ? new Date(createdAt).toISOString() : null,
+                        createdBy: v.created_by || v.createdBy || 'snapshot',
+                        previewUrl: `/api/ops/entrada/${encodeURIComponent(folio)}/versions/${encodeURIComponent(ver)}/preview`,
+                        downloadUrl: `/api/ops/entrada/${encodeURIComponent(folio)}/versions/${encodeURIComponent(ver)}/download`
+                    }
+                })
+                // prepend versions (most recent first)
+                docVersions.value = [...versItems, ...docVersions.value]
+            }
+        } catch (e) {
+            console.warn('No se pudieron cargar versiones snapshots', e)
+        }
+        if (docVersions.value.length) selectDocVersion(docVersions.value[0])
+    } catch (e) {
+        docVersions.value = []
+        docError.value = String(e && e.message ? e.message : e)
+    } finally {
+        // Espera el tiempo mínimo para que la animación sea visible
+        const elapsed = Date.now() - startTime
+        const remaining = minDuration - elapsed
+        if (remaining > 0) {
+            await new Promise(resolve => setTimeout(resolve, remaining))
+        }
+
+        docLoading.value = false
+        isLoadingOrders.value = false
+    }
+}
+
+async function forceGenerate() {
+    if (!docTitle.value) return
+    docLoading.value = true
+    try {
+        const res = await fetch(`/api/ops/entrada/${encodeURIComponent(docTitle.value)}/pdfs/generate-force`)
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+            const msg = json && (json.msg || json.error) ? (json.msg || json.error) : 'Error generando PDF'
+            docError.value = msg
+            await Swal.fire({ icon: 'error', title: 'Error', text: msg, ...darkThemeConfig })
+            return
+        }
+        await Swal.fire({ icon: 'success', title: 'Generado', text: 'PDF generado y guardado localmente.', ...darkThemeConfig })
+        // refresh list
+        await fetchDocVersionsFor(docTitle.value)
+    } catch (e) {
+        docError.value = String(e && e.message ? e.message : e)
+        await Swal.fire({ icon: 'error', title: 'Error', text: docError.value, ...darkThemeConfig })
+    } finally {
+        docLoading.value = false
+    }
+}
+
+async function generateAllVersions() {
+    if (!docTitle.value) return
+    docLoading.value = true
+    try {
+        const res = await fetch(`/api/ops/entrada/${encodeURIComponent(docTitle.value)}/pdfs/generate-all-versions`)
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+            const msg = json && (json.msg || json.error) ? (json.msg || json.error) : 'Error generando versiones'
+            docError.value = msg
+            await Swal.fire({ icon: 'error', title: 'Error', text: msg, ...darkThemeConfig })
+            return
+        }
+        await Swal.fire({ icon: 'success', title: 'Generadas', text: 'Se generaron/registraron las versiones (revisa resultados en consola).', ...darkThemeConfig })
+        console.debug('generateAllVersions result:', json)
+        // refresh list
+        await fetchDocVersionsFor(docTitle.value)
+    } catch (e) {
+        docError.value = String(e && e.message ? e.message : e)
+        await Swal.fire({ icon: 'error', title: 'Error', text: docError.value, ...darkThemeConfig })
+    } finally {
+        docLoading.value = false
+    }
+}
+
+function closeDocumentModal() {
+    showDocModal.value = false
+    docVersions.value = []
+    currentPreviewUrl.value = ''
+    docTitle.value = ''
+}
+
+function selectDocVersion(v) {
+    const folio = docTitle.value || ''
+    if (!v || !v.id) {
+        currentPreviewUrl.value = ''
+        return
+    }
+    // Prefer item's explicit previewUrl (covers snapshot versions), otherwise use default preview endpoint
+    // For mobile viewers, route via backend proxy to avoid CORS/session issues
+    if (isMobileView.value) {
+        if (v.version) {
+            currentPreviewUrl.value = `/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&version=${encodeURIComponent(v.version)}`
+        } else {
+            currentPreviewUrl.value = `/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&id=${encodeURIComponent(v.id)}`
+        }
+    } else {
+        currentPreviewUrl.value = v.previewUrl || `/api/ops/entrada/${encodeURIComponent(folio)}/pdfs/${v.id}/preview`
+    }
+    selectedPdfId.value = v.id
+}
+
+function playDownloadAnimation(id) {
+    downloadingId.value = id
+    setTimeout(() => {
+        downloadingId.value = null
+    }, 1500)
+}
 
 // Función para normalizar folios para búsqueda flexible
 // Convierte "E-000912" -> "E-912" y "E-912" -> "E-912" para comparación
@@ -716,6 +1055,12 @@ function closeFiltersDropdown() {
  */
 async function openEditModal(order) {
     editingOrder.value = JSON.parse(JSON.stringify(order))
+
+    // Ajustar offsets específicos para edición desde la fila de acciones
+    // Estos valores separan el botón externo fuera de la modal
+    editExternalOffsetTop.value = 80
+    editExternalOffsetRight.value = 220
+
     showEditModal.value = true
     showLegend.value = false
 
@@ -793,6 +1138,9 @@ function closeEditModal() {
     activeTab.value = 'main'
     branchTabs.value = []
     diffByVersion.value = {}
+    // Reset offsets a valores por defecto
+    editExternalOffsetTop.value = 0
+    editExternalOffsetRight.value = 0
 }
 
 // Maneja el intento de cierre del modal (botón X o overlay)
@@ -961,7 +1309,7 @@ async function loadOrderHistoryAndVersions(folio) {
                 .filter(v => !isNaN(v) && v >= 1)
                 .sort((a, b) => b - a)
             branchTabs.value = versions
-            
+
             // Establecer explícitamente la versión máxima
             if (versions.length > 0) {
                 maxVersionNumber.value = Math.max(...versions)
@@ -1057,12 +1405,86 @@ async function persistEditedOrder(payload) {
         if (!folio) {
             throw new Error('Folio inválido')
         }
+        // Merge with server-side current order to avoid overwriting unchanged fields with empty values
+        let mergedPayload = Object.assign({}, payload)
+        try {
+            const curRes = await fetch(`/api/ops/entrada/${encodeURIComponent(String(folio))}`, { cache: 'no-store' })
+            if (curRes && curRes.ok) {
+                const curBody = await curRes.json()
+                const serverOrden = curBody.orden || curBody || {}
+                // Only fill missing/empty string fields from server copy
+                const fillIfEmpty = (keyFront, keyServer) => {
+                    const v = mergedPayload[keyFront]
+                    if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) {
+                        mergedPayload[keyFront] = serverOrden[keyServer] || serverOrden[keyFront] || mergedPayload[keyFront]
+                    }
+                }
+                fillIfEmpty('nombreSolicitante', 'nombre_solicitante')
+                fillIfEmpty('servicio', 'servicio')
+                fillIfEmpty('especialidad', 'especialidad')
+                fillIfEmpty('fecha', 'fecha')
+                fillIfEmpty('fechaISO', 'fecha')
+                fillIfEmpty('horaInicio', 'hora_inicio')
+                fillIfEmpty('horaTermino', 'hora_termino')
+                fillIfEmpty('motivoEntrada', 'motivo_entrada')
+                fillIfEmpty('otroMotivo', 'otro_motivo')
+                fillIfEmpty('descripcion', 'descripcion')
+                fillIfEmpty('observaciones', 'observaciones')
+                fillIfEmpty('observacionesImg', 'observaciones_img_path')
+                fillIfEmpty('nombreIngeniero', 'nombre_ingeniero')
+                // Preserve signatures from server if payload didn't include them (avoid accidental erase)
+                if (!Array.isArray(mergedPayload.signatures) || !mergedPayload.signatures.length) {
+                    mergedPayload.signatures = (serverOrden && serverOrden.signatures) ? serverOrden.signatures : mergedPayload.signatures
+                } else if (Array.isArray(serverOrden && serverOrden.signatures)) {
+                    // Merge per-key to avoid accidental erasure of names/fixed flags when payload has partial data
+                    const serverMap = {}
+                        ; (serverOrden.signatures || []).forEach(s => { if (s && s.key) serverMap[s.key] = s })
+                    mergedPayload.signatures = mergedPayload.signatures.map(s => {
+                        const key = s && (s.key || (s.role || '').toString().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, ''))
+                        const base = (key && serverMap[key]) ? serverMap[key] : (s || {})
+                        return Object.assign({}, base, {
+                            key: key || (s && s.key) || undefined,
+                            role: (s && s.role) || base.role || '',
+                            nameKnown: (s && (s.nameKnown === true || s.nameKnown === 'true' || s.nameKnown === '1')) ? true : !!base.nameKnown,
+                            name: (s && s.name && String(s.name).trim() !== '') ? String(s.name).trim() : (base && base.name) || '',
+                            fixed: (s && typeof s.fixed === 'boolean') ? s.fixed : !!base.fixed
+                        })
+                    })
+                }
+                // For equiposEntrada, prefer payload if provided, otherwise reconstruct from server items
+                if (!Array.isArray(mergedPayload.equiposEntrada) || !mergedPayload.equiposEntrada.length) {
+                    try {
+                        const items = Array.isArray(curBody.items) ? curBody.items : []
+                        // map DB items to frontend equiposEntrada shape
+                        mergedPayload.equiposEntrada = items.map(it => ({
+                            line: it.line,
+                            tipo: it.tipo,
+                            cantidad: it.cantidad || 1,
+                            descripcion: it.descripcion || '',
+                            marca: it.marca || '',
+                            modelo: it.modelo || '',
+                            serie: it.serie || '',
+                            lote: it.lote || '',
+                            referencia: it.referencia || '',
+                            ubicacion: it.ubicacion || '',
+                            claveHRAEI: it.clave_hraei || it.claveHRAEI || ''
+                        }))
+                    } catch (e) {
+                        // ignore
+                    }
+                }
+            }
+        } catch (e) {
+            // ignore merge failure and proceed with original payload
+            console.warn('persistEditedOrder: no se pudo obtener orden actual para merge', e && e.message)
+        }
 
         const prevBranchTabs = Array.isArray(branchTabs.value) ? [...branchTabs.value] : []
+        console.log('[OrderManagement] Sending PUT /entrada payload.signatures =', mergedPayload.signatures)
         const res = await fetch(`/api/ops/entrada/${encodeURIComponent(String(folio))}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(mergedPayload)
         })
         if (!res.ok) {
             const err = await (async () => { try { return await res.json() } catch { return null } })()
@@ -1082,6 +1504,23 @@ async function persistEditedOrder(payload) {
             activeTab.value = newest
         }
         showSuccess('Actualizado', 'La orden se actualizó correctamente.')
+
+        // Intentar regenerar y persistir el PDF con los datos actualizados
+        try {
+            const genRes = await fetch(`/api/ops/entrada/${encodeURIComponent(folio)}/pdfs/generate-force`)
+            if (genRes && genRes.ok) {
+                // refrescar lista de documentos si el modal está abierto para esta orden
+                if (docTitle.value === String(folio) || showDocModal.value) {
+                    await fetchDocVersionsFor(String(folio))
+                }
+            } else {
+                // ignore failure, but log
+                const body = await genRes.json().catch(() => ({}))
+                console.warn('generate-force returned non-ok', body)
+            }
+        } catch (e) {
+            console.warn('Error calling generate-force after update:', e && e.message)
+        }
     } catch (e) {
         console.error('Error guardando orden (centralizado):', e)
         Swal.fire({
@@ -1136,6 +1575,7 @@ async function reloadOrdersFromServer() {
                 motivoEntrada: orden.motivo_entrada || 'N/A',
                 descripcion: orden.descripcion || 'N/A',
                 observaciones: orden.observaciones || 'N/A',
+                observacionesImg: orden.observaciones_img_path || null,
                 nombreIngeniero: orden.nombre_ingeniero || 'N/A',
                 equiposEntrada,
                 estado: 'completado'
@@ -2816,6 +3256,659 @@ onMounted(() => {
     to {
         opacity: 1;
         transform: translateX(0);
+    }
+
+}
+
+/* ===== DOCUMENT MODAL STYLES ===== */
+.doc-modal-shell {
+    display: flex;
+    gap: 24px;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(13, 20, 35, 0.5), rgba(20, 30, 50, 0.5));
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.doc-sidebar {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(20, 30, 50, 0.8));
+    border-right: 1px solid rgba(59, 130, 246, 0.2);
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.3) transparent;
+}
+
+.doc-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.doc-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.doc-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 3px;
+}
+
+.doc-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+.doc-header {
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(37, 99, 235, 0.05));
+    border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex-shrink: 0;
+}
+
+.doc-title-section {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.doc-icon {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    color: rgba(59, 130, 246, 0.9);
+    margin-top: 2px;
+}
+
+.doc-main-title {
+    margin: 0 0 4px 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: rgba(226, 232, 240, 0.95);
+    letter-spacing: 0.3px;
+}
+
+.doc-subtitle {
+    margin: 0;
+    font-size: 0.8rem;
+    color: rgba(226, 232, 240, 0.6);
+    line-height: 1.3;
+}
+
+.doc-subtitle strong {
+    color: rgba(59, 130, 246, 0.9);
+    font-weight: 600;
+}
+
+.doc-actions-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-doc-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: rgba(59, 130, 246, 0.8);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease, border 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.btn-doc-action:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.6);
+    color: rgba(96, 165, 250, 0.95);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.btn-doc-action.refresh-btn:not(.is-loading):hover {
+    transform: translateY(-2px);
+}
+
+.btn-doc-action.refresh-btn.is-loading {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: rgba(96, 165, 250, 0.95);
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-doc-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-doc-action svg {
+    width: 18px;
+    height: 18px;
+}
+
+@keyframes spin-cool {
+    0% {
+        transform: rotate(0deg) scale(1);
+    }
+
+    50% {
+        transform: rotate(180deg) scale(1.1);
+    }
+
+    100% {
+        transform: rotate(360deg) scale(1);
+    }
+}
+
+.btn-doc-action.refresh-btn svg {
+    display: block;
+    transform-origin: center;
+    transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-doc-action.refresh-btn svg.spin {
+    animation: spin-cool 1.2s linear infinite;
+    will-change: transform;
+}
+
+.btn-doc-action.refresh-btn:not(.is-loading):not(:disabled):hover svg {
+    transform: rotate(20deg);
+}
+
+.doc-list-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    padding: 12px;
+}
+
+.loading-state,
+.error-state,
+.empty-versions-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 40px 20px;
+    color: rgba(226, 232, 240, 0.6);
+    text-align: center;
+    flex: 1;
+}
+
+.loading-state svg,
+.error-state svg,
+.empty-versions-state svg {
+    width: 40px;
+    height: 40px;
+    opacity: 0.5;
+}
+
+.spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(59, 130, 246, 0.2);
+    border-top-color: rgba(59, 130, 246, 0.8);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+.doc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.doc-list-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    transition: all 0.2s ease;
+    padding: 8px;
+}
+
+.doc-list-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.doc-list-item.active {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
+}
+
+.doc-item-btn {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    background: transparent;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    text-align: left;
+    min-width: 0;
+}
+
+.doc-item-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(59, 130, 246, 0.7);
+    margin-top: 2px;
+}
+
+.doc-item-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.doc-item-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.doc-item-name {
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.9);
+    font-size: 0.9rem;
+    word-break: break-word;
+}
+
+.doc-item-meta {
+    font-size: 0.75rem;
+    color: rgba(226, 232, 240, 0.5);
+}
+
+.btn-download-doc {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(46, 221, 90, 0.1);
+    border: 1px solid rgba(46, 221, 90, 0.2);
+    color: rgba(46, 221, 90, 0.7);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.btn-download-doc:has(.checkmark-icon) {
+    animation: success-pulse 0.6s ease-out 1;
+}
+
+.btn-download-doc:hover {
+    background: rgba(46, 221, 90, 0.2);
+    border-color: rgba(46, 221, 90, 0.5);
+    color: rgba(46, 221, 90, 0.9);
+    box-shadow: 0 4px 12px rgba(46, 221, 90, 0.12);
+    transform: translateY(-2px);
+}
+
+.btn-download-doc svg {
+    width: 16px;
+    height: 16px;
+}
+
+.download-icon {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.download-icon.show-checkmark {
+    animation: download-exit 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.checkmark-icon {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    color: rgba(46, 221, 90, 0.95);
+    animation: checkmark-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes download-exit {
+    0% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 0;
+        transform: scale(0.3) rotate(-90deg);
+    }
+}
+
+@keyframes checkmark-enter {
+    0% {
+        opacity: 0;
+        transform: scale(0) rotate(90deg);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1.2);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1) rotate(0deg);
+    }
+}
+
+@keyframes success-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(46, 221, 90, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 4px rgba(46, 221, 90, 0.1);
+    }
+}
+
+.doc-viewer {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 12px;
+}
+
+.viewer-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+}
+
+.pdf-frame {
+    width: 100%;
+    height: 100%;
+    display: flex;
+}
+
+.pdf-frame iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    border-radius: 4px;
+}
+
+.no-preview {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: rgba(226, 232, 240, 0.4);
+}
+
+.no-preview svg {
+    width: 56px;
+    height: 56px;
+    opacity: 0.6;
+}
+
+.no-preview p {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+@media (max-width: 1024px) {
+    .doc-modal-shell {
+        flex-direction: column;
+    }
+
+    .doc-sidebar {
+        width: 100%;
+        height: auto;
+        max-height: 40vh;
+        border-right: none;
+        border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+    }
+
+    .doc-viewer {
+        height: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .doc-sidebar {
+        max-height: 35vh;
+    }
+
+    .doc-header {
+        padding: 16px;
+    }
+
+    .doc-main-title {
+        font-size: 1rem;
+    }
+
+    .doc-subtitle {
+        font-size: 0.75rem;
+    }
+
+    .btn-doc-action {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+@media (max-width: 640px) {
+    .doc-modal-shell {
+        flex-direction: column;
+        height: 100%;
+    }
+
+    .doc-sidebar {
+        max-height: 30vh;
+        padding: 12px;
+    }
+
+    .doc-header {
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .doc-title-section {
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .doc-icon {
+        width: 24px;
+        height: 24px;
+    }
+
+    .doc-main-title {
+        font-size: 0.9rem;
+    }
+
+    .doc-subtitle {
+        font-size: 0.7rem;
+    }
+
+    .doc-item-name {
+        font-size: 0.85rem;
+    }
+
+    .doc-item-meta {
+        font-size: 0.7rem;
+    }
+
+    .doc-viewer {
+        padding: 8px;
+    }
+
+    .modal-content {
+        padding: 12px;
+    }
+}
+
+/* ===== SKELETON LOADER ===== */
+.skeleton-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.skeleton-item {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    border-radius: 8px;
+    padding: 10px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    animation: skeleton-pulse 2s ease-in-out infinite;
+}
+
+.skeleton-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg,
+            rgba(59, 130, 246, 0.6) 0%,
+            rgba(59, 130, 246, 0.4) 25%,
+            rgba(59, 130, 246, 0.2) 50%,
+            rgba(59, 130, 246, 0.4) 75%,
+            rgba(59, 130, 246, 0.6) 100%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+    animation: skeleton-shimmer 2s ease-in-out infinite;
+}
+
+.skeleton-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.skeleton-title {
+    height: 14px;
+    background: linear-gradient(90deg,
+            rgba(59, 130, 246, 0.6) 0%,
+            rgba(59, 130, 246, 0.4) 25%,
+            rgba(59, 130, 246, 0.2) 50%,
+            rgba(59, 130, 246, 0.4) 75%,
+            rgba(59, 130, 246, 0.6) 100%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+    width: 75%;
+    animation: skeleton-shimmer 2s ease-in-out infinite;
+}
+
+.skeleton-meta {
+    height: 11px;
+    background: linear-gradient(90deg,
+            rgba(59, 130, 246, 0.5) 0%,
+            rgba(59, 130, 246, 0.3) 25%,
+            rgba(59, 130, 246, 0.1) 50%,
+            rgba(59, 130, 246, 0.3) 75%,
+            rgba(59, 130, 246, 0.5) 100%);
+    background-size: 200% 100%;
+    border-radius: 4px;
+    width: 55%;
+    animation: skeleton-shimmer 2s ease-in-out infinite 0.1s;
+}
+
+.skeleton-button {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg,
+            rgba(46, 221, 90, 0.5) 0%,
+            rgba(46, 221, 90, 0.3) 25%,
+            rgba(46, 221, 90, 0.15) 50%,
+            rgba(46, 221, 90, 0.3) 75%,
+            rgba(46, 221, 90, 0.5) 100%);
+    background-size: 200% 100%;
+    border-radius: 6px;
+    animation: skeleton-shimmer 2s ease-in-out infinite 0.2s;
+}
+
+@keyframes skeleton-shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+
+    50% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+@keyframes skeleton-pulse {
+
+    0%,
+    100% {
+        opacity: 0.95;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+/* ===== RESPONSIVE ZOOM PARA DISPOSITIVOS MÓVILES ===== */
+/* Aplicar zoom 80% a TODO el componente en dispositivos de 300px x 600px en adelante */
+@media (min-width: 300px) and (max-width: 768px) and (min-height: 600px) {
+    .order-management-container {
+        box-sizing: border-box;
+        transform: scale(0.8);
+        -webkit-transform: scale(0.8);
+        transform-origin: top center;
+        -webkit-transform-origin: top center;
+        /* Center the scaled content and avoid shifting to the right */
+        max-width: 1200px;
+        width: 100%;
+        padding: 0 12px;
+        margin: 0 auto;
     }
 }
 </style>

@@ -210,7 +210,7 @@
                                         class="section-card items-card">
                                         <div class="section-head">
                                             <h4>{{ getTipoLabel(newItem.tipo) }} (unidades) - {{ newItem.unidades.length
-                                            }}</h4>
+                                                }}</h4>
                                             <small class="hint">Completa la información individual de cada
                                                 unidad</small>
                                         </div>
@@ -227,52 +227,50 @@
                                                 <div class="item-grid unidades-grid">
                                                     <!-- Fila 1: Nombre y Cantidad (dos columnas) -->
                                                     <div class="field field-compact">
-                                                        <label
-                                                            style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">{{
-                                                                getNombreLabel() }}</label>
+                                                        <label class="field-label">{{
+                                                            getNombreLabel() }}</label>
                                                         <input class="control" v-model.trim="unidad.nombre"
-                                                            :placeholder="getNombrePlaceholder()"
-                                                            style="font-size: 0.9rem; padding: 10px 14px;" />
+                                                            :placeholder="getNombrePlaceholder()" />
                                                     </div>
                                                     <!-- colocar cantidad a la derecha del nombre -->
                                                     <div class="field field-medium unit-qty-field">
-                                                        <label class="form-label form-label--small">Cantidad</label>
+                                                        <label class="field-label">Cantidad</label>
                                                         <input class="control unit-qty-input"
                                                             v-model.number="unidad.cantidad" type="number" min="1"
                                                             step="1" />
                                                     </div>
                                                     <!-- Fila 2: Marca y Ubicación -->
                                                     <div class="field field-medium">
-                                                        <label class="form-label form-label--small">Marca</label>
+                                                        <label class="field-label">Marca</label>
                                                         <input class="control" v-model.trim="unidad.marca"
                                                             placeholder="Ej. Philips" />
                                                     </div>
                                                     <div class="field field-medium">
-                                                        <label class="form-label form-label--small">Ubicación</label>
+                                                        <label class="field-label">Ubicación</label>
                                                         <input class="control" v-model.trim="unidad.ubicacion"
                                                             placeholder="Ej. UCIA" />
                                                     </div>
                                                     <!-- Fila 3: Modelo y No. Serie -->
                                                     <div class="field field-compact">
-                                                        <label class="form-label form-label--small">Modelo</label>
+                                                        <label class="field-label">Modelo</label>
                                                         <input class="control" v-model.trim="unidad.modelo"
-                                                            placeholder="ej. MX40" />
+                                                            placeholder="Ej. MX40" />
                                                     </div>
                                                     <div class="field field-compact">
-                                                        <label class="form-label form-label--small">No. Serie</label>
+                                                        <label class="field-label">No. Serie</label>
                                                         <input class="control" v-model.trim="unidad.serie"
-                                                            placeholder="ej. 3500" />
+                                                            placeholder="Ej. 3500" />
                                                     </div>
                                                     <!-- Fila 4: Referencia y Clave HRAEI -->
                                                     <div class="field field-medium">
-                                                        <label class="form-label form-label--small">Referencia</label>
+                                                        <label class="field-label">Referencia</label>
                                                         <input class="control" v-model.trim="unidad.referencia"
-                                                            placeholder="ej. 9K9162" />
+                                                            placeholder="Ej. 9K9162" />
                                                     </div>
                                                     <div class="field field-medium">
-                                                        <label class="form-label form-label--small">Clave HRAEI</label>
+                                                        <label class="field-label">Clave HRAEI</label>
                                                         <input class="control" v-model.trim="unidad.claveHRAEI"
-                                                            placeholder="ej. COMODATO" />
+                                                            placeholder="Ej. COMODATO" />
                                                     </div>
 
                                                 </div>
@@ -300,61 +298,65 @@
 
                                                 <div class="item-grid unidades-grid">
                                                     <div class="field field-medium">
-                                                        <label
-                                                            style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">{{
-                                                                getNombreLabel() }}</label>
+                                                        <label class="field-label">{{
+                                                            getNombreLabel() }}</label>
                                                         <input class="control" v-model.trim="unidad.nombre"
-                                                            :placeholder="getNombrePlaceholder()"
-                                                            style="font-size: 0.9rem; padding: 10px 14px;" />
+                                                            :placeholder="getNombrePlaceholder()" />
                                                     </div>
                                                     <!-- cantidad al lado del nombre para mantener layout de 2 columnas -->
                                                     <div class="field field-medium unit-qty-field">
-                                                        <label
-                                                            style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Cantidad</label>
+                                                        <label class="field-label">Cantidad</label>
                                                         <input class="control unit-qty-input"
                                                             v-model.number="unidad.cantidad" type="number" min="1"
                                                             step="1" />
                                                     </div>
 
                                                     <div class="field field-medium">
-                                                        <label
-                                                            style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Marca</label>
+                                                        <label class="field-label">Marca</label>
                                                         <input class="control" v-model.trim="unidad.marca"
-                                                            placeholder="Marca"
-                                                            style="font-size: 0.9rem; padding: 10px 14px;" />
+                                                            placeholder="Ej. Philips" />
                                                     </div>
 
                                                     <div class="field field-medium">
-                                                        <label
-                                                            style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Modelo</label>
+                                                        <label class="field-label">Modelo</label>
                                                         <input class="control" v-model.trim="unidad.modelo"
-                                                            placeholder="Modelo"
-                                                            style="font-size: 0.9rem; padding: 10px 14px;" />
+                                                            placeholder="Ej. MX40" />
                                                     </div>
 
                                                     <div class="field field-medium">
-                                                        <label
-                                                            style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Lote</label>
+                                                        <label class="field-label">Ubicación</label>
+                                                        <input class="control" v-model.trim="unidad.ubicacion"
+                                                            placeholder="Ej. Sala de equipos" />
+                                                    </div>
+
+                                                    <div class="field field-medium">
+                                                        <label class="field-label">No. Serie</label>
+                                                        <input class="control" v-model.trim="unidad.serie"
+                                                            placeholder="Ej. SN123456" />
+                                                    </div>
+
+                                                    <div class="field field-medium">
+                                                        <label class="field-label">Lote</label>
                                                         <input class="control" v-model.trim="unidad.lote"
-                                                            placeholder="Lote"
-                                                            style="font-size: 0.9rem; padding: 10px 14px;" />
+                                                            placeholder="Ej. L2024001" />
                                                     </div>
 
                                                     <div class="field field-medium">
-                                                        <label
-                                                            style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Referencia</label>
+                                                        <label class="field-label">Referencia</label>
                                                         <input class="control" v-model.trim="unidad.referencia"
-                                                            placeholder="Referencia"
-                                                            style="font-size: 0.9rem; padding: 10px 14px;" />
+                                                            placeholder="Ej. 9K9162" />
                                                     </div>
 
-                                                    <div class="field field-wide">
-                                                        <label
-                                                            style="font-size: 0.85rem; font-weight: 600; color: rgba(71, 85, 105, 0.95);">Clave
-                                                            HRAEI</label>
+                                                    <div class="field field-medium">
+                                                        <label class="field-label">Equipo asociado</label>
+                                                        <input class="control" v-model.trim="unidad.equipoAsociado"
+                                                            placeholder="Ej. Monitor (si aplica)" />
+                                                    </div>
+
+                                                    <div class="field field-medium">
+                                                        <label class="field-label">Clave HRAEI</label>
                                                         <input class="control" v-model.trim="unidad.claveHRAEI"
-                                                            placeholder="Clave HRAEI"
-                                                            style="font-size: 0.9rem; padding: 10px 14px;" />
+                                                            placeholder="Ej. COMODATO" />
                                                     </div>
 
                                                 </div>
@@ -469,13 +471,10 @@
                                                             </div>
                                                             <span class="detalle-card__icon"
                                                                 aria-hidden="true">🧾</span>
-                                                            <button
-                                                                class="detalle-card__edit"
-                                                                type="button"
+                                                            <button class="detalle-card__edit" type="button"
                                                                 :disabled="!isItemEditable(index)"
                                                                 :aria-disabled="(!isItemEditable(index)).toString()"
-                                                                title="Editar item"
-                                                                aria-label="Editar item"
+                                                                title="Editar item" aria-label="Editar item"
                                                                 @click="editUnit(item, unidad, uIdx)">
                                                                 <svg xmlns="http://www.w3.org/2000/svg" width="18"
                                                                     height="18" viewBox="0 0 24 24" fill="none"
@@ -489,8 +488,7 @@
                                                                     </path>
                                                                 </svg>
                                                             </button>
-                                                            <TrashButton
-                                                                class="detalle-card__trash"
+                                                            <TrashButton class="detalle-card__trash"
                                                                 :disabled="!isItemEditable(index)"
                                                                 :duration="trashAnimationDuration"
                                                                 @done="onUnitTrashDone(item, unidad)" />
@@ -556,6 +554,24 @@
                                                                     <span class="detalle-card__label">Referencia</span>
                                                                     <span class="detalle-card__value">{{
                                                                         unidad.referencia || '-' }}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="detalle-card__pair" style="--pair-hue: 65">
+                                                                <span class="detalle-card__chip" aria-hidden="true">
+                                                                    <ClipboardDocumentListIcon class="detalle-card__chip-icon" />
+                                                                </span>
+                                                                <div class="detalle-card__pair-body">
+                                                                    <span class="detalle-card__label">Lote</span>
+                                                                    <span class="detalle-card__value">{{ unidad.lote || '-' }}</span>
+                                                                </div>
+                                                            </div>
+                                                            <div class="detalle-card__pair" style="--pair-hue: 10">
+                                                                <span class="detalle-card__chip" aria-hidden="true">
+                                                                    <DocumentTextIcon class="detalle-card__chip-icon" />
+                                                                </span>
+                                                                <div class="detalle-card__pair-body">
+                                                                    <span class="detalle-card__label">Equipo asociado</span>
+                                                                    <span class="detalle-card__value">{{ unidad.equipoAsociado || '-' }}</span>
                                                                 </div>
                                                             </div>
                                                             <div class="detalle-card__pair" style="--pair-hue: 110">
@@ -649,6 +665,64 @@
 
                     </form>
 
+                        <!-- Firmas (siempre presentes) -->
+                        <div class="section-card">
+                        <div class="section-head">
+                         <div class="section-title-with-icon">
+                           <h4>Firmas</h4>
+                         </div>
+                         <small class="hint">Marca "Sí" si conoces el nombre de la persona; los nombres se mostrarán en el PDF en el orden especificado</small>
+                        </div>
+                        <div class="section-list" style="padding:12px; display:grid; gap:16px;">
+                                                 <div v-for="(s, idx) in form.signatures" :key="s.key" style="display:flex; align-items:stretch; gap:12px; background:rgba(59,130,246,0.05); padding:12px; border-radius:8px; border:1px solid rgba(59,130,246,0.1);">
+                                                         <div style="flex:1;">
+                                                                                                                         <div style="display:flex; align-items:center; gap:10px; margin-bottom:8px">
+                                                                                                                                 <div style="font-weight:700; font-size:0.95rem">{{ s.role }}</div>
+                                                                                                                                 <transition name="check">
+                                                                                                                                     <!-- Show PENDIENTE badge when name unknown -->
+                                                                                                                                     <div v-if="!s.fixed && (!s.name || !String(s.name).trim() || !s.nameKnown)" style="margin-left:6px; background:#fef3c7; color:#92400e; padding:4px 8px; border-radius:999px; font-size:0.75rem; font-weight:600">PENDIENTE</div>
+                                                                                                                                     <!-- Show check in same place when name present -->
+                                                                                                                                     <div v-else-if="!s.fixed && (s.name && String(s.name).trim().length)" style="margin-left:6px; display:inline-flex; align-items:center; justify-content:center; width:38px; height:22px; background:#ecfdf5; border-radius:999px;">
+                                                                                                                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                                                                                                                             <path d="M7.5 12.5l2.2 2.2 6.3-6.3" stroke="#047857" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                                                                                                                                         </svg>
+                                                                                                                                     </div>
+                                                                                                                                     <!-- Fixed badge -->
+                                                                                                                                     <div v-else-if="s.fixed" style="margin-left:6px; background:#ecfeff; color:#065f46; padding:4px 8px; border-radius:999px; font-size:0.75rem; font-weight:600">FIJADO</div>
+                                                                                                                                 </transition>
+                                                                                                                         </div>
+                               
+                               <!-- Fixed signature (always visible) -->
+                               <div v-if="s.fixed">
+                                 <div style="font-size:0.85rem; color:rgba(0,0,0,0.6); margin-bottom:4px">Nombre asignado:</div>
+                                 <input class="control" :value="s.name" disabled style="opacity:1; background:rgba(200,200,200,0.1)" />
+                               </div>
+                               
+                               <!-- Non-fixed signature (radio yes/no) -->
+                               <div v-else>
+                                 <div style="font-size:0.85rem; color:rgba(0,0,0,0.6); margin-bottom:6px">¿Conoces el nombre?</div>
+                                 <div style="display:flex; gap:16px; margin-bottom:8px;">
+                                   <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                                     <input type="radio" :value="true" v-model="s.nameKnown" :disabled="isReadOnly" :name="`nameKnown_${idx}`" />
+                                     <span style="font-weight:500">Sí</span>
+                                   </label>
+                                   <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer;">
+                                     <input type="radio" :value="false" v-model="s.nameKnown" :disabled="isReadOnly" :name="`nameKnown_${idx}`" />
+                                     <span style="font-weight:500">No</span>
+                                   </label>
+                                 </div>
+                                                                 <transition name="fade-in">
+                                                                     <div v-if="s.nameKnown" style="margin-top:8px; position:relative;">
+                                                                         <div style="font-size:0.85rem; color:rgba(0,0,0,0.6); margin-bottom:4px">Nombre completo:</div>
+                                                                         <input class="control" v-model.trim="s.name" :disabled="isReadOnly" placeholder="Nombre completo de la persona" />
+                                                                     </div>
+                                                                 </transition>
+                               </div>
+                             </div>
+                         </div>
+                        </div>
+                        </div>
+
                     <div v-if="!isReadOnly" class="form-actions">
                         <button v-if="!(props.modo === 'editar' && props.enModal)" class="btn secondary cancel-btn"
                             type="button" @click="onCancel" :disabled="loading">
@@ -729,6 +803,11 @@
                                     <input class="control" v-model.number="editingUnit.cantidad" type="number" min="1"
                                         placeholder="Cantidad" />
                                 </div>
+                                <div class="field">
+                                    <label>Equipo asociado</label>
+                                    <input class="control" v-model.trim="editingUnit.equipoAsociado"
+                                        placeholder="Ej. Monitor (si aplica)" />
+                                </div>
                                 <div class="field" style="grid-column: 1 / -1;">
                                     <label>Clave HRAEI</label>
                                     <input class="control" v-model.trim="editingUnit.claveHRAEI"
@@ -776,6 +855,7 @@ import {
     DevicePhoneMobileIcon,
     FingerPrintIcon,
     DocumentTextIcon,
+    ClipboardDocumentListIcon,
     KeyIcon
 } from '@heroicons/vue/24/outline'
 import { HashtagIcon } from '@heroicons/vue/24/outline'
@@ -926,21 +1006,21 @@ function diffFieldClass(key) {
 }
 
 function diffItemClass(item) {
-     const h = props.diffHighlights && props.diffHighlights.items ? props.diffHighlights.items : null
-     const line = item && (item.line != null ? item.line : item.__line)
-     const c = h && line != null ? h[String(line)] : (item && item.__diffStatus)
-     if (c === 'red') return 'diff-red'
-     if (c === 'green') return 'diff-green'
-     if (c === 'yellow') return 'diff-yellow'
-     return ''
- }
+    const h = props.diffHighlights && props.diffHighlights.items ? props.diffHighlights.items : null
+    const line = item && (item.line != null ? item.line : item.__line)
+    const c = h && line != null ? h[String(line)] : (item && item.__diffStatus)
+    if (c === 'red') return 'diff-red'
+    if (c === 'green') return 'diff-green'
+    if (c === 'yellow') return 'diff-yellow'
+    return ''
+}
 
- // Check if an item at given index is the most recent (editable in edit mode)
- function isItemEditable(index) {
-     if (props.snapshot || isReadOnly.value) return false
-     // En modo editable real (versión más reciente), todos los items deben poder editarse/eliminarse.
-     return true
- }
+// Check if an item at given index is the most recent (editable in edit mode)
+function isItemEditable(index) {
+    if (props.snapshot || isReadOnly.value) return false
+    // En modo editable real (versión más reciente), todos los items deben poder editarse/eliminarse.
+    return true
+}
 
 function applySnapshotToForm(snapshot) {
     const snap = snapshot || {}
@@ -960,6 +1040,26 @@ function applySnapshotToForm(snapshot) {
     form.descripcion = orden.descripcion || ''
     form.observaciones = orden.observaciones || ''
     form.nombreIngeniero = orden.nombre_ingeniero || ''
+
+    // Firmas: aceptar array si viene en el snapshot/orden. Si no, usar defaults
+    try {
+        let s = orden.signatures || orden.firmas || null
+        if (s && typeof s === 'string') s = JSON.parse(s)
+        if (Array.isArray(s) && s.length) {
+            // Normalize items to expected shape
+            form.signatures = s.map(it => ({
+                key: it.key || (it.role || '').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/_+$/,''),
+                role: it.role || it.cargo || it.role || '',
+                nameKnown: !!(it.nameKnown === true || it.name_known === true || (it.name && String(it.name).trim())),
+                name: it.name || it.nombre || '',
+                fixed: !!it.fixed
+            }))
+        } else {
+            form.signatures = JSON.parse(JSON.stringify(DEFAULT_SIGNATURES))
+        }
+    } catch (e) {
+        form.signatures = JSON.parse(JSON.stringify(DEFAULT_SIGNATURES))
+    }
 
     // Imagen
     if (orden.observaciones_img_path) {
@@ -1133,6 +1233,14 @@ const tipoEntradaOptions = [
     { value: 'refaccion', label: 'Refacciones para el Equipo' }
 ]
 
+const DEFAULT_SIGNATURES = [
+    { key: 'subdireccion', role: 'SUBDIRECCIÓN DE INGENIERÍA BIOMÉDICA', nameKnown: true, name: 'ARQ. KARLA ALEJANDRA TORRES SÁNCHEZ', fixed: true },
+    { key: 'ingeniero', role: 'INGENIERO BIOMÉDICO', nameKnown: false, name: '', fixed: false },
+    { key: 'recibe', role: 'IMSS BIENESTAR', nameKnown: false, name: '', fixed: false },
+    { key: 'entrega', role: 'PROVEEDOR', nameKnown: false, name: '', fixed: false },
+    { key: 'vigilancia', role: 'COORDINACIÓN DE VIGILANCIA', nameKnown: false, name: '', fixed: false }
+]
+
 const form = reactive({
     // Datos del solicitante
     nombreSolicitante: '',
@@ -1155,6 +1263,9 @@ const form = reactive({
     // Equipos que entran
     equiposEntrada: [],
 
+    // Firmas: array centralizado. Mantener orden fijo para PDF
+    signatures: JSON.parse(JSON.stringify(DEFAULT_SIGNATURES)),
+
     // Otros campos heredados
     cantidad: 0,
     solicitante: '',
@@ -1175,6 +1286,7 @@ const newItem = reactive({
     referencia: '',
     ubicacion: '',
     claveHRAEI: '',
+    equipoAsociado: '',
     unidades: [] // Para equipos médicos/mobiliario con info individual
 })
 
@@ -1195,6 +1307,7 @@ const resetNewItem = () => {
     newItem.referencia = ''
     newItem.ubicacion = ''
     newItem.claveHRAEI = ''
+    newItem.equipoAsociado = ''
     newItem.unidades = []
 }
 
@@ -1233,6 +1346,7 @@ async function generarPdfEntrada(payloadParam) {
         nombreIngeniero: form.nombreIngeniero,
         equiposEntrada: form.equiposEntrada,
         observacionesImg: form.observacionesImg ? form.observacionesImg.dataUrl : null,
+        signatures: form.signatures,
         logoDataUrl: null
     }
 
@@ -1275,8 +1389,10 @@ const ajustarUnidadesEquipo = () => {
                 ubicacion: '',
                 modelo: '',
                 serie: '',
+                lote: '',
                 referencia: '',
                 claveHRAEI: '',
+                equipoAsociado: '',
                 cantidad: 1 // cantidad por unidad (desglose)
             })
         }
@@ -1337,6 +1453,9 @@ const agregarItem = () => {
         ubicacion: newItem.ubicacion
     }
 
+    // Allow specifying equipo asociado at item level (fallback for unidades)
+    itemData.equipoAsociado = newItem.equipoAsociado || ''
+
     itemData.unidades = [...newItem.unidades]
 
     // Para equipos médicos/mobiliario, ajustar descripción
@@ -1365,6 +1484,7 @@ const agregarItem = () => {
                     referencia: unidad.referencia || itemData.referencia || '',
                     ubicacion: unidad.ubicacion || itemData.ubicacion || '',
                     claveHRAEI: unidad.claveHRAEI || itemData.claveHRAEI || '',
+                    equipoAsociado: unidad.equipoAsociado || itemData.equipoAsociado || '',
                     unidades: [{ ...unidad, cantidad: 1 }]
                 }
                 form.equiposEntrada.push(single)
@@ -1384,6 +1504,7 @@ const agregarItem = () => {
                     referencia: itemData.referencia || '',
                     ubicacion: itemData.ubicacion || '',
                     claveHRAEI: itemData.claveHRAEI || '',
+                    equipoAsociado: itemData.equipoAsociado || '',
                     unidades: []
                 }
                 form.equiposEntrada.push(single)
@@ -1405,6 +1526,7 @@ const agregarItem = () => {
                     referencia: unidad.referencia || itemData.referencia || '',
                     ubicacion: unidad.ubicacion || itemData.ubicacion || '',
                     claveHRAEI: unidad.claveHRAEI || itemData.claveHRAEI || '',
+                    equipoAsociado: unidad.equipoAsociado || itemData.equipoAsociado || '',
                     unidades: [{ ...unidad, cantidad: 1 }]
                 }
                 form.equiposEntrada.push(single)
@@ -1422,6 +1544,7 @@ const agregarItem = () => {
                 referencia: itemData.referencia || '',
                 ubicacion: itemData.ubicacion || '',
                 claveHRAEI: itemData.claveHRAEI || '',
+                equipoAsociado: itemData.equipoAsociado || '',
                 unidades: []
             })
         }
@@ -3218,7 +3341,7 @@ async function generarExcelEntrada(payloadParam) {
                             rows[44].customHeight = true
                         }
                     }
-                    console.log('[ULTRA-FORZADO] 💀 Método apocalíptico aplicado')
+                    console.log('[FORZADO] ')
                 } catch (apocalypseError) {
                     console.error('[ULTRA-FORZADO] ❌ Método apocalíptico falló:', apocalypseError)
                 }
@@ -3415,6 +3538,8 @@ function clearForm() {
     form.unidad = ''
     form.turno = ''
     form.items = []
+    // Reset signatures to defaults
+    form.signatures = JSON.parse(JSON.stringify(DEFAULT_SIGNATURES))
     syncItemsToCantidad()
     try {
         localStorage.removeItem(LOCAL_KEY)
@@ -3481,8 +3606,20 @@ async function onSubmit() {
         return opt ? escapeHtml(opt.label) : ''
     })()
 
-    const html = `
-    <div style="text-align:left; max-height: 480px; overflow:auto; font-size: 14px;">
+        // Si hay firmantes pendientes, calcular antes de construir el HTML de confirmación
+        const hasPending = Array.isArray(form.signatures) && form.signatures.some(s => {
+            if (!s) return true
+            const n = (s.name || '').toString().trim()
+            return !n || n.toUpperCase() === 'PENDING'
+        })
+
+        if (hasPending) {
+            notifier.info('La orden se generará ahora. Actualiza los firmantes marcados como PENDIENTE DE LLENAR al subir el documento firmado.')
+        }
+
+        const html = `
+        <div style="text-align:left; max-height: 480px; overflow:auto; font-size: 14px;">
+          ${hasPending ? `<p style="background:#fffbeb; border-left:4px solid #f59e0b; padding:8px 10px; border-radius:4px; color:#92400e; margin-bottom:10px"><strong>Atención:</strong> La orden se generará ahora, pero algunos firmantes aparecen como <em>PENDIENTE DE LLENAR</em>. Recuerda actualizar los nombres al subir el documento firmado.</p>` : ''}
       <p><strong>Solicitante:</strong> ${escapeHtml(form.nombreSolicitante)}</p>
       <p><strong>Servicio:</strong> ${escapeHtml(form.servicio)}</p>
       <p><strong>Especialidad:</strong> ${escapeHtml(form.especialidad)}</p>
@@ -3531,6 +3668,7 @@ async function onSubmit() {
         nombreIngeniero: form.nombreIngeniero,
         equiposEntrada: form.equiposEntrada,
         observacionesImg: form.observacionesImg ? form.observacionesImg.dataUrl : null,
+        signatures: form.signatures, // centralized signature model
         createdAt: new Date().toISOString()
     }
 
@@ -3538,6 +3676,7 @@ async function onSubmit() {
         // Edit mode: NO persistencia aquí. Centralizar sync en OrderManagement.
         if (props.modo === 'editar') {
             if (!payload.id && props.ordenId) payload.id = props.ordenId
+            console.log('[OpEntrada] Emitting actualizado payload.signatures:', payload.signatures)
             emit('actualizado', payload)
             emit('close')
             loading.value = false
@@ -3572,6 +3711,22 @@ async function onSubmit() {
             // (no queremos limpiar antes de la generación)
             await generarPdfEntrada(payload)
             clearForm()
+            // Navegar a Order Management para que la tabla se actualice con la nueva orden
+            try {
+                await router.replace({ name: 'order-management', query: { t: Date.now() } })
+            } catch (e) { /* ignore navigation errors */ }
+            // If SPA navigation didn't change the route (guards or other issues), force a full reload to the target
+            try {
+                const currentName = router.currentRoute.value && router.currentRoute.value.name
+                if (currentName !== 'order-management') {
+                    const ts = Date.now()
+                    const base = window.location.origin || ''
+                    window.location.href = `${base}/op/order-management?t=${ts}`
+                    return
+                }
+            } catch (e) {
+                // best-effort fallback — ignore
+            }
             loading.value = false
             return
         }
@@ -3869,23 +4024,40 @@ const loadOrderData = async () => {
             }
 
             form.equiposEntrada = loaded
-             console.info('[OpEntrada] Loaded items (preserving order):', loaded.map((it, idx) => ({ idx, tipo: it.tipo, descripcion: it.descripcion, cantidad: it.cantidad })))
-             
-             // Set the most recent item (last one) as editable
-             if (loaded.length > 0) {
-                 mostRecentItemIndex.value = loaded.length - 1
-             }
+            console.info('[OpEntrada] Loaded items (preserving order):', loaded.map((it, idx) => ({ idx, tipo: it.tipo, descripcion: it.descripcion, cantidad: it.cantidad })))
+
+            // Set the most recent item (last one) as editable
+            if (loaded.length > 0) {
+                mostRecentItemIndex.value = loaded.length - 1
+            }
         } else {
             form.equiposEntrada = Array.isArray(data.equiposEntrada) ? data.equiposEntrada : []
         }
 
         // Cargar imagen si existe
         if (data.observaciones_img_path) {
-            form.observacionesImg = {
-                dataUrl: data.observaciones_img_path,
-                name: 'Imagen de observaciones',
-                extension: 'jpg'
+            const imgPath = String(data.observaciones_img_path).trim()
+            if (imgPath && imgPath.length > 0 && imgPath !== 'null' && imgPath !== 'undefined') {
+                
+                let finalUrl = imgPath;
+                if (!imgPath.startsWith('data:image')) {
+                    // It's a filename, construct full URL
+                    finalUrl = `/api/ops/images/${imgPath}`;
+                }
+
+                form.observacionesImg = {
+                    dataUrl: finalUrl,
+                    name: 'Imagen de observaciones',
+                    extension: 'jpg'
+                }
+                console.log('[OpEntrada] Imagen cargada:', { name: form.observacionesImg.name, url: finalUrl })
+            } else {
+                form.observacionesImg = null
+                console.log('[OpEntrada] observaciones_img_path vacío o inválido')
             }
+        } else {
+            form.observacionesImg = null
+            console.log('[OpEntrada] Sin observaciones_img_path')
         }
 
         // Actualizar info de la orden para el título
@@ -3923,6 +4095,18 @@ watch(
 )
 
 onMounted(async () => {
+    // Limpiar observacionesImg del localStorage para evitar caching de imágenes antiguas
+    try {
+        const raw = localStorage.getItem(LOCAL_KEY)
+        if (raw) {
+            const parsed = JSON.parse(raw)
+            if (parsed.observacionesImg) {
+                delete parsed.observacionesImg
+                localStorage.setItem(LOCAL_KEY, JSON.stringify(parsed))
+            }
+        }
+    } catch (e) { }
+    
     // Si es modo editar, cargar los datos de la orden
     if (props.modo === 'editar') {
         if (!props.snapshot) await loadOrderData()
@@ -4718,9 +4902,9 @@ defineExpose({
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    padding: 26px;
-    border-radius: 22px;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 20px;
     background: rgba(255, 255, 255, 0.12);
     border: 1px solid rgba(255, 255, 255, 0.22);
     backdrop-filter: blur(18px) saturate(160%);
@@ -4782,18 +4966,18 @@ defineExpose({
 .section-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 18px 20px;
+    gap: 14px 16px;
 }
 
 .section-grid.combined {
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 18px 20px;
+    gap: 14px 16px;
 }
 
 .section-grid.main-form {
     display: grid;
     grid-template-columns: 1fr auto;
-    gap: 18px 20px;
+    gap: 14px 16px;
     align-items: start;
 }
 
@@ -4810,7 +4994,7 @@ defineExpose({
 .section-grid.solicitante-form {
     display: grid;
     grid-template-columns: 1fr auto auto;
-    gap: 18px 20px;
+    gap: 14px 16px;
     align-items: start;
 }
 
@@ -5568,11 +5752,11 @@ input[type="text"],
     background: rgba(255, 255, 255, 0.14);
     border: 1px solid rgba(255, 255, 255, 0.22);
     border-radius: 20px;
-    padding: 20px 22px;
+    padding: 16px 18px;
     box-shadow: 0 18px 40px rgba(6, 10, 18, 0.22);
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
 }
 
 /* item-row exit animation (fade + slide + subtle shrink) */
@@ -5628,16 +5812,16 @@ input[type="text"],
 
 .item-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 140px 80px;
-    gap: 16px;
+    grid-template-columns: minmax(0, 1fr) 120px 70px;
+    gap: 12px;
     align-items: center;
 }
 
 /* Grid específico para unidades de equipo médico/mobiliario */
 .unidades-grid {
-    grid-template-columns: repeat(2, minmax(260px, 1fr));
-    column-gap: 18px;
-    row-gap: 12px;
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+    column-gap: 16px;
+    row-gap: 14px;
 }
 
 .unidades-grid .field-wide {
@@ -5668,21 +5852,21 @@ input[type="text"],
 .unit-qty-field {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
+    justify-content: flex-end;
 }
 
 .unit-qty-field label {
     width: 100%;
-    text-align: center;
+    text-align: left;
 }
 
 .unit-qty-input {
-    width: 82px !important;
-    min-width: 82px !important;
+    width: 80px !important;
+    min-width: 80px !important;
     max-width: 100px !important;
     text-align: center !important;
-    padding: 8px 10px !important;
+    padding: 8px 8px !important;
 }
 
 /* Ensure unit qty input is centered inside fields (overrides .control width rules) */
@@ -5722,32 +5906,33 @@ input[type="text"],
 
 /* Add item form style moved from inline to CSS */
 .add-item-form {
-    background: linear-gradient(135deg, rgba(147, 197, 253, 0.15), rgba(167, 243, 208, 0.15));
-    padding: 24px;
-    border-radius: 16px;
-    margin-bottom: 24px;
-    border: 1.5px solid rgba(59, 130, 246, 0.2);
+    background: linear-gradient(135deg, rgba(147, 197, 253, 0.12), rgba(167, 243, 208, 0.12));
+    padding: 20px 20px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    border: 1.5px solid rgba(59, 130, 246, 0.18);
     overflow: visible;
 }
 
 .add-item-form__inner {
     display: flex;
     flex-direction: column;
-    gap: 20px
+    gap: 16px;
 }
 
 .add-item-controls {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: center;
-    align-items: center;
-    gap: 60px;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    align-items: flex-end;
+    gap: 24px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     z-index: 1000;
     width: 100%;
     box-sizing: border-box;
-    padding: 0 16px;
+    padding: 0;
+    flex-wrap: wrap;
 }
 
 .add-item-controls .field {
@@ -5755,24 +5940,25 @@ input[type="text"],
     z-index: 1001;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    align-items: flex-start;
+    justify-content: flex-end;
+    flex: 0 1 auto;
 }
 
 .field.field--tipo {
     width: 100%;
-    max-width: 320px;
-    flex: 0 0 auto;
-    margin: 0 auto;
-    text-align: center;
+    max-width: 280px;
+    flex: 0 1 280px;
+    margin: 0;
+    text-align: left;
 }
 
 .field.field--cantidad {
     width: 100%;
-    max-width: 320px;
-    flex: 0 0 auto;
-    margin: 20px auto 0 auto;
-    text-align: center;
+    max-width: 220px;
+    flex: 0 1 220px;
+    margin: 0;
+    text-align: left;
 }
 
 .field.field--tipo.is-shifted {
@@ -5781,20 +5967,49 @@ input[type="text"],
 
 .form-label {
     font-weight: 600;
-    color: rgba(15, 23, 42, 0.9);
+    color: rgb(51, 65, 85);
     display: block;
-    text-align: center;
+    text-align: left;
     width: 100%;
+    margin-bottom: 6px;
+    font-size: 0.86rem;
 }
 
 .form-label--center {
-    text-align: center;
+    text-align: left;
     width: 100%;
 }
 
 .form-label--small {
-    font-size: 0.88rem;
-    font-weight: 600
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: rgb(51, 65, 85);
+}
+
+/* Nueva clase para labels consistentes en unidades-grid */
+.field-label {
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: rgb(51, 65, 85);
+    display: block;
+    margin-bottom: 6px;
+    text-transform: none;
+    letter-spacing: 0px;
+}
+
+/* Mejorar visibilidad de placeholders en inputs */
+.field .control::placeholder,
+.field .control:placeholder-shown {
+    color: rgba(107, 114, 128, 0.6);
+    opacity: 0.8;
+}
+
+.field .control {
+    color: rgb(15, 23, 42);
+}
+
+.field .control:focus::placeholder {
+    color: rgba(107, 114, 128, 0.4);
 }
 
 /* (El reescalado ahora se maneja por JS para evitar doble escala) */
@@ -6567,12 +6782,30 @@ input[placeholder="0"] {
 }
 
 .fecha-field .control {
-    width: 180px !important;
-    min-width: 180px !important;
-    max-width: 180px !important;
+     width: 180px !important;
+     min-width: 180px !important;
+     max-width: 180px !important;
+ }
+
+/* Transiciones para el componente de firmas */
+.fade-in-enter-active,
+.fade-in-leave-active {
+   transition: all 0.3s ease;
 }
 
-/* FORZAR BORDES REDONDEADOS EN TODOS LOS INPUTS TEXT */
+.fade-in-enter-from,
+.fade-in-leave-to {
+   opacity: 0;
+   transform: translateY(-6px);
+}
+
+.fade-in-enter-to,
+.fade-in-leave-from {
+   opacity: 1;
+   transform: translateY(0);
+}
+ 
+ /* FORZAR BORDES REDONDEADOS EN TODOS LOS INPUTS TEXT */
 .op-card input,
 .op-card .control,
 .section-card input,
@@ -7473,6 +7706,38 @@ html {
         transform: scale(0.95) translateY(20px);
         opacity: 0;
     }
+}
+
+/* Check badge animation */
+.check-badge {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.12);
+}
+
+.check-enter-active {
+    animation: popIn 420ms cubic-bezier(0.2, 0.9, 0.2, 1);
+}
+.check-leave-active {
+    transition: opacity 140ms linear, transform 140ms ease;
+}
+.check-enter-from {
+    opacity: 0;
+    transform: scale(0.2) rotate(-15deg);
+}
+.check-enter-to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+}
+
+@keyframes popIn {
+    0% { opacity: 0; transform: scale(0.2) rotate(-20deg); }
+    60% { opacity: 1; transform: scale(1.12) rotate(6deg); }
+    100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }
 
 @media (max-width: 640px) {
