@@ -1,5 +1,6 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import notifier from '@/utils/notifier'
 
 export function useResetComposable() {
@@ -51,7 +52,7 @@ export function useResetComposable() {
       if (!res.ok) throw new Error(data.msg || 'Error al restablecer contraseña')
       msg.value = 'Contraseña actualizada, inicia sesión.'
       notifier.success(msg.value)
-      router.push({ path: '/login' })
+      await navigateAndRefresh(router, { path: '/login' })
     } catch (e) {
       error.value = e.message
       notifier.error(e.message)

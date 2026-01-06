@@ -60,8 +60,9 @@
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import { 
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
@@ -106,13 +107,21 @@ function isEmbedded(opName) {
 }
 
 function go(name) {
-  router.push({ name }).catch(() => {})
+  try { navigateAndRefresh(router, { name }) } catch {}
 }
 
 onMounted(() => {
   setTimeout(() => {
     loading.value = false
   }, 1500)
+
+  try { window.dispatchEvent(new CustomEvent('route:mounted', { detail: { name: route.name, path: route.fullPath } })); console.debug('[UserDashboard] dispatched route:mounted', { name: route.name, path: route.fullPath }) } catch (e) {}
+
+  const onRecreate = () => {
+    try { pendingStore.refresh().catch(() => {}) } catch {}
+  }
+  window.addEventListener('app:force-recreate', onRecreate)
+  onBeforeUnmount(() => { window.removeEventListener('app:force-recreate', onRecreate) })
 })
 </script>
 

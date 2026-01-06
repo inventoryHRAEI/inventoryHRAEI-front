@@ -39,6 +39,7 @@ import UserHeader from '@/components/UserHeader.vue'
 import { ref } from 'vue'
 import notifier from '@/utils/notifier'
 import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 const router = useRouter()
 const loggedUser = ref(null)
 if (localStorage.getItem('user')) {
@@ -48,10 +49,10 @@ async function goHome(){
   try {
     const res = await confirmDelete('Ir al inicio', '¿Deseas volver al panel principal? Se cerrará esta pantalla.', 1, 'Ir al inicio', 'Cancelar')
     if (!res.isConfirmed) return
-    router.push({ name: 'dashboard' })
+    await navigateAndRefresh(router, { name: 'dashboard' })
   } catch (e) { console.error(e) }
 }
-function goManageUsers(){ try { router.push({ name: 'admin-users' }) } catch {} }
+function goManageUsers(){ try { navigateAndRefresh(router, { name: 'admin-users' }) } catch {} }
 
 const email = ref('')
 const msg = ref('')
@@ -76,7 +77,7 @@ const forgot = async () => {
       if (data && data.resetUrl) {
         window.location.href = data.resetUrl
       } else {
-        router.push({ path: '/reset', query: Object.fromEntries(q) })
+        navigateAndRefresh(router, { path: '/reset', query: Object.fromEntries(q) })
       }
     } catch (e) { console.error('Redirección a reset falló:', e) }
   } catch (e) {
@@ -87,7 +88,7 @@ const forgot = async () => {
 
 function requestPermissions(){
   // Simple placeholder: abrir modal de solicitud o navegar al panel de solicitudes
-  try { router.push({ name: 'dashboard', query: { area: 'SOLICITUDES' } }) } catch {}
+  try { navigateAndRefresh(router, { name: 'dashboard', query: { area: 'SOLICITUDES' } }) } catch {}
 }
 
 import { computed } from 'vue'

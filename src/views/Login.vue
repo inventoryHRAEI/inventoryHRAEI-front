@@ -66,6 +66,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import notifier from '@/utils/notifier'
 import { windowManager } from '@/utils/windowManager'
 import { saveToken } from '@/utils/auth.js'
@@ -186,7 +187,7 @@ const login = async () => {
      } catch (e) { console.warn('windowManager no disponible', e) }
      notifier.success('Sesión iniciada')
      try { window.dispatchEvent(new Event('session:updated')) } catch {}
-     router.push({ name: 'dashboard' })
+     await navigateAndRefresh(router, { name: 'dashboard' })
    } catch (e) {
      error.value = e.message
      notifier.error(e.message)

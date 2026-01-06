@@ -3,7 +3,7 @@
     <template #title>Administrar Usuarios</template>
 
     <section class="glass-panel list-panel users-cards">
-      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;"><button class="btn" @click.prevent="$router.push({ name: 'dashboard' })">Volver</button></div>
+      <div style="display:flex; justify-content:flex-end; margin-bottom:10px;"><button class="btn" @click.prevent="goBack">Volver</button></div>
       <h3>Lista de Usuarios disponibles</h3>
       <div class="cards">
         <div class="user-card" v-for="u in users" :key="u.id">
@@ -28,7 +28,7 @@
               </div>
             </div>
             <div class="card-actions">
-              <button class="btn small" @click.prevent="$router.push({ name: 'admin-user-detail', params: { id: u.id } })">Detalle</button>
+              <button class="btn small" @click.prevent="goToDetail(u.id)">Detalle</button>
               <button class="btn small" @click.prevent="openModifyPermissions(u)">Permisos</button>
               <button class="btn primary" @click.prevent="changeRole(u, u.role === 'admin' ? 'user' : 'admin')">{{ actionLabelFor(u.role) }}</button>
             </div>
@@ -85,6 +85,8 @@
 import ActionPanel from '@/components/ActionPanel.vue'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import { confirmDelete, showSuccess, showError, showLoading, closeModal as closeSwalModal } from '@/utils/sweetAlertConfig'
 import notifier from '@/utils/notifier'
 import pendingRequestsStore from '@/stores/pendingRequestsStore'
@@ -92,6 +94,9 @@ import { formatRole, actionLabelFor } from '@/utils/roles'
 
 const router = useRouter()
 const currentUser = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre'), role: localStorage.getItem('role'), email: localStorage.getItem('email') }
+
+function goBack(){ try { navigateAndRefresh(router, { name: 'dashboard' }) } catch {} }
+function goToDetail(id){ try { navigateAndRefresh(router, { name: 'admin-user-detail', params: { id } }) } catch {} }
 const isAdmin = currentUser && currentUser.role === 'admin'
 
 const pendingCounts = ref({})
@@ -228,7 +233,7 @@ async function rejectRequest(id){
 
 onMounted(async () => {
   if (!isAdmin) {
-    try { await router.push({ name: 'dashboard' }) } catch {}
+    try { await navigateAndRefresh(router, { name: 'dashboard' }) } catch {}
     return
   }
   await loadUsers()

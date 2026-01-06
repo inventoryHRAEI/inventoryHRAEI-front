@@ -509,6 +509,7 @@
 <script setup>
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import FormShell from '@/components/FormShell.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
 import DatePickerModern from '@/components/DatePickerModern.vue'
@@ -775,9 +776,9 @@ const onCancel = async () => {
     try { localStorage.removeItem(LOCAL_KEY) } catch {}
     // Regresar al dashboard con refresco forzado
     try { 
-      await router.push({ name: 'dashboard' })
+      await navigateAndRefresh(router, { name: 'dashboard' })
     } catch { 
-      try { await router.push('/') } catch {}
+      try { await navigateAndRefresh(router, '/') } catch {}
     }
   }
 }

@@ -1,7 +1,7 @@
 <template>
   <div>
     <LoadingSkeleton v-if="loading || !hasAccess" type="cards" :count="6" />
-    <component v-else :is="isAdmin ? AdminDashboard : UserDashboard" />
+    <component v-else :is="isAdmin ? AdminDashboard : UserDashboard" :key="`dashboard-${dashboardKey}`" />
   </div>
 </template>
 
@@ -21,6 +21,7 @@ const hasAccess = ref(false)
 const roleRef = ref(localStorage.getItem('role') || 'user')
 const isAdmin = computed(() => (roleRef.value || '').toLowerCase() === 'admin')
 const loading = ref(true)
+const dashboardKey = ref(0)
 
 
 async function loadDashboard() {
@@ -35,6 +36,7 @@ async function loadDashboard() {
   if (result.user && result.user.role) {
     roleRef.value = result.user.role
   }
+  dashboardKey.value++ // Forzar recreación de sub-componentes
   setTimeout(() => { loading.value = false }, 700)
 }
 

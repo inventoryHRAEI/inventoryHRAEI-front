@@ -25,6 +25,7 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import { windowManager } from '@/utils/windowManager'
 import { clearStoredSessionData } from '@/utils/auth'
 
@@ -54,7 +55,7 @@ async function handleInactive() {
   // Redirigir a login después de mostrar el mensaje
   setTimeout(() => {
     if (router.currentRoute.value.path !== '/login') {
-      router.push('/login')
+      navigateAndRefresh(router, '/login')
     }
   }, 1500) // 1.5 segundos para que lean el mensaje
 }
@@ -110,21 +111,21 @@ function handleLogout() {
   forceCloseMode.value = false
   manualCloseRequired.value = false
   clearStoredSessionData()
-  router.push('/login')
+  navigateAndRefresh(router, '/login')
 }
 
 function goHome() {
   showInactive.value = false
   forceCloseMode.value = false
   manualCloseRequired.value = false
-  router.push('/')
+  navigateAndRefresh(router, '/')
 }
 
 function goLogin() {
   showInactive.value = false
   forceCloseMode.value = false
   manualCloseRequired.value = false
-  router.push('/login')
+  navigateAndRefresh(router, '/login')
 }
 
 onMounted(() => {

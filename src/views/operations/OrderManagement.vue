@@ -693,6 +693,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch, defineAsyncComponent } from 'vue'
 import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 import { useRouter, useRoute } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import DatePicker from '@/components/DatePicker.vue'
@@ -718,9 +719,16 @@ function handleResizeForPreview() {
 }
 onMounted(() => {
     window.addEventListener('resize', handleResizeForPreview)
+    // Cargar lista al montar para asegurar que cuándo esta vista se muestra siempre
+    // hace una recuperación fresca desde el servidor
+    try { reloadOrdersFromServer().catch(() => {}) } catch (e) {}
+    try { console.debug('[OrderManagement] mounted, dispatching route:mounted', { name: route.name, path: route.fullPath }); window.dispatchEvent(new CustomEvent('route:mounted', { detail: { name: route.name, path: route.fullPath } })) } catch (e) {}
+    // Reaccionar si se fuerza la recreación global (ej. navigateAndRefresh)
+    try { window.addEventListener('app:force-recreate', () => { try { reloadOrdersFromServer().catch(() => {}) } catch {} }) } catch (e) {}
 })
 onBeforeUnmount(() => {
     window.removeEventListener('resize', handleResizeForPreview)
+    try { window.removeEventListener('app:force-recreate', () => { try { reloadOrdersFromServer().catch(() => {}) } catch {} }) } catch (e) {}
     // Limpiar estado al abandonar el componente
     showEditModal.value = false
     showDocModal.value = false
@@ -728,6 +736,13 @@ onBeforeUnmount(() => {
     showMoreFilters.value = false
     showLegend.value = false
     allOrders.value = []
+    
+    // Purga máxima: limpiar localStorage de órdenes para forzar recarga
+    try {
+        localStorage.removeItem('orders_list')
+    } catch (e) {
+        console.warn('Could not clear orders_list from localStorage', e)
+    }
 })
 const route = useRoute()
 
@@ -1725,11 +1740,13 @@ function formatDate(dateStr) {
 }
 
 function goToCreateOrder() {
-    router.push({ name: 'op-entrada', query: { from: 'order-management', t: Date.now() } })
+    console.debug('[OrderManagement] navigating to op-entrada')
+    navigateAndRefresh(router, { name: 'op-entrada', query: { from: 'order-management', t: Date.now() } })
 }
 
 function goToDashboard() {
-    router.push({ name: 'dashboard', query: { t: Date.now() } })
+    console.debug('[OrderManagement] navigating to dashboard')
+    navigateAndRefresh(router, { name: 'dashboard', query: { t: Date.now() } })
 }
 
 function closeFiltersDropdown() {

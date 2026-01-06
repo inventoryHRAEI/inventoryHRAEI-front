@@ -53,11 +53,12 @@
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
 import pendingStore from '@/stores/pendingRequestsStore'
 import notifier from '@/utils/notifier'
 import { confirmDelete, showSuccess, showError, showLoading, closeModal as closeSwalModal } from '@/utils/sweetAlertConfig'
 import { useRouter, useRoute } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import { 
   ArrowDownTrayIcon,
   ArrowUpTrayIcon,
@@ -91,7 +92,7 @@ const operations = [
 const pendingByOperation = ref({})
 
 function go(name) {
-  try { router.push({ name }) } catch {}
+  try { navigateAndRefresh(router, { name }) } catch {}
 }
 
 function isEmbedded(opName) {
@@ -129,6 +130,13 @@ onMounted(async () => {
   } catch (e) {
     console.error('No se pudieron obtener usuarios:', e)
   }
+
+  try { window.dispatchEvent(new CustomEvent('route:mounted', { detail: { name: route.name, path: route.fullPath } })); console.debug('[AdminDashboard] dispatched route:mounted', { name: route.name, path: route.fullPath }) } catch (e) {}
+
+  // Refresh permission requests when global recreate event triggers
+  const onRecreate = () => { try { loadPermissionRequests().catch(() => {}) } catch {} }
+  window.addEventListener('app:force-recreate', onRecreate)
+  onBeforeUnmount(() => { window.removeEventListener('app:force-recreate', onRecreate) })
 })
 
 async function loadPermissionRequests() {

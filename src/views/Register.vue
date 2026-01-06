@@ -114,6 +114,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import notifier from '@/utils/notifier'
 import { EyeIcon, EyeSlashIcon, UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, UserIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, PhotoIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
@@ -296,7 +297,7 @@ const completeRegistration = async () => {
     const data = await parseJsonSafe(res)
     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (complete-registration)')
   notifier.success('Registro completado. Ya puedes iniciar sesión.')
-    router.push({ name: 'login' })
+    await navigateAndRefresh(router, { name: 'login' })
   } catch (e) {
     error.value = e.message
   notifier.error(e.message)

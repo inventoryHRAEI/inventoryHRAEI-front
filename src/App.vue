@@ -59,7 +59,7 @@
     <main :class="['container', { 'op-embed-active': isOperationRoute(), 'dashboard-main-active': isOnDashboard() }]">
       <router-view v-slot="{ Component }">
         <transition name="page" mode="out-in">
-          <component :is="Component" :key="route.fullPath" />
+          <component :is="Component" :key="componentKey" />
         </transition>
       </router-view>
     </main>
@@ -89,6 +89,7 @@
   import { validateSession, logout } from '@/utils/auth'
   // Notivue components
   import { Notivue, Notification, NotivueSwipe, slateTheme } from 'notivue'
+  import { navigateAndRefresh } from '@/utils/routerHelpers.js'
   
   // Tema elegante y compacto para Notivue
   const nvTheme = {
@@ -124,6 +125,7 @@
     const route = useRoute()
     const router = useRouter()
     const menuOpen = ref(false)
+    const componentKey = ref(0)
 
     async function refreshSession(){
       try {
@@ -292,7 +294,7 @@
         if (!res.isConfirmed) return
         closeMenu()
         await logout()
-        router.push({ name: 'home' })
+        await navigateAndRefresh(router, { name: 'home' })
       } catch (e) { console.error(e) }
     }
 
@@ -301,13 +303,13 @@
         closeMenu()
         const res = await confirmDelete('Añadir cuenta', 'Añadir otra cuenta reemplazará tu sesión actual. ¿Continuar?', 1, 'Continuar', 'Cancelar')
         if (!res.isConfirmed) return
-        router.push({ name: 'add-account' })
+        await navigateAndRefresh(router, { name: 'add-account' })
       } catch (e) { console.error(e) }
     }
 
-    function resetPassword() {
+    async function resetPassword() {
       closeMenu()
-      router.push({ name: 'forgot' })
+      await navigateAndRefresh(router, { name: 'forgot' })
     }
 
     async function goHome() {
@@ -315,13 +317,13 @@
         closeMenu()
         const res = await confirmDelete('Ir al inicio', '¿Ir al inicio? Se cerrará este panel y volverás a tu inicio.', 1, 'Ir al inicio', 'Cancelar')
         if (!res.isConfirmed) return
-        router.push({ name: 'dashboard' })
+        await navigateAndRefresh(router, { name: 'dashboard' })
       } catch (e) { console.error(e) }
     }
 
-    function manageUsers() {
+    async function manageUsers() {
       closeMenu()
-      router.push({ name: 'admin-users' })
+      await navigateAndRefresh(router, { name: 'admin-users' })
     }
 
     const pendingCount = computed(() => pendingRequestsStore.totalPending.value || 0)
@@ -344,11 +346,27 @@
     let refreshTimeout = null
     watch(() => route.fullPath, () => {
       menuOpen.value = false
+      componentKey.value++ // Forzar recreación del componente al cambiar ruta
+      
+      // Purga de memoria al navegar entre operaciones o desde operaciones
+      try {
+        localStorage.removeItem('orders_list')
+        localStorage.removeItem('op_entrada_form')
+      } catch (e) {
+        console.warn('Could not purge localStorage', e)
+      }
+      
       clearTimeout(refreshTimeout)
       refreshTimeout = setTimeout(() => {
         refreshSession()
         ensureUserFoto()
       }, 100)
+    })
+
+    // Escuchar eventos externos para forzar recreación (usado por navigateAndRefresh)
+    onMounted(() => {
+    const onForce = () => { try { componentKey.value++; /* extra increment to ensure fresh remount */ componentKey.value++ } catch {} }
+      onBeforeUnmount(() => { window.removeEventListener('app:force-recreate', onForce) })
     })
 
     watch(menuOpen, (val) => {

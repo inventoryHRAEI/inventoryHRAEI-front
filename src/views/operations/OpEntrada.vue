@@ -840,6 +840,7 @@
 <script setup>
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import FormShell from '@/components/FormShell.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
@@ -1793,9 +1794,9 @@ const onCancel = async () => {
             try { localStorage.removeItem(LOCAL_KEY) } catch { }
             // Regresar a order-management en lugar de dashboard
             try {
-                await router.push({ name: 'order-management' })
+                await navigateAndRefresh(router, { name: 'order-management' })
             } catch {
-                try { await router.push('/op/order-management') } catch { }
+                try { await navigateAndRefresh(router, '/op/order-management') } catch { }
             }
         }
     }
@@ -1805,7 +1806,7 @@ const goToOrderManagement = () => {
     // Limpiar localStorage antes de regresar
     try { localStorage.removeItem(LOCAL_KEY) } catch { }
     // Regresar a order-management sin confirmación
-    router.push({ name: 'order-management' })
+    navigateAndRefresh(router, { name: 'order-management' })
 }
 
 const scrollToTop = () => {
@@ -4187,12 +4188,15 @@ const applyForcedZoomIfSmallMobile = () => {
 }
 
 onMounted(() => {
+    try { console.debug('[OpEntrada] mounted route:', router.currentRoute && router.currentRoute.value ? router.currentRoute.value.fullPath : '(unknown)') } catch {}
+    try { window.dispatchEvent(new CustomEvent('route:mounted', { detail: { name: router.currentRoute && router.currentRoute.value ? router.currentRoute.value.name : '', path: router.currentRoute && router.currentRoute.value ? router.currentRoute.value.fullPath : '' } })); console.debug('[OpEntrada] dispatched route:mounted') } catch {}
     applyForcedZoomIfSmallMobile()
     window.addEventListener('resize', applyForcedZoomIfSmallMobile)
     window.addEventListener('orientationchange', applyForcedZoomIfSmallMobile)
 })
 
 onBeforeUnmount(() => {
+    try { console.debug('[OpEntrada] beforeUnmount route:', router.currentRoute && router.currentRoute.value ? router.currentRoute.value.fullPath : '(unknown)') } catch {}
     try { document.documentElement.style.zoom = '' } catch (e) { }
     window.removeEventListener('resize', applyForcedZoomIfSmallMobile)
     window.removeEventListener('orientationchange', applyForcedZoomIfSmallMobile)

@@ -50,6 +50,19 @@ let initialSessionValidated = false
 
 // Guard global de rutas: valida sesión con el backend
 router.beforeEach(async (to, from, next) => {
+  // Purga agresiva: limpiar caché cuando se sale de ciertas rutas
+  const routesToPurge = ['order-management', 'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio']
+  if (routesToPurge.includes(from.name) && to.name !== from.name) {
+    try {
+      localStorage.removeItem('orders_list')
+      localStorage.removeItem('op_entrada_form')
+      sessionStorage.clear()
+      console.debug(`[ROUTER] Purged cache when leaving ${from.name}`)
+    } catch (e) {
+      console.warn('Could not clear storage on navigation', e)
+    }
+  }
+
   const needsAuth = to.matched.some(record => record.meta && record.meta.requiresAuth)
   
   if (needsAuth) {
@@ -90,12 +103,32 @@ router.beforeEach(async (to, from, next) => {
   next()
 })
 
+// Variable para rastrear la ruta anterior
+let lastRoute = null
+
 // Al montar el router, validar sesión inicial en caso de recarga
-router.afterEach((to) => {
+router.afterEach((to, from) => {
   // Marcar que hemos validado al menos una vez
   if (!initialSessionValidated) {
     initialSessionValidated = true
   }
+  
+  // Guardar la ruta actual para saber dónde venimos
+  lastRoute = to.name
+
+  // Si navegamos hacia dashboard u otras rutas de operaciones, forzar recreación y purga de caches
+  try {
+    const toName = to && to.name ? String(to.name) : ''
+    const fromName = from && from.name ? String(from.name) : ''
+    const relevant = (toName && (/^op-|^order-management$|^dashboard$/).test(toName)) || (to.path && /\/op\//.test(to.path))
+    if (relevant && toName !== fromName) {
+      try { localStorage.removeItem('orders_list') } catch {}
+      try { localStorage.removeItem('op_entrada_form') } catch {}
+      try { sessionStorage.clear() } catch {}
+      try { window.dispatchEvent(new CustomEvent('app:force-recreate')) } catch {}
+      console.debug('[ROUTER] afterEach triggered app:force-recreate for navigation', { from: fromName, to: toName })
+    }
+  } catch (e) { /* ignore */ }
 })
 
 export default router

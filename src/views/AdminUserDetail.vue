@@ -4,7 +4,7 @@
 
     <section class="glass-panel list-panel user-detail">
       <div v-if="loading" class="center">Cargando usuario...</div>
-      <div v-if="loadError" class="center" style="color:var(--muted); margin-bottom:12px">{{ loadError }} <button class="btn" @click="$router.push({ name: 'admin-users' })">Volver</button></div>
+      <div v-if="loadError" class="center" style="color:var(--muted); margin-bottom:12px">{{ loadError }} <button class="btn" @click="goBack">Volver</button></div>
       <div v-if="!user && !loading && !loadError" class="center">Usuario no disponible</div>
       <div class="user-header-row">
         <div class="avatar-wrapper">
@@ -15,7 +15,7 @@
           <h3>{{ user?.nombre }}</h3>
           <div>Tipo: <strong>{{ formatRole(user?.role) }}</strong></div>
           <div>Email: <strong>{{ user?.email }}</strong></div>
-          <div style="margin-top:8px"><button class="btn" @click.prevent="$router.push({ name: 'dashboard' })">Volver</button></div>
+          <div style="margin-top:8px"><button class="btn" @click.prevent="goHome">Volver</button></div>
         </div>
       </div>
 
@@ -56,6 +56,7 @@
 import ActionPanel from '@/components/ActionPanel.vue'
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import notifier from '@/utils/notifier'
 import { formatRole } from '@/utils/roles'
 import { authedFetch } from '@/utils/api'
@@ -66,6 +67,9 @@ const router = useRouter()
 const id = route.params.id
 const user = ref(null)
 const requests = ref([])
+
+function goBack(){ try { navigateAndRefresh(router, { name: 'admin-users' }) } catch {} }
+function goHome(){ try { navigateAndRefresh(router, { name: 'dashboard' }) } catch {} }
 
 const areasList = ['EQUIPO MEDICO I.P','EQUIPOS DE ADQUISICIÓN','COMODATOS','MOBILIARIO CLÍNICO/MÉDICO','DONACIÓN','MICROPIPETAS Y PIPETAS']
 const permissions = ref({})

@@ -40,11 +40,12 @@
 import { useResetComposable } from '@/composables/useReset'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 
 const { email, token, password, msg, error, show, sendingResend, resendCode, reset } = useResetComposable()
 const router = useRouter()
-function goHome(){ try { router.push({ name: 'dashboard' }) } catch {} }
-function goManageUsers(){ try { router.push({ name: 'admin-users' }) } catch {} }
+function goHome(){ try { navigateAndRefresh(router, { name: 'dashboard' }) } catch {} }
+function goManageUsers(){ try { navigateAndRefresh(router, { name: 'admin-users' }) } catch {} }
 </script>
 
 <style scoped>

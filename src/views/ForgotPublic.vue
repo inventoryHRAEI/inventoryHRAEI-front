@@ -46,6 +46,7 @@
 import { ref, onMounted } from 'vue'
 import notifier from '@/utils/notifier'
 import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import { EnvelopeIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
@@ -107,7 +108,7 @@ const forgot = async () => {
       if (data && data.resetUrl) {
         window.location.href = data.resetUrl
       } else {
-        router.push({ path: '/reset', query: Object.fromEntries(q) })
+        navigateAndRefresh(router, { path: '/reset', query: Object.fromEntries(q) })
       }
     } catch (e) { console.error('Redirección a reset falló:', e) }
   } catch (e) {
