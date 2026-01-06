@@ -36,7 +36,7 @@ const routes = [
   { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
   { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
   { path: '/op/servicio', name: 'op-servicio', component: OpServicio, meta: { requiresAuth: true } },
-  { path: '/op/inventario-biomedica', name: 'op-inventario-biomedica', component: OpInventarioBiomedica, meta: { requiresAuth: true } },
+  { path: '/op/inventario-biomedica', name: 'op-inventario-biomedica', component: OpInventarioBiomedica }, // Maqueta pública: renderiza sin requiresAuth
   { path: '/op/insumos-consumibles', name: 'op-insumos-consumibles', component: OpInsumosConsumibles, meta: { requiresAuth: true } }
 ]
 

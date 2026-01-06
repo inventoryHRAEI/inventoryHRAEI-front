@@ -1,0 +1,161 @@
+// Mock inventory data for presentation
+export function createMockInventory() {
+  const now = () => new Date().toISOString()
+  return [
+    {
+      inventoryNo: 'INV-0001',
+      name: 'Monitor Multiparamétrico',
+      brand: 'Philips',
+      model: 'IntelliVue MX450',
+      serialNumber: 'M450-2021-001',
+      area: 'UCIA',
+      status: 'DISPONIBLE',
+      type: 'equipo',
+      yearManufactured: '2020',
+      yearAcquisition: '2021',
+      warranty: true,
+      calibrationPending: false,
+      history: []
+    },
+    {
+      inventoryNo: 'INV-0002',
+      name: 'Ventilador Mecánico',
+      brand: 'Dräger',
+      model: 'Evita V300',
+      serialNumber: 'EVT300-2019-042',
+      area: 'TERAPIA INTENSIVA',
+      status: 'OPERATIVO',
+      type: 'equipo',
+      yearManufactured: '2019',
+      yearAcquisition: '2019',
+      warranty: false,
+      calibrationPending: true,
+      history: [
+        { id: 'h-1', start: now(), end: null, notes: 'Mantenimiento preventivo' }
+      ]
+    },
+    {
+      inventoryNo: 'INV-0003',
+      name: 'Ecógrafo',
+      brand: 'GE',
+      model: 'LOGIQ V2',
+      serialNumber: 'LOGIQ-2020-156',
+      area: 'DIAGNÓSTICO',
+      status: 'EN MANTENIMIENTO',
+      type: 'equipo',
+      yearManufactured: '2020',
+      yearAcquisition: '2020',
+      warranty: true,
+      calibrationPending: false,
+      history: [
+        { id: 'h-2', start: new Date(Date.now() - 3600 * 1000 * 24).toISOString(), end: new Date(Date.now() - 3600 * 1000 * 22).toISOString(), notes: 'Revisión general' },
+        { id: 'h-3', start: new Date(Date.now() - 3600 * 1000 * 2).toISOString(), end: null, notes: 'Calibración anual' }
+      ]
+    },
+    {
+      inventoryNo: 'INV-0004',
+      name: 'Bomba de Infusión',
+      brand: 'Baxter',
+      model: 'Spectrum',
+      serialNumber: 'SPEC-2021-089',
+      area: 'URGENCIAS',
+      status: 'OPERATIVO',
+      type: 'equipo',
+      yearManufactured: '2021',
+      yearAcquisition: '2021',
+      warranty: true,
+      calibrationPending: false,
+      history: []
+    },
+    {
+      inventoryNo: 'ACC-0001',
+      name: 'Cable de Monitor',
+      brand: 'Philips',
+      model: 'M1979A',
+      serialNumber: 'M1979A-ACC-001',
+      area: 'ALMACÉN',
+      status: 'DISPONIBLE',
+      type: 'accesorio',
+      yearManufactured: '2022',
+      yearAcquisition: '2022',
+      warranty: true,
+      calibrationPending: false,
+      history: []
+    },
+    {
+      inventoryNo: 'ACC-0002',
+      name: 'Transductor Ecografía',
+      brand: 'GE',
+      model: '2MHz Phased',
+      serialNumber: 'TRANS-2MHz-045',
+      area: 'DIAGNÓSTICO',
+      status: 'DISPONIBLE',
+      type: 'accesorio',
+      yearManufactured: '2020',
+      yearAcquisition: '2020',
+      warranty: false,
+      calibrationPending: true,
+      history: []
+    },
+    {
+      inventoryNo: 'CONS-0001',
+      name: 'Suero Salino 500ml',
+      brand: 'Baxter',
+      model: 'Plasma-Lyte',
+      serialNumber: 'LOTE-2024-001',
+      area: 'FARMACIA',
+      status: 'DISPONIBLE',
+      type: 'consumible',
+      yearManufactured: '2024',
+      yearAcquisition: '2024',
+      warranty: false,
+      calibrationPending: false,
+      history: []
+    },
+    {
+      inventoryNo: 'CONS-0002',
+      name: 'Jeringa 10ml',
+      brand: 'B. Braun',
+      model: 'Omnifix',
+      serialNumber: 'LOTE-2024-002',
+      area: 'FARMACIA',
+      status: 'DISPONIBLE',
+      type: 'consumible',
+      yearManufactured: '2024',
+      yearAcquisition: '2024',
+      warranty: false,
+      calibrationPending: false,
+      history: []
+    },
+    {
+      inventoryNo: 'REF-0001',
+      name: 'Filtro del Ventilador',
+      brand: 'Dräger',
+      model: 'EVT-FIL-100',
+      serialNumber: 'REF-FIL-100-234',
+      area: 'TERAPIA INTENSIVA',
+      status: 'DISPONIBLE',
+      type: 'refaccion',
+      yearManufactured: '2023',
+      yearAcquisition: '2023',
+      warranty: true,
+      calibrationPending: false,
+      history: []
+    },
+    {
+      inventoryNo: 'REF-0002',
+      name: 'Batería de Respaldo',
+      brand: 'Philips',
+      model: 'M3014A',
+      serialNumber: 'BAT-M3014A-567',
+      area: 'UCIA',
+      status: 'OPERATIVO',
+      type: 'refaccion',
+      yearManufactured: '2022',
+      yearAcquisition: '2022',
+      warranty: false,
+      calibrationPending: false,
+      history: []
+    }
+  ]
+}
