@@ -52,7 +52,7 @@
                                     <path d="M22 3H2l8 9v7l4 2v-9l8-9z" fill="currentColor" />
                                 </svg>
                                 <span v-if="hasActiveAdvancedFilters" class="filter-badge">{{ activeFiltersList.length
-                                    }}</span>
+                                }}</span>
                             </button>
 
                             <!-- Dropdown de filtros disponibles -->
@@ -100,32 +100,47 @@
                                         </label>
                                     </div>
                                     <div class="filter-group-section">
-                                        <div class="section-label">Características de Equipos</div>
-                                        <label class="checkbox-item-new">
-                                            <input type="checkbox" v-model="filterTipoActive" />
-                                            <span>Tipo de artículo</span>
-                                        </label>
-                                        <label class="checkbox-item-new">
-                                            <input type="checkbox" v-model="filterMarcaActive" />
-                                            <span>Marca</span>
-                                        </label>
-                                        <label class="checkbox-item-new">
-                                            <input type="checkbox" v-model="filterModeloActive" />
-                                            <span>Modelo</span>
-                                        </label>
-                                        <label class="checkbox-item-new">
-                                            <input type="checkbox" v-model="filterUbicacionActive" />
-                                            <span>Ubicación</span>
-                                        </label>
-                                        <label class="checkbox-item-new">
-                                            <input type="checkbox" v-model="filterClaveHRAEIActive" />
-                                            <span>Clave HRAEI</span>
-                                        </label>
-                                        <label class="checkbox-item-new">
-                                            <input type="checkbox" v-model="filterItemTextActive" />
-                                            <span>Búsqueda en artículos</span>
-                                        </label>
-                                    </div>
+                                         <div class="section-label">Búsqueda de Equipos</div>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterItemTextActive" />
+                                             <span>Nombre de equipo</span>
+                                         </label>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterAccesorioActive" />
+                                             <span>Accesorios</span>
+                                         </label>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterTipoActive" />
+                                             <span>Tipo de artículo</span>
+                                         </label>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterMarcaActive" />
+                                             <span>Marca</span>
+                                         </label>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterModeloActive" />
+                                             <span>Modelo</span>
+                                         </label>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterUbicacionActive" />
+                                             <span>Ubicación</span>
+                                         </label>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterClaveHRAEIActive" />
+                                             <span>Clave HRAEI</span>
+                                         </label>
+                                     </div>
+                                     <div class="filter-group-section">
+                                         <div class="section-label">Cantidad de Artículos</div>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterCantidadMinActive" />
+                                             <span>Cantidad mínima</span>
+                                         </label>
+                                         <label class="checkbox-item-new">
+                                             <input type="checkbox" v-model="filterCantidadMaxActive" />
+                                             <span>Cantidad máxima</span>
+                                         </label>
+                                     </div>
                                 </div>
                                 <div class="dropdown-footer-new">
                                     <button type="button" class="btn-listo-new"
@@ -193,6 +208,18 @@
                                     <input v-model="filterClaveHRAEI" class="control filter-input"
                                         placeholder="Ej. COMODATO..." />
                                 </template>
+                                <template v-else-if="f.key === 'cantidadMin'">
+                                    <input v-model.number="filterCantidadMin" type="number" class="control filter-input"
+                                        placeholder="Mínimo..." min="0" />
+                                </template>
+                                <template v-else-if="f.key === 'cantidadMax'">
+                                    <input v-model.number="filterCantidadMax" type="number" class="control filter-input"
+                                        placeholder="Máximo..." min="0" />
+                                </template>
+                                <template v-else-if="f.key === 'accesorio'">
+                                    <input v-model="filterAccesorio" class="control filter-input"
+                                        placeholder="Nombre de accesorio..." />
+                                </template>
                             </div>
                             <button type="button" class="btn-remove-filter" @click="removeActiveFilter(f.key)"
                                 title="Remover filtro">
@@ -233,7 +260,7 @@
                 :show-column-estado="showColumnEstado"
                 :empty-state-message="searchTerm || filterDate || filterService ? 'No se encontraron órdenes con los filtros seleccionados.' : 'Comienza creando una nueva orden.'"
                 @edit="openEditModal" @delete="deleteOrder" @deleteMultiple="handleDeleteMultipleWithModal"
-                @create="goToCreateOrder" @openHistory="openDocumentModal" />
+                @create="goToCreateOrder" @openHistory="openDocumentModal" @upload="openUploadModal" />
         </ActionPanel>
 
         <!-- Modal: edición única (no permite múltiples) + tabs de versiones (ramas) -->
@@ -320,85 +347,179 @@
                         </div>
                     </div>
 
-                    <div class="doc-list-section">
-                        <div v-if="docLoading" class="skeleton-loading">
-                            <div v-for="i in 5" :key="`skeleton-${i}`" class="skeleton-item">
-                                <div class="skeleton-icon"></div>
-                                <div class="skeleton-content">
-                                    <div class="skeleton-title"></div>
-                                    <div class="skeleton-meta"></div>
-                                </div>
-                                <div class="skeleton-button"></div>
-                            </div>
-                        </div>
-                        <div v-else-if="docError" class="error-state">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"></circle>
-                                <line x1="12" y1="8" x2="12" y2="12"></line>
-                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                            </svg>
-                            <p>{{ docError }}</p>
-                        </div>
-                        <div v-else-if="docVersions.length === 0" class="empty-versions-state">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2">
+                    <div class="doc-tabs">
+                        <button class="doc-tab" :class="{ active: activeDocTab === 'generadas' }"
+                            @click="activeDocTab = 'generadas'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                 <polyline points="14 2 14 8 20 8"></polyline>
                             </svg>
-                            <p>Sin versiones</p>
-                        </div>
-                        <ul v-else class="doc-list">
-                            <li v-for="v in docVersions" :key="v.id" class="doc-list-item"
-                                :class="{ active: selectedPdfId === v.id }">
-                                <button class="doc-item-btn" @click="selectDocVersion(v)">
-                                    <div class="doc-item-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                            stroke-linejoin="round">
-                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                            <polyline points="14 2 14 8 20 8"></polyline>
-                                            <line x1="12" y1="13" x2="12" y2="17"></line>
-                                            <line x1="9" y1="15" x2="15" y2="15"></line>
-                                        </svg>
+                            Documentos Generados
+                        </button>
+                        <button class="doc-tab" :class="{ active: activeDocTab === 'firmadas' }"
+                            @click="activeDocTab = 'firmadas'">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z">
+                                </path>
+                                <polyline points="7 12 10 15 17 8"></polyline>
+                            </svg>
+                            Documentos Firmados
+                            <span v-if="signedDocuments && signedDocuments.length > 0" class="tab-badge">{{ signedDocuments.length }}</span>
+                        </button>
+                    </div>
+
+                    <div class="doc-list-section">
+                        <!-- Tab: Documentos Generados -->
+                        <template v-if="activeDocTab === 'generadas'">
+                            <div v-if="docLoading" class="skeleton-loading">
+                                <div v-for="i in 5" :key="`skeleton-${i}`" class="skeleton-item">
+                                    <div class="skeleton-icon"></div>
+                                    <div class="skeleton-content">
+                                        <div class="skeleton-title"></div>
+                                        <div class="skeleton-meta"></div>
                                     </div>
-                                    <div class="doc-item-content">
-                                        <div class="doc-item-name">{{ v.name || ('entrada ' + docTitle + (v.version ? `
-                                            v${v.version}` : '') + '.pdf') }}</div>
-                                        <div class="doc-item-meta">{{ v.createdBy || '—' }} • {{
-                                            formatTimestamp(v.createdAt) }}
+                                    <div class="skeleton-button"></div>
+                                </div>
+                            </div>
+                            <div v-else-if="docError" class="error-state">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                </svg>
+                                <p>{{ docError }}</p>
+                            </div>
+                            <div v-else-if="docVersions.length === 0" class="empty-versions-state">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <p>Sin versiones</p>
+                            </div>
+                            <ul v-else class="doc-list">
+                                <li v-for="v in docVersions" :key="v.id" class="doc-list-item"
+                                    :class="{ active: selectedPdfId === v.id }">
+                                    <button class="doc-item-btn" @click="selectDocVersion(v)">
+                                        <div class="doc-item-icon">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z">
+                                                </path>
+                                                <polyline points="14 2 14 8 20 8"></polyline>
+                                                <line x1="12" y1="13" x2="12" y2="17"></line>
+                                                <line x1="9" y1="15" x2="15" y2="15"></line>
+                                            </svg>
                                         </div>
-                                    </div>
-                                </button>
-                                <a :href="v.downloadUrl" target="_blank" class="btn-download-doc" title="Descargar"
-                                    @click="playDownloadAnimation(v.id)">
-                                    <svg class="download-icon" :class="{ 'show-checkmark': downloadingId === v.id }"
-                                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2">
-                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                        <polyline points="7 10 12 15 17 10"></polyline>
-                                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                                    </svg>
-                                    <svg v-show="downloadingId === v.id" class="checkmark-icon"
-                                        xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg>
-                                </a>
-                            </li>
-                        </ul>
+                                        <div class="doc-item-content">
+                                            <div class="doc-item-name">{{ v.name || ('entrada ' + docTitle + (v.version
+                                                ? `
+                                                v${v.version}` : '') + '.pdf') }}</div>
+                                            <div class="doc-item-meta">{{ v.createdBy || '—' }} • {{
+                                                formatTimestamp(v.createdAt) }}
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <a :href="v.downloadUrl" target="_blank" class="btn-download-doc" title="Descargar"
+                                        @click="playDownloadAnimation(v.id)">
+                                        <svg class="download-icon" :class="{ 'show-checkmark': downloadingId === v.id }"
+                                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="7 10 12 15 17 10"></polyline>
+                                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                                        </svg>
+                                        <svg v-show="downloadingId === v.id" class="checkmark-icon"
+                                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </a>
+                                </li>
+                            </ul>
+                        </template>
+
+                        <!-- Tab: Documentos Firmados -->
+                        <template v-if="activeDocTab === 'firmadas'">
+                            <div v-if="signedDocuments.length === 0" class="empty-versions-state">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <p>Sin documentos firmados</p>
+                            </div>
+                            <ul v-else class="doc-list signed-docs-list">
+                                <li v-for="d in signedDocuments" :key="d.id" class="doc-list-item signed-doc-item">
+                                    <button class="doc-item-btn" @click="selectSignedDocument(d)">
+                                        <div class="doc-item-icon signed-doc-icon">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                                stroke-linejoin="round">
+                                                <path
+                                                    d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z">
+                                                </path>
+                                                <polyline points="7 12 10 15 17 8"></polyline>
+                                            </svg>
+                                        </div>
+                                        <div class="doc-item-content">
+                                            <div class="doc-item-name">{{ d.name }}</div>
+                                            <div class="doc-item-meta">
+                                                <span class="uploader-info">
+                                                    <img v-if="d.uploaderFoto" :src="d.uploaderFoto" class="uploader-avatar" alt="avatar" />
+                                                    <span v-else class="uploader-avatar placeholder">{{ (d.uploader||'U').split(' ').map(s=>s[0]).slice(0,2).join('') }}</span>
+                                                    <strong class="uploader-name">{{ d.uploader || 'Usuario' }}</strong>
+                                                </span>
+                                                • {{ formatTimestamp(d.createdAt) }}
+                                            </div>
+                                        </div>
+                                    </button>
+                                    <a :href="d.downloadUrl" :download="d.name" class="btn-download-doc"
+                                        title="Descargar" @click="playDownloadAnimation(d.id)" target="_blank"
+                                        rel="noopener noreferrer">
+                                        <svg class="download-icon" :class="{ 'show-checkmark': downloadingId === d.id }"
+                                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="7 10 12 15 17 10"></polyline>
+                                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                                        </svg>
+                                        <svg v-show="downloadingId === d.id" class="checkmark-icon"
+                                            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                        </svg>
+                                    </a>
+                                </li>
+                            </ul>
+                        </template>
                     </div>
                 </aside>
 
                 <section class="doc-viewer">
                     <div class="viewer-content">
                         <div v-if="currentPreviewUrl" class="pdf-frame">
-                            <template v-if="!isMobileView">
-                                <iframe :src="currentPreviewUrl" title="Previsualización documento" style="width:100%; height:100%; border:0; min-height:360px;"></iframe>
+                            <template v-if="currentPreviewType && currentPreviewType.startsWith('image/')">
+                                <div class="image-preview-wrap" style="display:flex;align-items:center;justify-content:center;height:100%;">
+                                    <img :src="currentPreviewUrl" alt="Imagen" style="max-width:100%; max-height:80vh; object-fit:contain;" />
+                                </div>
+                            </template>
+                            <template v-else-if="!isMobileView">
+                                <iframe :src="currentPreviewUrl" title="Previsualización documento"
+                                    style="width:100%; height:100%; border:0; min-height:360px;"></iframe>
                             </template>
                             <template v-else>
                                 <BlobPdfViewer :src="currentPreviewUrl" />
                             </template>
+
+                            <div v-if="currentPreviewType && !currentPreviewType.startsWith('image/') && !currentPreviewUrl.toLowerCase().endsWith('.pdf')" class="download-only" style="padding:12px;text-align:center;">
+                                <p style="margin:0 0 8px 0;color:var(--muted, rgba(0,0,0,0.6));">Previsualización no disponible para este tipo de archivo.</p>
+                                <a :href="currentPreviewUrl" target="_blank" class="btn-download-doc">Descargar</a>
+                            </div>
                         </div>
                         <div v-else class="no-preview">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -413,7 +534,159 @@
             </div>
         </ModalBase>
 
-    </div>
+        <!-- Modal: upload de archivos -->
+        <ModalBase :open="showUploadModal" @close="closeUploadModal" @close-request="closeUploadModal" :maxWidth="1200"
+            :height="'85vh'" :hideInternalClose="false" :externalClose="true">
+            <div class="upload-modal-shell">
+
+                <div class="upload-header">
+                    <h3 class="upload-title">Subir documento firmado</h3>
+                    <p class="upload-subtitle">Folio: <strong>{{ uploadOrderFolio }}</strong></p>
+                </div>
+
+                <!-- Dropzone o preview dinámico -->
+                <div class="upload-dropzone-wrapper">
+                    <template v-if="uploadSuccessData">
+                        <div class="upload-success-full">
+                            <div class="success-card">
+                                <div class="success-icon">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                </div>
+                                <p class="success-title">Archivo subido correctamente</p>
+                                <div class="uploaded-file-info">
+                                    <p class="uploaded-file-name">{{ uploadSuccessData.name }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                    <template v-else-if="!uploadFile">
+                        <label for="fileInput" class="upload-dropzone-container"
+                            @dragenter.prevent="dragOverActive = true" @dragover.prevent="dragOverActive = true"
+                            @dragleave.prevent="dragOverActive = false" @drop.prevent="handleFlowbiteDrop"
+                            :class="{ 'is-drag-active': dragOverActive }">
+                            <div class="dropzone-content">
+                                <div class="dropzone-icon-wrapper">
+                                    <svg v-if="!dragOverActive" class="dropzone-icon" xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <svg v-else class="dropzone-icon icon-bounce" xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                        <path d="M21 9v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9"></path>
+                                        <polyline points="7 16 12 21 17 16"></polyline>
+                                        <line x1="12" y1="21" x2="12" y2="9"></line>
+                                    </svg>
+                                </div>
+                                <div class="dropzone-text">
+                                    <h3 class="dropzone-title">
+                                        <span v-if="!dragOverActive">Suelta un archivo aquí</span>
+                                        <span v-else>Suelta para subir</span>
+                                    </h3>
+                                    <p class="dropzone-subtitle">
+                                        o <span class="dropzone-link">haz clic para seleccionar</span>
+                                    </p>
+                                    <p class="dropzone-formats">PDF, imágenes, DOCX, ZIP y más</p>
+                                </div>
+                            </div>
+                            <input ref="fileInput" id="fileInput" type="file" @change="handleFileUpload"
+                                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.bmp,.tiff,.zip" class="hidden" />
+                        </label>
+                    </template>
+                    <template v-else>
+                        <div class="selected-file-info">
+                            <div class="file-info-card">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <div class="file-details">
+                                    <p class="file-name">{{ uploadFile.name }}</p>
+                                    <p class="file-size">{{ (uploadFile.size / 1024).toFixed(2) }} KB</p>
+                                </div>
+                                <button type="button" @click="uploadFile = null" class="btn-remove-file"
+                                    title="Remover archivo">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2">
+                                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="file-preview-section">
+                                <div v-if="isImageFile(uploadFile)" class="preview-container">
+                                    <img :src="previewImageUrl" :alt="uploadFile.name" class="preview-image" />
+                                </div>
+                                <div v-else-if="isPdfFile(uploadFile)" class="preview-container">
+                                    <div v-if="pdfPreviewUrl" class="pdf-viewer-container">
+                                        <iframe :src="pdfPreviewUrl" class="pdf-iframe"></iframe>
+                                    </div>
+                                    <div v-else class="file-icon-preview pdf-preview">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        </svg>
+                                        <span>PDF</span>
+                                    </div>
+                                </div>
+                                <div v-else-if="isDocFile(uploadFile)" class="preview-container">
+                                    <div v-if="docPreviewHtml" class="doc-viewer-container" v-html="docPreviewHtml">
+                                    </div>
+                                    <div v-else class="file-icon-preview doc-preview">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        </svg>
+                                        <span>{{ getFileExtension(uploadFile.name).toUpperCase() }}</span>
+                                    </div>
+                                </div>
+                                <div v-else class="preview-container">
+                                    <div class="file-icon-preview generic-preview">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        </svg>
+                                        <span>{{ getFileExtension(uploadFile.name).toUpperCase() }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Firmantes pendientes SIEMPRE visibles -->
+                <div v-if="uploadMissingSigners.length" class="pending-signers-section upload-modal-section">
+                    <h4 class="signers-title">Firmantes pendientes</h4>
+                    <p class="signers-subtitle">Completa el/los nombre(s) de los firmantes marcados como
+                        <strong>PENDIENTE</strong> antes de subir el documento.
+                    </p>
+                    <div class="signers-inputs">
+                        <div v-for="s in uploadMissingSigners" :key="s.key" class="signer-input-group">
+                            <label class="signer-label">{{ s.label }}:</label>
+                            <input v-model.trim="uploadSignerNames[s.key]" class="control"
+                                placeholder="Nombre completo" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Footer de acciones SIEMPRE visible -->
+                <div class="upload-footer upload-modal-section">
+                    <button type="button" @click="closeUploadModal" class="btn-cancel" :disabled="isUploading">
+                        {{ uploadSuccessData ? 'Cerrar' : 'Cancelar' }}
+                    </button>
+                    <button v-if="!uploadSuccessData" type="button" @click="submitUpload" class="btn-submit"
+                        :disabled="!uploadFile || isUploading" :class="{ 'is-loading': isUploading }">
+                        <span v-if="!isUploading">Subir archivo</span>
+                        <span v-else class="loading-text">Subiendo...</span>
+                    </button>
+
+                </div>
+            </div> <!-- upload-modal-shell -->
+        </ModalBase>
+    </div> <!-- order-management-container -->
 </template>
 
 <script setup>
@@ -448,6 +721,13 @@ onMounted(() => {
 })
 onBeforeUnmount(() => {
     window.removeEventListener('resize', handleResizeForPreview)
+    // Limpiar estado al abandonar el componente
+    showEditModal.value = false
+    showDocModal.value = false
+    showUploadModal.value = false
+    showMoreFilters.value = false
+    showLegend.value = false
+    allOrders.value = []
 })
 const route = useRoute()
 
@@ -471,13 +751,43 @@ const editExternalOffsetRight = ref(0)
 // Estado y helpers para modal de documento (versiones / preview)
 const showDocModal = ref(false)
 const docVersions = ref([])
+const signedDocuments = ref([])
 const docLoading = ref(false)
 const docTitle = ref('')
 const currentPreviewUrl = ref('')
+const currentPreviewType = ref('')
 const docError = ref('')
+const usersCache = ref(null)
 const selectedPdfId = ref(null)
 const downloadingId = ref(null)
 const isLoadingOrders = ref(false)
+const activeDocTab = ref('generadas') // 'generadas' o 'firmadas'
+
+// Estado y helpers para modal de upload
+const showUploadModal = ref(false)
+const uploadOrderId = ref(null)
+const uploadOrderFolio = ref('')
+const uploadFile = ref(null)
+const uploadedFile = ref(null)
+const uploadedFilePreviewUrl = ref('')
+const uploadMissingSigners = ref([])
+const uploadSignerNames = ref({})
+const previewImageUrl = ref('')
+const pdfPreviewUrl = ref('')
+const docPreviewHtml = ref('')
+const isUploading = ref(false)
+const dragOverActive = ref(false)
+const uploadSuccessData = ref(null)
+
+function resetUploadState() {
+    uploadFile.value = null
+    uploadSuccessData.value = null
+    previewImageUrl.value = ''
+    pdfPreviewUrl.value = ''
+    docPreviewHtml.value = ''
+    isUploading.value = false
+}
+
 
 async function openDocumentModal(order) {
     console.log('[ORDER_MANAGEMENT] openDocumentModal called:', order)
@@ -488,9 +798,13 @@ async function openDocumentModal(order) {
     }
     docTitle.value = String(docId)
     showDocModal.value = true
+    activeDocTab.value = 'generadas' // Reset to first tab
 
     // Auto-reload al abrir la modal
-    await fetchDocVersionsFor(docId)
+    await Promise.all([
+        fetchDocVersionsFor(docId),
+        fetchSignedDocuments(docId)
+    ])
 }
 
 async function fetchDocVersionsFor(folio) {
@@ -623,11 +937,346 @@ async function generateAllVersions() {
     }
 }
 
+async function fetchSignedDocuments(folio) {
+    // Try fetching signed documents; if 404, attempt common folio variants
+    try {
+        const tryFetch = async (f) => {
+            const r = await fetch(`/api/ops/entrada/${encodeURIComponent(f)}/signed-documents`)
+            return r
+        }
+
+        let res = await tryFetch(folio)
+        // If 404, try simple variants (with/without 'E-' prefix, remove leading zeros)
+        if (res.status === 404) {
+            const variants = []
+            const raw = String(folio || '')
+            // If starts with E- try without prefix
+            if (raw.toUpperCase().startsWith('E-')) {
+                variants.push(raw.replace(/^E-/i, ''))
+            } else {
+                variants.push('E-' + raw)
+            }
+            // Try stripping leading zeros from numeric part
+            const m = raw.match(/E-?0*(\d+)/i)
+            if (m && m[1]) {
+                variants.push('E-' + String(Number(m[1])))
+                variants.push(String(Number(m[1])))
+            }
+
+            // Remove duplicates and try each
+            const uniq = [...new Set(variants.filter(Boolean))]
+            for (const v of uniq) {
+                try {
+                    res = await tryFetch(v)
+                    if (res.ok) {
+                        folio = v
+                        break
+                    }
+                } catch (err) {
+                    // continue
+                }
+            }
+        }
+
+        if (!res.ok) {
+            const payload = await res.json().catch(() => ({}))
+            throw new Error(payload && (payload.msg || payload.error) ? (payload.msg || payload.error) : `Error obteniendo documentos firmados (status ${res.status})`)
+        }
+
+        const json = await res.json()
+        console.debug('[ORDER_MANAGEMENT] fetched signed-documents response:', json)
+        let docs = (json && json.documents && Array.isArray(json.documents)) ? json.documents : []
+        // Ensure we have uploader photos by resolving users list once
+        try {
+            if (!usersCache.value) {
+                const ures = await fetch('/api/auth/users')
+                if (ures.ok) {
+                    const ujson = await ures.json()
+                    usersCache.value = Array.isArray(ujson) ? ujson : []
+                } else {
+                    usersCache.value = []
+                }
+            }
+            if (usersCache.value && usersCache.value.length) {
+                docs = docs.map(d => {
+                    const uploaderName = String(d.uploader || '').trim()
+                    const found = usersCache.value.find(u => (u.nombre && String(u.nombre).trim().toLowerCase()) === uploaderName.toLowerCase())
+                    if (found) {
+                        // Normalize foto binary/data url like backend
+                        const foto = found.foto || null
+                        return { ...d, uploaderFoto: foto }
+                    }
+                    return d
+                })
+            }
+        } catch (e) {
+            console.debug('Could not resolve uploader photos:', e)
+        }
+
+        signedDocuments.value = docs
+        // Ensure docTitle tracks the folio used
+        docTitle.value = String(folio)
+    } catch (e) {
+        console.warn('Error fetching signed documents:', e)
+        signedDocuments.value = []
+    }
+}
+
 function closeDocumentModal() {
     showDocModal.value = false
     docVersions.value = []
+    signedDocuments.value = []
     currentPreviewUrl.value = ''
     docTitle.value = ''
+    activeDocTab.value = 'generadas'
+}
+
+function openUploadModal(order) {
+    console.log('[ORDER_MANAGEMENT] openUploadModal called:', order)
+    uploadOrderId.value = order?.id
+    uploadOrderFolio.value = order?.folio ?? String(order?.id ?? '')
+    uploadFile.value = null
+    // Fetch order details to detect pending signers
+    uploadMissingSigners.value = []
+    uploadSignerNames.value = {}
+        ; (async () => {
+            try {
+                const fol = encodeURIComponent(uploadOrderFolio.value)
+                const res = await fetch(`/api/ops/entrada/${fol}`)
+                if (res.ok) {
+                    const json = await res.json().catch(() => ({}))
+                    const orden = json && json.orden ? json.orden : null
+                    if (orden) {
+                        const signerKeys = [
+                            { key: 'firma_subdireccion_name', label: 'Subdirección' },
+                            { key: 'firma_ingeniero_name', label: 'Ingeniero biomédico que atiende' },
+                            { key: 'firma_recibe_name', label: 'Quien recibe de IMSS Bienestar' },
+                            { key: 'firma_entrega_name', label: 'Proveedor que entrega (empresa)' },
+                            { key: 'firma_vigilancia_name', label: 'Coordinación de Vigilancia' }
+                        ]
+                        const missing = []
+                        for (const s of signerKeys) {
+                            const val = (orden[s.key] || '').toString().trim()
+                            if (!val || val.toUpperCase() === 'PENDING') {
+                                missing.push({ key: s.key, label: s.label })
+                            }
+                        }
+                        uploadMissingSigners.value = missing
+                        // Initialize empty fields for inputs
+                        for (const m of missing) uploadSignerNames.value[m.key] = ''
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not fetch order details for upload modal', e)
+            } finally {
+                showUploadModal.value = true
+            }
+        })()
+}
+
+function closeUploadModal() {
+    showUploadModal.value = false
+    uploadOrderId.value = null
+    uploadOrderFolio.value = ''
+    resetUploadState() // <-- Use the new reset function
+}
+
+function isImageFile(file) {
+    if (!file) return false
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff']
+    const fileName = file.name.toLowerCase()
+    return imageExtensions.some(ext => fileName.endsWith(ext))
+}
+
+function isPdfFile(file) {
+    if (!file) return false
+    return file.name.toLowerCase().endsWith('.pdf')
+}
+
+function isDocFile(file) {
+    if (!file) return false
+    const docExtensions = ['.doc', '.docx', '.odt']
+    const fileName = file.name.toLowerCase()
+    return docExtensions.some(ext => fileName.endsWith(ext))
+}
+
+function getFileExtension(fileName) {
+    return fileName.split('.').pop()
+}
+
+async function handleFileUpload(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    processFile(file)
+}
+
+function handleFlowbiteDrop(e) {
+    dragOverActive.value = false
+    const file = e.dataTransfer?.files?.[0]
+    if (file) processFile(file)
+}
+
+function processFile(file) {
+    uploadFile.value = file
+    pdfPreviewUrl.value = ''
+    docPreviewHtml.value = ''
+    previewImageUrl.value = ''
+
+    // Si es imagen, generar preview
+    if (isImageFile(file)) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+            previewImageUrl.value = e.target.result
+        }
+        reader.readAsDataURL(file)
+    }
+    // Si es PDF, renderizar con PDF.js (blob)
+    else if (isPdfFile(file)) {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+            try {
+                const pdfData = e.target.result
+                const blob = new Blob([pdfData], { type: 'application/pdf' })
+                const blobUrl = URL.createObjectURL(blob)
+                pdfPreviewUrl.value = blobUrl
+            } catch (err) {
+                console.error('Error procesando PDF:', err)
+            }
+        }
+        reader.readAsArrayBuffer(file)
+    }
+    // Si es DOCX, renderizar con Mammoth
+    else if (isDocFile(file)) {
+        const reader = new FileReader()
+        reader.onload = async (e) => {
+            try {
+                const arrayBuffer = e.target.result
+                const result = await window.mammoth.convertToHtml({ arrayBuffer })
+                docPreviewHtml.value = result.value
+            } catch (err) {
+                console.error('Error procesando DOCX:', err)
+            }
+        }
+        reader.readAsArrayBuffer(file)
+    }
+}
+
+async function submitUpload() {
+    if (!uploadFile.value || !uploadOrderFolio.value) {
+        await Swal.fire({ icon: 'warning', title: 'Advertencia', text: 'Por favor selecciona un archivo', ...darkThemeConfig })
+        return
+    }
+
+    // Si hay firmantes pendientes, validar que se hayan completado los nombres
+    if (uploadMissingSigners.value && uploadMissingSigners.value.length) {
+        const missing = uploadMissingSigners.value.filter(s => !uploadSignerNames.value[s.key] || !String(uploadSignerNames.value[s.key]).trim())
+        if (missing.length) {
+            await Swal.fire({ icon: 'warning', title: 'Firmantes pendientes', text: 'Debes completar los nombres de todos los firmantes pendientes antes de subir el archivo.', ...darkThemeConfig })
+            return
+        }
+    }
+
+    isUploading.value = true
+    try {
+        const formData = new FormData()
+        formData.append('file', uploadFile.value)
+        // Attach signer names if provided
+        if (uploadMissingSigners.value && uploadMissingSigners.value.length) {
+            try {
+                formData.append('signerNames', JSON.stringify(uploadSignerNames.value || {}))
+            } catch (e) { }
+        }
+
+        // Try to include uploader info from localStorage and token for backend identification
+        const storedUser = (() => { try { return JSON.parse(localStorage.getItem('user')||'null') } catch { return null } })()
+        const uploaderNameHeader = (storedUser && storedUser.nombre) ? String(storedUser.nombre) : (localStorage.getItem('nombre') || '')
+        const token = localStorage.getItem('token') || null
+
+        const fetchOptions = {
+            method: 'POST',
+            body: formData,
+            credentials: 'include',
+            headers: {}
+        }
+        if (uploaderNameHeader) fetchOptions.headers['x-uploader-name'] = uploaderNameHeader
+        if (token) fetchOptions.headers['Authorization'] = `Bearer ${token}`
+
+        const res = await fetch(`/api/ops/entrada/${encodeURIComponent(uploadOrderFolio.value)}/pdfs/upload`, fetchOptions)
+
+        const json = await res.json().catch(() => ({}))
+
+        if (!res.ok) {
+            const msg = json && (json.msg || json.error) ? (json.msg || json.error) : 'Error al subir archivo'
+            throw new Error(msg)
+        }
+
+        // --- NEW ---
+        // Set success data to show the new success screen
+        uploadSuccessData.value = {
+            name: uploadFile.value.name,
+            uploader: json.uploader,
+            uploadedAt: json.uploadedAt
+        }
+        // --- END NEW ---
+
+        // Mostrar alerta de éxito
+        await Swal.fire({
+            icon: 'success',
+            title: 'Orden Firmada Subida Correctamente',
+            html: `<p>Puedes revisar este documento para descargas y demás con la función de documentos en la sección de <strong>DOCUMENTOS FIRMADOS</strong>.</p>`,
+            confirmButtonText: 'Cerrar',
+            ...darkThemeConfig
+        })
+
+        // Cerrar el modal de upload automáticamente
+        closeUploadModal()
+
+        // Actualizar el conteo de documentos para la orden en la tabla
+        const orderIndex = allOrders.value.findIndex(o => o.folio === uploadOrderFolio.value)
+        if (orderIndex !== -1) {
+            try {
+                const res = await fetch(`/api/ops/entrada/${encodeURIComponent(uploadOrderFolio.value)}/signed-documents`)
+                if (res.ok) {
+                    const json = await res.json()
+                    const count = (json && json.documents && Array.isArray(json.documents)) ? json.documents.length : 0
+                    allOrders.value[orderIndex].documentCount = count
+                }
+            } catch (e) {
+                console.warn('Error updating document count:', e)
+            }
+        }
+
+        // Refrescar la lista de documentos firmados y abrir la modal de documentos
+        try {
+            // Siempre refrescar signed documents para que el badge y la lista estén actualizados
+            await fetchSignedDocuments(uploadOrderFolio.value)
+
+            // Abrir modal de documentos y mostrar la pestaña de firmadas
+            docTitle.value = String(uploadOrderFolio.value)
+            activeDocTab.value = 'firmadas'
+            showDocModal.value = true
+
+            // Intentar seleccionar el documento recién subido
+            const uploadedId = json && json.uploadId ? json.uploadId : null
+            let selected = null
+            if (uploadedId) selected = signedDocuments.value.find(d => String(d.id) === String(uploadedId))
+            if (!selected && uploadFile.value && uploadFile.value.name) {
+                selected = signedDocuments.value.find(d => d.name === uploadFile.value.name)
+            }
+            if (selected) {
+                selectedPdfId.value = selected.id
+                currentPreviewUrl.value = selected.previewUrl || selected.downloadUrl || (`/api${selected.filePath}`)
+                currentPreviewType.value = selected.contentType || ''
+            }
+        } catch (e) {
+            console.warn('Error refreshing signed documents after upload:', e)
+        }
+    } catch (e) {
+        await Swal.fire({ icon: 'error', title: 'Error', text: String(e && e.message ? e.message : e), ...darkThemeConfig })
+    } finally {
+        isUploading.value = false
+    }
 }
 
 function selectDocVersion(v) {
@@ -648,6 +1297,25 @@ function selectDocVersion(v) {
         currentPreviewUrl.value = v.previewUrl || `/api/ops/entrada/${encodeURIComponent(folio)}/pdfs/${v.id}/preview`
     }
     selectedPdfId.value = v.id
+}
+
+function selectSignedDocument(d) {
+    if (!d) return
+    // Set selected id
+    selectedPdfId.value = d.id
+
+    // Use provided content type when available
+    currentPreviewType.value = d.contentType || ''
+
+    // Build preview URL (backend already provides absolute/relative previewUrl)
+    const url = d.previewUrl || d.downloadUrl || (d.filePath ? `/api${d.filePath}` : null)
+    if (!url) {
+        currentPreviewUrl.value = ''
+        return
+    }
+
+    // For mobile, route through proxy only for generated PDFs/versions; uploaded files are served under /api/uploads
+    currentPreviewUrl.value = url
 }
 
 function playDownloadAnimation(id) {
@@ -727,6 +1395,9 @@ const filterMarcaActive = ref(false)
 const filterModeloActive = ref(false)
 const filterUbicacionActive = ref(false)
 const filterClaveHRAEIActive = ref(false)
+const filterCantidadMinActive = ref(false)
+const filterCantidadMaxActive = ref(false)
+const filterAccesorioActive = ref(false)
 const filterEstado = ref('')
 const filterHoraInicioFrom = ref('')
 const filterHoraInicioTo = ref('')
@@ -734,6 +1405,9 @@ const filterMarca = ref('')
 const filterModelo = ref('')
 const filterUbicacion = ref('')
 const filterClaveHRAEI = ref('')
+const filterCantidadMin = ref(null)
+const filterCantidadMax = ref(null)
+const filterAccesorio = ref('')
 const filterMinItems = ref(null)
 const filterMaxItems = ref(null)
 const filterTipo = ref('')
@@ -911,13 +1585,16 @@ const activeFiltersList = computed(() => {
     if (filterMotivoActive.value) list.push({ key: 'motivo', label: 'Motivo de entrada', type: 'select', bindings: { modelValue: filterMotivo, 'onUpdate:modelValue': val => filterMotivo.value = val, class: 'control filter-input' } })
     if (filterObservacionesActive.value) list.push({ key: 'obs', label: 'Observaciones', type: 'input', bindings: { modelValue: filterObservaciones, 'onUpdate:modelValue': val => filterObservaciones.value = val, class: 'control filter-input', placeholder: 'Buscar en observaciones' } })
     if (filterIngenieroActive.value) list.push({ key: 'ing', label: 'Ingeniero residente', type: 'input', bindings: { modelValue: filterIngeniero, 'onUpdate:modelValue': val => filterIngeniero.value = val, class: 'control filter-input', placeholder: 'Buscar nombre' } })
-    if (filterTipoActive.value) list.push({ key: 'tipo', label: 'Tipo de artículo', type: 'select', bindings: { modelValue: filterTipo, 'onUpdate:modelValue': val => filterTipo.value = val, class: 'control filter-input' } })
-    if (filterItemTextActive.value) list.push({ key: 'itemText', label: 'Buscar en artículos', type: 'input', bindings: { modelValue: filterItemText, 'onUpdate:modelValue': val => filterItemText.value = val, class: 'control filter-input', placeholder: 'Nombre, modelo, serie...' } })
     if (filterHoraActive.value) list.push({ key: 'hora', label: 'Hora inicio (rango)', type: 'hora-range', bindings: {} })
-    if (filterMarcaActive.value) list.push({ key: 'marca', label: 'Marca de equipos', type: 'input', bindings: { modelValue: filterMarca, 'onUpdate:modelValue': val => filterMarca.value = val, class: 'control filter-input', placeholder: 'Ej. Philips...' } })
-    if (filterModeloActive.value) list.push({ key: 'modelo', label: 'Modelo de equipos', type: 'input', bindings: { modelValue: filterModelo, 'onUpdate:modelValue': val => filterModelo.value = val, class: 'control filter-input', placeholder: 'Ej. MX40...' } })
-    if (filterUbicacionActive.value) list.push({ key: 'ubicacion', label: 'Ubicación de equipos', type: 'input', bindings: { modelValue: filterUbicacion, 'onUpdate:modelValue': val => filterUbicacion.value = val, class: 'control filter-input', placeholder: 'Ej. UCIA...' } })
+    if (filterItemTextActive.value) list.push({ key: 'itemText', label: 'Nombre de equipo', type: 'input', bindings: { modelValue: filterItemText, 'onUpdate:modelValue': val => filterItemText.value = val, class: 'control filter-input', placeholder: 'Ej. Monitor, Ventilador...' } })
+    if (filterAccesorioActive.value) list.push({ key: 'accesorio', label: 'Accesorios', type: 'input', bindings: { modelValue: filterAccesorio, 'onUpdate:modelValue': val => filterAccesorio.value = val, class: 'control filter-input', placeholder: 'Ej. Cable, Batería...' } })
+    if (filterTipoActive.value) list.push({ key: 'tipo', label: 'Tipo de artículo', type: 'select', bindings: { modelValue: filterTipo, 'onUpdate:modelValue': val => filterTipo.value = val, class: 'control filter-input' } })
+    if (filterMarcaActive.value) list.push({ key: 'marca', label: 'Marca', type: 'input', bindings: { modelValue: filterMarca, 'onUpdate:modelValue': val => filterMarca.value = val, class: 'control filter-input', placeholder: 'Ej. Philips, GE...' } })
+    if (filterModeloActive.value) list.push({ key: 'modelo', label: 'Modelo', type: 'input', bindings: { modelValue: filterModelo, 'onUpdate:modelValue': val => filterModelo.value = val, class: 'control filter-input', placeholder: 'Ej. MX40...' } })
+    if (filterUbicacionActive.value) list.push({ key: 'ubicacion', label: 'Ubicación', type: 'input', bindings: { modelValue: filterUbicacion, 'onUpdate:modelValue': val => filterUbicacion.value = val, class: 'control filter-input', placeholder: 'Ej. UCIA...' } })
     if (filterClaveHRAEIActive.value) list.push({ key: 'claveHRAEI', label: 'Clave HRAEI', type: 'input', bindings: { modelValue: filterClaveHRAEI, 'onUpdate:modelValue': val => filterClaveHRAEI.value = val, class: 'control filter-input', placeholder: 'Ej. COMODATO...' } })
+    if (filterCantidadMinActive.value) list.push({ key: 'cantidadMin', label: 'Cantidad mínima', type: 'input', bindings: { modelValue: filterCantidadMin, 'onUpdate:modelValue': val => filterCantidadMin.value = val, class: 'control filter-input', placeholder: 'Mínimo...', type: 'number' } })
+    if (filterCantidadMaxActive.value) list.push({ key: 'cantidadMax', label: 'Cantidad máxima', type: 'input', bindings: { modelValue: filterCantidadMax, 'onUpdate:modelValue': val => filterCantidadMax.value = val, class: 'control filter-input', placeholder: 'Máximo...', type: 'number' } })
     return list
 })
 
@@ -930,11 +1607,14 @@ const hasActiveAdvancedFilters = computed(() => {
         filterIngenieroActive.value ||
         filterTipoActive.value ||
         filterItemTextActive.value ||
+        filterAccesorioActive.value ||
         filterHoraActive.value ||
         filterMarcaActive.value ||
         filterModeloActive.value ||
         filterUbicacionActive.value ||
-        filterClaveHRAEIActive.value
+        filterClaveHRAEIActive.value ||
+        filterCantidadMinActive.value ||
+        filterCantidadMaxActive.value
     )
 })
 
@@ -1019,10 +1699,18 @@ const filteredOrders = computed(() => {
             const search = filterClaveHRAEI.value.toLowerCase()
             return String(e.claveHRAEI || '').toLowerCase().includes(search)
         })
+        const matchAccesorio = !filterAccesorioActive.value || !filterAccesorio.value || (order.equiposEntrada || []).some(e => {
+            const search = filterAccesorio.value.toLowerCase()
+            // Busca en descripción del equipo o en accesorios si existen
+            const description = String(e.descripcion || e.nombre || '').toLowerCase()
+            return description.includes(search)
+        })
         const itemCount = (order.equiposEntrada || []).length || 0
         const matchMin = filterMinItems.value == null || filterMinItems.value === '' || itemCount >= Number(filterMinItems.value)
         const matchMax = filterMaxItems.value == null || filterMaxItems.value === '' || itemCount <= Number(filterMaxItems.value)
-        return matchFolio && matchSolicitante && matchSearch && matchDate && matchService && matchEspecialidad && matchMotivo && matchObservaciones && matchIngeniero && matchTipo && matchItemText && matchEstado && matchHoraFrom && matchHoraTo && matchMin && matchMax && matchMarca && matchModelo && matchUbicacion && matchClaveHRAEI
+        const matchCantidadMin = !filterCantidadMinActive.value || filterCantidadMin.value == null || itemCount >= Number(filterCantidadMin.value)
+        const matchCantidadMax = !filterCantidadMaxActive.value || filterCantidadMax.value == null || itemCount <= Number(filterCantidadMax.value)
+        return matchFolio && matchSolicitante && matchSearch && matchDate && matchService && matchEspecialidad && matchMotivo && matchObservaciones && matchIngeniero && matchTipo && matchItemText && matchAccesorio && matchEstado && matchHoraFrom && matchHoraTo && matchMin && matchMax && matchMarca && matchModelo && matchUbicacion && matchClaveHRAEI && matchCantidadMin && matchCantidadMax
     })
 })
 
@@ -1037,11 +1725,11 @@ function formatDate(dateStr) {
 }
 
 function goToCreateOrder() {
-    router.push({ name: 'op-entrada', query: { from: 'order-management' } })
+    router.push({ name: 'op-entrada', query: { from: 'order-management', t: Date.now() } })
 }
 
 function goToDashboard() {
-    router.push({ name: 'dashboard' })
+    router.push({ name: 'dashboard', query: { t: Date.now() } })
 }
 
 function closeFiltersDropdown() {
@@ -1578,15 +2266,39 @@ async function reloadOrdersFromServer() {
                 observacionesImg: orden.observaciones_img_path || null,
                 nombreIngeniero: orden.nombre_ingeniero || 'N/A',
                 equiposEntrada,
-                estado: 'completado'
+                estado: 'completado',
+                documentCount: 0
             }
         })
+
+        // Cargar conteos de documentos para cada orden
+        loadDocumentCountsForOrders()
     } catch (e) {
         console.warn('Error recargando órdenes:', e)
         allOrders.value = []
     } finally {
         loading.value = false
     }
+}
+
+async function loadDocumentCountsForOrders() {
+    // Cargar conteos de documentos para cada orden de forma paralela
+    const documentCountPromises = allOrders.value.map(async (order) => {
+        try {
+            const res = await fetch(`/api/ops/entrada/${encodeURIComponent(order.folio)}/signed-documents`)
+            if (res.ok) {
+                const json = await res.json()
+                const count = (json && json.documents && Array.isArray(json.documents)) ? json.documents.length : 0
+                order.documentCount = count
+            }
+        } catch (e) {
+            console.warn(`Error loading documents for ${order.folio}:`, e)
+            order.documentCount = 0
+        }
+    })
+
+    // Ejecutar todas las promesas en paralelo
+    await Promise.all(documentCountPromises)
 }
 
 function updateAndDownloadExcel() {
@@ -1735,6 +2447,8 @@ function clearFilters() {
     filterTipoActive.value = false
     filterItemText.value = ''
     filterItemTextActive.value = false
+    filterAccesorio.value = ''
+    filterAccesorioActive.value = false
     filterMinItems.value = null
     filterMaxItems.value = null
     filterEstado.value = ''
@@ -1749,6 +2463,10 @@ function clearFilters() {
     filterUbicacionActive.value = false
     filterClaveHRAEI.value = ''
     filterClaveHRAEIActive.value = false
+    filterCantidadMin.value = null
+    filterCantidadMinActive.value = false
+    filterCantidadMax.value = null
+    filterCantidadMaxActive.value = false
     // do not automatically close the panel when clearing — allow user to adjust further
 }
 
@@ -1765,11 +2483,14 @@ function removeActiveFilter(key) {
     else if (key === 'ing') filterIngenieroActive.value = false
     else if (key === 'tipo') filterTipoActive.value = false
     else if (key === 'itemText') filterItemTextActive.value = false
+    else if (key === 'accesorio') filterAccesorioActive.value = false
     else if (key === 'hora') filterHoraActive.value = false
     else if (key === 'marca') filterMarcaActive.value = false
     else if (key === 'modelo') filterModeloActive.value = false
     else if (key === 'ubicacion') filterUbicacionActive.value = false
     else if (key === 'claveHRAEI') filterClaveHRAEIActive.value = false
+    else if (key === 'cantidadMin') filterCantidadMinActive.value = false
+    else if (key === 'cantidadMax') filterCantidadMaxActive.value = false
 }
 
 function applyFilters() {
@@ -2895,6 +3616,94 @@ onMounted(() => {
     }
 }
 
+/* ===== Contención y truncado para previews y firmas (evita overflow en mobile/tablet) =====
+   - Establece `min-width: 0` en contenedores flex/grid para permitir que hijos encojan.
+   - Prioriza ellipsis en títulos y wrapping para descripciones.
+   - Limita imágenes/iframes con `max-width:100%` y `max-height` para que no empujen la card.
+*/
+
+/* Signed docs: items grid adaptativo */
+.signed-docs-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.signed-docs-list .signed-doc-item {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0; /* permite que hijos encojan en flex context */
+    overflow: hidden; /* contenedor límite real */
+}
+
+.signed-docs-list .doc-item-name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* títulos: ellipsis prioritario */
+}
+.signed-docs-list .doc-item-meta {
+    white-space: normal; /* metadatos: permiten wrapping */
+    overflow-wrap: anywhere;
+    font-size: 0.9rem;
+}
+
+/* Previews: imágenes y iframes nunca exceden el ancho de la card */
+.signed-docs-list .signed-doc-item img,
+.signed-docs-list .signed-doc-item iframe,
+.pdf-frame,
+.preview-image,
+.pdf-iframe {
+    max-width: 100%;
+    height: auto;
+    max-height: 46vh; /* limita altura para no empujar el layout */
+    object-fit: contain;
+    display: block;
+}
+
+/* Upload dropzone / preview containment */
+.upload-dropzone-wrapper .upload-dropzone-container,
+.upload-dropzone-wrapper .upload-preview,
+.upload-dropzone-wrapper .selected-file-info {
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden; /* evita que elementos internos salgan de la card */
+}
+
+.upload-preview { min-width: 0; }
+.file-details, .file-info-card { min-width: 0; }
+.file-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-size { font-size: 0.85rem; color: rgba(255,255,255,0.6); }
+
+/* Contención de iframe PDF en upload preview */
+.pdf-viewer-container .pdf-iframe { width: 100%; height: 40vh; max-height: 50vh; border: 0; }
+
+/* Firmantes: inputs siempre visibles y responsivos */
+.signers-inputs, .signer-inputs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.signer-input-group, .signer {
+    flex: 1 1 160px; /* encoje si hace falta, no rompe el layout */
+    min-width: 0; /* crítico para evitar overflow por inputs largos */
+}
+.signer-input-group input { width: 100%; box-sizing: border-box; overflow-wrap: anywhere }
+
+/* Botones y badges: compactación en mobile */
+.tab-badge, .action-badge, .documents-badge { display: inline-block; white-space: nowrap; }
+@media (max-width: 420px) {
+    .signed-docs-list { grid-template-columns: 1fr; }
+    .upload-actions button span { display: none } /* icon-only on very small widths */
+    .tab-badge, .action-badge, .documents-badge { font-size: 12px; padding: 4px 8px }
+}
+
+/* Small utility: ensure any flex child can shrink to avoid forcing parent width */
+.orders-table td > *,
+.orders-table td, .doc-item-content, .file-details { min-width: 0 }
+
+/* ===== End containment styles ===== */
+
 /* Dropdown Filter Styles */
 .dropdown-filter-group {
     position: relative;
@@ -3422,6 +4231,56 @@ onMounted(() => {
     transform: rotate(20deg);
 }
 
+.doc-tabs {
+    display: flex;
+    gap: 0;
+    padding: 0 12px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.1);
+    margin-bottom: 0;
+}
+
+.doc-tab {
+    flex: 1;
+    padding: 12px 16px;
+    border: none;
+    background: transparent;
+
+.tab-badge {
+    display: inline-block;
+    background: #ef4444;
+    color: #fff;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    margin-left: 8px;
+}
+    color: rgba(226, 232, 240, 0.6);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border-bottom: 2px solid transparent;
+    position: relative;
+}
+
+.doc-tab:hover {
+    color: rgba(226, 232, 240, 0.9);
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.doc-tab.active {
+    color: rgba(59, 130, 246, 1);
+    border-bottom-color: rgba(59, 130, 246, 1);
+}
+
+.doc-tab svg {
+    width: 16px;
+    height: 16px;
+}
+
 .doc-list-section {
     flex: 1;
     display: flex;
@@ -3492,6 +4351,11 @@ onMounted(() => {
     box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3);
 }
 
+/* Upload modal shell */
+.upload-modal-shell {
+    position: relative;
+}
+
 .doc-item-btn {
     flex: 1;
     display: flex;
@@ -3540,6 +4404,44 @@ onMounted(() => {
     font-size: 0.75rem;
     color: rgba(226, 232, 240, 0.5);
 }
+
+/* Estilos para documentos firmados */
+.signed-docs-list {
+    gap: 10px;
+}
+
+.signed-doc-item {
+    background: rgba(34, 197, 94, 0.08) !important;
+    border: 1px solid rgba(34, 197, 94, 0.2) !important;
+}
+
+.signed-doc-item:hover {
+    background: rgba(34, 197, 94, 0.12) !important;
+    border-color: rgba(34, 197, 94, 0.4) !important;
+}
+
+.signed-doc-item.active {
+    background: rgba(34, 197, 94, 0.2) !important;
+    border-color: rgba(34, 197, 94, 0.5) !important;
+}
+
+.signed-doc-icon {
+    color: rgba(34, 197, 94, 0.8) !important;
+}
+
+.uploader-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    background: rgba(34, 197, 94, 0.15);
+    border-radius: 4px;
+    color: rgba(34, 197, 94, 0.9);
+    font-weight: 500;
+}
+
+.uploader-info { display:inline-flex; align-items:center; gap:8px }
+.uploader-avatar { width:32px; height:32px; border-radius:50%; object-fit:cover }
+.uploader-avatar.placeholder { display:inline-flex; align-items:center; justify-content:center; background:#e6eefb; color:#2b6cb0; width:32px; height:32px; border-radius:50%; font-weight:700 }
+.uploader-name { margin-left:6px; font-weight:600 }
 
 .btn-download-doc {
     width: 32px;
@@ -3900,15 +4802,793 @@ onMounted(() => {
 @media (min-width: 300px) and (max-width: 768px) and (min-height: 600px) {
     .order-management-container {
         box-sizing: border-box;
-        transform: scale(0.8);
-        -webkit-transform: scale(0.8);
-        transform-origin: top center;
-        -webkit-transform-origin: top center;
-        /* Center the scaled content and avoid shifting to the right */
+        /* REMOVED transform scale: using transform to scale the whole container
+           reserved the original layout box, producing empty visual space below
+           the content on some mobile browsers (ghost vertical scroll). Setting
+           transform to none ensures the document flow height matches visual
+           content. Keep width/padding to control content size instead. */
+        transform: none;
+        -webkit-transform: none;
+        transform-origin: initial;
+        -webkit-transform-origin: initial;
         max-width: 1200px;
         width: 100%;
         padding: 0 12px;
         margin: 0 auto;
+    }
+}
+
+/* ===== UPLOAD MODAL STYLES ===== */
+.upload-modal-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 32px;
+    background: rgba(13, 20, 35, 0.95);
+    border-radius: 16px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    position: relative;
+    animation: modalFadeIn 0.5s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.upload-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+    padding-bottom: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-title {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: rgba(226, 232, 240, 0.95);
+    margin: 0;
+    letter-spacing: -0.025em;
+}
+
+.upload-subtitle {
+    font-size: 1rem;
+    color: rgba(226, 232, 240, 0.7);
+    margin: 0;
+    font-weight: 500;
+}
+
+.upload-subtitle strong {
+    color: rgba(226, 232, 240, 0.9);
+    font-weight: 700;
+}
+
+.upload-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.upload-content-full {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* On wide screens keep a tall scrollable area inside the modal; on small screens allow auto height
+       to avoid creating ghost vertical scroll in the page (min-height values below can push page height). */
+    height: calc(90vh - 160px);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.upload-dropzone-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+}
+
+.upload-dropzone-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.08), rgba(249, 115, 22, 0.04));
+    border: 3px dashed rgba(249, 115, 22, 0.4);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 400px;
+    position: relative;
+    overflow: hidden;
+}
+
+.upload-dropzone-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.02), rgba(249, 115, 22, 0.01));
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.upload-dropzone-container:hover {
+    border-color: rgba(249, 115, 22, 0.6);
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.12), rgba(249, 115, 22, 0.08));
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(249, 115, 22, 0.15);
+}
+
+.upload-dropzone-container:hover::before {
+    opacity: 1;
+}
+
+.upload-dropzone-container.is-drag-active {
+    border-color: rgba(249, 115, 22, 0.8);
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(249, 115, 22, 0.12));
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.3);
+    transform: scale(1.02);
+}
+
+.upload-dropzone-container.is-drag-active::before {
+    opacity: 1;
+}
+
+.dropzone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    z-index: 1;
+}
+
+.dropzone-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 50%;
+    border: 2px solid rgba(249, 115, 22, 0.3);
+    transition: all 0.4s ease;
+}
+
+.upload-dropzone-container:hover .dropzone-icon-wrapper {
+    background: rgba(249, 115, 22, 0.1);
+    border-color: rgba(249, 115, 22, 0.5);
+    transform: scale(1.1);
+}
+
+.upload-dropzone-container.is-drag-active .dropzone-icon-wrapper {
+    background: rgba(249, 115, 22, 0.15);
+    border-color: rgba(249, 115, 22, 0.7);
+    transform: scale(1.2);
+}
+
+.dropzone-icon {
+    width: 40px;
+    height: 40px;
+    color: rgba(249, 115, 22, 0.7);
+    transition: all 0.4s ease;
+}
+
+.upload-dropzone-container:hover .dropzone-icon {
+    color: rgba(249, 115, 22, 0.9);
+    transform: translateY(-4px);
+}
+
+.upload-dropzone-container.is-drag-active .dropzone-icon {
+    color: rgba(249, 115, 22, 1);
+    transform: translateY(-8px);
+}
+
+.dropzone-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+}
+
+.dropzone-title {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: rgba(226, 232, 240, 0.95);
+    margin: 0;
+    letter-spacing: -0.025em;
+}
+
+.dropzone-subtitle {
+    font-size: 1.1rem;
+    color: rgba(226, 232, 240, 0.75);
+    margin: 0;
+    font-weight: 500;
+}
+
+.dropzone-link {
+    color: rgba(249, 115, 22, 0.9);
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgba(249, 115, 22, 0.5);
+    transition: all 0.3s ease;
+}
+
+.dropzone-link:hover {
+    color: rgba(249, 115, 22, 1);
+    text-decoration-color: rgba(249, 115, 22, 0.8);
+}
+
+.dropzone-formats {
+    font-size: 0.9rem;
+    color: rgba(226, 232, 240, 0.5);
+    margin: 0;
+    font-weight: 400;
+}
+
+.selected-file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    animation: slideInUp 0.4s ease-out;
+}
+
+.file-info-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(46, 221, 90, 0.1), rgba(46, 221, 90, 0.05));
+    border: 1px solid rgba(46, 221, 90, 0.25);
+    border-radius: 12px;
+    color: rgba(226, 232, 240, 0.9);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(46, 221, 90, 0.1);
+}
+
+.file-info-card:hover {
+    background: linear-gradient(135deg, rgba(46, 221, 90, 0.15), rgba(46, 221, 90, 0.08));
+    border-color: rgba(46, 221, 90, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(46, 221, 90, 0.15);
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.file-info-card svg {
+    flex-shrink: 0;
+    color: rgba(46, 221, 90, 0.7);
+}
+
+.file-preview-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+}
+
+.preview-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.08), rgba(249, 115, 22, 0.04));
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    border-radius: 8px;
+    /* Keep previews usable but avoid forcing large min-heights on small viewports */
+    min-height: 240px;
+    max-height: 60vh;
+    overflow: auto;
+}
+
+.preview-image {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 6px;
+    object-fit: contain;
+}
+
+.file-icon-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.file-icon-preview svg {
+    width: 80px;
+    height: 80px;
+}
+
+.file-icon-preview span {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.pdf-preview svg {
+    color: rgba(239, 68, 68, 0.9);
+    filter: drop-shadow(0 4px 12px rgba(239, 68, 68, 0.3));
+}
+
+.pdf-preview span {
+    color: rgba(239, 68, 68, 0.95);
+}
+
+.doc-preview svg {
+    color: rgba(59, 130, 246, 0.9);
+    filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.3));
+}
+
+.doc-preview span {
+    color: rgba(59, 130, 246, 0.95);
+}
+
+.generic-preview svg {
+    color: rgba(148, 163, 184, 0.9);
+    filter: drop-shadow(0 4px 12px rgba(148, 163, 184, 0.3));
+}
+
+.generic-preview span {
+    color: rgba(148, 163, 184, 0.95);
+}
+
+.pending-signers-section {
+    padding: 24px;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.1), rgba(249, 115, 22, 0.05));
+    border: 1px solid rgba(249, 115, 22, 0.25);
+    border-radius: 12px;
+    margin-top: 24px;
+}
+
+.signers-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: rgba(226, 232, 240, 0.95);
+    margin: 0 0 8px 0;
+}
+
+.signers-subtitle {
+    font-size: 0.95rem;
+    color: rgba(226, 232, 240, 0.75);
+    margin: 0 0 16px 0;
+    line-height: 1.5;
+}
+
+.signers-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.signer-input-group {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.signer-input-group:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(249, 115, 22, 0.3);
+}
+
+.signer-label {
+    min-width: 140px;
+    font-weight: 600;
+    color: rgba(226, 232, 240, 0.9);
+    font-size: 0.95rem;
+}
+
+.upload-success-full {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: 20px;
+}
+
+.success-card {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    align-items: center;
+    text-align: center;
+    padding: 40px;
+    background: linear-gradient(135deg, rgba(46, 221, 90, 0.08), rgba(46, 221, 90, 0.04));
+    border: 2px solid rgba(46, 221, 90, 0.3);
+    border-radius: 12px;
+    max-width: 600px;
+}
+
+
+
+.file-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    background: rgba(46, 221, 90, 0.08);
+    border: 1px solid rgba(46, 221, 90, 0.2);
+    border-radius: 6px;
+}
+
+.file-info {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.file-info svg {
+    flex-shrink: 0;
+    color: rgba(46, 221, 90, 0.7);
+}
+
+.file-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.file-name {
+    font-weight: 500;
+    color: rgba(226, 232, 240, 0.9);
+    margin: 0;
+    font-size: 0.9rem;
+    word-break: break-word;
+}
+
+.file-size {
+    font-size: 0.75rem;
+    color: rgba(226, 232, 240, 0.6);
+    margin: 0;
+}
+
+.btn-remove-file {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.2);
+    color: rgba(255, 107, 107, 0.7);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-remove-file:hover {
+    background: rgba(255, 107, 107, 0.2);
+    border-color: rgba(255, 107, 107, 0.4);
+    color: rgba(255, 107, 107, 0.9);
+}
+
+.upload-footer {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    padding-top: 32px;
+    margin-top: 32px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-cancel,
+.btn-submit {
+    padding: 14px 28px;
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 140px;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-cancel {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(226, 232, 240, 0.8);
+}
+
+.btn-cancel:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(226, 232, 240, 0.95);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.1);
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.1));
+    border-color: rgba(249, 115, 22, 0.4);
+    color: rgba(249, 115, 22, 0.9);
+}
+
+.btn-submit:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.3), rgba(249, 115, 22, 0.2));
+    border-color: rgba(249, 115, 22, 0.6);
+    color: rgba(249, 115, 22, 1);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(249, 115, 22, 0.2);
+}
+
+.btn-cancel:disabled,
+.btn-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.loading-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.loading-text svg {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+
+
+
+/* PDF Viewer Container */
+.pdf-viewer-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.pdf-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 6px;
+}
+
+/* DOCX Viewer Container */
+.doc-viewer-container {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(226, 232, 240, 0.9);
+}
+
+.doc-viewer-container p {
+    margin: 12px 0;
+    color: rgba(226, 232, 240, 0.85);
+}
+
+.doc-viewer-container h1,
+.doc-viewer-container h2,
+.doc-viewer-container h3,
+.doc-viewer-container h4,
+.doc-viewer-container h5,
+.doc-viewer-container h6 {
+    margin: 16px 0 8px 0;
+    color: rgba(226, 232, 240, 0.95);
+    font-weight: 600;
+}
+
+.doc-viewer-container strong {
+    color: rgba(226, 232, 240, 0.95);
+}
+
+.doc-viewer-container em {
+    color: rgba(226, 232, 240, 0.8);
+}
+
+.doc-viewer-container ul,
+.doc-viewer-container ol {
+    margin: 12px 0 12px 24px;
+    color: rgba(226, 232, 240, 0.85);
+}
+
+
+
+
+
+.success-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background: rgba(46, 221, 90, 0.15);
+    border-radius: 50%;
+    color: rgba(46, 221, 90, 0.8);
+    animation: pulse-success 2s ease-in-out infinite;
+}
+
+.success-icon svg {
+    width: 32px;
+    height: 32px;
+}
+
+@keyframes pulse-success {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+.success-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: rgba(46, 221, 90, 0.9);
+    margin: 0;
+}
+
+.uploaded-image-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(46, 221, 90, 0.2);
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.uploaded-preview-image {
+    max-width: 100%;
+    max-height: 350px;
+    border-radius: 4px;
+    object-fit: cover;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.uploaded-file-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.file-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.file-type-badge svg {
+    width: 18px;
+    height: 18px;
+}
+
+.pdf-badge {
+    background: rgba(239, 68, 68, 0.15);
+    color: rgba(239, 68, 68, 0.9);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.doc-badge {
+    background: rgba(59, 130, 246, 0.15);
+    color: rgba(59, 130, 246, 0.9);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.uploaded-file-name {
+    font-size: 0.95rem;
+    color: rgba(226, 232, 240, 0.85);
+    margin: 0;
+    word-break: break-word;
+    max-width: 100%;
+}
+
+/* Upload modal full-overlay for drag-and-drop */
+.upload-drop-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(2, 6, 23, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 120;
+    border-radius: 16px;
+    transition: opacity 0.3s ease;
+    pointer-events: auto;
+}
+
+.upload-drop-overlay .overlay-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.25rem;
+    padding: 24px 32px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    animation: overlay-pulse 2s ease-in-out infinite;
+}
+
+@keyframes overlay-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    }
+
+    50% {
+        transform: scale(1.02);
+        box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
     }
 }
 </style>

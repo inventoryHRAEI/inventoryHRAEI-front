@@ -49,6 +49,7 @@
                         <th v-if="showColumnTipo">Tipo</th>
                         <th v-if="showColumnItems">Items</th>
                         <th v-if="showColumnEstado">Estado</th>
+                        <th>Documentos</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -99,6 +100,20 @@
                                     {{ order.estado || 'Pendiente' }}
                                 </span>
                             </td>
+                            <td class="cell-documents" data-label="Documentos">
+                                <div class="documents-container">
+                                    <button v-if="(order.documentCount || 0) > 0"
+                                        @click="$emit('openHistory', JSON.parse(JSON.stringify(order)))"
+                                        class="documents-badge clickable"
+                                        :title="`Ver ${order.documentCount} documento${order.documentCount !== 1 ? 's' : ''}`">
+                                        {{ order.documentCount }} documento{{ order.documentCount !== 1 ? 's' : '' }}
+                                    </button>
+                                    <button v-else @click="$emit('openHistory', JSON.parse(JSON.stringify(order)))"
+                                        class="documents-badge empty clickable" title="Ver documentos">
+                                        Sin documentos
+                                    </button>
+                                </div>
+                            </td>
                             <td class="cell-actions" data-label="Acciones">
                                 <button @click="$emit('openHistory', JSON.parse(JSON.stringify(order)))"
                                     class="action-btn doc-btn" title="Documentos">
@@ -107,6 +122,18 @@
                                         stroke-linejoin="round">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                         <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
+                                    <span v-if="order.documentCount && order.documentCount > 0" class="action-badge">{{
+                                        order.documentCount }}</span>
+                                </button>
+                                <button @click="$emit('upload', order)" class="action-btn upload-btn"
+                                    title="Subir archivos">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
                                     </svg>
                                 </button>
                                 <button @click="$emit('edit', order)" class="action-btn edit-btn" title="Editar">
@@ -269,7 +296,7 @@ const props = defineProps({
     },
 })
 
-const emit = defineEmits(['edit', 'excel', 'delete', 'create', 'deleteMultiple', 'openHistory'])
+const emit = defineEmits(['edit', 'excel', 'delete', 'create', 'deleteMultiple', 'openHistory', 'upload'])
 
 const currentPage = ref(1)
 const itemsPerPage = 10
@@ -448,9 +475,6 @@ function deleteSelected() {
     display: flex;
     flex-direction: column;
     gap: 0;
-    width: 100%;
-    overflow: hidden;
-    box-sizing: border-box;
 }
 
 /* MULTI-DELETE TOOLBAR */
@@ -567,23 +591,6 @@ function deleteSelected() {
     transform: translateY(0);
 }
 
-@media (max-width: 720px) {
-    .toggle-label {
-        font-size: 0.85rem;
-    }
-
-    .selected-count {
-        font-size: 0.8rem;
-        padding: 5px 10px;
-    }
-
-    .btn-delete-selected {
-        padding: 10px 14px;
-        font-size: 0.85rem;
-        flex: 1;
-    }
-}
-
 /* CHECKBOX COLUMN */
 .checkbox-col,
 .checkbox-cell {
@@ -614,12 +621,10 @@ function deleteSelected() {
     background: rgba(13, 20, 35, 0.65);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 14px;
-    overflow: hidden;
+    overflow: visible;
     box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(8px) saturate(120%);
     margin-bottom: 0;
-    width: 100%;
-    box-sizing: border-box;
 }
 
 /* ORDERS TABLE */
@@ -627,7 +632,6 @@ function deleteSelected() {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.9rem;
-    box-sizing: border-box;
 }
 
 .orders-table thead {
@@ -652,6 +656,8 @@ function deleteSelected() {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     transition: all 0.2s ease;
     background: transparent;
+    overflow: visible;
+    display: table-row;
 }
 
 .orders-table tbody tr:hover {
@@ -666,6 +672,7 @@ function deleteSelected() {
     padding: 14px;
     color: rgba(230, 235, 245, 0.85);
     vertical-align: middle;
+    overflow: visible !important;
 }
 
 .cell-folio {
@@ -731,135 +738,156 @@ function deleteSelected() {
 /* CELL ACTIONS */
 .cell-actions {
     display: flex;
-    gap: 8px;
+    flex-wrap: wrap;
+    gap: 6px;
     align-items: center;
-    white-space: nowrap;
+    justify-content: flex-start;
+    overflow: visible !important;
+    padding: 8px 8px 0 0 !important;
+    margin: 0 !important;
 }
 
 .action-btn {
+    position: relative;
     padding: 8px;
     background: rgba(255, 255, 255, 0.05);
     color: rgba(230, 235, 245, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 8px;
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-width: 40px;
+    min-height: 40px;
+    flex-shrink: 0;
+    overflow: visible !important;
+    /* Margen para reservar espacio al badge (position:absolute) */
+    margin: 0 2px 0 0 !important;
+}
+
+.action-btn svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+/* Small numeric badge for quick visibility on action buttons */
+.action-badge {
+    position: absolute;
+    top: -12px !important;
+    right: -12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+    padding: 0 !important;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+    color: #fff !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    border-radius: 50% !important;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    white-space: nowrap !important;
+    border: 2px solid rgba(13, 20, 35, 0.95) !important;
+    z-index: 9999 !important;
+    animation: badge-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite !important;
+    font-variant-numeric: tabular-nums !important;
+    overflow: visible !important;
+    clip-path: none !important;
+    margin: 0 !important;
+}
+
+/* Pulse animation para badge */
+@keyframes badge-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+        transform: scale(1);
+    }
+
+    50% {
+        box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        transform: scale(1.08);
+    }
+}
+
+/* Badge visible solo cuando hay contenido */
+.action-badge:empty {
+    display: none;
 }
 
 /* Hover: only visual lift + subtle bg; color/border set per-button */
 .action-btn:hover {
-    transform: translateY(-2px);
-    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-3px);
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* Document button: purple on hover */
+.action-btn.doc-btn {
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 .action-btn.doc-btn:hover {
-    color: #7c3aed;
-    border-color: #7c3aed;
-    background: rgba(124, 58, 237, 0.08);
-    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.12);
+    color: #a78bfa;
+    border-color: #a78bfa;
+    background: linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(99, 102, 241, 0.1));
+    box-shadow: 0 10px 28px rgba(124, 58, 237, 0.25);
+}
+
+/* Upload button: orange/amber on hover */
+.action-btn.upload-btn {
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.action-btn.upload-btn:hover {
+    color: #fb923c;
+    border-color: #fb923c;
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.18), rgba(245, 158, 11, 0.12));
+    box-shadow: 0 10px 28px rgba(249, 115, 22, 0.25);
 }
 
 /* Edit / Excel / Delete: colored on hover (keep existing colors) */
-.action-btn.edit-btn:hover {
-    border-color: #299deb;
-    color: #299deb;
-    background: rgba(41, 157, 235, 0.08);
-    box-shadow: 0 4px 12px rgba(41, 157, 235, 0.18);
-}
-
-.action-btn.excel-btn:hover {
-    border-color: #2edd5a;
-    color: #2edd5a;
-    background: rgba(46, 221, 90, 0.08);
-    box-shadow: 0 4px 12px rgba(46, 221, 90, 0.14);
-}
-
-.action-btn.delete-btn:hover {
-    border-color: #ff6b6b;
-    color: #ff6b6b;
-    background: rgba(255, 107, 107, 0.08);
-    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.12);
-}
-
-/* Mobile optimizations for action buttons */
-@media (max-width: 720px) {
-    .action-btn {
-        padding: 10px 12px;
-        border-radius: 8px;
-        font-size: 0.9rem;
-        flex: 1;
-        min-width: 44px;
-        min-height: 44px;
-    }
-
-    .action-btn:hover {
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .action-btn.doc-btn {
-        background: rgba(124, 58, 237, 0.12);
-        color: #a78bfa;
-        border-color: rgba(124, 58, 237, 0.25);
-    }
-
-    .action-btn.doc-btn:hover {
-        background: rgba(124, 58, 237, 0.2);
-        color: #d8b4fe;
-        box-shadow: 0 6px 16px rgba(124, 58, 237, 0.15);
-    }
-
-    .action-btn.edit-btn {
-        background: rgba(59, 130, 246, 0.12);
-        color: #93c5fd;
-        border-color: rgba(59, 130, 246, 0.25);
-    }
-
-    .action-btn.edit-btn:hover {
-        background: rgba(59, 130, 246, 0.2);
-        color: #bfdbfe;
-        box-shadow: 0 6px 16px rgba(59, 130, 246, 0.15);
-    }
-
-    .action-btn.delete-btn {
-        background: rgba(255, 107, 107, 0.12);
-        color: #fca5a5;
-        border-color: rgba(255, 107, 107, 0.25);
-    }
-
-    .action-btn.delete-btn:hover {
-        background: rgba(255, 107, 107, 0.2);
-        color: #fecaca;
-        box-shadow: 0 6px 16px rgba(255, 107, 107, 0.15);
-    }
+.action-btn.edit-btn {
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .action-btn.edit-btn:hover {
-    border-color: #299deb;
-    color: #299deb;
-    box-shadow: 0 4px 12px rgba(41, 157, 235, 0.2);
+    border-color: #60a5fa;
+    color: #60a5fa;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(96, 165, 250, 0.1));
+    box-shadow: 0 10px 28px rgba(59, 130, 246, 0.25);
+}
+
+.action-btn.excel-btn {
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .action-btn.excel-btn:hover {
-    border-color: #2edd5a;
-    color: #2edd5a;
-    box-shadow: 0 4px 12px rgba(46, 221, 90, 0.2);
+    border-color: #4ade80;
+    color: #4ade80;
+    background: linear-gradient(135deg, rgba(46, 221, 90, 0.15), rgba(74, 222, 128, 0.1));
+    box-shadow: 0 10px 28px rgba(46, 221, 90, 0.25);
+}
+
+.action-btn.delete-btn {
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .action-btn.delete-btn:hover {
-    border-color: #ff6b6b;
-    color: #ff6b6b;
-    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+    border-color: #fca5a5;
+    color: #fca5a5;
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(248, 113, 113, 0.1));
+    box-shadow: 0 10px 28px rgba(239, 68, 68, 0.25);
 }
 
-.action-btn.doc-btn:hover {
-    border-color: #7c3aed;
-    color: #7c3aed;
-    box-shadow: 0 6px 18px rgba(124, 58, 237, 0.14);
-}
+
 
 /* EMPTY STATE */
 .empty-state {
@@ -944,22 +972,19 @@ function deleteSelected() {
         display: none;
     }
 
-    /* Grid of cards: 2 columns on narrow tablets / wider phones, 1 column on small phones */
+    /* Grid of cards: prefer single-column on small viewports for better readability.
+       Force one card per row to avoid cramped/cascading content on narrow screens. */
     .orders-table tbody {
         display: grid;
-        grid-template-columns: repeat(2, minmax(240px, 1fr));
-        gap: 14px;
-        padding: 14px;
-        width: 100%;
-        box-sizing: border-box;
-        overflow: visible;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 12px;
     }
 
-    @media (max-width: 480px) {
+    @media (max-width: 420px) {
         .orders-table tbody {
             grid-template-columns: 1fr;
-            padding: 10px;
-            gap: 12px;
+            padding: 8px;
         }
     }
 
@@ -967,77 +992,43 @@ function deleteSelected() {
     .orders-table tr {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        padding: 14px;
-        border-radius: 14px;
-        background: linear-gradient(135deg, rgba(20, 28, 45, 0.8), rgba(15, 22, 40, 0.7));
-        border: 1px solid rgba(46, 221, 90, 0.08);
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.02);
-        transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-        position: relative;
+        gap: 8px;
+        padding: 12px;
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(18, 24, 38, 0.7), rgba(13, 20, 35, 0.6));
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
         overflow: hidden;
-        max-width: 100%;
-        min-width: 0;
-        width: 100%;
+        /* prevent inner content from escaping card */
         box-sizing: border-box;
     }
 
-    .orders-table tr::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, rgba(46, 221, 90, 0.6), rgba(46, 221, 90, 0.2), transparent);
-        opacity: 0;
-        transition: opacity 0.25s ease;
-    }
-
     .orders-table tr:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 8px 24px rgba(46, 221, 90, 0.15), inset 0 1px 1px rgba(255, 255, 255, 0.05);
-        border-color: rgba(46, 221, 90, 0.15);
-    }
-
-    .orders-table tr:hover::before {
-        opacity: 1;
-    }
-
-    .orders-table tr.row-selected {
-        background: linear-gradient(135deg, rgba(46, 221, 90, 0.15), rgba(46, 221, 90, 0.08));
-        border-color: rgba(46, 221, 90, 0.3);
-        box-shadow: 0 4px 16px rgba(46, 221, 90, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.03);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
     }
 
     .orders-table td {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 0;
+        padding: 6px 4px;
         border-bottom: none;
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .orders-table td:first-child {
-        padding-top: 0;
-    }
-
-    .orders-table td:last-child:not(.cell-actions) {
-        padding-bottom: 0;
+        min-width: 0;
+        /* allow flex children to shrink */
+        word-break: break-word;
     }
 
     /* Label on the left, value on the right */
     .orders-table td::before {
         content: attr(data-label);
-        color: rgba(230, 235, 245, 0.68);
+        color: rgba(230, 235, 245, 0.72);
         font-weight: 700;
-        flex: 1 0 45%;
-        font-size: 0.8rem;
-        opacity: 0.92;
-        letter-spacing: 0.3px;
-        text-transform: uppercase;
+        margin-right: 12px;
+        flex: 0 0 auto;
+        font-size: 0.82rem;
+        opacity: 0.95;
     }
 
     /* Header (folio) stands out */
@@ -1047,16 +1038,9 @@ function deleteSelected() {
         align-items: center;
         font-weight: 800;
         color: #2edd5a;
-        font-size: 1.05rem;
-        padding: 10px 0;
-        padding-bottom: 12px;
-        border-bottom: 2px solid rgba(46, 221, 90, 0.2);
-        margin-bottom: 4px;
-        width: 100%;
-    }
-
-    .orders-table .cell-folio::before {
-        display: none;
+        font-size: 1rem;
+        padding-bottom: 6px;
+        border-bottom: 1px dashed rgba(255, 255, 255, 0.03);
     }
 
     /* Truncate description to allow wrapping nicely */
@@ -1064,74 +1048,168 @@ function deleteSelected() {
         max-width: 100%;
         white-space: normal;
         overflow: visible;
-        word-break: break-word;
-        flex: 1 0 55%;
+    }
+
+    /* Ensure inner elements don't force horizontal overflow. Forces children to be shrinkable
+       and to use ellipsis where appropriate. This prevents long strings or badges from pushing
+       the card wider than its container. */
+    .orders-table td>* {
+        min-width: 0;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Allow descriptive fields to wrap instead of forcing the card wider. Titles truncate with ellipsis. */
+    .orders-table td .truncate-cell,
+    .orders-table td .doc-item-content .doc-item-meta {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .orders-table td .doc-item-name {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .orders-table .cell-actions {
         justify-content: flex-end;
-        gap: 8px;
-        width: 100%;
-        padding-top: 8px;
-        border-top: 1px solid rgba(46, 221, 90, 0.1);
-        margin-top: 4px;
-    }
-
-    .orders-table .cell-actions::before {
-        display: none;
+        gap: 6px;
     }
 
     .orders-table .folio-with-accordion {
         display: flex;
         align-items: center;
         gap: 8px;
-        width: 100%;
     }
 
+    .table-surface {
+        /* Keep table surface as a normal flow container; individual cards will hide overflow. */
+        overflow: visible;
+    }
+
+    /* Reduce paddings and font sizes on very small screens to avoid overflow */
+    @media (max-width: 420px) {
+        .orders-table tr {
+            padding: 8px;
+            gap: 6px;
+        }
+
+        .orders-table td::before {
+            font-size: 0.75rem;
+            margin-right: 8px;
+        }
+
+        .orders-table .cell-folio {
+            font-size: 0.95rem
+        }
+
+        .orders-table td {
+            padding: 6px 2px
+        }
+
+        .orders-table .cell-actions {
+            gap: 4px
+        }
+    }
+
+    /* Compact badges and action buttons on very small screens to avoid overflow. */
+    @media (max-width: 420px) {
+        .action-badge {
+            width: 22px;
+            height: 22px;
+            padding: 0;
+            font-size: 12px;
+            line-height: 1;
+            min-width: 0;
+        }
+
+        .action-btn {
+            padding: 6px;
+        }
+
+        .action-btn svg {
+            width: 16px;
+            height: 16px
+        }
+
+        .documents-badge {
+            font-size: 12px;
+            padding: 6px 8px
+        }
+    }
+}
+
+/* Allow badges to overflow card bounds on very small screens so they
+           remain fully visible (not clipped by parent's overflow:hidden). */
+@media (max-width: 420px) {
+    .orders-table tr {
+        overflow: visible;
+    }
+
+    /* Ensure container surfaces allow visible overflow so the badge can
+               overlap the button without being clipped. */
     .table-surface {
         overflow: visible;
     }
 
-    /* Status badge styling for cards */
-    .orders-table .status-badge {
-        font-size: 0.75rem;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-weight: 600;
+    /* Make the row the positioning context and render the badge above
+               the button. We set the button to static so the badge can be placed
+               relative to the card (`tr`). This ensures the badge visually
+               overlaps the button (badge 'eating' the button) and avoids
+               clipping caused by other stacking contexts. */
+    .orders-table tr {
+        position: relative;
+        z-index: 1;
     }
 
-    .orders-table .count-badge {
+    .action-btn {
+        position: static;
+        z-index: 2;
+        /* keep below the badge */
+        overflow: visible;
+    }
+
+    .action-badge {
+        position: absolute;
+        top: 10px;
+        right: 18px;
+        z-index: 9999;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+        border: 2px solid rgba(0, 0, 0, 0.12);
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        font-size: 13px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
-        background: linear-gradient(135deg, rgba(46, 221, 90, 0.25), rgba(46, 221, 90, 0.15));
-        color: rgba(46, 221, 90, 0.95);
-        border: 1px solid rgba(46, 221, 90, 0.3);
-        border-radius: 50%;
-        font-weight: 700;
-        font-size: 0.9rem;
-        box-shadow: 0 2px 6px rgba(46, 221, 90, 0.1);
-    }
-
-    /* Checkbox styling in cards */
-    .orders-table .checkbox-cell {
-        position: absolute;
-        right: 14px;
-        top: 14px;
-        padding: 0;
-        display: flex;
-        align-items: center;
-        border: none;
-    }
-
-    .orders-table .checkbox-cell::before {
-        display: none;
+        background: #ef4444;
+        color: #fff;
+        line-height: 1;
+        border-radius: 999px;
     }
 }
 
+/* Zoom por defecto en dispositivos móviles con al menos 350x620 (ajusta a 80%) */
+@media (min-width: 350px) and (max-width: 720px) and (min-height: 620px) {
+    .orders-table-container {
+        /* Avoid scaling via CSS transform on small viewports: scaling leaves the
+           original layout box size, which can create a gap/ghost-scroll below the
+           visually smaller content. Use responsive spacing instead. */
+        transform: none;
+        -webkit-transform: none;
+        transform-origin: initial;
+        -webkit-transform-origin: initial;
+    }
 
+    /* Evitar que el contenedor quede recortado al escalar */
+    .table-surface {
+        overflow: visible;
+    }
+}
 
 .pagination-nav {
     display: flex;
@@ -1139,6 +1217,153 @@ function deleteSelected() {
     gap: 8px;
     flex: 1 1 auto;
     justify-content: center;
+}
+
+/* Make pagination safe on small screens: allow nav to wrap and page numbers to scroll
+   horizontally inside their container instead of forcing viewport overflow. */
+.pagination-nav {
+    flex-wrap: wrap;
+}
+
+.page-numbers {
+    max-width: 60%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.page-numbers::-webkit-scrollbar {
+    height: 6px
+}
+
+.page-numbers::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 6px
+}
+
+@media (max-width: 420px) {
+    .pagination-section {
+        padding: 12px;
+        gap: 8px
+    }
+
+
+    /* Mobile-first readability tweaks: force single column at narrow widths,
+   stack label above value, allow wrapping and better spacing for 300x630 viewports. */
+    @media (max-width: 420px) {
+        .orders-table tbody {
+            grid-template-columns: 1fr !important;
+            padding: 8px;
+            gap: 10px;
+        }
+
+        .orders-table tr {
+            padding: 10px;
+            gap: 8px;
+            border-radius: 12px;
+            overflow: visible;
+            /* allow badges to be visible */
+            font-size: 0.95rem;
+        }
+
+        /* Stack label above value to avoid cascading long lines */
+        .orders-table td {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 8px 4px;
+            gap: 6px;
+        }
+
+        .orders-table td::before {
+            content: attr(data-label);
+            margin: 0;
+            font-size: 0.78rem;
+            color: rgba(230, 235, 245, 0.85);
+            opacity: 0.95;
+            width: 100%;
+        }
+
+        /* Allow values to wrap naturally and prevent ellipses */
+        .orders-table td>* {
+            min-width: 0;
+            max-width: 100%;
+            white-space: normal !important;
+            overflow: visible !important;
+            text-overflow: clip !important;
+            word-break: break-word;
+        }
+
+        .orders-table .truncate-cell,
+        .orders-table td .doc-item-content .doc-item-meta {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .orders-table .cell-actions {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        .orders-table .cell-folio {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        /* Ensure badges stay visible but don't push layout */
+        .action-badge,
+        .documents-badge {
+            position: relative;
+            z-index: 60;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+            margin-left: 6px;
+            flex: 0 0 auto;
+        }
+
+        /* Slightly larger touch targets for mobile */
+        .action-btn {
+            padding: 8px 10px;
+        }
+
+    }
+
+    .pagination-info {
+        order: 2;
+        width: 100%;
+        text-align: center
+    }
+
+    .pagination-nav {
+        order: 1;
+        width: 100%;
+        justify-content: space-between
+    }
+
+    .pagination-btn {
+        padding: 8px;
+        font-size: 0.85rem
+    }
+
+    .pagination-btn span {
+        display: none
+    }
+
+    /* icon-only to avoid width pressure */
+    .page-numbers {
+        max-width: calc(100% - 120px);
+    }
+
+    .page-number {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem
+    }
 }
 
 .pagination-btn {
@@ -1207,51 +1432,6 @@ function deleteSelected() {
     padding: 0 4px;
 }
 
-@media (max-width: 720px) {
-    .pagination-btn {
-        padding: 9px 12px;
-        font-size: 0.8rem;
-        border-radius: 6px;
-    }
-
-    .pagination-btn span {
-        display: none;
-    }
-
-    .pagination-btn svg {
-        width: 16px;
-        height: 16px;
-    }
-
-    .page-numbers {
-        gap: 3px;
-    }
-
-    .page-number {
-        width: 28px;
-        height: 28px;
-        font-size: 0.8rem;
-        border-radius: 4px;
-    }
-
-    .page-ellipsis {
-        font-size: 0.8rem;
-        padding: 0 2px;
-    }
-
-    .pagination-info {
-        font-size: 0.8rem;
-    }
-
-    .info-text {
-        font-size: 0.8rem;
-    }
-
-    .info-number {
-        font-weight: 700;
-    }
-}
-
 /* Accordion Styles */
 .folio-with-accordion {
     display: flex;
@@ -1298,25 +1478,9 @@ function deleteSelected() {
     padding: 16px 20px;
 }
 
-@media (max-width: 720px) {
-    .accordion-row {
-        display: contents;
-    }
-
-    .accordion-row td {
-        padding: 0;
-        margin-top: 10px;
-        border-top: 1px solid rgba(46, 221, 90, 0.12);
-        width: 100%;
-        overflow: hidden;
-    }
-}
-
 .accordion-content {
     display: flex;
     flex-direction: column;
-    width: 100%;
-    overflow: hidden;
 }
 
 .items-list {
@@ -1341,30 +1505,6 @@ function deleteSelected() {
     border-color: rgba(46, 221, 90, 0.2);
 }
 
-@media (max-width: 720px) {
-    .items-list {
-        gap: 8px;
-        width: 100%;
-        overflow: hidden;
-    }
-
-    .item-list-row {
-        gap: 10px;
-        padding: 10px;
-        border-radius: 8px;
-        background: rgba(46, 221, 90, 0.05);
-        border: 1px solid rgba(46, 221, 90, 0.15);
-        overflow: hidden;
-        max-width: 100%;
-        min-width: 0;
-    }
-
-    .item-list-row:hover {
-        background: rgba(46, 221, 90, 0.08);
-        border-color: rgba(46, 221, 90, 0.25);
-    }
-}
-
 .item-type-badge {
     flex-shrink: 0;
     padding: 4px 10px;
@@ -1381,8 +1521,6 @@ function deleteSelected() {
     display: flex;
     flex-direction: column;
     gap: 6px;
-    min-width: 0;
-    overflow: hidden;
 }
 
 .item-main {
@@ -1390,17 +1528,12 @@ function deleteSelected() {
     gap: 8px;
     align-items: center;
     justify-content: space-between;
-    min-width: 0;
-    width: 100%;
 }
 
 .item-description {
     color: rgba(230, 235, 245, 0.9);
     font-weight: 500;
     word-break: break-word;
-    flex: 1;
-    min-width: 0;
-    overflow-wrap: break-word;
 }
 
 .item-qty-badge {
@@ -1420,23 +1553,61 @@ function deleteSelected() {
     font-size: 0.8rem;
     padding-top: 6px;
     border-top: 1px solid rgba(46, 221, 90, 0.08);
-    width: 100%;
-    overflow: hidden;
 }
 
 .spec {
     color: rgba(230, 235, 245, 0.7);
     display: flex;
     gap: 4px;
-    min-width: 0;
-    flex-wrap: wrap;
-    align-items: flex-start;
 }
 
 .spec strong {
     color: rgba(230, 235, 245, 0.5);
     font-weight: 600;
+}
+
+/* Documents Cell Styles */
+.cell-documents {
+    text-align: center;
+}
+
+.documents-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.documents-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
     white-space: nowrap;
+    background: rgba(59, 130, 246, 0.18);
+    color: #0442a6;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    transition: all 0.2s ease;
+    cursor: default;
+}
+
+.documents-badge.clickable {
+    cursor: pointer;
+}
+
+.documents-badge:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.documents-badge.empty {
+    background: rgba(148, 163, 184, 0.12);
+    color: rgba(148, 163, 184, 0.8);
+    border-color: rgba(148, 163, 184, 0.2);
+}
+
+.documents-badge.empty:hover {
+    background: rgba(148, 163, 184, 0.18);
 }
 
 /* Old Styles - Keep for compatibility if needed */
@@ -1574,11 +1745,22 @@ function deleteSelected() {
     }
 
     .cell-actions {
-        gap: 6px;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
     }
 
     .action-btn {
-        padding: 6px;
+        padding: 8px;
+        min-width: 40px;
+        min-height: 40px;
+        flex-basis: calc(50% - 4px);
+        /* 2x2 grid layout for tablet */
+    }
+
+    .action-btn svg {
+        width: 18px;
+        height: 18px;
     }
 
     .truncate-cell {
@@ -1609,11 +1791,23 @@ function deleteSelected() {
     }
 
     .cell-actions {
-        gap: 4px;
+        gap: 6px;
+        flex-wrap: wrap;
+        justify-content: flex-start;
     }
 
     .action-btn {
-        padding: 6px;
+        padding: 10px;
+        min-width: 44px;
+        min-height: 44px;
+        border-radius: 10px;
+        flex-basis: calc(33.333% - 4px);
+        /* 3 column grid layout for mobile */
+    }
+
+    .action-btn svg {
+        width: 18px;
+        height: 18px;
     }
 }
 
