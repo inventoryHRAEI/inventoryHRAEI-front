@@ -42,7 +42,7 @@
                                 <path d="M22 3H2l8 9v7l4 2v-9l8-9z" fill="currentColor" />
                             </svg>
                             <span v-if="hasActiveAdvancedFilters" class="filter-badge">{{ activeFiltersList.length
-                                }}</span>
+                            }}</span>
                         </button>
 
                         <!-- Dropdown de filtros disponibles -->
@@ -179,14 +179,25 @@
 
             <div class="summary-card">
                 <h4>⚙️ Acciones</h4>
-                <button class="btn-export" @click="simulateExport">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="7 10 12 15 17 10"></polyline>
-                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                    </svg>
-                    Descargar historial
-                </button>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button class="btn-export" @click="goToTestingEnvironment">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        entorno aislado
+                    </button>
+                    <button class="btn-export" @click="simulateExport">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Descargar historial
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -334,6 +345,14 @@ function goToDashboard() {
         navigateAndRefresh(router, { name: 'dashboard' })
     } catch (e) {
         router.push('/dashboard')
+    }
+}
+
+function goToTestingEnvironment() {
+    try {
+        navigateAndRefresh(router, { name: 'testing-biomedical' })
+    } catch (e) {
+        router.push('/op/testing-biomedical')
     }
 }
 
