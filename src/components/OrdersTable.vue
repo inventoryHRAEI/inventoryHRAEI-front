@@ -568,27 +568,45 @@ function deleteSelected() {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 16px;
-    background: rgba(255, 107, 107, 0.15);
-    border: 1px solid rgba(255, 107, 107, 0.4);
-    color: #ff6b6b;
-    border-radius: 8px;
+    padding: 10px 18px;
+    background: linear-gradient(135deg, rgba(255, 83, 108, 0.2), rgba(255, 121, 97, 0.15));
+    border: 1px solid rgba(255, 83, 108, 0.45);
+    color: #ff7a95;
+    border-radius: 12px;
     cursor: pointer;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.2s ease;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: all 0.28s ease;
     flex: 0 1 auto;
+    box-shadow: 0 10px 22px rgba(255, 83, 108, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-delete-selected::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.25), transparent 60%);
+    opacity: 0;
+    transition: opacity 0.28s ease;
+    pointer-events: none;
 }
 
 .btn-delete-selected:hover {
-    background: rgba(255, 107, 107, 0.25);
-    border-color: rgba(255, 107, 107, 0.6);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+    background: linear-gradient(135deg, rgba(255, 83, 108, 0.3), rgba(255, 121, 97, 0.25));
+    border-color: rgba(255, 83, 108, 0.6);
+    transform: translateY(-2px) scale(1.01);
+    box-shadow: 0 12px 28px rgba(255, 83, 108, 0.25);
+}
+
+.btn-delete-selected:hover::after {
+    opacity: 1;
 }
 
 .btn-delete-selected:active {
-    transform: translateY(0);
+    transform: translateY(0) scale(0.99);
 }
 
 /* CHECKBOX COLUMN */
@@ -653,15 +671,34 @@ function deleteSelected() {
 
 
 .orders-table tbody tr {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.2s ease;
-    background: transparent;
-    overflow: visible;
+    border-bottom: 1px solid transparent;
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    background: linear-gradient(135deg, rgba(13, 20, 35, 0.9), rgba(24, 33, 52, 0.95));
+    overflow: hidden;
     display: table-row;
+    position: relative;
+    border-radius: 18px;
+    box-shadow: 0 25px 45px rgba(5, 8, 16, 0.6);
+    border: 1px solid rgba(46, 221, 90, 0.05);
+}
+
+.orders-table tbody tr::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at top right, rgba(46, 221, 90, 0.35), transparent 55%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+}
+
+.orders-table tbody tr:hover::before {
+    opacity: 1;
 }
 
 .orders-table tbody tr:hover {
-    background: rgba(46, 221, 90, 0.08);
+    transform: translateY(-6px);
+    box-shadow: 0 30px 50px rgba(5, 8, 16, 0.7);
 }
 
 .orders-table tbody tr:last-child {
@@ -670,9 +707,11 @@ function deleteSelected() {
 
 .orders-table td {
     padding: 14px;
-    color: rgba(230, 235, 245, 0.85);
+    color: rgba(230, 235, 245, 0.88);
     vertical-align: middle;
     overflow: visible !important;
+    position: relative;
+    z-index: 1;
 }
 
 .cell-folio {
@@ -749,22 +788,34 @@ function deleteSelected() {
 
 .action-btn {
     position: relative;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.05);
-    color: rgba(230, 235, 245, 0.7);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 8px;
+    padding: 10px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(46, 221, 90, 0.06));
+    color: rgba(230, 235, 245, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition: transform 0.28s ease, box-shadow 0.28s ease;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 42px;
+    min-height: 42px;
     flex-shrink: 0;
     overflow: visible !important;
-    /* Margen para reservar espacio al badge (position:absolute) */
-    margin: 0 2px 0 0 !important;
+    margin: 0 4px 0 0 !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.action-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    border: 1px solid transparent;
+    background: linear-gradient(120deg, rgba(46, 221, 90, 0.2), transparent);
+    opacity: 0;
+    transition: opacity 0.28s ease;
 }
 
 .action-btn svg {
@@ -824,9 +875,13 @@ function deleteSelected() {
 
 /* Hover: only visual lift + subtle bg; color/border set per-button */
 .action-btn:hover {
-    transform: translateY(-3px);
-    background: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    transform: translateY(-4px) scale(1.01);
+    background: linear-gradient(145deg, rgba(46, 221, 90, 0.15), rgba(255, 255, 255, 0.15));
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+}
+
+.action-btn:hover::after {
+    opacity: 1;
 }
 
 /* Document button: purple on hover */

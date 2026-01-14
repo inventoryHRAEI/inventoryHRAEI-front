@@ -212,7 +212,6 @@ import BiomedicalInventoryTable from '@/components/inventory/BiomedicalInventory
 import EquipmentDetail from '@/components/inventory/EquipmentDetail.vue'
 import StartMaintenanceModal from '@/components/inventory/StartMaintenanceModal.vue'
 import FinishMaintenanceModal from '@/components/inventory/FinishMaintenanceModal.vue'
-import { createMockInventory } from '@/data/mockInventory'
 import { useRouter } from 'vue-router'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 

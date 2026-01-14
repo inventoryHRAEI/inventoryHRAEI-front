@@ -215,7 +215,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
@@ -223,13 +223,29 @@ import BiomedicalInventoryTable from '@/components/inventory/BiomedicalInventory
 import EquipmentDetail from '@/components/inventory/EquipmentDetail.vue'
 import StartMaintenanceModal from '@/components/inventory/StartMaintenanceModal.vue'
 import FinishMaintenanceModal from '@/components/inventory/FinishMaintenanceModal.vue'
-import { createMockInventory } from '@/data/mockInventory'
 import { useRouter } from 'vue-router'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 
 const router = useRouter()
 
-const items = ref(createMockInventory())
+const items = ref([])
+
+onMounted(async () => {
+    try {
+        const resp = await fetch('/api/ops/historial-mantenimientos')
+        if (resp.ok) {
+            const json = await resp.json().catch(() => null)
+            // API may return array or { data: [...] }
+            const list = Array.isArray(json) ? json : (Array.isArray(json && json.data) ? json.data : [])
+            items.value = list
+        } else {
+            items.value = []
+        }
+    } catch (e) {
+        console.warn('No se pudo cargar inventario desde API, usando vacío:', e && e.message)
+        items.value = []
+    }
+})
 const startModalVisible = ref(false)
 const startTarget = ref(null)
 const finishModalVisible = ref(false)

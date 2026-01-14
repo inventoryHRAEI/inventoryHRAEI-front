@@ -22,8 +22,8 @@
                 <div class="filters-header">
                     <div class="filters-title-wrapper">
                         <div class="search-icon-container">
-                            <svg class="icon-search animated-pulse" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <svg class="icon-search animated-pulse" xmlns="http://www.w3.org/2000/svg" width="20"
+                                height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                 <circle cx="11" cy="11" r="8"></circle>
                                 <path d="m21 21-4.35-4.35"></path>
                             </svg>
@@ -40,351 +40,448 @@
                             </div>
                         </div>
                     </div>
+
                     <div class="filters-header-actions">
-                        <button class="btn-filter-panel" type="button" @click="toggleFilterPanel" :aria-expanded="showFilterPanel">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M4 6h16M8 12h8M12 18h4" stroke-linecap="round" stroke-linejoin="round" />
-                            </svg>
-                            <span>Filtros</span>
-                            <span v-if="activeAdvancedFiltersCount" class="filter-badge">{{ activeAdvancedFiltersCount }}</span>
-                        </button>
-                        <div class="search-signal" :class="{ 'is-active': loading }">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="8"></circle>
-                                <path d="m18.5 18.5-4.5-4.5"></path>
-                            </svg>
-                            <div class="signal-text">
-                                <strong>{{ loading ? 'Sincronizando' : 'Sincronizado' }}</strong>
-                                <span>{{ searchStatusMessage }}</span>
+                        <div class="filters-global-actions">
+                            <div class="dropdown-filters-container" ref="filterDropdownContainer">
+                                <button ref="filterDropdownBtn" @click="toggleFilterDropdown" class="btn-filter-primary"
+                                    :aria-expanded="isFilterDropdownOpen">
+                                    <span class="btn-filter-label">
+                                        <span class="btn-filter-icon">
+                                            <svg v-if="activeDynamicFilterIds.length === 0"
+                                                xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M4 4h16l-6 8v5l-4 3v-8z" />
+                                                <path d="M12 3v8" />
+                                            </svg>
+                                            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M4 4h16l-6 8v5l-4 3v-8z" />
+                                                <path d="M9 9l6 6" />
+                                                <path d="M15 9l-6 6" />
+                                            </svg>
+                                        </span>
+                                        <span class="btn-filter-text">
+                                            <span class="btn-filter-title">Filtros</span>
+                                            <span class="btn-filter-count"
+                                                v-if="activeDynamicFilterIds.length === 0">Añadir</span>
+                                            <span class="btn-filter-count" v-else>{{ activeDynamicFilterIds.length }}
+                                                activos</span>
+                                        </span>
+                                    </span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" class="btn-filter-chevron"
+                                        :class="{ 'rotate': isFilterDropdownOpen }">
+                                        <path d="m6 9 6 6 6-6" />
+                                    </svg>
+                                </button>
+
+                                <transition name="dropdown-fade">
+                                    <div v-show="isFilterDropdownOpen" class="dropdown-filters-menu" @click.stop>
+                                        <!-- Header with actions -->
+                                        <div class="dropdown-header">
+                                            <button class="action-btn action-clear-all"
+                                                :disabled="activeDynamicFilterIds.length === 0"
+                                                @click.stop="clearDynamicFilters">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                    stroke-width="2">
+                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                </svg>
+                                                Limpiar
+                                            </button>
+                                            <div class="dropdown-title-text">Filtros disponibles</div>
+                                        </div>
+
+                                        <!-- Search input -->
+                                        <div class="dropdown-search-wrapper">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                                class="search-icon">
+                                                <circle cx="11" cy="11" r="8"></circle>
+                                                <path d="m21 21-4.35-4.35"></path>
+                                            </svg>
+                                            <input class="dropdown-filters-search" type="search"
+                                                v-model="dropdownSearch" placeholder="Buscar filtros..." @click.stop />
+                                        </div>
+
+                                        <!-- Active filters section -->
+                                        <div v-if="activeDynamicFilterIds.length > 0" class="dropdown-active-section">
+                                            <div class="active-section-title">Activos ({{ activeDynamicFilterIds.length
+                                                }}/15)
+                                            </div>
+                                            <div class="active-filters-list">
+                                                <div v-for="id in activeDynamicFilterIds" :key="id"
+                                                    class="active-filter-chip">
+                                                    <span class="chip-label">{{ getDynamicFieldLabel(id) }}</span>
+                                                    <button class="chip-remove-btn"
+                                                        @click.stop="removeDynamicFilter(id)" title="Eliminar filtro">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                            stroke-width="2">
+                                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Loading state -->
+                                        <div v-if="metaLoading" class="dropdown-state-message loading-state">
+                                            <div class="loader-spinner-small"></div>
+                                            <span>Cargando catálogo...</span>
+                                        </div>
+
+                                        <!-- Empty state -->
+                                        <div v-else-if="filteredDropdownCatalog.length === 0"
+                                            class="dropdown-state-message empty-state">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <circle cx="12" cy="12" r="10"></circle>
+                                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                                            </svg>
+                                            <span>No hay filtros disponibles</span>
+                                        </div>
+
+                                        <!-- Filters list -->
+                                        <div v-else class="dropdown-filters-list">
+                                            <div v-for="cat in filteredDropdownCatalog" :key="cat.category"
+                                                class="filter-category">
+                                                <div class="category-header">{{ cat.category }}</div>
+                                                <div class="category-filters">
+                                                    <label v-for="field in cat.fields" :key="field.id"
+                                                        class="filter-checkbox-item"
+                                                        :class="{ 'is-disabled': isFixedField(field.id) || activeDynamicFilterIds.length >= 15 }">
+                                                        <input type="checkbox"
+                                                            :checked="activeDynamicFilterIds.includes(field.id)"
+                                                            :disabled="isFixedField(field.id) || activeDynamicFilterIds.length >= 15"
+                                                            @change="handleFilterCheckboxChange(field.id)" />
+                                                        <span class="checkbox-custom"></span>
+                                                        <span class="filter-item-label">
+                                                            {{ field.label }}
+                                                        </span>
+                                                        <span v-if="isFixedField(field.id)"
+                                                            class="filter-type-badge fixed">Fijo</span>
+                                                        <span v-else-if="activeDynamicFilterIds.includes(field.id)"
+                                                            class="filter-type-badge active">Activo</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Footer -->
+                                        <div class="dropdown-footer">
+                                            <span class="filter-counter">{{ activeDynamicFilterIds.length }} de 15
+                                                filtros</span>
+                                        </div>
+                                    </div>
+                                </transition>
                             </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="filters-callout">
                     <div class="callout-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2">
                             <path d="M12 2 15 8l6 .5-4.5 4 1.5 6L12 16l-6 3 1.5-6-4.5-4L9 8z"></path>
                         </svg>
                         <span class="icon-halo"></span>
                     </div>
                     <div class="callout-content">
                         <p class="callout-title">Búsqueda guiada para equipos biomédicos</p>
-                        <p class="callout-subtext">Mantén la vista clara: cada filtro reacciona en tiempo real para darte contexto inmediato.</p>
+                        <p class="callout-subtext">Mantén la vista clara: cada filtro reacciona en tiempo real con
+                            debounce
+                            y persistencia.</p>
                     </div>
                     <div class="callout-metric">
-                        <span class="metric-label">Filtros avanzados activos</span>
-                        <strong class="metric-value">{{ activeAdvancedFiltersCount }}</strong>
+                        <span class="metric-label">Filtros dinámicos activos</span>
+                        <strong class="metric-value">{{ activeDynamicFilterIds.length }}</strong>
                         <span class="metric-time">se aplican al instante</span>
                     </div>
                 </div>
-                <div class="filters-panel">
-                    <div class="filters-grid">
-                        <div class="filter-item filter-primary">
-                            <label for="filter-no">
-                                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                                </svg>
-                                No. Registro
-                            </label>
-                            <div class="input-wrapper">
-                                <input id="filter-no" v-model="filters.no" type="text" placeholder="Ej. 001234"
-                                    @input="applyFilters" />
-                                <div class="input-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M10 2v4m0 0H6m4 0h4"/>
-                                        <path d="M2 10h4m0 0V6m0 4v4"/>
-                                        <path d="M14 2v4m0 0h4m-4 0h-4"/>
-                                        <path d="M22 10h-4m0 0V6m0 4v4"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="filter-item">
-                            <label for="filter-equipo">
-                                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>
-                                </svg>
-                                Equipo Médico
-                            </label>
-                            <div class="input-wrapper">
-                                <input id="filter-equipo" v-model="filters.equipoMedico" type="text"
-                                    placeholder="Monitor, Desfibrilador..." @input="applyFilters" />
-                                <div class="input-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="filter-item">
-                            <label for="filter-marca">
-                                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M6 2 3 6v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
-                                    <line x1="3" x2="21" y1="6" y2="6"/>
-                                    <path d="M16 10a4 4 0 0 1-8 0"/>
-                                </svg>
-                                Marca
-                            </label>
-                            <div class="input-wrapper">
-                                <input id="filter-marca" v-model="filters.marca" type="text"
-                                    placeholder="Philips, GE, Siemens..." @input="applyFilters" />
-                                <div class="input-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect width="20" height="14" x="2" y="3" rx="2"/>
-                                        <line x1="8" x2="16" y1="21" y2="21"/>
-                                        <line x1="12" x2="12" y1="17" y2="21"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="filter-item">
-                            <label for="filter-tipo">
-                                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                                </svg>
-                                Tipo de Mantenimiento
-                            </label>
-                            <div class="select-wrapper">
-                                <select id="filter-tipo" v-model="filters.tipoMantenimiento" @change="applyFilters">
-                                    <option value="">Todos</option>
-                                    <option value="Preventivo">Preventivo</option>
-                                    <option value="Correctivo">Correctivo</option>
-                                </select>
-                                <div class="select-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="m6 9 6 6 6-6"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="filter-item">
-                            <label for="filter-estatus">
-                                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="12" cy="12" r="10"/>
-                                    <path d="M12 16v-4"/>
-                                    <path d="M12 8h.01"/>
-                                </svg>
-                                Estatus
-                            </label>
-                            <div class="select-wrapper">
-                                <select id="filter-estatus" v-model="filters.estatus" @change="applyFilters">
-                                    <option value="">Todos</option>
-                                    <option value="ACTIVO">Activo</option>
-                                    <option value="INACTIVO">Inactivo</option>
-                                </select>
-                                <div class="select-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="m6 9 6 6 6-6"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="filter-item">
-                            <label for="filter-funcional">
-                                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                    <polyline points="22 4 12 14.01 9 11.01"/>
-                                </svg>
-                                ¿Funcional?
-                            </label>
-                            <div class="select-wrapper">
-                                <select id="filter-funcional" v-model="filters.funcional" @change="applyFilters">
-                                    <option value="">Todos</option>
-                                    <option value="SI">Sí</option>
-                                    <option value="NO">No</option>
-                                </select>
-                                <div class="select-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="m6 9 6 6 6-6"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="filter-item">
-                            <label for="filter-unidad">
-                                <svg class="field-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 21h18"/>
-                                    <path d="M5 21V7l8-4v18"/>
-                                    <path d="M19 21V11l-6-4"/>
-                                    <path d="M9 9v.01"/>
-                                    <path d="M9 12v.01"/>
-                                    <path d="M9 15v.01"/>
-                                    <path d="M9 18v.01"/>
-                                </svg>
-                                Unidad Médica
-                            </label>
-                            <div class="input-wrapper">
-                                <input id="filter-unidad" v-model="filters.unidadMedica" type="text"
-                                    placeholder="Sala, Área..." @input="applyFilters" />
-                                <div class="input-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                                        <circle cx="12" cy="10" r="3"/>
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="filter-actions">
-                        <button class="btn-reset" @click="resetFilters">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2">
-                                <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                                <path d="M21 3v5h-5"/>
-                                <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                                <path d="M8 16H3v5"/>
-                            </svg>
-                            Limpiar filtros
-                        </button>
-                        <button class="btn-advanced-toggle" @click="toggleAdvancedFilters">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2">
-                                <path d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
-                            </svg>
-                            {{ showAdvancedFilters ? 'Ocultar' : 'Mostrar' }} Avanzados
-                        </button>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Filtros Avanzados -->
-            <div v-if="showAdvancedFilters" class="advanced-filters-section">
-                <div class="advanced-filters-header">
-                    <h3>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 0 1-.659 1.591l-5.432 5.432a2.25 2.25 0 0 0-.659 1.591v2.927a2.25 2.25 0 0 1-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 0 0-.659-1.591L3.659 7.409A2.25 2.25 0 0 1 3 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0 1 12 3Z"/>
-                        </svg>
-                        Filtros Avanzados
-                    </h3>
-                    <div class="advanced-filters-stats">
-                        <span class="active-filters-count" v-if="activeAdvancedFiltersCount > 0">
-                            {{ activeAdvancedFiltersCount }} activo{{ activeAdvancedFiltersCount !== 1 ? 's' : '' }}
-                        </span>
-                    </div>
+                <div class="filters-layout" :class="{ 'has-dynamic': activeDynamicFilterIds.length > 0 }">
+                    <section class="filters-zone filters-zone-fixed" aria-label="Filtros fijos">
+                        <header class="zone-header">
+                            <div class="zone-title">
+                                <span class="zone-pill zone-pill-fixed">Fijo</span>
+                                <strong>Filtros obligatorios</strong>
+                            </div>
+                            <span class="zone-subtitle">Siempre visibles • No eliminables</span>
+                        </header>
+
+                        <div class="filters-grid-fixed"
+                            :class="{ 'grid-initial': activeDynamicFilterIds.length === 0 }">
+                            <div class="filter-card filter-card-fixed">
+                                <label for="filter-no">
+                                    <span class="field-label">No. Inventario</span>
+                                    <span class="field-badge field-badge-fixed">Fijo</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input id="filter-no" v-model="filters.no" type="text" placeholder="SIB-MSV-..." />
+                                </div>
+                            </div>
+
+                            <div class="filter-card filter-card-fixed">
+                                <label for="filter-no-registro">
+                                    <span class="field-label">No</span>
+                                    <span class="field-badge field-badge-fixed">Fijo</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input id="filter-no-registro" v-model="filters.noRegistro" type="text"
+                                        placeholder="1234" />
+                                </div>
+                            </div>
+
+                            <div class="filter-card filter-card-fixed">
+                                <label for="filter-estatus">
+                                    <span class="field-label">Estatus</span>
+                                    <span class="field-badge field-badge-fixed">Fijo</span>
+                                </label>
+                                <div class="select-wrapper">
+                                    <select id="filter-estatus" v-model="filters.estatus">
+                                        <option value="">Todos</option>
+                                        <option :value="SIN_ESTADO_VALUE">Sin estado</option>
+                                        <option v-for="opt in estatusOptions" :key="opt" :value="opt">{{ opt }}
+                                        </option>
+                                    </select>
+                                    <div class="select-icon">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="m6 9 6 6 6-6" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="filter-card filter-card-fixed">
+                                <label for="filter-equipo">
+                                    <span class="field-label">Equipo Médico</span>
+                                    <span class="field-badge field-badge-fixed">Fijo</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input id="filter-equipo" v-model="filters.equipoMedico" type="text"
+                                        placeholder="Monitor, Desfibrilador..." :list="equipoMedicoDatalistId" />
+                                    <datalist :id="equipoMedicoDatalistId">
+                                        <option v-for="v in equipoMedicoSuggestions" :key="v" :value="v" />
+                                    </datalist>
+                                </div>
+                            </div>
+
+                            <div class="filter-card filter-card-fixed">
+                                <label>
+                                    <span class="field-label">¿Funcional?</span>
+                                    <span class="field-badge field-badge-fixed">Fijo</span>
+                                </label>
+                                <div class="tri-toggle">
+                                    <button type="button" class="tri-option"
+                                        :class="{ active: filters.funcional === '' }"
+                                        @click="filters.funcional = ''">Todos</button>
+                                    <button type="button" class="tri-option"
+                                        :class="{ active: filters.funcional === 'SI' }"
+                                        @click="filters.funcional = 'SI'">Sí</button>
+                                    <button type="button" class="tri-option"
+                                        :class="{ active: filters.funcional === 'NO' }"
+                                        @click="filters.funcional = 'NO'">No</button>
+                                </div>
+                            </div>
+
+                            <div class="filter-card filter-card-fixed">
+                                <label for="filter-marca">
+                                    <span class="field-label">Marca</span>
+                                    <span class="field-badge field-badge-fixed">Fijo</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input id="filter-marca" v-model="filters.marca" type="text"
+                                        placeholder="Philips, GE, Siemens..." :list="marcaDatalistId" />
+                                    <datalist :id="marcaDatalistId">
+                                        <option v-for="v in marcaSuggestions" :key="v" :value="v" />
+                                    </datalist>
+                                </div>
+                            </div>
+
+                            <div class="filter-card filter-card-fixed">
+                                <label for="filter-unidad">
+                                    <span class="field-label">Unidad Médica</span>
+                                    <span class="field-badge field-badge-fixed">Fijo</span>
+                                </label>
+                                <div class="input-wrapper">
+                                    <input id="filter-unidad" v-model="filters.unidadMedica" type="text"
+                                        placeholder="UCI, Área..." :list="unidadMedicaDatalistId" />
+                                    <datalist :id="unidadMedicaDatalistId">
+                                        <option v-for="v in unidadMedicaSuggestions" :key="v" :value="v" />
+                                    </datalist>
+                                </div>
+                            </div>
+
+                            <div class="filter-card filter-card-fixed">
+                                <label for="filter-tipo">
+                                    <span class="field-label">Tipo de Mantenimiento</span>
+                                    <span class="field-badge field-badge-fixed">Fijo</span>
+                                </label>
+                                <div class="select-wrapper">
+                                    <select id="filter-tipo" v-model="filters.tipoMantenimiento">
+                                        <option value="">Todos</option>
+                                        <option value="Preventivo">Preventivo</option>
+                                        <option value="Correctivo">Correctivo</option>
+                                        <option value="Predictivo">Predictivo</option>
+                                    </select>
+                                    <div class="select-icon">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="m6 9 6 6 6-6" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section v-if="activeDynamicFilterIds.length > 0" class="filters-zone filters-zone-dynamic"
+                        aria-label="Filtros dinámicos">
+                        <header class="zone-header">
+                            <div class="zone-title">
+                                <span class="zone-pill zone-pill-dynamic">Dinámico</span>
+                                <strong>Filtros añadidos</strong>
+                            </div>
+                            <span class="zone-subtitle">Máx. 15 • Eliminables</span>
+                        </header>
+
+                        <div class="filters-grid-dynamic">
+                            <div v-for="id in activeDynamicFilterIds" :key="id" class="filter-card filter-card-dynamic">
+                                <div class="dynamic-card-header">
+                                    <label :for="`dyn-${id}`">
+                                        <span class="field-label">{{ getDynamicFieldLabel(id) }}</span>
+                                    </label>
+                                    <button type="button" class="btn-remove-filter" @click="removeDynamicFilter(id)"
+                                        title="Eliminar filtro">✕</button>
+                                </div>
+
+                                <div v-if="getDynamicFieldKind(id) === 'boolean'" class="tri-toggle tri-toggle-dynamic">
+                                    <button type="button" class="tri-option"
+                                        :class="{ active: getDynamicValue(id) === '' }"
+                                        @click="setDynamicValue(id, '')">Todos</button>
+                                    <button type="button" class="tri-option"
+                                        :class="{ active: getDynamicValue(id) === 'SI' }"
+                                        @click="setDynamicValue(id, 'SI')">Sí</button>
+                                    <button type="button" class="tri-option"
+                                        :class="{ active: getDynamicValue(id) === 'NO' }"
+                                        @click="setDynamicValue(id, 'NO')">No</button>
+                                </div>
+
+                                <div v-else-if="getDynamicFieldKind(id) === 'date'" class="input-wrapper">
+                                    <input :id="`dyn-${id}`" v-model="dynamicFilterValues[id]" type="text"
+                                        placeholder="DD/MM/AAAA" v-flatpickr />
+                                </div>
+
+                                <div v-else-if="isDynamicSelectable(id)" class="select-wrapper">
+                                    <select :id="`dyn-${id}`" v-model="dynamicFilterValues[id]">
+                                        <option value="">Todos</option>
+                                        <option v-for="v in getDynamicSelectOptions(id)" :key="v" :value="v">{{ v }}
+                                        </option>
+                                    </select>
+                                    <div class="select-icon">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="m6 9 6 6 6-6" />
+                                        </svg>
+                                    </div>
+                                </div>
+
+                                <div v-else class="input-wrapper">
+                                    <input :id="`dyn-${id}`" v-model="dynamicFilterValues[id]" type="text"
+                                        placeholder="Escribe para filtrar" :list="getDynamicDatalistId(id)" />
+                                    <datalist :id="getDynamicDatalistId(id)">
+                                        <option v-for="v in getDynamicSuggestions(id)" :key="v" :value="v" />
+                                    </datalist>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
                 </div>
-                <div class="advanced-filters-grid">
-                    <div class="filter-item advanced">
-                        <label for="filter-no-inventario">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/>
-                            </svg>
-                            No. de Inventario
-                        </label>
-                        <div class="input-wrapper advanced">
-                            <input id="filter-no-inventario" v-model="advancedFilters.noInventario" type="text"
-                                placeholder="Ej: INV-001" @input="applyAdvancedFilters" />
-                            <div class="inp ut-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.35-4.35"/>
-                                </svg>
+
+                <!-- Drawer lateral: + Añadir filtro -->
+                <div v-if="isAddFilterDrawerOpen" class="drawer-overlay" @click.self="closeAddFilterDrawer">
+                    <aside ref="drawerEl" :class="['drawer', { animating: drawerAnimating }]" role="dialog"
+                        aria-modal="true" aria-label="Añadir filtro">
+                        <header class="drawer-header">
+                            <div>
+                                <h3>Añadir filtro</h3>
+                                <p class="drawer-subtitle">Categorías colapsables • Campos reales de BD • Máx. 15
+                                    dinámicos</p>
                             </div>
-                        </div>
-                    </div>
-                    <div class="filter-item advanced">
-                        <label for="filter-clave-cnis">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M15 7h.01M7 7h.01M7 15h.01M15 15h.01M12 12V9"/>
-                                <circle cx="12" cy="12" r="3"/>
-                            </svg>
-                            Clave CNIS
-                        </label>
-                        <div class="input-wrapper advanced">
-                            <input id="filter-clave-cnis" v-model="advancedFilters.claveCnis" type="text"
-                                placeholder="Ej: CNIS-123" @input="applyAdvancedFilters" />
-                            <div class="input-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.35-4.35"/>
-                                </svg>
+                            <button class="drawer-close" type="button" @click="closeAddFilterDrawer">✕</button>
+                        </header>
+
+                        <div class="drawer-body">
+                            <div class="drawer-search-wrapper">
+                                <input class="drawer-search" type="search" v-model="drawerSearch"
+                                    placeholder="Buscar filtros..." aria-label="Buscar filtros" />
                             </div>
-                        </div>
-                    </div>
-                    <div class="filter-item advanced">
-                        <label for="filter-modelo">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                            </svg>
-                            Modelo
-                        </label>
-                        <div class="input-wrapper advanced">
-                            <input id="filter-modelo" v-model="advancedFilters.modelo" type="text"
-                                placeholder="Ej: X-Ray 5000" @input="applyAdvancedFilters" />
-                            <div class="input-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.35-4.35"/>
-                                </svg>
+
+                            <div class="drawer-meta">
+                                <span class="drawer-count">Añadidos: <strong>{{ activeDynamicFilterIds.length
+                                }}</strong> /
+                                    15</span>
+                                <span v-if="metaLoading" class="drawer-loading">Cargando catálogo...</span>
                             </div>
-                        </div>
-                    </div>
-                    <div class="filter-item advanced">
-                        <label for="filter-serie">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-                                <text x="12" y="15" text-anchor="middle" font-size="8" fill="currentColor">SN</text>
-                            </svg>
-                            No. de Serie
-                        </label>
-                        <div class="input-wrapper advanced">
-                            <input id="filter-serie" v-model="advancedFilters.numeroSerie" type="text"
-                                placeholder="Ej: SN123456" @input="applyAdvancedFilters" />
-                            <div class="input-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.35-4.35"/>
-                                </svg>
+
+                            <div v-if="metaError" class="drawer-empty">
+                                <p style="margin: 0 0 10px;">No se pudo cargar el catálogo de filtros.</p>
+                                <p style="margin: 0 0 12px; opacity: 0.85;">{{ metaError }}</p>
+                                <button type="button" class="drawer-add" @click="fetchMeta">Reintentar</button>
                             </div>
-                        </div>
-                    </div>
-                    <div class="filter-item advanced">
-                        <label for="filter-categoria">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M19 11H5m14 0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2m14 0V9a2 2 0 0 0-2-2M5 11V9a2 2 0 0 1 2-2m0 0V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2M7 7h10"/>
-                            </svg>
-                            Categoría
-                        </label>
-                        <div class="input-wrapper advanced">
-                            <input id="filter-categoria" v-model="advancedFilters.categoria" type="text"
-                                placeholder="Ej: Radiología" @input="applyAdvancedFilters" />
-                            <div class="input-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.35-4.35"/>
-                                </svg>
+
+                            <div v-else-if="!dynamicCatalog.length && !metaLoading" class="drawer-empty">
+                                No hay campos disponibles (verifica backend/BD).
+                                <div style="margin-top: 10px;">
+                                    <button type="button" class="drawer-add" @click="fetchMeta">Reintentar</button>
+                                </div>
                             </div>
+
+                            <details v-for="cat in filteredDynamicCatalog" :key="cat.category" class="drawer-category"
+                                open>
+                                <summary class="drawer-category-title">{{ cat.category }}</summary>
+                                <div class="drawer-list">
+                                    <div v-for="field in cat.fields" :key="field.id" class="drawer-item">
+                                        <div class="drawer-item-main">
+                                            <div class="drawer-item-title">
+                                                <span class="drawer-item-name">{{ field.label }}</span>
+                                                <span class="drawer-item-type">{{ getFieldTypeLabel(field) }}</span>
+                                            </div>
+                                            <div class="drawer-item-badges">
+                                                <span v-if="isFixedField(field.id)"
+                                                    class="drawer-badge drawer-badge-fixed">Fijo</span>
+                                                <span v-else-if="activeDynamicFilterIds.includes(field.id)"
+                                                    class="drawer-badge drawer-badge-added">Añadido</span>
+                                            </div>
+                                        </div>
+
+                                        <div style="display:flex; gap:10px; align-items:center;">
+                                            <button
+                                                v-if="!isFixedField(field.id) && activeDynamicFilterIds.includes(field.id)"
+                                                type="button" class="drawer-add"
+                                                style="border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.12);"
+                                                @click="removeDynamicFilter(field.id)">
+                                                Quitar
+                                            </button>
+
+                                            <button v-else type="button" class="drawer-add"
+                                                :disabled="isFixedField(field.id) || activeDynamicFilterIds.includes(field.id) || activeDynamicFilterIds.length >= 15"
+                                                @click="addDynamicFilter(field.id)">
+                                                Añadir
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
                         </div>
-                    </div>
-                    <div class="filter-item advanced">
-                        <label for="filter-ubicacion">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-                                <circle cx="12" cy="10" r="3"/>
-                            </svg>
-                            Ubicación Específica
-                        </label>
-                        <div class="input-wrapper advanced">
-                            <input id="filter-ubicacion" v-model="advancedFilters.ubicacionEspecifica" type="text"
-                                placeholder="Ej: Sala de Radiología" @input="applyAdvancedFilters" />
-                            <div class="input-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <circle cx="11" cy="11" r="8"/>
-                                    <path d="m21 21-4.35-4.35"/>
-                                </svg>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div clasperos="advanced-filter-actions">
-                    <button class="btn-reset-advanced" @click="resetAdvancedFilters">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                            <path d="M21 3v5h-5"/>
-                            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                            <path d="M8 16H3v5"/>
-                        </svg>
-                        Limpiar Avanzados
-                        </button>
+                    </aside>
                 </div>
             </div>
 
@@ -400,7 +497,7 @@
                         </svg>
                         Resumen de Equipos
                     </h3>
-                    <span class="cards-count">{{ displayedCards.length }} mostrados</span>
+                    <span class="cards-count">Mostrando {{ displayedCards.length }} de {{ visibleCount }}</span>
                 </div>
                 <div v-if="loading" class="loading">
                     <div class="loader-spinner"></div>
@@ -415,244 +512,168 @@
                     <p>No se encontraron equipos con los filtros aplicados</p>
                 </div>
                 <div v-else class="cards-grid">
-                    <div v-for="item in displayedCards" :key="item.No" class="maintenance-card"
-                        @click="selectItem(item)" :class="{ active: selectedItem?.No === item.No }">
+                    <div v-for="(item, idx) in displayedCards" :key="getItemKey(item, idx)" class="maintenance-card"
+                        @click="toggleSelect(item)"
+                        :class="{ active: isExpanded(item, idx), expanded: isExpanded(item, idx), 'card-sparse': isSparse(item) }"
+                        :aria-expanded="isExpanded(item, idx)" tabindex="0" @keydown.enter.prevent="toggleSelect(item)"
+                        @keydown.space.prevent="toggleSelect(item)">
                         <div class="card-accent" :class="getStatusAccentClass(item)"></div>
                         <div class="card-glow" :class="getStatusGlowClass(item)"></div>
                         <div class="card-header">
-                            <div class="card-title-group">
-                                <div class="card-no-container">
-                                    <span class="card-no">{{ item['No DE INVENTARIO'] || 'N/A' }}</span>
-                                    <div class="card-no-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/>
+                            <div class="card-header-top">
+                                <!-- Num de Inventario: SIEMPRE visible con label y valor (nunca en blanco) -->
+                                <div class="card-no-wrapper">
+                                    <div class="card-no">
+                                        <span class="card-pill-label">Num de Inventario </span>
+                                        <span class="card-pill-value"
+                                            :class="{ 'value-na': !hasRealValue(item['No DE INVENTARIO']) }">{{
+                                                displayValue(item['No DE INVENTARIO']) }}</span>
+                                    </div>
+                                    <div class="card-no-icon" aria-hidden="true">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path
+                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z" />
                                         </svg>
                                     </div>
                                 </div>
-                                <span class="card-equipo">{{ item['EQUIPO MEDICO'] || 'N/A' }}</span>
+
+                                <!-- Campo No: SIEMPRE visible, nunca en blanco -->
+                                <div class="card-record">
+                                    <span class="card-record-label">No</span>
+                                    <span class="card-record-value" :title="String(displayValue(item['No']))"
+                                        :class="{ 'value-na': !hasRealValue(item['No']) }">{{
+                                            displayValue(item['No'])
+                                        }}</span>
+                                </div>
+
+                                <!-- Close button shown only when expanded -->
+                                <button v-if="isExpanded(item, idx)" class="card-close" @click.stop="toggleSelect(null)"
+                                    aria-label="Cerrar" title="Cerrar">✕</button>
                             </div>
-                            <div class="card-status-container">
-                                <span class="card-status" :class="item['ESTATUS']?.toLowerCase()">
-                                    <div class="status-dot" :class="item['ESTATUS']?.toLowerCase()"></div>
-                                    {{ item['ESTATUS'] || 'Sin estado' }}
-                                </span>
+
+                            <div class="card-header-bottom">
+                                <div class="card-status-container">
+                                    <span class="card-status-label">Estatus</span>
+                                    <span class="card-status"
+                                        :class="[getStatusTextClass(item), getStatusPillClass(item)]">
+                                        <span class="status-dot" :class="getStatusTextClass(item)"></span>
+                                        {{ item['ESTATUS'] || 'Sin estado' }}
+                                    </span>
+                                </div>
+
+                                <div class="card-title-group">
+                                    <span v-if="isFieldVisible(item, 'EQUIPO MEDICO')" class="card-equipo">
+                                        {{ item['EQUIPO MEDICO'] }}
+                                    </span>
+                                    <span v-if="isSparse(item)" class="sparse-badge">Pocos datos</span>
+                                </div>
                             </div>
                         </div>
                         <div class="card-body">
                             <div class="card-info-row">
                                 <span class="card-label">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M6 2 3 6v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
-                                        <line x1="3" x2="21" y1="6" y2="6"/>
-                                        <path d="M16 10a4 4 0 0 1-8 0"/>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M6 2 3 6v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                                        <line x1="3" x2="21" y1="6" y2="6" />
+                                        <path d="M16 10a4 4 0 0 1-8 0" />
                                     </svg>
                                     Marca:
                                 </span>
-                                <span class="card-value">{{ item['MARCA'] || 'N/A' }}</span>
+                                <span class="card-value" :class="{ 'value-na': !hasRealValue(item['MARCA']) }">{{
+                                    displayValue(item['MARCA']) }}</span>
                             </div>
                             <div class="card-info-row">
                                 <span class="card-label">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2">
+                                        <path
+                                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                                     </svg>
                                     Modelo:
                                 </span>
-                                <span class="card-value">{{ item['MODELO'] || 'N/A' }}</span>
+                                <span class="card-value" :class="{ 'value-na': !hasRealValue(item['MODELO']) }">{{
+                                    displayValue(item['MODELO']) }}</span>
                             </div>
                             <div class="card-info-row">
                                 <span class="card-label">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M15 7h.01M7 7h.01M7 15h.01M15 15h.01M12 12V9"/>
-                                        <circle cx="12" cy="12" r="3"/>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M15 7h.01M7 7h.01M7 15h.01M15 15h.01M12 12V9" />
+                                        <circle cx="12" cy="12" r="3" />
                                     </svg>
                                     CNIS:
                                 </span>
-                                <span class="card-value card-cnis">{{ item['CLAVE CNIS'] || 'N/A' }}</span>
+                                <span class="card-value card-cnis"
+                                    :class="{ 'value-na': !hasRealValue(item['CLAVE CNIS']) }">{{
+                                        displayValue(item['CLAVE CNIS']) }}</span>
                             </div>
+                            <!-- Campos dinámicos activos: siempre se muestran si están añadidos (N/A si vacío) -->
+                            <template v-for="id in activeDynamicFilterIds" :key="'dyn-' + id">
+                                <div v-if="!isDynamicFieldDuplicate(id)" class="card-info-row">
+                                    <span class="card-label">{{ getDynamicFieldLabel(id) }}:</span>
+                                    <span class="card-value"
+                                        :class="{ 'value-na': !hasRealValue(getItemFieldValue(item, id)) }">{{
+                                            displayValue(getItemFieldValue(item, id)) }}</span>
+                                </div>
+                            </template>
                         </div>
                         <div class="card-footer">
-                            <div class="maintenance-badge" :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()">
+                            <div v-if="isFieldVisible(item, 'TIPO DE MANTENIMIENTO')" class="maintenance-badge"
+                                :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()">
                                 <div class="badge-icon" :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()"></div>
-                                {{ item['TIPO DE MANTENIMIENTO'] || 'N/A' }}
+                                {{ item['TIPO DE MANTENIMIENTO'] }}
                             </div>
-                            <div class="functional-indicator" :class="item['FUNCIONAL SI NO']?.toLowerCase()">
+                            <div v-if="isFieldVisible(item, 'FUNCIONAL SI NO')" class="functional-indicator"
+                                :class="item['FUNCIONAL SI NO']?.toLowerCase()">
                                 <span class="indicator-dot"></span>
                                 {{
                                     item['FUNCIONAL SI NO'] === 'SI'
                                         ? 'Funcional'
                                         : item['FUNCIONAL SI NO'] === 'NO'
                                             ? 'No Funcional'
-                                            : 'N/A'
+                                            : item['FUNCIONAL SI NO']
                                 }}
                             </div>
                         </div>
                         <div class="card-hover-effect"></div>
                     </div>
                 </div>
-                <div v-if="filteredData.length > pageSize && !loading" class="pagination">
-                    <button @click="previousPage" :disabled="currentPage === 1" class="btn-pagination">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2">
-                            <polyline points="15 18 9 12 15 6"></polyline>
-                        </svg>
-                        Anterior
-                    </button>
-                    <span class="page-info">Página {{ currentPage }} de {{ totalPages }}</span>
-                    <button @click="nextPage" :disabled="currentPage === totalPages" class="btn-pagination">
-                        Siguiente
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    </button>
+                <div v-if="visibleCount > pageSize && !loading" class="pagination">
+                    <button @click="firstPage" :disabled="currentPage === 1" class="btn-pagination"
+                        aria-label="Primera página">«</button>
+                    <button @click="previousPage" :disabled="currentPage === 1" class="btn-pagination"
+                        aria-label="Página anterior">Anterior</button>
+
+                    <div class="page-numbers">
+                        <button v-for="p in visiblePageNumbers" :key="`pg-${p}`" class="page-btn"
+                            :class="{ active: p === currentPage }" :disabled="p === '…'"
+                            @click="p !== '…' && goToPage(p)">{{ p
+                            }}</button>
+                    </div>
+
+                    <button @click="nextPage" :disabled="currentPage === totalPages" class="btn-pagination"
+                        aria-label="Página siguiente">Siguiente</button>
+                    <button @click="lastPage" :disabled="currentPage === totalPages" class="btn-pagination"
+                        aria-label="Última página">»</button>
+
+                    <div class="page-info">Mostrando {{ displayedStart }}-{{ displayedEnd }} de {{ visibleCount }}
+                    </div>
+
+                    <div class="page-size-select">
+                        <label for="psize">Por página</label>
+                        <select id="psize" v-model="pageSize" @change="changePageSize(Number(pageSize))">
+                            <option :value="6">6</option>
+                            <option :value="12">12</option>
+                            <option :value="24">24</option>
+                            <option :value="48">48</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <!-- Vista de Tabla Detallada (Al seleccionar item) -->
-            <div v-if="selectedItem" class="details-section">
-                <h3>Detalles del Mantenimiento</h3>
-                <div class="details-grid">
-                    <!-- Información General -->
-                    <div class="detail-group">
-                        <h4>Información General</h4>
-                        <div class="detail-row">
-                            <span class="detail-label">No. Registro:</span>
-                            <span class="detail-value">{{ selectedItem.No }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">No. de Inventario:</span>
-                            <span class="detail-value">{{ selectedItem['NO DE INVENTARIO'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Unidad Médica:</span>
-                            <span class="detail-value">{{ selectedItem['UNIDAD MEDICA'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Ubicación Específica:</span>
-                            <span class="detail-value">{{ selectedItem['UBICACION ESPECIFICA'] }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Información del Equipo -->
-                    <div class="detail-group">
-                        <h4>Información del Equipo</h4>
-                        <div class="detail-row">
-                            <span class="detail-label">Equipo Médico:</span>
-                            <span class="detail-value">{{ selectedItem['EQUIPO MEDICO'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Marca:</span>
-                            <span class="detail-value">{{ selectedItem['MARCA'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Modelo:</span>
-                            <span class="detail-value">{{ selectedItem['MODELO'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">No. de Serie:</span>
-                            <span class="detail-value">{{ selectedItem['NUMERO DE SERIE'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Categoría:</span>
-                            <span class="detail-value">{{ selectedItem['CATEGORIA'] }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Estado del Equipo -->
-                    <div class="detail-group">
-                        <h4>Estado del Equipo</h4>
-                        <div class="detail-row">
-                            <span class="detail-label">Estatus:</span>
-                            <span class="detail-value">{{ selectedItem['ESTATUS'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Condiciones:</span>
-                            <span class="detail-value">{{ selectedItem['CONDICIONES DEL EQUIPO'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">¿Funcional?:</span>
-                            <span class="detail-value">{{ selectedItem['FUNCIONAL SI NO'] }}</span>
-                        </div>
-                        <div class="detail-row" v-if="selectedItem['CAUSA DE NO FUNCIONAMIENTO']">
-                            <span class="detail-label">Causa No Funcionamiento:</span>
-                            <span class="detail-value">{{ selectedItem['CAUSA DE NO FUNCIONAMIENTO'] }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Mantenimiento -->
-                    <div class="detail-group">
-                        <h4>Información de Mantenimiento</h4>
-                        <div class="detail-row">
-                            <span class="detail-label">Tipo de Mantenimiento:</span>
-                            <span class="detail-value">{{ selectedItem['TIPO DE MANTENIMIENTO'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Último MP:</span>
-                            <span class="detail-value">{{ selectedItem['ULTIMO MP DD MM AAAA'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Cantidad MP al Año:</span>
-                            <span class="detail-value">{{ selectedItem['CANTIDAD DE MP AL AÑO'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Fecha de Adquisición:</span>
-                            <span class="detail-value">{{ selectedItem['FECHA DE ADQUISICION DD MM AAAA'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Fecha de Instalación:</span>
-                            <span class="detail-value">{{ selectedItem['FECHA DE INSTALACIÓN'] }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Garantía -->
-                    <div class="detail-group">
-                        <h4>Información de Garantía</h4>
-                        <div class="detail-row">
-                            <span class="detail-label">¿Con Garantía?:</span>
-                            <span class="detail-value">{{ selectedItem['GARANTIA SI NO'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Fin de Garantía:</span>
-                            <span class="detail-value">{{ selectedItem['FIN DE GARANTIA DD MM AAAA'] }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Garantía Cruce:</span>
-                            <span class="detail-value">{{ selectedItem['GARANTIA CRUCE'] }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Refacciones y Consumibles -->
-                    <div class="detail-group full-width">
-                        <h4>Refacciones, Accesorios y Consumibles</h4>
-                        <div class="detail-row">
-                            <span class="detail-label">Accesorios:</span>
-                            <span class="detail-value">{{ selectedItem['ACCESORIOS'] || 'N/A' }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Consumibles:</span>
-                            <span class="detail-value">{{ selectedItem['CONSUMIBLES'] || 'N/A' }}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="detail-label">Refacciones Levantamiento:</span>
-                            <span class="detail-value">{{ selectedItem['REFACCIONES\nLEVANTAMIENTO'] || 'N/A' }}</span>
-                        </div>
-                    </div>
-
-                    <!-- Observaciones -->
-                    <div class="detail-group full-width">
-                        <h4>Observaciones</h4>
-                        <div class="detail-row">
-                            <span class="detail-label">Observaciones:</span>
-                            <span class="detail-value">{{ selectedItem['OBSERVACIONES'] || 'N/A' }}</span>
-                        </div>
-                        <div class="detail-row" v-if="selectedItem['OBSERVACIONES\nLEVANTAMIENTO']">
-                            <span class="detail-label">Observaciones Levantamiento:</span>
-                            <span class="detail-value">{{ selectedItem['OBSERVACIONES\nLEVANTAMIENTO'] }}</span>
-                        </div>
-                    </div>
-                </div>
-                <button class="btn-close-details" @click="selectedItem = null">Cerrar detalles</button>
-            </div>
+            <!-- Detalles del mantenimiento eliminado por petición del usuario -->
 
             <!-- Mensaje cuando no hay datos -->
             <div v-if="filteredData.length === 0 && !loading && hasFilters" class="no-results">
@@ -664,7 +685,8 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
+import flatpickr from 'flatpickr'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
@@ -677,12 +699,55 @@ const filteredData = ref([])
 const selectedItem = ref(null)
 const currentPage = ref(1)
 const loading = ref(false)
-const pageSize = 6
-const showAdvancedFilters = ref(false)
+const pageSize = ref(6)
+
+// Persistencia
+const STORAGE_KEY = 'op.testing-biomedical.filters.v1'
+
+// Drawer (Añadir filtro)
+const isAddFilterDrawerOpen = ref(false)
+const drawerEl = ref(null)
+const drawerAnimating = ref(false)
+const drawerSearch = ref('')
+const filteredDynamicCatalog = computed(() => {
+    const q = String(drawerSearch.value || '').trim().toLowerCase()
+    if (!q) return dynamicCatalogByCategory.value
+    return dynamicCatalogByCategory.value.map(cat => ({
+        category: cat.category,
+        fields: (cat.fields || []).filter(f => String(f?.label || f?.id || '').toLowerCase().includes(q))
+    })).filter(c => Array.isArray(c.fields) && c.fields.length > 0)
+})
+
+// Dropdown de Filtros (nueva interfaz)
+const isFilterDropdownOpen = ref(false)
+const filterDropdownBtn = ref(null)
+const dropdownSearch = ref('')
+
+const filteredDropdownCatalog = computed(() => {
+    const q = String(dropdownSearch.value || '').trim().toLowerCase()
+    if (!q) return dynamicCatalogByCategory.value
+    return dynamicCatalogByCategory.value.map(cat => ({
+        category: cat.category,
+        fields: (cat.fields || []).filter(f => String(f?.label || f?.id || '').toLowerCase().includes(q))
+    })).filter(c => Array.isArray(c.fields) && c.fields.length > 0)
+})
+
+// Catálogo DB-driven
+const metaLoading = ref(false)
+const metaError = ref('')
+const metaFields = ref([])
+
+// Filtros dinámicos activos (por id)
+const activeDynamicFilterIds = ref([])
+const dynamicFilterValues = ref({})
+
+// Control de restauración
+let isRestoring = true
 
 // Filtros iniciales
 const initialFilters = {
     no: '',
+    noRegistro: '',
     equipoMedico: '',
     marca: '',
     tipoMantenimiento: '',
@@ -693,80 +758,796 @@ const initialFilters = {
 
 const filters = ref({ ...initialFilters })
 
-// Filtros avanzados iniciales
-const initialAdvancedFilters = {
-    noInventario: '',
-    claveCnis: '',
-    modelo: '',
-    numeroSerie: '',
-    categoria: '',
-    ubicacionEspecifica: ''
+const FIXED_FIELD_IDS = new Set(['estatus', 'equipoMedico', 'funcional', 'marca', 'unidadMedica', 'tipoMantenimiento'])
+
+// Mapear ids de meta a las claves exactas usadas en los objetos de item (caso DB/labels)
+const FIXED_COLUMN_MAP = {
+    // Backend uses 'no' for inventory folio; 'no_registro' maps to column 'No' (label shown as 'No')
+    no: 'No DE INVENTARIO',
+    no_registro: 'No',
+    'no_de_inventario': 'No DE INVENTARIO',
+    equipoMedico: 'EQUIPO MEDICO',
+    marca: 'MARCA',
+    modelo: 'MODELO',
+    claveCnis: 'CLAVE CNIS',
+    clave_cnis: 'CLAVE CNIS',
+    numeroSerie: 'NUMERO DE SERIE',
+    numero_de_serie: 'NUMERO DE SERIE',
+    tipoMantenimiento: 'TIPO DE MANTENIMIENTO',
+    funcional: 'FUNCIONAL SI NO',
+    unidadMedica: 'UNIDAD MEDICA',
+    estatus: 'ESTATUS'
 }
 
-const advancedFilters = ref({ ...initialAdvancedFilters })
-
 // Computed
+// Helper: decide si una fila tiene al menos un campo con información real
+function hasRealData(item) {
+    if (!item || typeof item !== 'object') return false
+    const checkFields = [
+        'No DE INVENTARIO', 'EQUIPO MEDICO', 'MARCA', 'MODELO', 'CLAVE CNIS',
+        'NUMERO DE SERIE', 'TIPO DE MANTENIMIENTO', 'FUNCIONAL SI NO', 'UNIDAD MEDICA'
+    ]
+    // Check default fields first
+    for (const f of checkFields) {
+        const v = item[f]
+        if (v === null || v === undefined) continue
+        const s = String(v).trim()
+        if (!s) continue
+        const low = s.toLowerCase()
+        if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') continue
+        return true
+    }
+    // If no default fields, check any active dynamic filter fields for data
+    for (const id of activeDynamicFilterIds.value) {
+        const col = getMetaFieldColumn(id)
+        if (!col) continue
+        const v = item[col]
+        if (v === null || v === undefined) continue
+        const s = String(v).trim()
+        if (!s) continue
+        const low = s.toLowerCase()
+        if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') continue
+        return true
+    }
+    return false
+}
+
+function isFieldVisible(item, fieldName) {
+    if (!item) return false
+    const v = item[fieldName]
+    if (v === null || v === undefined) return false
+    const s = String(v).trim()
+    if (!s) return false
+    const low = s.toLowerCase()
+    if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') return false
+    return true
+}
+
+// Determina si un valor tiene datos reales (no vacío, no N/A)
+function hasRealValue(v) {
+    if (v === null || v === undefined) return false
+    const s = String(v).trim()
+    if (!s) return false
+    const low = s.toLowerCase()
+    if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') return false
+    return true
+}
+
+// Muestra el valor o 'N/A' si está vacío
+function displayValue(v) {
+    if (v === null || v === undefined) return 'N/A'
+    const s = String(v).trim()
+    if (!s) return 'N/A'
+    const low = s.toLowerCase()
+    if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') return 'N/A'
+    return v
+}
+
+// Indica si el item tiene muchos campos vacíos (sparse)
+function isSparse(item) {
+    if (!item || typeof item !== 'object') return false
+    const checkFields = [
+        'No DE INVENTARIO', 'EQUIPO MEDICO', 'MARCA', 'MODELO', 'CLAVE CNIS',
+        'NUMERO DE SERIE', 'TIPO DE MANTENIMIENTO', 'FUNCIONAL SI NO', 'UNIDAD MEDICA'
+    ]
+    let total = 0
+    let filled = 0
+    for (const f of checkFields) {
+        total++
+        const v = item[f]
+        if (v === null || v === undefined) continue
+        const s = String(v).trim()
+        if (!s) continue
+        const low = s.toLowerCase()
+        if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') continue
+        filled++
+    }
+    if (total === 0) return false
+    const filledRatio = filled / total
+    // Si hay menos o igual al 40% de campos con datos reales, consideramos "pocos datos"
+    return filledRatio <= 0.4
+}
+
 const displayedCards = computed(() => {
-    const startIndex = (currentPage.value - 1) * pageSize
-    return filteredData.value.slice(startIndex, startIndex + pageSize)
+    const visible = Array.isArray(filteredData.value) ? filteredData.value.filter(hasRealData) : []
+    const startIndex = (currentPage.value - 1) * pageSize.value
+    return visible.slice(startIndex, startIndex + pageSize.value)
+})
+
+const visibleCount = computed(() => {
+    return Array.isArray(filteredData.value) ? filteredData.value.filter(hasRealData).length : 0
 })
 
 const totalPages = computed(() => {
-    return Math.ceil(filteredData.value.length / pageSize)
+    return Math.max(1, Math.ceil(visibleCount.value / pageSize.value))
 })
 
 const hasFilters = computed(() => {
-    return Object.values(filters.value).some(v => v !== '')
+    const fixedHas = Object.values(filters.value).some(v => String(v || '').trim() !== '')
+    const dynamicHas = activeDynamicFilterIds.value.some(id => String(dynamicFilterValues.value[id] || '').trim() !== '')
+    return fixedHas || dynamicHas
+})
+
+const displayedStart = computed(() => {
+    if (!visibleCount.value) return 0
+    return (currentPage.value - 1) * pageSize.value + 1
+})
+
+const displayedEnd = computed(() => {
+    if (!visibleCount.value) return 0
+    return Math.min(currentPage.value * pageSize.value, visibleCount.value)
+})
+
+const visiblePageNumbers = computed(() => {
+    const total = totalPages.value
+    const cur = currentPage.value
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+    const range = []
+    range.push(1)
+    let start = Math.max(2, cur - 2)
+    let end = Math.min(total - 1, cur + 2)
+    if (start > 2) range.push('…')
+    for (let i = start; i <= end; i++) range.push(i)
+    if (end < total - 1) range.push('…')
+    range.push(total)
+    return range
 })
 
 const searchStatusMessage = computed(() => {
     return loading.value ? 'Actualizando resultados y sincronizando con inventario...' : 'Listo para explorar con precisión'
 })
 
-const activeAdvancedFiltersCount = computed(() => {
-    return Object.values(advancedFilters.value).filter(v => v.trim() !== '').length
+const equipoMedicoDatalistId = 'fixed-equipoMedico-datalist'
+const marcaDatalistId = 'fixed-marca-datalist'
+const unidadMedicaDatalistId = 'fixed-unidadMedica-datalist'
+
+const equipoMedicoSuggestions = computed(() => {
+    return getMetaFieldSuggestions('equipoMedico')
 })
+
+const marcaSuggestions = computed(() => {
+    return getMetaFieldSuggestions('marca')
+})
+
+const unidadMedicaSuggestions = computed(() => {
+    return getMetaFieldSuggestions('unidadMedica')
+})
+
+const estatusOptions = computed(() => {
+    const items = Array.isArray(allData.value) ? allData.value : []
+
+    const normalize = (v) => String(v ?? '').trim().replace(/\s+/g, ' ')
+
+    // Prefer meta distinct values (these should match DB exactly)
+    const direct = getMetaField('estatus')
+    const byColumn = (metaFields.value || []).find(f => {
+        const col = getMetaFieldColumn(f?.id)
+        return String(col || '').toUpperCase() === 'ESTATUS'
+    })
+    const byLabel = (metaFields.value || []).find(f => String(f?.label || '').toLowerCase().includes('estatus'))
+
+    const field = direct || byColumn || byLabel
+    const metaValues = Array.isArray(field?.distinctValues) ? field.distinctValues : []
+
+    const set = new Map()
+    for (const v of metaValues) {
+        const n = normalize(v)
+        if (!n) continue
+        if (!set.has(n.toLowerCase())) set.set(n.toLowerCase(), n)
+    }
+
+    // Fallback: derive from loaded data (useful if meta doesn't include estatus)
+    if (set.size === 0) {
+        for (const it of items) {
+            const raw = it?.['ESTATUS']
+            const n = normalize(raw)
+            if (!n) continue
+            if (!set.has(n.toLowerCase())) set.set(n.toLowerCase(), n)
+        }
+    }
+
+    // Keep current selection visible even if not in meta list (but skip internal sentinel value)
+    if (filters.value.estatus && filters.value.estatus !== SIN_ESTADO_VALUE) {
+        const n = normalize(filters.value.estatus)
+        if (n && !set.has(n.toLowerCase())) set.set(n.toLowerCase(), n)
+    }
+
+    return Array.from(set.values()).sort((a, b) => String(a).localeCompare(String(b)))
+})
+
+const dynamicCatalog = computed(() => {
+    const all = Array.isArray(metaFields.value) ? metaFields.value : []
+    // No mostrar en el modal los aliases de filtros fijos (solo sirven para sugerencias)
+    return all.filter(f => !f?.fixed)
+})
+
+const dynamicCatalogByCategory = computed(() => {
+    const groups = new Map()
+    for (const field of dynamicCatalog.value) {
+        const category = field.category || 'Otros'
+        if (!groups.has(category)) groups.set(category, [])
+        groups.get(category).push(field)
+    }
+    return Array.from(groups.entries()).map(([category, fields]) => ({
+        category,
+        fields: fields.slice().sort((a, b) => String(a.label || '').localeCompare(String(b.label || '')))
+    }))
+})
+
+const vFlatpickr = {
+    mounted(el) {
+        // Only attach to date inputs (we only use this directive there)
+        flatpickr(el, {
+            dateFormat: 'd/m/Y',
+            allowInput: true,
+            disableMobile: true
+        })
+    },
+    unmounted(el) {
+        if (el && el._flatpickr) {
+            el._flatpickr.destroy()
+        }
+    }
+}
 
 // Métodos
 function goToDashboard() {
     navigateAndRefresh(router, { name: 'dashboard' })
 }
 
-async function applyFilters() {
-    await applyAdvancedFilters()
+function openAddFilterDrawer() {
+    // Trigger animated open from button position and position the drawer under the button
+    isAddFilterDrawerOpen.value = true
+    drawerAnimating.value = true
+    if (!metaFields.value.length) fetchMeta()
+
+    nextTick(() => {
+        try {
+            const btn = document.querySelector('.btn-open-drawer')
+            const drawer = drawerEl.value
+            if (!drawer || !btn) { drawerAnimating.value = false; return }
+
+            const b = btn.getBoundingClientRect()
+            const d = drawer.getBoundingClientRect()
+
+            // Compute final left so the drawer is centered horizontally on the button
+            let left = Math.round(b.left + b.width / 2 - d.width / 2)
+            const margin = 12
+            const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
+            left = Math.max(margin, Math.min(left, vw - d.width - margin))
+
+            // Try to place below button; if not enough space, place above
+            const spaceBelow = window.innerHeight - b.bottom
+            let top
+            if (spaceBelow >= d.height + 20) {
+                top = Math.round(b.bottom + 10)
+            } else {
+                top = Math.round(Math.max(margin, b.top - d.height - 10))
+            }
+
+            // Final positioning
+            drawer.style.position = 'fixed'
+            drawer.style.left = `${left}px`
+            drawer.style.top = `${top}px`
+            drawer.style.transformOrigin = 'top center'
+
+            // Start small at the top origin so it looks like it unfolds from the button
+            const startScale = Math.max(0.12, Math.min(0.28, Math.min(b.width / d.width, b.height / d.height)))
+            drawer.style.transform = `translateY(-6px) scale(${startScale})`
+            drawer.style.opacity = '0'
+            // Force style flush
+            void drawer.offsetWidth
+
+            requestAnimationFrame(() => {
+                drawer.style.transition = 'transform 320ms cubic-bezier(0.22,1,0.36,1), opacity 220ms ease'
+                drawer.style.transform = ''
+                drawer.style.opacity = '1'
+            })
+
+            const onEnd = (e) => {
+                if (e && e.target !== drawer) return
+                drawer.removeEventListener('transitionend', onEnd)
+                drawer.style.transition = ''
+                drawerAnimating.value = false
+                const focusable = drawer.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+                if (focusable) focusable.focus()
+                // Reposition after content settles (meta might fill the drawer)
+                positionDrawerUnderButton()
+            }
+            drawer.addEventListener('transitionend', onEnd)
+        } catch (err) {
+            drawerAnimating.value = false
+        }
+    })
 }
 
-function resetFilters() {
-    filters.value = { ...initialFilters }
-    applyFilters()
+function closeAddFilterDrawer() {
+    const drawer = drawerEl.value
+    const btn = document.querySelector('.btn-open-drawer')
+    if (drawer && btn) {
+        drawerAnimating.value = true
+        const b = btn.getBoundingClientRect()
+        const d = drawer.getBoundingClientRect()
+        // compute translate dx/dy from drawer final position to button center
+        const centerDrawerX = d.left + d.width / 2
+        const centerDrawerY = d.top + d.height / 2
+        const centerBtnX = b.left + b.width / 2
+        const centerBtnY = b.top + b.height / 2
+        const dx = Math.round(centerBtnX - centerDrawerX)
+        const dy = Math.round(centerBtnY - centerDrawerY)
+        // scale towards button size
+        const scale = Math.max(0.12, Math.min(0.28, Math.min(b.width / d.width, b.height / d.height)))
+
+        drawer.style.transition = 'transform 220ms cubic-bezier(0.4,0,0.2,1), opacity 180ms ease'
+        drawer.style.transformOrigin = 'top center'
+        drawer.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`
+        drawer.style.opacity = '0'
+
+        const onEnd = () => {
+            drawer.removeEventListener('transitionend', onEnd)
+            drawer.style.transition = ''
+            drawer.style.transform = ''
+            drawer.style.opacity = ''
+            drawer.style.left = ''
+            drawer.style.top = ''
+            drawer.style.position = ''
+            drawerAnimating.value = false
+            isAddFilterDrawerOpen.value = false
+        }
+        drawer.addEventListener('transitionend', onEnd)
+    } else {
+        isAddFilterDrawerOpen.value = false
+    }
 }
 
-function toggleAdvancedFilters() {
-    showAdvancedFilters.value = !showAdvancedFilters.value
+// Métodos para dropdown de filtros
+function toggleFilterDropdown() {
+    if (isFilterDropdownOpen.value) {
+        closeFilterDropdown()
+    } else {
+        openFilterDropdown()
+    }
 }
 
-async function applyAdvancedFilters() {
+function openFilterDropdown() {
+    isFilterDropdownOpen.value = true
+    if (!metaFields.value.length) fetchMeta()
+}
+
+function closeFilterDropdown() {
+    isFilterDropdownOpen.value = false
+    dropdownSearch.value = ''
+}
+
+function positionFilterDropdown() {
+    const button = document.querySelector('.btn-filter-primary')
+    const menu = document.querySelector('.dropdown-filters-menu')
+    const container = document.querySelector('.dropdown-filters-container')
+
+    if (!button || !menu || !container) return
+
+    const btnRect = button.getBoundingClientRect()
+    const containerRect = container.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const viewportWidth = window.innerWidth
+    const padding = 20
+    const menuWidth = 380
+
+    // Desactivar transiciones temporalmente para la posición inicial
+    const hadTransition = menu.style.transition
+    menu.style.transition = 'none'
+
+    // ===== POSICIÓN VERTICAL =====
+    const spaceBelow = viewportHeight - btnRect.bottom - padding
+    const spaceAbove = btnRect.top - padding
+    const minHeight = 300
+
+    if (spaceBelow >= minHeight) {
+        menu.style.maxHeight = `${Math.min(70 * viewportHeight / 100, spaceBelow)}px`
+        menu.classList.remove('menu-above')
+        menu.classList.add('menu-below')
+    } else if (spaceAbove >= minHeight) {
+        menu.style.maxHeight = `${Math.min(70 * viewportHeight / 100, spaceAbove)}px`
+        menu.classList.add('menu-above')
+        menu.classList.remove('menu-below')
+    } else {
+        const availableHeight = Math.max(spaceBelow, spaceAbove)
+        menu.style.maxHeight = `${Math.min(70 * viewportHeight / 100, availableHeight)}px`
+        menu.classList.remove('menu-above')
+        menu.classList.add('menu-below')
+    }
+
+    // ===== POSICIÓN HORIZONTAL =====
+    // Calcular si el dropdown cabe a la derecha del contenedor
+    const rightEdge = containerRect.left + menuWidth
+
+    if (rightEdge > viewportWidth - padding) {
+        // No cabe a la derecha, alinear desde la derecha del contenedor
+        menu.style.left = 'auto'
+        menu.style.right = '0'
+        menu.classList.add('menu-right-aligned')
+    } else {
+        // Cabe a la derecha, alinear normal
+        menu.style.left = '0'
+        menu.style.right = 'auto'
+        menu.classList.remove('menu-right-aligned')
+    }
+
+    // Restaurar transiciones después de la siguiente frame
+    requestAnimationFrame(() => {
+        menu.style.transition = hadTransition || ''
+    })
+}
+
+function handleFilterCheckboxChange(fieldId) {
+    if (activeDynamicFilterIds.value.includes(fieldId)) {
+        removeDynamicFilter(fieldId)
+    } else {
+        addDynamicFilter(fieldId)
+    }
+}
+
+function handleGlobalKeydown(e) {
+    if (e && e.key === 'Escape') {
+        if (isAddFilterDrawerOpen.value) closeAddFilterDrawer()
+        if (isFilterDropdownOpen.value) closeFilterDropdown()
+    }
+}
+
+function positionDrawerUnderButton() {
+    const drawer = drawerEl.value
+    const btn = document.querySelector('.btn-open-drawer')
+    if (!drawer || !btn) return
+    // ensure drawer has fixed positioning
+    drawer.style.position = 'fixed'
+    const b = btn.getBoundingClientRect()
+    const d = drawer.getBoundingClientRect()
+
+    const margin = 12
+    const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
+
+    // Compute horizontal position: center on the button but keep within viewport
+    let left = Math.round(b.left + b.width / 2 - d.width / 2)
+    left = Math.max(margin, Math.min(left, vw - d.width - margin))
+
+    // Compute vertical position ensuring the drawer does NOT overlap the button
+    const arrowHeight = 12
+    const gap = Math.max(8, Math.ceil(arrowHeight / 2)) // minimal gap between button and drawer
+    const spaceBelow = window.innerHeight - b.bottom
+    const spaceAbove = b.top
+
+    let top
+    let placeBelow = false
+
+    if (spaceBelow >= d.height + gap) {
+        // enough room below
+        top = Math.round(b.bottom + gap)
+        placeBelow = true
+    } else if (spaceAbove >= d.height + gap) {
+        // enough room above
+        top = Math.round(b.top - d.height - gap)
+        placeBelow = false
+    } else {
+        // not enough room either side; fit as best as possible below with caps
+        top = Math.round(Math.max(margin, Math.min(b.bottom + gap, window.innerHeight - d.height - margin)))
+        placeBelow = top >= b.bottom
+        // if still overlaps, nudge the top to be just below button
+        if (top < b.bottom && spaceBelow > 0) {
+            top = Math.min(Math.round(b.bottom + gap), window.innerHeight - d.height - margin)
+            placeBelow = top >= b.bottom
+        }
+    }
+
+    drawer.style.left = `${left}px`
+    drawer.style.top = `${top}px`
+
+    // Arrow: compute where to place an arrow so the drawer looks attached to the button
+    const arrowWidth = 12
+    let arrowLeft = Math.round((b.left + b.width / 2) - left - (arrowWidth / 2))
+    // Clamp arrow left so it never goes outside the drawer bounds
+    arrowLeft = Math.max(8, Math.min(arrowLeft, Math.round(d.width - arrowWidth - 8)))
+    drawer.style.setProperty('--arrow-left', `${arrowLeft}px`)
+
+    if (placeBelow) {
+        drawer.classList.add('drawer-below')
+        drawer.classList.remove('drawer-above')
+    } else {
+        drawer.classList.add('drawer-above')
+        drawer.classList.remove('drawer-below')
+    }
+}
+
+function handleResize() {
+    if (isAddFilterDrawerOpen.value) positionDrawerUnderButton()
+    if (isFilterDropdownOpen.value) positionFilterDropdown()
+}
+
+function handleScroll() {
+    if (isAddFilterDrawerOpen.value) positionDrawerUnderButton()
+    if (isFilterDropdownOpen.value) positionFilterDropdown()
+}
+
+
+function isFixedField(id) {
+    return FIXED_FIELD_IDS.has(id)
+}
+
+function addDynamicFilter(id) {
+    if (!id) return
+    if (isFixedField(id)) return
+    if (activeDynamicFilterIds.value.includes(id)) return
+    if (activeDynamicFilterIds.value.length >= 15) return
+    activeDynamicFilterIds.value = [...activeDynamicFilterIds.value, id]
+    if (!(id in dynamicFilterValues.value)) {
+        dynamicFilterValues.value = { ...dynamicFilterValues.value, [id]: '' }
+    }
+    closeAddFilterDrawer()
+}
+
+function removeDynamicFilter(id) {
+    activeDynamicFilterIds.value = activeDynamicFilterIds.value.filter(x => x !== id)
+    const next = { ...dynamicFilterValues.value }
+    delete next[id]
+    dynamicFilterValues.value = next
+}
+
+function clearDynamicFilters() {
+    activeDynamicFilterIds.value = []
+    dynamicFilterValues.value = {}
+}
+
+function getMetaField(id) {
+    return (metaFields.value || []).find(f => f.id === id)
+}
+
+function getMetaFieldSuggestions(id) {
+    const field = getMetaField(id)
+    const values = Array.isArray(field?.distinctValues) ? field.distinctValues : []
+    return values.slice(0, 50)
+}
+
+function getDynamicFieldLabel(id) {
+    return getMetaField(id)?.label || id
+}
+
+function getDynamicFieldKind(id) {
+    return getMetaField(id)?.kind || 'text'
+}
+
+function isDynamicSelectable(id) {
+    return Boolean(getMetaField(id)?.selectable)
+}
+
+function getDynamicSelectOptions(id) {
+    const field = getMetaField(id)
+    const values = Array.isArray(field?.distinctValues) ? field.distinctValues : []
+    return values.slice(0, 10)
+}
+
+function getDynamicSuggestions(id) {
+    return getMetaFieldSuggestions(id)
+}
+
+function getDynamicDatalistId(id) {
+    return `dyn-${id}-datalist`
+}
+
+function getDynamicValue(id) {
+    return String(dynamicFilterValues.value[id] ?? '')
+}
+
+function setDynamicValue(id, value) {
+    dynamicFilterValues.value = { ...dynamicFilterValues.value, [id]: value }
+}
+
+function getFieldTypeLabel(field) {
+    if (!field) return 'Texto'
+    if (field.kind === 'boolean') return 'Sí/No'
+    if (field.kind === 'date') return 'Fecha'
+    if (field.selectable) return 'Select'
+    return 'Texto'
+}
+
+function getMetaFieldColumn(id) {
+    const field = getMetaField(id)
+    if (!field) return null
+    // Prefer explicit fixed mapping first
+    if (field && field.id && FIXED_COLUMN_MAP[field.id]) return FIXED_COLUMN_MAP[field.id]
+    // Backend-provided column hints
+    if (field.column) return field.column
+    if (field.columnName) return field.columnName
+    if (field.dbColumn) return field.dbColumn
+    if (field.property) return field.property
+    if (field.key) return field.key
+    if (field.id) return field.id
+    return null
+}
+
+function getItemFieldValue(item, id) {
+    const col = getMetaFieldColumn(id)
+    if (!item) return null
+    const candidates = []
+    if (col) candidates.push(col)
+    // common alternates
+    try {
+        if (typeof col === 'string') {
+            candidates.push(col.toUpperCase())
+            candidates.push(col.replace(/_/g, ' ').toUpperCase())
+            candidates.push(col.replace(/\s+/g, '_').toLowerCase())
+            candidates.push(col.toLowerCase())
+        }
+    } catch (e) { }
+    const field = getMetaField(id)
+    if (field && field.label) {
+        candidates.push(field.label)
+        candidates.push(String(field.label).toUpperCase())
+        candidates.push(String(field.label).replace(/\s+/g, '_').toLowerCase())
+    }
+    // Always try raw id as last resort
+    if (id) candidates.push(id)
+
+    for (const c of candidates) {
+        if (!c) continue
+        if (Object.prototype.hasOwnProperty.call(item, c)) {
+            return item[c]
+        }
+    }
+    return null
+}
+
+function isDynamicFieldVisibleInItem(item, id) {
+    if (!item) return false
+    const v = getItemFieldValue(item, id)
+    if (v === null || v === undefined) return false
+    const s = String(v).trim()
+    if (!s) return false
+    const low = s.toLowerCase()
+    if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') return false
+    return true
+}
+
+function isColumnInDefaults(col) {
+    if (!col) return false
+    const defaults = [
+        'No DE INVENTARIO', 'EQUIPO MEDICO', 'ESTATUS', 'MARCA', 'MODELO', 'CLAVE CNIS',
+        'TIPO DE MANTENIMIENTO', 'FUNCIONAL SI NO', 'UNIDAD MEDICA'
+    ]
+    return defaults.includes(col)
+}
+
+function isDynamicFieldDuplicate(id) {
+    const col = getMetaFieldColumn(id)
+    return isColumnInDefaults(col)
+}
+
+async function fetchMeta() {
+    try {
+        metaLoading.value = true
+        const response = await fetch('/api/ops/historial-mantenimientos/meta')
+        const json = await response.json().catch(() => ({}))
+        metaFields.value = Array.isArray(json.fields) ? json.fields : []
+        // If drawer is open, reposition under button after data loads
+        if (isAddFilterDrawerOpen.value) {
+            nextTick(() => positionDrawerUnderButton())
+        }
+    } catch (e) {
+        console.error('Error cargando metadatos de filtros:', e)
+        metaFields.value = []
+    } finally {
+        metaLoading.value = false
+    }
+}
+
+let searchTimer = null
+function scheduleSearch() {
+    if (isRestoring) return
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+        runSearch()
+    }, 300)
+}
+
+let persistTimer = null
+function schedulePersist() {
+    if (isRestoring) return
+    if (persistTimer) clearTimeout(persistTimer)
+    persistTimer = setTimeout(() => {
+        persistFilters()
+    }, 150)
+}
+
+function persistFilters() {
+    try {
+        const payload = {
+            fixed: { ...filters.value },
+            dynamicIds: [...activeDynamicFilterIds.value],
+            dynamicValues: { ...dynamicFilterValues.value }
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
+    } catch (e) {
+        console.warn('No se pudo persistir filtros en localStorage:', e)
+    }
+}
+
+function restoreFilters() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (!raw) return
+        const parsed = JSON.parse(raw)
+
+        const fixed = parsed && typeof parsed.fixed === 'object' ? parsed.fixed : {}
+        filters.value = { ...initialFilters, ...fixed }
+
+        const ids = Array.isArray(parsed?.dynamicIds) ? parsed.dynamicIds : []
+        const unique = []
+        for (const id of ids) {
+            if (!id || typeof id !== 'string') continue
+            if (isFixedField(id)) continue
+            if (unique.includes(id)) continue
+            if (unique.length >= 15) break
+            unique.push(id)
+        }
+        activeDynamicFilterIds.value = unique
+
+        const values = parsed && typeof parsed.dynamicValues === 'object' ? parsed.dynamicValues : {}
+        const nextValues = {}
+        for (const id of unique) {
+            nextValues[id] = String(values[id] ?? '')
+        }
+        dynamicFilterValues.value = nextValues
+    } catch (e) {
+        console.warn('No se pudo restaurar filtros desde localStorage:', e)
+    }
+}
+
+function buildQueryParams() {
+    const queryParams = new URLSearchParams()
+
+    if (filters.value.no.trim()) queryParams.append('no', filters.value.no.trim())
+    if ((filters.value.noRegistro || '').trim()) queryParams.append('no_registro', (filters.value.noRegistro || '').trim())
+    if (filters.value.equipoMedico.trim()) queryParams.append('equipoMedico', filters.value.equipoMedico.trim())
+    if (filters.value.marca.trim()) queryParams.append('marca', filters.value.marca.trim())
+    if (filters.value.tipoMantenimiento) queryParams.append('tipoMantenimiento', filters.value.tipoMantenimiento)
+    if (filters.value.estatus && filters.value.estatus !== SIN_ESTADO_VALUE) queryParams.append('estatus', filters.value.estatus)
+    if (filters.value.funcional) queryParams.append('funcional', filters.value.funcional)
+    if (filters.value.unidadMedica.trim()) queryParams.append('unidadMedica', filters.value.unidadMedica.trim())
+
+    for (const id of activeDynamicFilterIds.value) {
+        const value = String(dynamicFilterValues.value[id] || '').trim()
+        if (!value) continue
+        queryParams.append(`dyn_${id}`, value)
+    }
+
+    return queryParams
+}
+
+const SIN_ESTADO_VALUE = '__SIN_ESTADO__'
+
+async function runSearch() {
     try {
         loading.value = true
-        const queryParams = new URLSearchParams()
-
-        // Filtros básicos
-        if (filters.value.no.trim()) queryParams.append('no', filters.value.no.trim())
-        if (filters.value.equipoMedico.trim()) queryParams.append('equipoMedico', filters.value.equipoMedico.trim())
-        if (filters.value.marca.trim()) queryParams.append('marca', filters.value.marca.trim())
-        if (filters.value.tipoMantenimiento) queryParams.append('tipoMantenimiento', filters.value.tipoMantenimiento)
-        if (filters.value.estatus) queryParams.append('estatus', filters.value.estatus)
-        if (filters.value.funcional) queryParams.append('funcional', filters.value.funcional)
-        if (filters.value.unidadMedica.trim()) queryParams.append('unidadMedica', filters.value.unidadMedica.trim())
-
-        // Filtros avanzados
-        if (advancedFilters.value.noInventario.trim()) queryParams.append('noInventario', advancedFilters.value.noInventario.trim())
-        if (advancedFilters.value.claveCnis.trim()) queryParams.append('claveCnis', advancedFilters.value.claveCnis.trim())
-        if (advancedFilters.value.modelo.trim()) queryParams.append('modelo', advancedFilters.value.modelo.trim())
-        if (advancedFilters.value.numeroSerie.trim()) queryParams.append('numeroSerie', advancedFilters.value.numeroSerie.trim())
-        if (advancedFilters.value.categoria.trim()) queryParams.append('categoria', advancedFilters.value.categoria.trim())
-        if (advancedFilters.value.ubicacionEspecifica.trim()) queryParams.append('ubicacionEspecifica', advancedFilters.value.ubicacionEspecifica.trim())
-
+        metaError.value = ''
+        const queryParams = buildQueryParams()
         const url = `/api/ops/historial-mantenimientos${queryParams.toString() ? '?' + queryParams.toString() : ''}`
         const response = await fetch(url)
 
@@ -775,10 +1556,16 @@ async function applyAdvancedFilters() {
             throw new Error(json.msg || json.error || `HTTP ${response.status}`)
         }
 
-        const data = await response.json()
-        const items = Array.isArray(data) ? data : (data.data || [])
+        const data = await response.json().catch(() => null)
+        const items = Array.isArray(data)
+            ? data
+            : (Array.isArray(data && data.data) ? data.data : [])
         allData.value = items
-        filteredData.value = items
+        if (filters.value.estatus === SIN_ESTADO_VALUE) {
+            filteredData.value = items.filter(it => !hasRealValue(it?.['ESTATUS']))
+        } else {
+            filteredData.value = items
+        }
     } catch (error) {
         console.error('Error aplicando filtros avanzados:', error)
         allData.value = []
@@ -790,18 +1577,14 @@ async function applyAdvancedFilters() {
     selectedItem.value = null
 }
 
-function resetAdvancedFilters() {
-    advancedFilters.value = { ...initialAdvancedFilters }
-    applyAdvancedFilters()
-}
-
 function getStatusAccentClass(item) {
     const status = item['ESTATUS']?.toLowerCase()
     const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
 
     if (funcional === 'no') return 'accent-critical'
-    if (status === 'inactivo') return 'accent-warning'
-    if (status === 'activo' && funcional === 'si') return 'accent-success'
+    if (status?.includes('mantenimiento')) return 'accent-warning'
+    if (status === 'inactivo' || status?.includes('no operativo')) return 'accent-warning'
+    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'accent-success'
     return 'accent-default'
 }
 
@@ -810,9 +1593,67 @@ function getStatusGlowClass(item) {
     const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
 
     if (funcional === 'no') return 'glow-critical'
-    if (status === 'inactivo') return 'glow-warning'
-    if (status === 'activo' && funcional === 'si') return 'glow-success'
+    if (status?.includes('mantenimiento')) return 'glow-warning'
+    if (status === 'inactivo' || status?.includes('no operativo')) return 'glow-warning'
+    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'glow-success'
     return 'glow-default'
+}
+
+function getStatusPillClass(item) {
+    const statusRaw = item?.['ESTATUS']
+    const status = statusRaw ? String(statusRaw).toLowerCase() : ''
+    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
+
+    if (!hasRealValue(statusRaw)) return 'status-unknown'
+    if (status.includes('propio')) return 'status-success'
+
+    if (funcional === 'no') return 'status-critical'
+    if (status?.includes('mantenimiento')) return 'status-warning'
+    if (status === 'inactivo' || status?.includes('no operativo')) return 'status-warning'
+    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'status-success'
+    return 'status-default'
+}
+
+function getStatusTextClass(item) {
+    const raw = item?.['ESTATUS']
+    if (!hasRealValue(raw)) return 'sin-estado'
+    return String(raw).toLowerCase()
+}
+
+function selectItem(item) {
+    // Legacy single-select setter
+    selectedItem.value = item
+}
+
+function getItemKey(item, idx) {
+    if (!item || typeof item !== 'object') return `idx:${idx}`
+    const inv = item['No DE INVENTARIO']
+    const no = item['No']
+    const id = item._id
+    const key = (inv && String(inv).trim()) || (no && String(no).trim()) || (id && String(id).trim())
+    return key ? `k:${key}` : `idx:${idx}`
+}
+
+function isExpanded(item, idx) {
+    if (!selectedItem.value) return false
+    return getItemKey(selectedItem.value, -1) === getItemKey(item, idx)
+}
+
+function toggleSelect(item) {
+    if (!item) { selectedItem.value = null; return }
+    // Toggle: if the same item is selected, collapse; otherwise expand
+    if (selectedItem.value && getItemKey(selectedItem.value, -1) === getItemKey(item, -1)) {
+        selectedItem.value = null
+    } else {
+        selectedItem.value = item
+        // Smooth scroll the expanded card into center view
+        nextTick(() => {
+            try {
+                const el = document.querySelector('.maintenance-card.active')
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            } catch (e) { }
+        })
+    }
 }
 
 function nextPage() {
@@ -827,9 +1668,90 @@ function previousPage() {
     }
 }
 
+function firstPage() {
+    currentPage.value = 1
+}
+
+function lastPage() {
+    currentPage.value = totalPages.value
+}
+
+function goToPage(n) {
+    if (typeof n === 'number' && n >= 1 && n <= totalPages.value) currentPage.value = n
+}
+
+function changePageSize(n) {
+    pageSize.value = n
+    currentPage.value = 1
+}
+
 // Ciclo de vida
+function handleClickOutside(e) {
+    if (isFilterDropdownOpen.value) {
+        const container = document.querySelector('.dropdown-filters-container')
+        const menu = document.querySelector('.dropdown-filters-menu')
+        const btn = filterDropdownBtn.value
+        // click outside both the container/menu/button closes the dropdown
+        if (container && !container.contains(e.target) && (!menu || !menu.contains(e.target)) && (!btn || !btn.contains(e.target))) {
+            closeFilterDropdown()
+        }
+    }
+}
+
 onMounted(async () => {
-    await applyFilters()
+    window.addEventListener('keydown', handleGlobalKeydown)
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    document.addEventListener('click', handleClickOutside)
+    restoreFilters()
+    await fetchMeta()
+    isRestoring = false
+    await runSearch()
+})
+
+onBeforeUnmount(() => {
+    window.removeEventListener('resize', handleResize)
+    window.removeEventListener('scroll', handleScroll)
+    window.removeEventListener('keydown', handleGlobalKeydown)
+    document.removeEventListener('click', handleClickOutside)
+})
+
+watch(filters, () => {
+    schedulePersist()
+    scheduleSearch()
+}, { deep: true })
+
+watch(activeDynamicFilterIds, () => {
+    schedulePersist()
+    scheduleSearch()
+}, { deep: true })
+
+watch(dynamicFilterValues, () => {
+    schedulePersist()
+    scheduleSearch()
+}, { deep: true })
+
+watch([dropdownSearch, filteredDropdownCatalog], () => {
+    // No need to reposition with the new absolute positioning system
+})
+
+watch(isFilterDropdownOpen, (newVal) => {
+    if (newVal) {
+        // Cuando se abre, posicionar inmediatamente
+        nextTick(() => {
+            positionFilterDropdown()
+        })
+    }
+})
+
+// Asegura que la página actual siempre esté dentro del rango válido
+watch(totalPages, (tp) => {
+    if (currentPage.value > tp) currentPage.value = tp
+})
+
+watch(pageSize, (n) => {
+    if (!n || Number(n) <= 0) pageSize.value = 6
+    if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
 })
 </script>
 
@@ -910,6 +1832,61 @@ onMounted(async () => {
 .filters-header-actions {
     display: flex;
     align-items: center;
+    gap: 12px;
+}
+
+.filters-global-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 12px;
+}
+
+.btn-clear-dynamic,
+.btn-open-drawer {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn-clear-dynamic {
+    color: #0f172a;
+    background: rgba(226, 232, 240, 0.95);
+    border-color: rgba(148, 163, 184, 0.6);
+}
+
+.btn-clear-dynamic:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-clear-dynamic:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.25);
+}
+
+.btn-open-drawer {
+    color: #ecfeff;
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.9), rgba(59, 130, 246, 0.9));
+    border-color: rgba(34, 211, 238, 0.35);
+    position: relative;
+    z-index: 600;
+    /* keep button clearly above overlay and drawer */
+}
+
+.btn-open-drawer:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 26px rgba(34, 211, 238, 0.25);
 }
 
 .search-signal {
@@ -954,9 +1931,17 @@ onMounted(async () => {
 }
 
 @keyframes searchPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.15); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.15);
+    }
+
+    100% {
+        transform: scale(1);
+    }
 }
 
 .filters-title-wrapper {
@@ -985,7 +1970,7 @@ onMounted(async () => {
     padding: 16px 20px;
     border-radius: 16px;
     background: linear-gradient(145deg, rgba(56, 189, 248, 0.08), rgba(14, 165, 233, 0.12));
-    border:1px solid rgba(14,165,233,0.4);
+    border: 1px solid rgba(14, 165, 233, 0.4);
     margin-bottom: 20px;
     box-shadow: 0 12px 24px rgba(15, 118, 212, 0.25);
     position: relative;
@@ -1018,6 +2003,490 @@ onMounted(async () => {
 .callout-icon svg {
     position: relative;
     z-index: 2;
+}
+
+/* Layout: ZONA IZQUIERDA (FIJA) + ZONA DERECHA (DINÁMICA) */
+.filters-layout {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.filters-layout.has-dynamic {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.filters-zone {
+    border-radius: 16px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.filters-zone-fixed {
+    border: 1px solid rgba(59, 130, 246, 0.55);
+    background: rgba(191, 219, 254, 0.14);
+}
+
+.filters-zone-dynamic {
+    border: 1px solid rgba(34, 197, 94, 0.55);
+    background: rgba(187, 247, 208, 0.12);
+}
+
+.zone-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.zone-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #f8fafc;
+}
+
+.zone-subtitle {
+    font-size: 0.85rem;
+    color: rgba(226, 232, 240, 0.75);
+}
+
+.zone-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+}
+
+.zone-pill-fixed {
+    color: #0b1220;
+    background: rgba(147, 197, 253, 0.95);
+    border: 1px solid rgba(59, 130, 246, 0.55);
+}
+
+.zone-pill-dynamic {
+    color: #052e16;
+    background: rgba(134, 239, 172, 0.95);
+    border: 1px solid rgba(34, 197, 94, 0.55);
+}
+
+.filters-grid-fixed,
+.filters-grid-dynamic {
+    display: grid;
+    gap: 12px;
+}
+
+/* ESTADO INICIAL: 2x4 en desktop (7 campos llenan 2 filas) */
+.filters-grid-fixed.grid-initial {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Con dinámicos: grids internos más legibles */
+.filters-layout.has-dynamic .filters-grid-fixed {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.filters-grid-dynamic {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.filter-card {
+    border-radius: 14px;
+    padding: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(15, 23, 42, 0.35);
+}
+
+.filter-card-fixed {
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(30, 58, 138, 0.18);
+}
+
+.filter-card-dynamic {
+    border-color: rgba(34, 197, 94, 0.35);
+    background: rgba(20, 83, 45, 0.18);
+}
+
+.filter-card label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: rgba(226, 232, 240, 0.92);
+    margin-bottom: 8px;
+}
+
+.field-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 18px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 900;
+}
+
+.field-badge-fixed {
+    color: #0b1220;
+    background: rgba(147, 197, 253, 0.95);
+    border: 1px solid rgba(59, 130, 246, 0.55);
+}
+
+.dynamic-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.btn-remove-filter {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    background: rgba(34, 197, 94, 0.12);
+    color: rgba(220, 252, 231, 0.95);
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-remove-filter:hover {
+    transform: translateY(-1px);
+    background: rgba(34, 197, 94, 0.18);
+}
+
+.tri-toggle {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.tri-option {
+    height: 38px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    background: rgba(15, 23, 42, 0.35);
+    color: rgba(226, 232, 240, 0.9);
+    font-weight: 800;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.tri-option.active {
+    background: rgba(34, 211, 238, 0.16);
+    border-color: rgba(34, 211, 238, 0.45);
+}
+
+.tri-toggle-dynamic .tri-option.active {
+    background: rgba(34, 197, 94, 0.16);
+    border-color: rgba(34, 197, 94, 0.45);
+}
+
+/* Drawer */
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: transparent;
+    /* no dimming effect as requested */
+    /* no backdrop blur */
+    z-index: 80;
+    /* keep low so the opener button can be above */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+}
+
+.drawer {
+    width: min(520px, 92vw);
+    /* more compact */
+    max-height: 78vh;
+    /* smaller to avoid covering too much */
+    background: rgba(15, 23, 42, 0.96);
+    border: 1px solid rgba(59, 130, 246, 0.28);
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.48);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    /* anchor to viewport to allow exact left/top */
+    transform-origin: top center;
+    z-index: 200;
+    /* above overlay but below the opener button */
+    overflow: hidden;
+}
+
+.drawer-body {
+    padding: 10px 12px;
+    overflow: auto;
+}
+
+.drawer-meta {
+    padding: 6px 6px 12px 6px;
+}
+
+.drawer-search-wrapper {
+    padding: 8px 12px;
+}
+
+.drawer-search {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.12);
+    background: rgba(10, 14, 22, 0.45);
+    color: #e6f8ff;
+}
+
+.drawer-list .drawer-item {
+    padding: 8px 10px;
+    border-radius: 10px;
+}
+
+.drawer-item-name {
+    font-size: 0.92rem;
+}
+
+
+.drawer.animating {
+    pointer-events: none;
+}
+
+/* triangle pointer to visually connect drawer to the opener button */
+.drawer::after {
+    content: '';
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    left: var(--arrow-left, 26px);
+    top: -6px;
+    background: rgba(15, 23, 42, 0.96);
+    transform: rotate(45deg);
+    border-left: 1px solid rgba(59, 130, 246, 0.18);
+    border-top: 1px solid rgba(59, 130, 246, 0.18);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.28);
+    opacity: 0.98;
+    transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.drawer.drawer-above::after {
+    top: auto;
+    bottom: -6px;
+    transform: rotate(225deg);
+}
+
+
+.drawer-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+}
+
+.drawer-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #f8fafc;
+}
+
+.drawer-subtitle {
+    margin: 6px 0 0;
+    color: rgba(226, 232, 240, 0.72);
+    font-size: 0.85rem;
+}
+
+.drawer-close {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    background: rgba(30, 41, 59, 0.5);
+    color: rgba(226, 232, 240, 0.95);
+    cursor: pointer;
+}
+
+.drawer-body {
+    padding: 16px;
+    overflow: auto;
+}
+
+.drawer-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    color: rgba(226, 232, 240, 0.75);
+    font-size: 0.85rem;
+}
+
+.drawer-empty {
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px dashed rgba(148, 163, 184, 0.25);
+    color: rgba(226, 232, 240, 0.75);
+}
+
+.drawer-category {
+    border-radius: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(2, 6, 23, 0.28);
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.drawer-category-title {
+    padding: 12px 14px;
+    cursor: pointer;
+    color: rgba(226, 232, 240, 0.92);
+    font-weight: 900;
+}
+
+.drawer-list {
+    padding: 10px 12px 12px;
+    display: grid;
+    gap: 10px;
+}
+
+.drawer-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    background: rgba(30, 41, 59, 0.3);
+}
+
+.drawer-item-main {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.drawer-item-title {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.drawer-item-name {
+    color: rgba(226, 232, 240, 0.95);
+    font-weight: 900;
+}
+
+.drawer-item-type {
+    font-size: 0.8rem;
+    color: rgba(148, 163, 184, 0.9);
+}
+
+.drawer-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 20px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 900;
+}
+
+.drawer-badge-fixed {
+    color: #0b1220;
+    background: rgba(147, 197, 253, 0.95);
+    border: 1px solid rgba(59, 130, 246, 0.55);
+}
+
+.drawer-badge-added {
+    color: #052e16;
+    background: rgba(134, 239, 172, 0.95);
+    border: 1px solid rgba(34, 197, 94, 0.55);
+}
+
+.drawer-add {
+    height: 36px;
+    padding: 0 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    background: rgba(34, 211, 238, 0.12);
+    color: rgba(236, 254, 255, 0.95);
+    font-weight: 900;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.drawer-add:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.drawer-add:not(:disabled):hover {
+    transform: translateY(-1px);
+}
+
+/* Responsive: tablet */
+@media (max-width: 1024px) {
+    .filters-layout.has-dynamic {
+        grid-template-columns: 1fr;
+    }
+
+    .filters-grid-fixed.grid-initial {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .filters-layout.has-dynamic .filters-grid-fixed,
+    .filters-grid-dynamic {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+/* Responsive: móvil */
+@media (max-width: 767px) {
+    .filters-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+    }
+
+    .filters-header-actions {
+        width: 100%;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .filters-global-actions {
+        width: 100%;
+        justify-content: stretch;
+        margin-right: 0;
+    }
+
+    .btn-clear-dynamic,
+    .btn-open-drawer {
+        width: 100%;
+    }
+
+    .filters-grid-fixed.grid-initial,
+    .filters-layout.has-dynamic .filters-grid-fixed,
+    .filters-grid-dynamic {
+        grid-template-columns: 1fr;
+    }
 }
 
 .icon-halo {
@@ -1079,9 +2548,20 @@ onMounted(async () => {
 }
 
 @keyframes haloPulse {
-    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.7; }
-    50% { transform: translate(-50%, -50%) scale(1); opacity: 0.9; }
-    100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.7; }
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.7;
+    }
+
+    50% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0.9;
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.7;
+    }
 }
 
 .result-count-badge {
@@ -1236,8 +2716,13 @@ onMounted(async () => {
 }
 
 @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
 }
 
 .advanced-filters-header {
@@ -1342,7 +2827,7 @@ onMounted(async () => {
     transition: color 0.2s ease;
 }
 
-.filter-item.advanced input:focus + .input-icon {
+.filter-item.advanced input:focus+.input-icon {
     color: #06b6d4;
 }
 
@@ -1397,7 +2882,7 @@ onMounted(async () => {
     opacity: 0.7;
 }
 
-.cards-section > * {
+.cards-section>* {
     position: relative;
     z-index: 1;
 }
@@ -1488,41 +2973,87 @@ onMounted(async () => {
 }
 
 @keyframes pulse-text {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.7; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
 }
 
 .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 22px;
     margin-bottom: 20px;
 }
 
+@media (max-width: 1024px) {
+    .cards-grid {
+        grid-template-columns: repeat(2, minmax(220px, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .cards-grid {
+        grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+}
+
 .maintenance-card {
-    background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
-    border: 1.5px solid #4b5563;
-    border-radius: 12px;
+    background:
+        radial-gradient(900px 320px at 18% -20%, rgba(6, 182, 212, 0.16), transparent 55%),
+        radial-gradient(900px 360px at 120% 0%, rgba(168, 85, 247, 0.12), transparent 60%),
+        linear-gradient(135deg, rgba(45, 55, 72, 0.95) 0%, rgba(17, 24, 39, 0.92) 100%);
+    border: 1.5px solid rgba(75, 85, 99, 0.9);
+    border-radius: 16px;
     padding: 0;
     cursor: pointer;
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transition:
+        transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 240ms cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 240ms ease,
+        background 240ms ease;
     position: relative;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    min-height: 340px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
     animation: card-enter 0.6s ease-out forwards;
     opacity: 0;
     transform: translateY(20px);
+    -webkit-backdrop-filter: blur(12px);
     backdrop-filter: blur(12px);
+    will-change: transform;
 }
 
-.maintenance-card:nth-child(1) { animation-delay: 0.1s; }
-.maintenance-card:nth-child(2) { animation-delay: 0.2s; }
-.maintenance-card:nth-child(3) { animation-delay: 0.3s; }
-.maintenance-card:nth-child(4) { animation-delay: 0.4s; }
-.maintenance-card:nth-child(5) { animation-delay: 0.5s; }
-.maintenance-card:nth-child(6) { animation-delay: 0.6s; }
+.maintenance-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.maintenance-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.maintenance-card:nth-child(3) {
+    animation-delay: 0.3s;
+}
+
+.maintenance-card:nth-child(4) {
+    animation-delay: 0.4s;
+}
+
+.maintenance-card:nth-child(5) {
+    animation-delay: 0.5s;
+}
+
+.maintenance-card:nth-child(6) {
+    animation-delay: 0.6s;
+}
 
 @keyframes card-enter {
     to {
@@ -1542,6 +3073,23 @@ onMounted(async () => {
 
 .card-accent.accent-default {
     background: linear-gradient(90deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.card-sparse {
+    border-left: 4px solid rgba(249, 115, 22, 0.9);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.06), 0 0 24px rgba(249, 115, 22, 0.04) inset;
+}
+
+.sparse-badge {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #7c2d12;
+    background: linear-gradient(180deg, rgba(255, 237, 213, 0.95), rgba(255, 249, 238, 0.9));
+    border: 1px solid rgba(249, 115, 22, 0.15);
 }
 
 .card-accent.accent-success {
@@ -1581,9 +3129,11 @@ onMounted(async () => {
 }
 
 .maintenance-card:hover {
-    border-color: #06b6d4;
-    box-shadow: 0 12px 32px rgba(6, 182, 212, 0.25);
-    transform: translateY(-6px) scale(1.02);
+    border-color: rgba(6, 182, 212, 0.9);
+    box-shadow:
+        0 18px 44px rgba(6, 182, 212, 0.18),
+        0 20px 55px rgba(0, 0, 0, 0.46);
+    transform: translateY(-6px) scale(1.018);
 }
 
 .maintenance-card:hover .card-accent {
@@ -1595,9 +3145,14 @@ onMounted(async () => {
 }
 
 .maintenance-card.active {
-    border-color: #06b6d4;
-    background: linear-gradient(135deg, #374151 0%, #2d3748 100%);
-    box-shadow: 0 12px 32px rgba(6, 182, 212, 0.3);
+    border-color: rgba(6, 182, 212, 0.95);
+    background:
+        radial-gradient(900px 320px at 18% -20%, rgba(6, 182, 212, 0.18), transparent 55%),
+        radial-gradient(900px 360px at 120% 0%, rgba(168, 85, 247, 0.14), transparent 60%),
+        linear-gradient(135deg, rgba(55, 65, 81, 0.96) 0%, rgba(17, 24, 39, 0.94) 100%);
+    box-shadow:
+        0 20px 55px rgba(6, 182, 212, 0.2),
+        0 22px 64px rgba(0, 0, 0, 0.5);
     transform: translateY(-4px) scale(1.01);
 }
 
@@ -1619,38 +3174,85 @@ onMounted(async () => {
 
 .card-header {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 16px 16px 12px;
+    flex-direction: column;
     gap: 12px;
+    padding: 18px 16px;
     position: relative;
     z-index: 2;
+}
+
+.card-header-top {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.maintenance-card.expanded .card-header-top {
+    padding-right: 48px;
+}
+
+.card-no-wrapper {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex: 0 1 auto;
+}
+
+.card-header-bottom {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: 0;
 }
 
 .card-title-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
     min-width: 0;
-}
-
-.card-no-container {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    overflow: hidden;
 }
 
 .card-no {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: #06b6d4;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: rgba(6, 182, 212, 0.15);
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(6, 182, 212, 0.25);
+    justify-content: center;
+    flex: 0 1 auto;
+}
+
+.card-pill-label {
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.98);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: rgba(6, 182, 212, 0.1);
-    padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid rgba(6, 182, 212, 0.2);
+    letter-spacing: 0.9px;
+    display: block;
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.card-pill-value {
+    font-size: 0.9rem;
+    font-weight: 800;
+    color: #e5faff;
+    letter-spacing: 0.2px;
+    line-height: 1.08;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 220px;
+    word-break: break-word;
 }
 
 .card-no-icon {
@@ -1659,42 +3261,202 @@ onMounted(async () => {
     align-items: center;
     justify-content: center;
     opacity: 0.8;
+    flex: 0 0 auto;
+}
+
+.card-record {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 2px;
+    flex: 0 0 auto;
+    max-width: 140px;
+    min-width: 80px;
+    z-index: 4;
+}
+
+.card-record-value {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.card-record-value {
+    display: inline-block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+    .card-record {
+        max-width: 110px;
+    }
+}
+
+.card-record-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 700;
+}
+
+.card-record-value {
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: #e5faff;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    line-height: 1.2;
+}
+
+.card-record-value.value-na {
+    color: #6b7280;
+    font-style: italic;
+    font-weight: 500;
+    opacity: 0.7;
 }
 
 .card-equipo {
-    font-size: 1rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: #f3f4f6;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-    line-height: 1.3;
+    display: -webkit-box;
+    line-clamp: 3;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    line-height: 1.12;
+    opacity: 0.95;
+    word-break: break-word;
+    max-height: 3.6em;
+    padding-right: 8px;
+}
+
+/* Expanded card: show full equipo text */
+.maintenance-card.expanded .card-equipo {
+    line-clamp: 10;
+    -webkit-line-clamp: 10;
+    max-height: none;
+}
+
+.maintenance-card.expanded {
+    min-height: 480px;
+    transform: translateY(-6px) scale(1.012);
+    z-index: 60;
+    box-shadow:
+        0 28px 70px rgba(6, 182, 212, 0.16),
+        0 26px 72px rgba(0, 0, 0, 0.56);
+}
+
+.maintenance-card.expanded .card-pill-value,
+.maintenance-card.expanded .card-record-value {
+    line-clamp: unset;
+    -webkit-line-clamp: none;
+    white-space: normal;
+    overflow: visible;
+}
+
+.card-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(15, 23, 42, 0.62);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(229, 231, 235, 0.98);
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 6;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42);
+    transition: transform 180ms cubic-bezier(0.22, 1, 0.36, 1), background 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.card-close:hover {
+    background: rgba(6, 182, 212, 0.14);
+    border-color: rgba(6, 182, 212, 0.45);
+    transform: scale(1.07) rotate(2deg);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.52), 0 0 0 6px rgba(6, 182, 212, 0.08);
+}
+
+.card-close:active {
+    transform: scale(0.98);
+}
+
+.card-close:focus-visible {
+    outline: none;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.52), 0 0 0 2px rgba(17, 24, 39, 0.9), 0 0 0 5px rgba(6, 182, 212, 0.7);
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    .maintenance-card,
+    .card-close,
+    .card-accent,
+    .card-glow,
+    .card-hover-effect {
+        transition: none !important;
+        animation: none !important;
+    }
+
+    .maintenance-card:hover {
+        transform: none;
+    }
 }
 
 .card-status-container {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 4px;
+    flex: 0 0 auto;
+}
+
+.card-status-label {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 700;
+    line-height: 1.1;
+    opacity: 0.95;
 }
 
 .card-status {
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 6px 10px;
-    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    padding: 7px 12px;
+    border-radius: 999px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     display: flex;
     align-items: center;
     gap: 6px;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 10px 22px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, background 180ms ease;
 }
 
 .status-dot {
-    width: 6px;
-    height: 6px;
+    display: inline-block;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
 }
@@ -1721,22 +3483,136 @@ onMounted(async () => {
     box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
 }
 
+/* Common multi-word statuses: class tokens come from toLowerCase() split by spaces */
+.card-status.mantenimiento,
+.card-status.mantenimientos,
+.card-status.mantto {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(245, 158, 11, 0.1) 100%);
+    color: #fde68a;
+    border-color: rgba(245, 158, 11, 0.35);
+}
+
+.card-status.mantenimiento .status-dot,
+.card-status.mantenimientos .status-dot,
+.card-status.mantto .status-dot {
+    background: #f59e0b;
+    box-shadow: 0 0 10px rgba(245, 158, 11, 0.65);
+}
+
+.card-status.operativo {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.16) 0%, rgba(34, 197, 94, 0.1) 100%);
+    color: #bbf7d0;
+    border-color: rgba(34, 197, 94, 0.34);
+}
+
+.card-status.operativo .status-dot {
+    background: #22c55e;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.65);
+}
+
+.card-status.no,
+.card-status.fuera,
+.card-status.baja {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(239, 68, 68, 0.1) 100%);
+    color: #fecaca;
+    border-color: rgba(239, 68, 68, 0.35);
+}
+
+.card-status.no .status-dot,
+.card-status.fuera .status-dot,
+.card-status.baja .status-dot {
+    background: #ef4444;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.65);
+}
+
+.maintenance-card:hover .card-status {
+    transform: translateY(-1px);
+    box-shadow:
+        0 14px 28px rgba(0, 0, 0, 0.34),
+        0 0 0 5px rgba(6, 182, 212, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Category styles (driven by getStatusPillClass) */
+.card-status.status-success {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.22) 0%, rgba(34, 197, 94, 0.12) 100%);
+    border-color: rgba(34, 197, 94, 0.45);
+    box-shadow:
+        0 14px 34px rgba(34, 197, 94, 0.12),
+        0 10px 22px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.card-status.status-warning {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.24) 0%, rgba(245, 158, 11, 0.12) 100%);
+    border-color: rgba(245, 158, 11, 0.5);
+    box-shadow:
+        0 14px 34px rgba(245, 158, 11, 0.12),
+        0 10px 22px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.card-status.status-critical {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.22) 0%, rgba(239, 68, 68, 0.12) 100%);
+    border-color: rgba(239, 68, 68, 0.5);
+    box-shadow:
+        0 14px 34px rgba(239, 68, 68, 0.12),
+        0 10px 22px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.card-status.status-default {
+    background: linear-gradient(135deg, rgba(148, 163, 184, 0.14) 0%, rgba(148, 163, 184, 0.08) 100%);
+    border-color: rgba(148, 163, 184, 0.28);
+}
+
+.card-status.status-unknown {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.18) 0%, rgba(99, 102, 241, 0.1) 100%);
+    border-color: rgba(99, 102, 241, 0.38);
+    color: #c7d2fe;
+    box-shadow:
+        0 14px 34px rgba(99, 102, 241, 0.12),
+        0 10px 22px rgba(0, 0, 0, 0.28),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* Token-specific styling */
+.card-status.sin-estado {
+    border-color: rgba(99, 102, 241, 0.5);
+}
+
+.card-status.sin-estado .status-dot {
+    background: #818cf8;
+    box-shadow: 0 0 10px rgba(129, 140, 248, 0.7);
+}
+
+.card-status.propio {
+    background: linear-gradient(135deg, rgba(34, 197, 94, 0.22) 0%, rgba(34, 197, 94, 0.12) 100%);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #bbf7d0;
+}
+
+.card-status.propio .status-dot {
+    background: #22c55e;
+    box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
+}
+
 .card-body {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 14px 16px;
     flex: 1;
     position: relative;
     z-index: 2;
 }
 
 .card-info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    padding: 10px 0;
     border-bottom: 1px solid #3f475a;
     transition: all 0.2s ease;
 }
@@ -1778,8 +3654,16 @@ onMounted(async () => {
     text-align: right;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+}
+
+.card-value.value-na {
+    color: #6b7280;
+    font-style: italic;
+    font-weight: 500;
+    opacity: 0.7;
 }
 
 .card-cnis {
@@ -1884,8 +3768,15 @@ onMounted(async () => {
 }
 
 @keyframes pulse-green {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
 }
 
 .functional-indicator.no {
@@ -1901,8 +3792,15 @@ onMounted(async () => {
 }
 
 @keyframes pulse-red {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
 }
 
 .pagination {
@@ -1950,6 +3848,48 @@ onMounted(async () => {
     font-weight: 600;
     min-width: 120px;
     text-align: center;
+}
+
+.page-numbers {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.page-btn {
+    padding: 6px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #cbd5e1;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.page-btn.active {
+    background: #06b6d4;
+    color: #072027;
+    border-color: transparent;
+}
+
+.page-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.page-size-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #cbd5e1;
+}
+
+.page-size-select select {
+    background: #263141;
+    color: #e5e7eb;
+    border: 1px solid #374151;
+    padding: 6px 8px;
+    border-radius: 6px;
 }
 
 /* Sección de Detalles */
@@ -2037,23 +3977,7 @@ onMounted(async () => {
     font-weight: 600;
 }
 
-.btn-close-details {
-    padding: 10px 16px;
-    background: #4b5563;
-    color: #e5e7eb;
-    border: none;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-close-details:hover {
-    background: #6b7280;
-    transform: translateY(-2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
+/* Botón de cerrar detalles eliminado (detalles removidos por petición del usuario) */
 
 /* No results */
 .no-results {
@@ -2074,5 +3998,528 @@ onMounted(async () => {
     margin: 0;
     font-size: 1rem;
     font-weight: 500;
+}
+
+/* Dropdown de Filtros */
+/* Dropdown de Filtros - Rediseño */
+.dropdown-filters-container {
+    position: relative;
+    display: inline-block;
+}
+
+/* Button styling */
+.btn-filter-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 16px;
+    height: auto;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border: 1px solid rgba(34, 211, 238, 0.4);
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.85), rgba(59, 130, 246, 0.85));
+    color: #ffffff;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    z-index: 600;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(34, 211, 238, 0.15);
+}
+
+.btn-filter-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(34, 211, 238, 0.95), rgba(59, 130, 246, 0.95));
+    box-shadow: 0 4px 16px rgba(34, 211, 238, 0.25);
+    transform: translateY(-2px);
+}
+
+.btn-filter-primary:active:not(:disabled) {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(34, 211, 238, 0.15);
+}
+
+.btn-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-filter-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.btn-filter-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    line-height: 1.2;
+}
+
+.btn-filter-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    opacity: 0.9;
+    font-weight: 700;
+}
+
+.btn-filter-count {
+    font-size: 0.85rem;
+    font-weight: 600;
+    opacity: 1;
+}
+
+.btn-filter-chevron {
+    flex-shrink: 0;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-filter-chevron.rotate {
+    transform: rotate(180deg);
+}
+
+/* Dropdown menu */
+.dropdown-filters-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    background: rgba(15, 23, 42, 0.97);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 1px rgba(34, 211, 238, 0.2);
+    z-index: 1100;
+    width: 380px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    backdrop-filter: blur(12px);
+}
+
+.dropdown-filters-menu::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: rgba(15, 23, 42, 0.97);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    border-bottom-color: transparent;
+    border-right-color: transparent;
+    z-index: -1;
+    box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.dropdown-filters-menu.menu-below::before {
+    top: -8px;
+    left: 16px;
+    transform: rotate(45deg);
+}
+
+.dropdown-filters-menu.menu-above {
+    top: auto;
+    bottom: calc(100% + 8px);
+}
+
+.dropdown-filters-menu.menu-above::before {
+    bottom: -8px;
+    left: 16px;
+    top: auto;
+    transform: rotate(225deg);
+}
+
+.dropdown-filters-menu.menu-right-aligned {
+    left: auto;
+    right: 0;
+}
+
+.dropdown-filters-menu.menu-right-aligned.menu-below::before {
+    left: auto;
+    right: 16px;
+}
+
+.dropdown-filters-menu.menu-right-aligned.menu-above::before {
+    left: auto;
+    right: 16px;
+}
+
+/* Dropdown header */
+.dropdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(34, 211, 238, 0.2);
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.dropdown-title-text {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid rgba(34, 211, 238, 0.4);
+    border-radius: 6px;
+    color: #22d3ee;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+    background: rgba(34, 211, 238, 0.1);
+    border-color: rgba(34, 211, 238, 0.6);
+}
+
+.action-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.action-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Search wrapper */
+.dropdown-search-wrapper {
+    position: relative;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(34, 211, 238, 0.15);
+    flex-shrink: 0;
+}
+
+.search-icon {
+    position: absolute;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+.dropdown-filters-search {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(34, 211, 238, 0.25);
+    border-radius: 8px;
+    color: #e2e8f0;
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.dropdown-filters-search:focus {
+    background: rgba(15, 23, 42, 0.9);
+    border-color: rgba(34, 211, 238, 0.5);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.1);
+}
+
+.dropdown-filters-search::placeholder {
+    color: #64748b;
+}
+
+/* Active filters section */
+.dropdown-active-section {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(34, 211, 238, 0.15);
+    background: rgba(34, 211, 238, 0.05);
+    flex-shrink: 0;
+}
+
+.active-section-title {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+}
+
+.active-filters-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.active-filter-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: rgba(34, 211, 238, 0.15);
+    border: 1px solid rgba(34, 211, 238, 0.3);
+    border-radius: 6px;
+    color: #22d3ee;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.chip-label {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chip-remove-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    background: none;
+    border: none;
+    color: #22d3ee;
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    flex-shrink: 0;
+}
+
+.chip-remove-btn:hover {
+    opacity: 1;
+}
+
+.chip-remove-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* State messages */
+.dropdown-state-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 32px 24px;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    text-align: center;
+    min-height: 120px;
+}
+
+.loading-state {
+    color: #64748b;
+}
+
+.empty-state svg {
+    width: 24px;
+    height: 24px;
+    color: #64748b;
+}
+
+/* Filters list */
+.dropdown-filters-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.filter-category {
+    padding: 4px 0;
+}
+
+.category-header {
+    padding: 10px 16px 6px;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: transparent;
+    border-top: 1px solid rgba(34, 211, 238, 0.15);
+    margin-top: 4px;
+}
+
+.filter-category:first-child .category-header {
+    border-top: none;
+    margin-top: 0;
+}
+
+.category-filters {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+}
+
+/* Filter checkbox item */
+.filter-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin: 2px 8px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.15s ease;
+    color: #e2e8f0;
+    user-select: none;
+    position: relative;
+}
+
+.filter-checkbox-item:hover:not(.is-disabled) {
+    background: rgba(34, 211, 238, 0.1);
+}
+
+.filter-checkbox-item.is-disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.filter-checkbox-item input[type="checkbox"] {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 1.5px solid rgba(34, 211, 238, 0.4);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.filter-checkbox-item:hover:not(.is-disabled) input[type="checkbox"] {
+    border-color: rgba(34, 211, 238, 0.6);
+}
+
+.filter-checkbox-item input[type="checkbox"]:checked {
+    background: #22d3ee;
+    border-color: #22d3ee;
+}
+
+.filter-checkbox-item input[type="checkbox"]:checked::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
+    border: solid #0f172a;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.filter-checkbox-item input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+    border-color: rgba(34, 211, 238, 0.2);
+}
+
+.checkbox-custom {
+    display: none;
+}
+
+.filter-item-label {
+    flex: 1;
+    font-size: 0.9rem;
+    color: #e2e8f0;
+    word-break: break-word;
+}
+
+.filter-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.filter-type-badge.fixed {
+    background: rgba(100, 116, 139, 0.3);
+    color: #cbd5e1;
+}
+
+.filter-type-badge.active {
+    background: rgba(34, 211, 238, 0.25);
+    color: #22d3ee;
+}
+
+/* Footer */
+.dropdown-footer {
+    padding: 12px 16px;
+    border-top: 1px solid rgba(34, 211, 238, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.filter-counter {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* Transitions */
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+    transition: opacity 0.15s ease;
+}
+
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+    opacity: 0;
+}
+
+.dropdown-fade-enter-to,
+.dropdown-fade-leave-from {
+    opacity: 1;
+}
+
+/* Scrollbar styling */
+.dropdown-filters-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dropdown-filters-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dropdown-filters-list::-webkit-scrollbar-thumb {
+    background: rgba(34, 211, 238, 0.3);
+    border-radius: 3px;
+}
+
+.dropdown-filters-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(34, 211, 238, 0.5);
+}
+
+.loader-spinner-small {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(34, 211, 238, 0.2);
+    border-top-color: #22d3ee;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>

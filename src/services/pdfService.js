@@ -251,3 +251,4 @@ function getTypeLabel(type) {
     }
     return labels[type] || (type ? type.charAt(0).toUpperCase() + type.slice(1) : '—')
 }
+
