@@ -106,28 +106,28 @@
                                                 v-model="dropdownSearch" placeholder="Buscar filtros..." @click.stop />
                                         </div>
 
-                                        <!-- Active filters section -->
-                                        <div v-if="activeDynamicFilterIds.length > 0" class="dropdown-active-section">
-                                            <div class="active-section-title">Activos ({{ activeDynamicFilterIds.length
-                                                }}/15)
-                                            </div>
+                                        <!-- Active filters accordion (collapsed by default) -->
+                                        <details v-if="activeDynamicFilterIds.length > 0" class="dropdown-active-accordion">
+                                            <summary class="active-section-summary" role="button" aria-expanded="false">
+                                                <span class="active-section-title">Activos ({{ activeDynamicFilterIds.length }}/15)</span>
+                                                <span class="summary-count">{{ activeDynamicFilterIds.length }}</span>
+                                                <svg class="summary-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <path d="m6 9 6 6 6-6" />
+                                                </svg>
+                                            </summary>
+
                                             <div class="active-filters-list">
-                                                <div v-for="id in activeDynamicFilterIds" :key="id"
-                                                    class="active-filter-chip">
+                                                <div v-for="id in activeDynamicFilterIds" :key="id" class="active-filter-chip">
                                                     <span class="chip-label">{{ getDynamicFieldLabel(id) }}</span>
-                                                    <button class="chip-remove-btn"
-                                                        @click.stop="removeDynamicFilter(id)" title="Eliminar filtro">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                                            viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                            stroke-width="2">
+                                                    <button class="chip-remove-btn" @click.stop="removeDynamicFilter(id)" title="Eliminar filtro">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                             <line x1="18" y1="6" x2="6" y2="18"></line>
                                                             <line x1="6" y1="6" x2="18" y2="18"></line>
                                                         </svg>
                                                     </button>
                                                 </div>
                                             </div>
-                                        </div>
-
+                                            </details> 
                                         <!-- Loading state -->
                                         <div v-if="metaLoading" class="dropdown-state-message loading-state">
                                             <div class="loader-spinner-small"></div>
@@ -148,10 +148,13 @@
 
                                         <!-- Filters list -->
                                         <div v-else class="dropdown-filters-list">
-                                            <div v-for="cat in filteredDropdownCatalog" :key="cat.category"
-                                                class="filter-category">
-                                                <div class="category-header">{{ cat.category }}</div>
-                                                <div class="category-filters">
+                                            <details v-for="cat in filteredDropdownCatalog" :key="cat.category" class="filter-category">
+                                                <summary class="category-header">{{ cat.category }}
+                                                    <svg class="category-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                        <path d="m6 9 6 6 6-6" />
+                                                    </svg>
+                                                </summary>
+                                                    <div class="category-filters">
                                                     <label v-for="field in cat.fields" :key="field.id"
                                                         class="filter-checkbox-item"
                                                         :class="{ 'is-disabled': isFixedField(field.id) || activeDynamicFilterIds.length >= 15 }">
@@ -169,7 +172,7 @@
                                                             class="filter-type-badge active">Activo</span>
                                                     </label>
                                                 </div>
-                                            </div>
+                                            </details>
                                         </div>
 
                                         <!-- Footer -->
@@ -268,7 +271,7 @@
                                     <input id="filter-equipo" v-model="filters.equipoMedico" type="text"
                                         placeholder="Monitor, Desfibrilador..." :list="equipoMedicoDatalistId" />
                                     <datalist :id="equipoMedicoDatalistId">
-                                        <option v-for="v in equipoMedicoSuggestions" :key="v" :value="v" />
+                                        <option v-for="v in equipoMedicoSuggestions" :key="v" :value="v">{{ v }}</option>
                                     </datalist>
                                 </div>
                             </div>
@@ -300,7 +303,7 @@
                                     <input id="filter-marca" v-model="filters.marca" type="text"
                                         placeholder="Philips, GE, Siemens..." :list="marcaDatalistId" />
                                     <datalist :id="marcaDatalistId">
-                                        <option v-for="v in marcaSuggestions" :key="v" :value="v" />
+                                        <option v-for="v in marcaSuggestions" :key="v" :value="v">{{ v }}</option>
                                     </datalist>
                                 </div>
                             </div>
@@ -314,7 +317,7 @@
                                     <input id="filter-unidad" v-model="filters.unidadMedica" type="text"
                                         placeholder="UCI, Área..." :list="unidadMedicaDatalistId" />
                                     <datalist :id="unidadMedicaDatalistId">
-                                        <option v-for="v in unidadMedicaSuggestions" :key="v" :value="v" />
+                                        <option v-for="v in unidadMedicaSuggestions" :key="v" :value="v">{{ v }}</option>
                                     </datalist>
                                 </div>
                             </div>
@@ -397,7 +400,7 @@
                                     <input :id="`dyn-${id}`" v-model="dynamicFilterValues[id]" type="text"
                                         placeholder="Escribe para filtrar" :list="getDynamicDatalistId(id)" />
                                     <datalist :id="getDynamicDatalistId(id)">
-                                        <option v-for="v in getDynamicSuggestions(id)" :key="v" :value="v" />
+                                        <option v-for="v in getDynamicSuggestions(id)" :key="v" :value="v">{{ v }}</option>
                                     </datalist>
                                 </div>
                             </div>
@@ -613,7 +616,14 @@
                             <template v-for="id in activeDynamicFilterIds" :key="'dyn-' + id">
                                 <div v-if="!isDynamicFieldDuplicate(id)" class="card-info-row">
                                     <span class="card-label">{{ getDynamicFieldLabel(id) }}:</span>
-                                    <span class="card-value"
+                                    <!-- Material Necesario para Funcionamiento: SIN accordion, solo texto con wrap -->
+                                    <span v-if="id.includes('refaccion_accesorio_consumible') || id.includes('REFACCION_ACCESORIO_CONSUMIBLE')"
+                                        class="card-value card-value-wrap"
+                                        :class="{ 'value-na': !hasRealValue(getItemFieldValue(item, id)) }">{{
+                                            displayValue(getItemFieldValue(item, id)) }}</span>
+
+                                    <!-- Otros campos: sin expandir -->
+                                    <span v-else class="card-value card-value-wrap"
                                         :class="{ 'value-na': !hasRealValue(getItemFieldValue(item, id)) }">{{
                                             displayValue(getItemFieldValue(item, id)) }}</span>
                                 </div>
@@ -732,12 +742,12 @@ const filteredDropdownCatalog = computed(() => {
     })).filter(c => Array.isArray(c.fields) && c.fields.length > 0)
 })
 
-// Catálogo DB-driven
+
 const metaLoading = ref(false)
 const metaError = ref('')
 const metaFields = ref([])
 
-// Filtros dinámicos activos (por id)
+
 const activeDynamicFilterIds = ref([])
 const dynamicFilterValues = ref({})
 
@@ -760,9 +770,8 @@ const filters = ref({ ...initialFilters })
 
 const FIXED_FIELD_IDS = new Set(['estatus', 'equipoMedico', 'funcional', 'marca', 'unidadMedica', 'tipoMantenimiento'])
 
-// Mapear ids de meta a las claves exactas usadas en los objetos de item (caso DB/labels)
+// Mapear ids de meta a las claves exactas usadas en los objetos de item 
 const FIXED_COLUMN_MAP = {
-    // Backend uses 'no' for inventory folio; 'no_registro' maps to column 'No' (label shown as 'No')
     no: 'No DE INVENTARIO',
     no_registro: 'No',
     'no_de_inventario': 'No DE INVENTARIO',
@@ -2637,6 +2646,37 @@ watch(pageSize, (n) => {
     background: #374151;
 }
 
+/* --- FIX: asegurar que los selects dentro de las cards de filtros no se desborden --- */
+.filter-card .select-wrapper select,
+.filter-card .input-wrapper input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.filter-card .select-wrapper {
+    position: relative;
+}
+
+.filter-card .select-wrapper .select-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.filter-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
 .filter-actions {
     display: flex;
     align-items: center;
@@ -3639,6 +3679,12 @@ watch(pageSize, (n) => {
     align-items: center;
     gap: 6px;
     flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .card-label svg {
@@ -3652,11 +3698,20 @@ watch(pageSize, (n) => {
     color: #e5e7eb;
     font-weight: 600;
     text-align: right;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-width: 0;
+}
+
+/* Texto largo (p.ej. Material necesario…) debe envolver por palabras */
+.card-value.card-value-wrap {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    text-align: left;
     white-space: normal;
-    overflow-wrap: anywhere;
-    line-height: 1.25;
+    word-break: normal;
+    overflow-wrap: break-word;
 }
 
 .card-value.value-na {
@@ -3665,6 +3720,7 @@ watch(pageSize, (n) => {
     font-weight: 500;
     opacity: 0.7;
 }
+
 
 .card-cnis {
     background: linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.1) 100%);
@@ -3890,6 +3946,128 @@ watch(pageSize, (n) => {
     border: 1px solid #374151;
     padding: 6px 8px;
     border-radius: 6px;
+}
+
+/* Media queries para responsive pagination */
+@media (max-width: 1200px) {
+    .pagination {
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .btn-pagination {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+
+    .page-numbers {
+        gap: 4px;
+    }
+
+    .page-btn {
+        padding: 5px 8px;
+        font-size: 0.9rem;
+    }
+
+    .page-info {
+        font-size: 0.85rem;
+        min-width: 140px;
+    }
+
+    .page-size-select {
+        gap: 6px;
+        font-size: 0.85rem;
+    }
+
+    .page-size-select select {
+        padding: 5px 6px;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .pagination {
+        gap: 8px;
+        width: 100%;
+        padding: 15px 10px;
+    }
+
+    .btn-pagination {
+        padding: 7px 10px;
+        font-size: 0.8rem;
+        flex-shrink: 1;
+        white-space: nowrap;
+    }
+
+    .page-numbers {
+        gap: 3px;
+        flex-shrink: 1;
+        min-width: 0;
+        overflow-x: auto;
+    }
+
+    .page-btn {
+        padding: 4px 6px;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+    }
+
+    .page-info {
+        font-size: 0.75rem;
+        min-width: 100px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .page-size-select {
+        gap: 4px;
+        font-size: 0.75rem;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    .page-size-select select {
+        padding: 4px 4px;
+        font-size: 0.75rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination {
+        gap: 4px;
+        padding: 12px 8px;
+    }
+
+    .btn-pagination {
+        padding: 6px 8px;
+        font-size: 0.75rem;
+    }
+
+    .page-numbers {
+        gap: 2px;
+    }
+
+    .page-btn {
+        padding: 3px 5px;
+        font-size: 0.7rem;
+        min-width: 24px;
+        text-align: center;
+    }
+
+    .page-info {
+        font-size: 0.7rem;
+        min-width: 90px;
+    }
+
+    .page-size-select {
+        gap: 3px;
+        font-size: 0.7rem;
+    }
+
+    .page-size-select select {
+        padding: 3px 3px;
+        font-size: 0.7rem;
+    }
 }
 
 /* Sección de Detalles */
@@ -4336,6 +4514,55 @@ watch(pageSize, (n) => {
 
 .filter-category {
     padding: 4px 0;
+}
+
+/* Accordions: compact details/summary styling for dropdown */
+.filter-category summary.category-header,
+.dropdown-active-accordion > summary.active-section-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 6px;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: transparent;
+    border-top: 1px solid rgba(34, 211, 238, 0.06);
+    list-style: none;
+    cursor: pointer;
+}
+
+.filter-category summary.category-header {
+    gap: 8px;
+}
+
+.filter-category summary.category-header .category-chevron,
+.dropdown-active-accordion summary .summary-chevron {
+    width: 14px;
+    height: 14px;
+    color: #8b98a8;
+    flex-shrink: 0;
+    transition: transform 0.18s ease;
+}
+
+.filter-category[open] summary.category-header .category-chevron,
+.dropdown-active-accordion[open] summary .summary-chevron {
+    transform: rotate(180deg);
+}
+
+.dropdown-active-accordion .active-filters-list {
+    padding: 8px 16px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Remove default marker in WebKit for cleaner look */
+.filter-category summary::-webkit-details-marker,
+.dropdown-active-accordion summary::-webkit-details-marker {
+    display: none;
 }
 
 .category-header {
