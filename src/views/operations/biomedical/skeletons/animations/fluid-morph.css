@@ -1,0 +1,6 @@
+@keyframes fluid-morph {
+  0% { border-radius: 12px 24px 12px 24px; }
+  33% { border-radius: 24px 12px 24px 12px; }
+  66% { border-radius: 18px 18px 24px 18px; }
+  100% { border-radius: 12px 24px 12px 24px; }
+}

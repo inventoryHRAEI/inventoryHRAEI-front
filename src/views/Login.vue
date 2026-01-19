@@ -187,7 +187,14 @@ const login = async () => {
      } catch (e) { console.warn('windowManager no disponible', e) }
      notifier.success('Sesión iniciada')
      try { window.dispatchEvent(new Event('session:updated')) } catch {}
-     await navigateAndRefresh(router, { name: 'dashboard' })
+
+     const nextTarget = typeof route.query?.next === 'string' ? String(route.query.next) : ''
+     const safeNext = nextTarget && nextTarget.startsWith('/') ? nextTarget : ''
+     if (safeNext) {
+       await navigateAndRefresh(router, safeNext)
+     } else {
+       await navigateAndRefresh(router, { name: 'dashboard' })
+     }
    } catch (e) {
      error.value = e.message
      notifier.error(e.message)

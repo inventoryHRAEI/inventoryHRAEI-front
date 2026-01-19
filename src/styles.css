@@ -239,6 +239,19 @@ input[type="date"] {
   min-width: 0
 }
 
+/* Make the main testing environment panel use the same dark "liquid glass" as the topbar
+   Targets the <section class="action-panel ... testing-environment-main"> -> .panel-surface inside it. */
+.testing-environment-main > .panel-surface,
+.testing-environment-main .panel-surface {
+  background: rgba(19, 31, 52, 0.50) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  backdrop-filter: blur(12px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+  box-shadow: 0 16px 48px rgba(2, 6, 23, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  background-clip: padding-box !important;
+  border-radius: 16px;
+}
+
 .brand-text {
   flex: 0 1 auto;
   min-width: 0;

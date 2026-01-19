@@ -1,0 +1,88 @@
+/* Tunnel Performance Optimizations */
+/* Disable expensive animations when on tunnel to improve render speed */
+
+@media (prefers-reduced-motion: reduce), 
+       (min-width: 1px) {
+  /* Check if running through tunnel (will be set by JS) */
+  html.tunnel-mode {
+    --animation-duration: 0ms;
+    --transition-duration: 0ms;
+  }
+
+  html.tunnel-mode * {
+    animation-duration: 0ms !important;
+    transition-duration: 0ms !important;
+  }
+
+  /* BUT: Keep skeleton loader animation - it's essential for UX */
+  html.tunnel-mode .shimmer-animation {
+    animation-duration: 2s !important;
+    transition-duration: 200ms !important;
+  }
+
+  /* Reduce main.js startup animations */
+  html.tunnel-mode .card-enter {
+    animation: none !important;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Disable pulse animations on non-critical elements */
+  html.tunnel-mode .pulse-text,
+  html.tunnel-mode .haloPulse,
+  html.tunnel-mode .maintenancePulse {
+    animation: none !important;
+  }
+
+  /* Simpler hover states */
+  html.tunnel-mode .maintenance-card:hover {
+    transform: none !important;
+  }
+
+  html.tunnel-mode .filter-item input:focus,
+  html.tunnel-mode .filter-item select:focus {
+    transform: none !important;
+  }
+}
+
+/* Force GPU acceleration on tunnel */
+@supports (contain: layout) {
+  html.tunnel-mode .cards-grid,
+  html.tunnel-mode .maintenance-card,
+  html.tunnel-mode .card-body {
+    contain: layout style paint;
+    will-change: transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+}
+
+/* Defer non-critical paints */
+@media (min-width: 1px) {
+  /* Hide non-critical decorative elements on tunnel */
+  html.tunnel-mode .card-hover-effect,
+  html.tunnel-mode .card-glow,
+  html.tunnel-mode .icon-halo,
+  html.tunnel-mode .filters-section::after,
+  html.tunnel-mode .cards-section::before {
+    display: none !important;
+  }
+
+  /* Simplify backgrounds */
+  html.tunnel-mode .maintenance-card {
+    background: linear-gradient(135deg, rgba(45, 55, 72, 0.95) 0%, rgba(17, 24, 39, 0.92) 100%) !important;
+  }
+
+  /* Disable box-shadows on tunnel for faster rendering */
+  html.tunnel-mode .maintenance-card,
+  html.tunnel-mode .filters-section,
+  html.tunnel-mode .cards-section {
+    box-shadow: none !important;
+  }
+
+  /* Simpler focus states */
+  html.tunnel-mode *:focus-visible {
+    outline: 2px solid #06b6d4;
+    outline-offset: 2px;
+  }
+}

@@ -1,0 +1,164 @@
+import { computed, ref, watch, nextTick } from 'vue'
+
+export function useBiomedicalCardRendering() {
+  const selectedItem = ref(null)
+  const currentPage = ref(1)
+  const pageSize = ref(3)
+  
+  // Tunnel performance optimizations
+  const isTunnel = typeof window !== 'undefined' && /\.trycloudflare\.com|\.ngrok-free\.dev|\.loca\.lt/.test(window.location.hostname)
+  const renderedCount = ref(0)
+  const batchSize = ref(isTunnel ? 6 : 12) // Smaller batches in tunnel
+  const isRendering = ref(false)
+
+  function getItemKey(item, idx) {
+    if (!item || typeof item !== 'object') return `idx:${idx}`
+    const inv = item['No DE INVENTARIO']
+    const no = item['No']
+    const id = item._id
+    const key = (inv && String(inv).trim()) || (no && String(no).trim()) || (id && String(id).trim())
+    return key ? `k:${key}` : `idx:${idx}`
+  }
+
+  function isExpanded(item, idx) {
+    if (!selectedItem.value) return false
+    return getItemKey(selectedItem.value, -1) === getItemKey(item, idx)
+  }
+
+  function toggleSelect(item) {
+    if (!item) { selectedItem.value = null; return }
+    if (selectedItem.value && getItemKey(selectedItem.value, -1) === getItemKey(item, -1)) {
+      selectedItem.value = null
+    } else {
+      selectedItem.value = item
+    }
+  }
+
+  function getStatusAccentClass(item) {
+    const status = item['ESTATUS']?.toLowerCase()
+    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
+    if (funcional === 'no') return 'accent-critical'
+    if (status?.includes('mantenimiento')) return 'accent-warning'
+    if (status === 'inactivo' || status?.includes('no operativo')) return 'accent-warning'
+    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'accent-success'
+    return 'accent-default'
+  }
+
+  function getStatusGlowClass(item) {
+    const status = item['ESTATUS']?.toLowerCase()
+    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
+    if (funcional === 'no') return 'glow-critical'
+    if (status?.includes('mantenimiento')) return 'glow-warning'
+    if (status === 'inactivo' || status?.includes('no operativo')) return 'glow-warning'
+    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'glow-success'
+    return 'glow-default'
+  }
+
+  function getStatusPillClass(item) {
+    const statusRaw = item?.['ESTATUS']
+    const status = statusRaw ? String(statusRaw).toLowerCase() : ''
+    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
+    const hasRealValue = statusRaw && String(statusRaw).trim() && !['n/a', 'sin clave', 'sin datos', 'no disponible', 'na'].includes(String(statusRaw).toLowerCase())
+    if (!hasRealValue) return 'status-unknown'
+    if (status.includes('propio')) return 'status-success'
+    if (funcional === 'no') return 'status-critical'
+    if (status?.includes('mantenimiento')) return 'status-warning'
+    if (status === 'inactivo' || status?.includes('no operativo')) return 'status-warning'
+    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'status-success'
+    return 'status-default'
+  }
+
+  function getStatusTextClass(item) {
+    const raw = item?.['ESTATUS']
+    const hasRealValue = raw && String(raw).trim() && !['n/a', 'sin clave', 'sin datos', 'no disponible', 'na'].includes(String(raw).toLowerCase())
+    if (!hasRealValue) return 'sin-estado'
+    return String(raw).toLowerCase()
+  }
+
+  function isSparse(item) {
+    if (!item || typeof item !== 'object') return false
+    return !item.__hasRealData
+  }
+
+  function isInMaintenance(item) {
+    if (!item) return false
+    const inv = item['No DE INVENTARIO']
+    return inv ? maintenanceMap?.value?.[String(inv).trim()]?.status === 'in_progress' : false
+  }
+
+  function isFieldVisible(item, field) {
+    if (!item) return false
+    const val = item[field]
+    const hasReal = val && String(val).trim() && !['n/a', 'sin clave', 'sin datos', 'no disponible', 'na'].includes(String(val).toLowerCase())
+    return !!hasReal
+  }
+
+  // Batch rendering for tunnel: Schedule incremental renders
+  function scheduleBatchRender(totalCards) {
+    if (!isTunnel || isRendering.value) return
+    isRendering.value = true
+    renderedCount.value = 0
+    
+    if (typeof window !== 'undefined' && window.console) {
+      console.log(`[perf] Batch render starting: ${totalCards} items, batch size: ${batchSize.value}`)
+    }
+
+    function renderNextBatch() {
+      const prevCount = renderedCount.value
+      renderedCount.value = Math.min(renderedCount.value + batchSize.value, totalCards)
+      
+      if (typeof window !== 'undefined' && window.console && renderedCount.value !== prevCount) {
+        console.log(`[perf] Rendered ${renderedCount.value}/${totalCards} items`)
+      }
+      
+      if (renderedCount.value < totalCards) {
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(() => {
+            nextTick(() => renderNextBatch())
+          }, { timeout: 50 })
+        } else {
+          // Fallback: use requestAnimationFrame (every ~16ms)
+          requestAnimationFrame(() => {
+            setTimeout(() => renderNextBatch(), 0)
+          })
+        }
+      } else {
+        isRendering.value = false
+        if (typeof window !== 'undefined' && window.console) {
+          console.log(`[perf] Batch render complete`)
+        }
+      }
+    }
+
+    // Start first batch immediately
+    renderNextBatch()
+  }
+
+  // Reset rendered count when page or filters change
+  function resetBatchRender() {
+    renderedCount.value = 0
+    isRendering.value = false
+  }
+
+  return {
+    selectedItem,
+    currentPage,
+    pageSize,
+    renderedCount,
+    batchSize,
+    isRendering,
+    isTunnel,
+    getItemKey,
+    isExpanded,
+    toggleSelect,
+    getStatusAccentClass,
+    getStatusGlowClass,
+    getStatusPillClass,
+    getStatusTextClass,
+    isSparse,
+    isInMaintenance,
+    isFieldVisible,
+    scheduleBatchRender,
+    resetBatchRender
+  }
+}

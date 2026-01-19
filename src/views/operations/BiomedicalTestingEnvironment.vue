@@ -9,716 +9,195 @@
                         <polyline points="12 19 5 12 12 5"></polyline>
                     </svg>
                 </button>
-                <span>Trabajando - Entorno de Pruebas</span>
-                <div class="spacer"></div>
+                <span class="testing-environment-title">Trabajando - Entorno de Pruebas</span>
+                <button class="btn-back-to-dashboard" style="visibility: hidden; pointer-events: none;"></button>
             </div>
         </template>
 
         <Breadcrumbs />
 
-        <div class="testing-content">
-            <!-- Sección de Filtros -->
-            <div class="filters-section">
-                <div class="filters-header">
-                    <div class="filters-title-wrapper">
-                        <div class="search-icon-container">
-                            <svg class="icon-search animated-pulse" xmlns="http://www.w3.org/2000/svg" width="20"
-                                height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <circle cx="11" cy="11" r="8"></circle>
-                                <path d="m21 21-4.35-4.35"></path>
-                            </svg>
-                        </div>
-                        <h3>Filtros de búsqueda</h3>
-                        <div class="filters-stats">
-                            <div class="stat-item">
-                                <span class="stat-number">{{ filteredData.length }}</span>
-                                <span class="stat-label">resultados</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-number">{{ allData.length }}</span>
-                                <span class="stat-label">total</span>
-                            </div>
-                        </div>
-                    </div>
+        <BiomedicalSkeletonLoader v-if="!contentReady" />
 
-                    <div class="filters-header-actions">
-                        <div class="filters-global-actions">
-                            <div class="dropdown-filters-container" ref="filterDropdownContainer">
-                                <button ref="filterDropdownBtn" @click="toggleFilterDropdown" class="btn-filter-primary"
-                                    :aria-expanded="isFilterDropdownOpen">
-                                    <span class="btn-filter-label">
-                                        <span class="btn-filter-icon">
-                                            <svg v-if="activeDynamicFilterIds.length === 0"
-                                                xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M4 4h16l-6 8v5l-4 3v-8z" />
-                                                <path d="M12 3v8" />
-                                            </svg>
-                                            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <path d="M4 4h16l-6 8v5l-4 3v-8z" />
-                                                <path d="M9 9l6 6" />
-                                                <path d="M15 9l-6 6" />
-                                            </svg>
-                                        </span>
-                                        <span class="btn-filter-text">
-                                            <span class="btn-filter-title">Filtros</span>
-                                            <span class="btn-filter-count"
-                                                v-if="activeDynamicFilterIds.length === 0">Añadir</span>
-                                            <span class="btn-filter-count" v-else>{{ activeDynamicFilterIds.length }}
-                                                activos</span>
-                                        </span>
-                                    </span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" class="btn-filter-chevron"
-                                        :class="{ 'rotate': isFilterDropdownOpen }">
-                                        <path d="m6 9 6 6 6-6" />
-                                    </svg>
-                                </button>
-
-                                <transition name="dropdown-fade">
-                                    <div v-show="isFilterDropdownOpen" class="dropdown-filters-menu" @click.stop>
-                                        <!-- Header with actions -->
-                                        <div class="dropdown-header">
-                                            <button class="action-btn action-clear-all"
-                                                :disabled="activeDynamicFilterIds.length === 0"
-                                                @click.stop="clearDynamicFilters">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                                    viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                    stroke-width="2">
-                                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                                </svg>
-                                                Limpiar
-                                            </button>
-                                            <div class="dropdown-title-text">Filtros disponibles</div>
-                                        </div>
-
-                                        <!-- Search input -->
-                                        <div class="dropdown-search-wrapper">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                                class="search-icon">
-                                                <circle cx="11" cy="11" r="8"></circle>
-                                                <path d="m21 21-4.35-4.35"></path>
-                                            </svg>
-                                            <input class="dropdown-filters-search" type="search"
-                                                v-model="dropdownSearch" placeholder="Buscar filtros..." @click.stop />
-                                        </div>
-
-                                        <!-- Active filters accordion (collapsed by default) -->
-                                        <details v-if="activeDynamicFilterIds.length > 0" class="dropdown-active-accordion">
-                                            <summary class="active-section-summary" role="button" aria-expanded="false">
-                                                <span class="active-section-title">Activos ({{ activeDynamicFilterIds.length }}/15)</span>
-                                                <span class="summary-count">{{ activeDynamicFilterIds.length }}</span>
-                                                <svg class="summary-chevron" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                    <path d="m6 9 6 6 6-6" />
-                                                </svg>
-                                            </summary>
-
-                                            <div class="active-filters-list">
-                                                <div v-for="id in activeDynamicFilterIds" :key="id" class="active-filter-chip">
-                                                    <span class="chip-label">{{ getDynamicFieldLabel(id) }}</span>
-                                                    <button class="chip-remove-btn" @click.stop="removeDynamicFilter(id)" title="Eliminar filtro">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            </details> 
-                                        <!-- Loading state -->
-                                        <div v-if="metaLoading" class="dropdown-state-message loading-state">
-                                            <div class="loader-spinner-small"></div>
-                                            <span>Cargando catálogo...</span>
-                                        </div>
-
-                                        <!-- Empty state -->
-                                        <div v-else-if="filteredDropdownCatalog.length === 0"
-                                            class="dropdown-state-message empty-state">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-                                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <circle cx="12" cy="12" r="10"></circle>
-                                                <line x1="12" y1="8" x2="12" y2="12"></line>
-                                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                                            </svg>
-                                            <span>No hay filtros disponibles</span>
-                                        </div>
-
-                                        <!-- Filters list -->
-                                        <div v-else class="dropdown-filters-list">
-                                            <details v-for="cat in filteredDropdownCatalog" :key="cat.category" class="filter-category">
-                                                <summary class="category-header">{{ cat.category }}
-                                                    <svg class="category-chevron" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                        <path d="m6 9 6 6 6-6" />
-                                                    </svg>
-                                                </summary>
-                                                    <div class="category-filters">
-                                                    <label v-for="field in cat.fields" :key="field.id"
-                                                        class="filter-checkbox-item"
-                                                        :class="{ 'is-disabled': isFixedField(field.id) || activeDynamicFilterIds.length >= 15 }">
-                                                        <input type="checkbox"
-                                                            :checked="activeDynamicFilterIds.includes(field.id)"
-                                                            :disabled="isFixedField(field.id) || activeDynamicFilterIds.length >= 15"
-                                                            @change="handleFilterCheckboxChange(field.id)" />
-                                                        <span class="checkbox-custom"></span>
-                                                        <span class="filter-item-label">
-                                                            {{ field.label }}
-                                                        </span>
-                                                        <span v-if="isFixedField(field.id)"
-                                                            class="filter-type-badge fixed">Fijo</span>
-                                                        <span v-else-if="activeDynamicFilterIds.includes(field.id)"
-                                                            class="filter-type-badge active">Activo</span>
-                                                    </label>
-                                                </div>
-                                            </details>
-                                        </div>
-
-                                        <!-- Footer -->
-                                        <div class="dropdown-footer">
-                                            <span class="filter-counter">{{ activeDynamicFilterIds.length }} de 15
-                                                filtros</span>
-                                        </div>
-                                    </div>
-                                </transition>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="filters-callout">
-                    <div class="callout-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2">
-                            <path d="M12 2 15 8l6 .5-4.5 4 1.5 6L12 16l-6 3 1.5-6-4.5-4L9 8z"></path>
-                        </svg>
-                        <span class="icon-halo"></span>
-                    </div>
-                    <div class="callout-content">
-                        <p class="callout-title">Búsqueda guiada para equipos biomédicos</p>
-                        <p class="callout-subtext">Mantén la vista clara: cada filtro reacciona en tiempo real con
-                            debounce
-                            y persistencia.</p>
-                    </div>
-                    <div class="callout-metric">
-                        <span class="metric-label">Filtros dinámicos activos</span>
-                        <strong class="metric-value">{{ activeDynamicFilterIds.length }}</strong>
-                        <span class="metric-time">se aplican al instante</span>
-                    </div>
-                </div>
-
-                <div class="filters-layout" :class="{ 'has-dynamic': activeDynamicFilterIds.length > 0 }">
-                    <section class="filters-zone filters-zone-fixed" aria-label="Filtros fijos">
-                        <header class="zone-header">
-                            <div class="zone-title">
-                                <span class="zone-pill zone-pill-fixed">Fijo</span>
-                                <strong>Filtros obligatorios</strong>
-                            </div>
-                            <span class="zone-subtitle">Siempre visibles • No eliminables</span>
-                        </header>
-
-                        <div class="filters-grid-fixed"
-                            :class="{ 'grid-initial': activeDynamicFilterIds.length === 0 }">
-                            <div class="filter-card filter-card-fixed">
-                                <label for="filter-no">
-                                    <span class="field-label">No. Inventario</span>
-                                    <span class="field-badge field-badge-fixed">Fijo</span>
-                                </label>
-                                <div class="input-wrapper">
-                                    <input id="filter-no" v-model="filters.no" type="text" placeholder="SIB-MSV-..." />
-                                </div>
-                            </div>
-
-                            <div class="filter-card filter-card-fixed">
-                                <label for="filter-no-registro">
-                                    <span class="field-label">No</span>
-                                    <span class="field-badge field-badge-fixed">Fijo</span>
-                                </label>
-                                <div class="input-wrapper">
-                                    <input id="filter-no-registro" v-model="filters.noRegistro" type="text"
-                                        placeholder="1234" />
-                                </div>
-                            </div>
-
-                            <div class="filter-card filter-card-fixed">
-                                <label for="filter-estatus">
-                                    <span class="field-label">Estatus</span>
-                                    <span class="field-badge field-badge-fixed">Fijo</span>
-                                </label>
-                                <div class="select-wrapper">
-                                    <select id="filter-estatus" v-model="filters.estatus">
-                                        <option value="">Todos</option>
-                                        <option :value="SIN_ESTADO_VALUE">Sin estado</option>
-                                        <option v-for="opt in estatusOptions" :key="opt" :value="opt">{{ opt }}
-                                        </option>
-                                    </select>
-                                    <div class="select-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="m6 9 6 6 6-6" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="filter-card filter-card-fixed">
-                                <label for="filter-equipo">
-                                    <span class="field-label">Equipo Médico</span>
-                                    <span class="field-badge field-badge-fixed">Fijo</span>
-                                </label>
-                                <div class="input-wrapper">
-                                    <input id="filter-equipo" v-model="filters.equipoMedico" type="text"
-                                        placeholder="Monitor, Desfibrilador..." :list="equipoMedicoDatalistId" />
-                                    <datalist :id="equipoMedicoDatalistId">
-                                        <option v-for="v in equipoMedicoSuggestions" :key="v" :value="v">{{ v }}</option>
-                                    </datalist>
-                                </div>
-                            </div>
-
-                            <div class="filter-card filter-card-fixed">
-                                <label>
-                                    <span class="field-label">¿Funcional?</span>
-                                    <span class="field-badge field-badge-fixed">Fijo</span>
-                                </label>
-                                <div class="tri-toggle">
-                                    <button type="button" class="tri-option"
-                                        :class="{ active: filters.funcional === '' }"
-                                        @click="filters.funcional = ''">Todos</button>
-                                    <button type="button" class="tri-option"
-                                        :class="{ active: filters.funcional === 'SI' }"
-                                        @click="filters.funcional = 'SI'">Sí</button>
-                                    <button type="button" class="tri-option"
-                                        :class="{ active: filters.funcional === 'NO' }"
-                                        @click="filters.funcional = 'NO'">No</button>
-                                </div>
-                            </div>
-
-                            <div class="filter-card filter-card-fixed">
-                                <label for="filter-marca">
-                                    <span class="field-label">Marca</span>
-                                    <span class="field-badge field-badge-fixed">Fijo</span>
-                                </label>
-                                <div class="input-wrapper">
-                                    <input id="filter-marca" v-model="filters.marca" type="text"
-                                        placeholder="Philips, GE, Siemens..." :list="marcaDatalistId" />
-                                    <datalist :id="marcaDatalistId">
-                                        <option v-for="v in marcaSuggestions" :key="v" :value="v">{{ v }}</option>
-                                    </datalist>
-                                </div>
-                            </div>
-
-                            <div class="filter-card filter-card-fixed">
-                                <label for="filter-unidad">
-                                    <span class="field-label">Unidad Médica</span>
-                                    <span class="field-badge field-badge-fixed">Fijo</span>
-                                </label>
-                                <div class="input-wrapper">
-                                    <input id="filter-unidad" v-model="filters.unidadMedica" type="text"
-                                        placeholder="UCI, Área..." :list="unidadMedicaDatalistId" />
-                                    <datalist :id="unidadMedicaDatalistId">
-                                        <option v-for="v in unidadMedicaSuggestions" :key="v" :value="v">{{ v }}</option>
-                                    </datalist>
-                                </div>
-                            </div>
-
-                            <div class="filter-card filter-card-fixed">
-                                <label for="filter-tipo">
-                                    <span class="field-label">Tipo de Mantenimiento</span>
-                                    <span class="field-badge field-badge-fixed">Fijo</span>
-                                </label>
-                                <div class="select-wrapper">
-                                    <select id="filter-tipo" v-model="filters.tipoMantenimiento">
-                                        <option value="">Todos</option>
-                                        <option value="Preventivo">Preventivo</option>
-                                        <option value="Correctivo">Correctivo</option>
-                                        <option value="Predictivo">Predictivo</option>
-                                    </select>
-                                    <div class="select-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="m6 9 6 6 6-6" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section v-if="activeDynamicFilterIds.length > 0" class="filters-zone filters-zone-dynamic"
-                        aria-label="Filtros dinámicos">
-                        <header class="zone-header">
-                            <div class="zone-title">
-                                <span class="zone-pill zone-pill-dynamic">Dinámico</span>
-                                <strong>Filtros añadidos</strong>
-                            </div>
-                            <span class="zone-subtitle">Máx. 15 • Eliminables</span>
-                        </header>
-
-                        <div class="filters-grid-dynamic">
-                            <div v-for="id in activeDynamicFilterIds" :key="id" class="filter-card filter-card-dynamic">
-                                <div class="dynamic-card-header">
-                                    <label :for="`dyn-${id}`">
-                                        <span class="field-label">{{ getDynamicFieldLabel(id) }}</span>
-                                    </label>
-                                    <button type="button" class="btn-remove-filter" @click="removeDynamicFilter(id)"
-                                        title="Eliminar filtro">✕</button>
-                                </div>
-
-                                <div v-if="getDynamicFieldKind(id) === 'boolean'" class="tri-toggle tri-toggle-dynamic">
-                                    <button type="button" class="tri-option"
-                                        :class="{ active: getDynamicValue(id) === '' }"
-                                        @click="setDynamicValue(id, '')">Todos</button>
-                                    <button type="button" class="tri-option"
-                                        :class="{ active: getDynamicValue(id) === 'SI' }"
-                                        @click="setDynamicValue(id, 'SI')">Sí</button>
-                                    <button type="button" class="tri-option"
-                                        :class="{ active: getDynamicValue(id) === 'NO' }"
-                                        @click="setDynamicValue(id, 'NO')">No</button>
-                                </div>
-
-                                <div v-else-if="getDynamicFieldKind(id) === 'date'" class="input-wrapper">
-                                    <input :id="`dyn-${id}`" v-model="dynamicFilterValues[id]" type="text"
-                                        placeholder="DD/MM/AAAA" v-flatpickr />
-                                </div>
-
-                                <div v-else-if="isDynamicSelectable(id)" class="select-wrapper">
-                                    <select :id="`dyn-${id}`" v-model="dynamicFilterValues[id]">
-                                        <option value="">Todos</option>
-                                        <option v-for="v in getDynamicSelectOptions(id)" :key="v" :value="v">{{ v }}
-                                        </option>
-                                    </select>
-                                    <div class="select-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path d="m6 9 6 6 6-6" />
-                                        </svg>
-                                    </div>
-                                </div>
-
-                                <div v-else class="input-wrapper">
-                                    <input :id="`dyn-${id}`" v-model="dynamicFilterValues[id]" type="text"
-                                        placeholder="Escribe para filtrar" :list="getDynamicDatalistId(id)" />
-                                    <datalist :id="getDynamicDatalistId(id)">
-                                        <option v-for="v in getDynamicSuggestions(id)" :key="v" :value="v">{{ v }}</option>
-                                    </datalist>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <!-- Drawer lateral: + Añadir filtro -->
-                <div v-if="isAddFilterDrawerOpen" class="drawer-overlay" @click.self="closeAddFilterDrawer">
-                    <aside ref="drawerEl" :class="['drawer', { animating: drawerAnimating }]" role="dialog"
-                        aria-modal="true" aria-label="Añadir filtro">
-                        <header class="drawer-header">
-                            <div>
-                                <h3>Añadir filtro</h3>
-                                <p class="drawer-subtitle">Categorías colapsables • Campos reales de BD • Máx. 15
-                                    dinámicos</p>
-                            </div>
-                            <button class="drawer-close" type="button" @click="closeAddFilterDrawer">✕</button>
-                        </header>
-
-                        <div class="drawer-body">
-                            <div class="drawer-search-wrapper">
-                                <input class="drawer-search" type="search" v-model="drawerSearch"
-                                    placeholder="Buscar filtros..." aria-label="Buscar filtros" />
-                            </div>
-
-                            <div class="drawer-meta">
-                                <span class="drawer-count">Añadidos: <strong>{{ activeDynamicFilterIds.length
-                                }}</strong> /
-                                    15</span>
-                                <span v-if="metaLoading" class="drawer-loading">Cargando catálogo...</span>
-                            </div>
-
-                            <div v-if="metaError" class="drawer-empty">
-                                <p style="margin: 0 0 10px;">No se pudo cargar el catálogo de filtros.</p>
-                                <p style="margin: 0 0 12px; opacity: 0.85;">{{ metaError }}</p>
-                                <button type="button" class="drawer-add" @click="fetchMeta">Reintentar</button>
-                            </div>
-
-                            <div v-else-if="!dynamicCatalog.length && !metaLoading" class="drawer-empty">
-                                No hay campos disponibles (verifica backend/BD).
-                                <div style="margin-top: 10px;">
-                                    <button type="button" class="drawer-add" @click="fetchMeta">Reintentar</button>
-                                </div>
-                            </div>
-
-                            <details v-for="cat in filteredDynamicCatalog" :key="cat.category" class="drawer-category"
-                                open>
-                                <summary class="drawer-category-title">{{ cat.category }}</summary>
-                                <div class="drawer-list">
-                                    <div v-for="field in cat.fields" :key="field.id" class="drawer-item">
-                                        <div class="drawer-item-main">
-                                            <div class="drawer-item-title">
-                                                <span class="drawer-item-name">{{ field.label }}</span>
-                                                <span class="drawer-item-type">{{ getFieldTypeLabel(field) }}</span>
-                                            </div>
-                                            <div class="drawer-item-badges">
-                                                <span v-if="isFixedField(field.id)"
-                                                    class="drawer-badge drawer-badge-fixed">Fijo</span>
-                                                <span v-else-if="activeDynamicFilterIds.includes(field.id)"
-                                                    class="drawer-badge drawer-badge-added">Añadido</span>
-                                            </div>
-                                        </div>
-
-                                        <div style="display:flex; gap:10px; align-items:center;">
-                                            <button
-                                                v-if="!isFixedField(field.id) && activeDynamicFilterIds.includes(field.id)"
-                                                type="button" class="drawer-add"
-                                                style="border-color: rgba(248,113,113,0.35); background: rgba(248,113,113,0.12);"
-                                                @click="removeDynamicFilter(field.id)">
-                                                Quitar
-                                            </button>
-
-                                            <button v-else type="button" class="drawer-add"
-                                                :disabled="isFixedField(field.id) || activeDynamicFilterIds.includes(field.id) || activeDynamicFilterIds.length >= 15"
-                                                @click="addDynamicFilter(field.id)">
-                                                Añadir
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </details>
-                        </div>
-                    </aside>
-                </div>
-            </div>
-
-            <!-- Vista de Cards (Resumen) -->
-            <div class="cards-section">
-                <div class="cards-header">
-                    <h3>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <line x1="9" y1="9" x2="15" y2="9"></line>
-                            <line x1="9" y1="15" x2="15" y2="15"></line>
-                        </svg>
-                        Resumen de Equipos
-                    </h3>
-                    <span class="cards-count">Mostrando {{ displayedCards.length }} de {{ visibleCount }}</span>
-                </div>
-                <div v-if="loading" class="loading">
-                    <div class="loader-spinner"></div>
-                    <p>Cargando datos...</p>
-                </div>
-                <div v-else-if="filteredData.length === 0" class="no-results">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.35-4.35"></path>
-                    </svg>
-                    <p>No se encontraron equipos con los filtros aplicados</p>
-                </div>
-                <div v-else class="cards-grid">
-                    <div v-for="(item, idx) in displayedCards" :key="getItemKey(item, idx)" class="maintenance-card"
-                        @click="toggleSelect(item)"
-                        :class="{ active: isExpanded(item, idx), expanded: isExpanded(item, idx), 'card-sparse': isSparse(item) }"
-                        :aria-expanded="isExpanded(item, idx)" tabindex="0" @keydown.enter.prevent="toggleSelect(item)"
-                        @keydown.space.prevent="toggleSelect(item)">
-                        <div class="card-accent" :class="getStatusAccentClass(item)"></div>
-                        <div class="card-glow" :class="getStatusGlowClass(item)"></div>
-                        <div class="card-header">
-                            <div class="card-header-top">
-                                <!-- Num de Inventario: SIEMPRE visible con label y valor (nunca en blanco) -->
-                                <div class="card-no-wrapper">
-                                    <div class="card-no">
-                                        <span class="card-pill-label">Num de Inventario </span>
-                                        <span class="card-pill-value"
-                                            :class="{ 'value-na': !hasRealValue(item['No DE INVENTARIO']) }">{{
-                                                displayValue(item['No DE INVENTARIO']) }}</span>
-                                    </div>
-                                    <div class="card-no-icon" aria-hidden="true">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                            <path
-                                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z" />
-                                        </svg>
-                                    </div>
-                                </div>
-
-                                <!-- Campo No: SIEMPRE visible, nunca en blanco -->
-                                <div class="card-record">
-                                    <span class="card-record-label">No</span>
-                                    <span class="card-record-value" :title="String(displayValue(item['No']))"
-                                        :class="{ 'value-na': !hasRealValue(item['No']) }">{{
-                                            displayValue(item['No'])
-                                        }}</span>
-                                </div>
-
-                                <!-- Close button shown only when expanded -->
-                                <button v-if="isExpanded(item, idx)" class="card-close" @click.stop="toggleSelect(null)"
-                                    aria-label="Cerrar" title="Cerrar">✕</button>
-                            </div>
-
-                            <div class="card-header-bottom">
-                                <div class="card-status-container">
-                                    <span class="card-status-label">Estatus</span>
-                                    <span class="card-status"
-                                        :class="[getStatusTextClass(item), getStatusPillClass(item)]">
-                                        <span class="status-dot" :class="getStatusTextClass(item)"></span>
-                                        {{ item['ESTATUS'] || 'Sin estado' }}
-                                    </span>
-                                </div>
-
-                                <div class="card-title-group">
-                                    <span v-if="isFieldVisible(item, 'EQUIPO MEDICO')" class="card-equipo">
-                                        {{ item['EQUIPO MEDICO'] }}
-                                    </span>
-                                    <span v-if="isSparse(item)" class="sparse-badge">Pocos datos</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="card-info-row">
-                                <span class="card-label">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M6 2 3 6v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                                        <line x1="3" x2="21" y1="6" y2="6" />
-                                        <path d="M16 10a4 4 0 0 1-8 0" />
-                                    </svg>
-                                    Marca:
-                                </span>
-                                <span class="card-value" :class="{ 'value-na': !hasRealValue(item['MARCA']) }">{{
-                                    displayValue(item['MARCA']) }}</span>
-                            </div>
-                            <div class="card-info-row">
-                                <span class="card-label">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2">
-                                        <path
-                                            d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                                    </svg>
-                                    Modelo:
-                                </span>
-                                <span class="card-value" :class="{ 'value-na': !hasRealValue(item['MODELO']) }">{{
-                                    displayValue(item['MODELO']) }}</span>
-                            </div>
-                            <div class="card-info-row">
-                                <span class="card-label">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2">
-                                        <path d="M15 7h.01M7 7h.01M7 15h.01M15 15h.01M12 12V9" />
-                                        <circle cx="12" cy="12" r="3" />
-                                    </svg>
-                                    CNIS:
-                                </span>
-                                <span class="card-value card-cnis"
-                                    :class="{ 'value-na': !hasRealValue(item['CLAVE CNIS']) }">{{
-                                        displayValue(item['CLAVE CNIS']) }}</span>
-                            </div>
-                            <!-- Campos dinámicos activos: siempre se muestran si están añadidos (N/A si vacío) -->
-                            <template v-for="id in activeDynamicFilterIds" :key="'dyn-' + id">
-                                <div v-if="!isDynamicFieldDuplicate(id)" class="card-info-row">
-                                    <span class="card-label">{{ getDynamicFieldLabel(id) }}:</span>
-                                    <!-- Material Necesario para Funcionamiento: SIN accordion, solo texto con wrap -->
-                                    <span v-if="id.includes('refaccion_accesorio_consumible') || id.includes('REFACCION_ACCESORIO_CONSUMIBLE')"
-                                        class="card-value card-value-wrap"
-                                        :class="{ 'value-na': !hasRealValue(getItemFieldValue(item, id)) }">{{
-                                            displayValue(getItemFieldValue(item, id)) }}</span>
-
-                                    <!-- Otros campos: sin expandir -->
-                                    <span v-else class="card-value card-value-wrap"
-                                        :class="{ 'value-na': !hasRealValue(getItemFieldValue(item, id)) }">{{
-                                            displayValue(getItemFieldValue(item, id)) }}</span>
-                                </div>
-                            </template>
-                        </div>
-                        <div class="card-footer">
-                            <div v-if="isFieldVisible(item, 'TIPO DE MANTENIMIENTO')" class="maintenance-badge"
-                                :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()">
-                                <div class="badge-icon" :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()"></div>
-                                {{ item['TIPO DE MANTENIMIENTO'] }}
-                            </div>
-                            <div v-if="isFieldVisible(item, 'FUNCIONAL SI NO')" class="functional-indicator"
-                                :class="item['FUNCIONAL SI NO']?.toLowerCase()">
-                                <span class="indicator-dot"></span>
-                                {{
-                                    item['FUNCIONAL SI NO'] === 'SI'
-                                        ? 'Funcional'
-                                        : item['FUNCIONAL SI NO'] === 'NO'
-                                            ? 'No Funcional'
-                                            : item['FUNCIONAL SI NO']
-                                }}
-                            </div>
-                        </div>
-                        <div class="card-hover-effect"></div>
-                    </div>
-                </div>
-                <div v-if="visibleCount > pageSize && !loading" class="pagination">
-                    <button @click="firstPage" :disabled="currentPage === 1" class="btn-pagination"
-                        aria-label="Primera página">«</button>
-                    <button @click="previousPage" :disabled="currentPage === 1" class="btn-pagination"
-                        aria-label="Página anterior">Anterior</button>
-
-                    <div class="page-numbers">
-                        <button v-for="p in visiblePageNumbers" :key="`pg-${p}`" class="page-btn"
-                            :class="{ active: p === currentPage }" :disabled="p === '…'"
-                            @click="p !== '…' && goToPage(p)">{{ p
-                            }}</button>
-                    </div>
-
-                    <button @click="nextPage" :disabled="currentPage === totalPages" class="btn-pagination"
-                        aria-label="Página siguiente">Siguiente</button>
-                    <button @click="lastPage" :disabled="currentPage === totalPages" class="btn-pagination"
-                        aria-label="Última página">»</button>
-
-                    <div class="page-info">Mostrando {{ displayedStart }}-{{ displayedEnd }} de {{ visibleCount }}
-                    </div>
-
-                    <div class="page-size-select">
-                        <label for="psize">Por página</label>
-                        <select id="psize" v-model="pageSize" @change="changePageSize(Number(pageSize))">
-                            <option :value="6">6</option>
-                            <option :value="12">12</option>
-                            <option :value="24">24</option>
-                            <option :value="48">48</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Detalles del mantenimiento eliminado por petición del usuario -->
-
-            <!-- Mensaje cuando no hay datos -->
+        <div v-else class="testing-content" :style="{ animation: 'fadeIn 0.4s ease-in' }">
+            <ScanOverlay
+                :open="scanOverlayOpen"
+                :item="scanOverlayItem"
+                :code="scanOverlayCode"
+                @login="goLoginWithRedirect"
+                @close="closeScanOverlay"
+                @logged="onScanOverlayLogged"
+            />
+            <FiltersSection
+                ref="filtersSectionRef"
+                v-model:filters="filters"
+                v-model:dynamicFilterValues="dynamicFilterValues"
+                v-model:dropdownSearch="dropdownSearch"
+                v-model:drawerSearch="drawerSearch"
+                :filtered-count="filteredData.length"
+                :total-count="allData.length"
+                :mobile-limit-applied="mobileLimitApplied"
+                :active-dynamic-filter-ids="activeDynamicFilterIds"
+                :is-filter-dropdown-open="isFilterDropdownOpen"
+                :meta-loading="metaLoading"
+                :filtered-dropdown-catalog="filteredDropdownCatalog"
+                :toggle-filter-dropdown="toggleFilterDropdown"
+                :open-add-filter-drawer="openAddFilterDrawer"
+                :clear-dynamic-filters="clearDynamicFilters"
+                :handle-filter-checkbox-change="handleFilterCheckboxChange"
+                :get-dynamic-field-label="getDynamicFieldLabel"
+                :remove-dynamic-filter="removeDynamicFilter"
+                :get-dynamic-field-kind="getDynamicFieldKind"
+                :get-dynamic-value="getDynamicValue"
+                :set-dynamic-value="setDynamicValue"
+                :is-dynamic-selectable="isDynamicSelectable"
+                :get-dynamic-select-options="getDynamicSelectOptions"
+                :get-dynamic-datalist-id="getDynamicDatalistId"
+                :get-dynamic-suggestions="getDynamicSuggestions"
+                :sin-estado-value="SIN_ESTADO_VALUE"
+                :estatus-options="estatusOptions"
+                :equipo-medico-datalist-id="equipoMedicoDatalistId"
+                :equipo-medico-suggestions="equipoMedicoSuggestions"
+                :marca-datalist-id="marcaDatalistId"
+                :marca-suggestions="marcaSuggestions"
+                :unidad-medica-datalist-id="unidadMedicaDatalistId"
+                :unidad-medica-suggestions="unidadMedicaSuggestions"
+                :is-add-filter-drawer-open="isAddFilterDrawerOpen"
+                :close-add-filter-drawer="closeAddFilterDrawer"
+                :drawer-animating="drawerAnimating"
+                :filtered-dynamic-catalog="filteredDynamicCatalog"
+                :meta-error="metaError"
+                :dynamic-catalog="dynamicCatalog"
+                :get-field-type-label="getFieldTypeLabel"
+                :fetch-meta="fetchMeta"
+                :add-dynamic-filter="addDynamicFilter"
+                :is-fixed-field="isFixedField"
+            />
+            <CardsSkeletonLoader v-if="!cardsReady" />
+            <CardsSection
+                v-else
+                :loading="loading"
+                :filtered-count="filteredData.length"
+                :displayed-cards="displayedCards"
+                :visible-count="visibleCount"
+                :page-size="pageSize"
+                :current-page="currentPage"
+                :total-pages="totalPages"
+                :visible-page-numbers="visiblePageNumbers"
+                :displayed-start="displayedStart"
+                :displayed-end="displayedEnd"
+                :active-dynamic-filter-ids="activeDynamicFilterIds"
+                :handle-show-barcode="handleShowBarcode"
+                :get-item-key="getItemKey"
+                :toggle-select="toggleSelect"
+                :is-expanded="isExpanded"
+                :is-sparse="isSparse"
+                :is-in-maintenance="isInMaintenance"
+                :get-status-accent-class="getStatusAccentClass"
+                :get-status-glow-class="getStatusGlowClass"
+                :is-field-visible="isFieldVisible"
+                :display-value="displayValue"
+                :has-real-value="hasRealValue"
+                :get-status-text-class="getStatusTextClass"
+                :get-status-pill-class="getStatusPillClass"
+                :is-dynamic-field-duplicate="isDynamicFieldDuplicate"
+                :get-dynamic-field-label="getDynamicFieldLabel"
+                :get-item-field-value="getItemFieldValue"
+                :first-page="firstPage"
+                :previous-page="previousPage"
+                :next-page="nextPage"
+                :last-page="lastPage"
+                :go-to-page="goToPage"
+                :change-page-size="changePageSize"
+                :open-scan-modal="openScanModal"
+            />
             <div v-if="filteredData.length === 0 && !loading && hasFilters" class="no-results">
                 <p>No se encontraron registros que coincidan con los filtros aplicados.</p>
             </div>
         </div>
+        <BarcodeModal v-model="barcodeModalOpen" :code="barcodeCode" :item="barcodeItem" @request-start-maintenance="onRequestStartMaintenance" />
+        <MaintenanceScannerModal
+            v-model="scanModalOpen"
+            :items="allData"
+            :maintenance-map="maintenanceMap"
+            :initial-code="externalInitialCode"
+            @start-maintenance="onStartMaintenance"
+            @finish-maintenance="onFinishMaintenance"
+        />
     </ActionPanel>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
-import flatpickr from 'flatpickr'
+import { useRouter, useRoute } from 'vue-router'
+import VueIcon from '@kalimahapps/vue-icons/VueIcon'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, defineAsyncComponent } from 'vue'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import BarcodeModal from '@/components/BarcodeModal.vue'
+import MaintenanceScannerModal from '@/components/MaintenanceScannerModal.vue'
+import ScanOverlay from '@/views/operations/biomedical/ScanOverlay.vue'
+import BiomedicalSkeletonLoader from '@/components/BiomedicalSkeletonLoader.vue'
+import CardsSkeletonLoader from '@/components/CardsSkeletonLoader.vue'
+import { getStoredToken, validateSession } from '@/utils/auth.js'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
+import { useBiomedicalFilters } from '@/composables/useBiomedicalFilters.js'
+import { useBiomedicalSearch } from '@/composables/useBiomedicalSearch.js'
+import { useBiomedicalMaintenance } from '@/composables/useBiomedicalMaintenance.js'
+import { useBiomedicalCardRendering } from '@/composables/useBiomedicalCardRendering.js'
+import { useBiomedicalMeta } from '@/composables/useBiomedicalMeta.js'
+
+// Lazy load heavy components
+const FiltersSection = defineAsyncComponent(() => import('@/views/operations/biomedical/FiltersSection.vue'))
+const CardsSection = defineAsyncComponent(() => import('@/views/operations/biomedical/CardsSection.vue'))
+
+// Lazy load QRCode only when needed
+let QRCode = null
+const getQRCode = async () => {
+  if (!QRCode) QRCode = (await import('qrcode')).default
+  return QRCode
+}
 
 const router = useRouter()
 
-// Estado de datos
-const allData = ref([])
-const filteredData = ref([])
-const selectedItem = ref(null)
-const currentPage = ref(1)
-const loading = ref(false)
-const pageSize = ref(6)
+// Initialize composables
+const { metaFields, metaLoading, fetchMeta, getDynamicFieldLabel, getDynamicFieldKind, isDynamicSelectable, getDynamicSelectOptions, getDynamicSuggestions, getDynamicDatalistId } = useBiomedicalMeta()
+const { allData, filteredData, loading, metaError, mobileLimitApplied, hasRealValue, computeHasRealData, applyMobileLimit, runSearch: runSearchBase } = useBiomedicalSearch()
+const { maintenanceMap, isInMaintenance: isInMaintenanceBase, onStartMaintenance, onFinishMaintenance, initMaintenanceMap, persistMaintenanceMap } = useBiomedicalMaintenance()
+const { selectedItem, currentPage, pageSize, getItemKey, isExpanded, toggleSelect, getStatusAccentClass, getStatusGlowClass, getStatusPillClass, getStatusTextClass, isSparse, isFieldVisible: isFieldVisibleBase } = useBiomedicalCardRendering()
+const { filters, activeDynamicFilterIds, dynamicFilterValues, estatusOptions, dynamicCatalog, dynamicCatalogByCategory, isRestoring: getIsRestoring, setRestoring, getMetaField, getMetaFieldColumn, getItemFieldValue, isFixedField, addDynamicFilter, removeDynamicFilter, clearDynamicFilters, buildQueryParams, persistFilters, restoreFilters, SIN_ESTADO_VALUE } = useBiomedicalFilters(metaFields)
 
-// Persistencia
-const STORAGE_KEY = 'op.testing-biomedical.filters.v1'
 
-// Drawer (Añadir filtro)
+// Local UI state
+const barcodeModalOpen = ref(false)
+const barcodeCode = ref('')
+const barcodeItem = ref(null)
+const scanModalOpen = ref(false)
+const scanOverlayOpen = ref(false)
+const scanOverlayItem = ref(null)
+const scanOverlayCode = ref('')
+const externalInitialCode = ref('')
+
+// Dev HTTPS state
+const devHosts = ref([])
+const devHostsLoading = ref(false)
+const httpsUrl = ref('')
+const httpsQrData = ref('')
+const httpsQrOpen = ref(false)
+const cfInfo = ref(null)
+const cfUnstable = computed(() => cfInfo.value && (cfInfo.value.hmrDisabled === true))
+
+// Content readiness
+const contentReady = ref(false)
+const cardsReady = ref(false)
+
+// UI state for filters drawer/dropdown
 const isAddFilterDrawerOpen = ref(false)
-const drawerEl = ref(null)
 const drawerAnimating = ref(false)
 const drawerSearch = ref('')
+const isFilterDropdownOpen = ref(false)
+const dropdownSearch = ref('')
+const filtersSectionRef = ref(null)
+
+// Computed properties for drawer/dropdown filtering
 const filteredDynamicCatalog = computed(() => {
     const q = String(drawerSearch.value || '').trim().toLowerCase()
     if (!q) return dynamicCatalogByCategory.value
@@ -727,11 +206,6 @@ const filteredDynamicCatalog = computed(() => {
         fields: (cat.fields || []).filter(f => String(f?.label || f?.id || '').toLowerCase().includes(q))
     })).filter(c => Array.isArray(c.fields) && c.fields.length > 0)
 })
-
-// Dropdown de Filtros (nueva interfaz)
-const isFilterDropdownOpen = ref(false)
-const filterDropdownBtn = ref(null)
-const dropdownSearch = ref('')
 
 const filteredDropdownCatalog = computed(() => {
     const q = String(dropdownSearch.value || '').trim().toLowerCase()
@@ -742,107 +216,29 @@ const filteredDropdownCatalog = computed(() => {
     })).filter(c => Array.isArray(c.fields) && c.fields.length > 0)
 })
 
-
-const metaLoading = ref(false)
-const metaError = ref('')
-const metaFields = ref([])
-
-
-const activeDynamicFilterIds = ref([])
-const dynamicFilterValues = ref({})
-
-// Control de restauración
+// Helpers
 let isRestoring = true
 
-// Filtros iniciales
-const initialFilters = {
-    no: '',
-    noRegistro: '',
-    equipoMedico: '',
-    marca: '',
-    tipoMantenimiento: '',
-    estatus: '',
-    funcional: '',
-    unidadMedica: ''
-}
-
-const filters = ref({ ...initialFilters })
-
-const FIXED_FIELD_IDS = new Set(['estatus', 'equipoMedico', 'funcional', 'marca', 'unidadMedica', 'tipoMantenimiento'])
-
-// Mapear ids de meta a las claves exactas usadas en los objetos de item 
-const FIXED_COLUMN_MAP = {
-    no: 'No DE INVENTARIO',
-    no_registro: 'No',
-    'no_de_inventario': 'No DE INVENTARIO',
-    equipoMedico: 'EQUIPO MEDICO',
-    marca: 'MARCA',
-    modelo: 'MODELO',
-    claveCnis: 'CLAVE CNIS',
-    clave_cnis: 'CLAVE CNIS',
-    numeroSerie: 'NUMERO DE SERIE',
-    numero_de_serie: 'NUMERO DE SERIE',
-    tipoMantenimiento: 'TIPO DE MANTENIMIENTO',
-    funcional: 'FUNCIONAL SI NO',
-    unidadMedica: 'UNIDAD MEDICA',
-    estatus: 'ESTATUS'
-}
-
-// Computed
-// Helper: decide si una fila tiene al menos un campo con información real
+// Filter helper: compute if item has real data
 function hasRealData(item) {
     if (!item || typeof item !== 'object') return false
-    const checkFields = [
-        'No DE INVENTARIO', 'EQUIPO MEDICO', 'MARCA', 'MODELO', 'CLAVE CNIS',
-        'NUMERO DE SERIE', 'TIPO DE MANTENIMIENTO', 'FUNCIONAL SI NO', 'UNIDAD MEDICA'
-    ]
-    // Check default fields first
-    for (const f of checkFields) {
-        const v = item[f]
-        if (v === null || v === undefined) continue
-        const s = String(v).trim()
-        if (!s) continue
-        const low = s.toLowerCase()
-        if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') continue
-        return true
-    }
-    // If no default fields, check any active dynamic filter fields for data
-    for (const id of activeDynamicFilterIds.value) {
-        const col = getMetaFieldColumn(id)
-        if (!col) continue
-        const v = item[col]
-        if (v === null || v === undefined) continue
-        const s = String(v).trim()
-        if (!s) continue
-        const low = s.toLowerCase()
-        if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') continue
-        return true
-    }
-    return false
+    if (Object.prototype.hasOwnProperty.call(item, '__hasRealData')) return Boolean(item.__hasRealData)
+    return computeHasRealData(item)
+}
+
+// Card rendering helpers that wrap maintenance logic
+function isInMaintenance(item) {
+    const code = String(item?.['No DE INVENTARIO'] || '').trim()
+    if (!code) return false
+    return maintenanceMap.value?.[code]?.status === 'in_progress'
 }
 
 function isFieldVisible(item, fieldName) {
     if (!item) return false
-    const v = item[fieldName]
-    if (v === null || v === undefined) return false
-    const s = String(v).trim()
-    if (!s) return false
-    const low = s.toLowerCase()
-    if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') return false
-    return true
+    return isFieldVisibleBase(item, fieldName) && hasRealValue(item[fieldName])
 }
 
-// Determina si un valor tiene datos reales (no vacío, no N/A)
-function hasRealValue(v) {
-    if (v === null || v === undefined) return false
-    const s = String(v).trim()
-    if (!s) return false
-    const low = s.toLowerCase()
-    if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') return false
-    return true
-}
-
-// Muestra el valor o 'N/A' si está vacío
+// Display value helper
 function displayValue(v) {
     if (v === null || v === undefined) return 'N/A'
     const s = String(v).trim()
@@ -852,39 +248,25 @@ function displayValue(v) {
     return v
 }
 
-// Indica si el item tiene muchos campos vacíos (sparse)
-function isSparse(item) {
-    if (!item || typeof item !== 'object') return false
-    const checkFields = [
-        'No DE INVENTARIO', 'EQUIPO MEDICO', 'MARCA', 'MODELO', 'CLAVE CNIS',
-        'NUMERO DE SERIE', 'TIPO DE MANTENIMIENTO', 'FUNCIONAL SI NO', 'UNIDAD MEDICA'
-    ]
-    let total = 0
-    let filled = 0
-    for (const f of checkFields) {
-        total++
-        const v = item[f]
-        if (v === null || v === undefined) continue
-        const s = String(v).trim()
-        if (!s) continue
-        const low = s.toLowerCase()
-        if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') continue
-        filled++
+// Pagination and card counting
+const visibleItems = computed(() => {
+    const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now.bind(performance) : Date.now
+    const s = perfNow()
+    const res = Array.isArray(filteredData.value) ? filteredData.value.filter(hasRealData) : []
+    const d = Math.round(perfNow() - s)
+    if (typeof window !== 'undefined' && window.console && d > 20) {
+        console.warn(`[perf] visibleItems compute: ${d}ms for ${res.length} items`)
     }
-    if (total === 0) return false
-    const filledRatio = filled / total
-    // Si hay menos o igual al 40% de campos con datos reales, consideramos "pocos datos"
-    return filledRatio <= 0.4
-}
+    return res
+})
 
 const displayedCards = computed(() => {
-    const visible = Array.isArray(filteredData.value) ? filteredData.value.filter(hasRealData) : []
     const startIndex = (currentPage.value - 1) * pageSize.value
-    return visible.slice(startIndex, startIndex + pageSize.value)
+    return visibleItems.value.slice(startIndex, startIndex + pageSize.value)
 })
 
 const visibleCount = computed(() => {
-    return Array.isArray(filteredData.value) ? filteredData.value.filter(hasRealData).length : 0
+    return visibleItems.value.length
 })
 
 const totalPages = computed(() => {
@@ -931,205 +313,244 @@ const marcaDatalistId = 'fixed-marca-datalist'
 const unidadMedicaDatalistId = 'fixed-unidadMedica-datalist'
 
 const equipoMedicoSuggestions = computed(() => {
-    return getMetaFieldSuggestions('equipoMedico')
+    return getDynamicSelectOptions('equipoMedico')
 })
 
 const marcaSuggestions = computed(() => {
-    return getMetaFieldSuggestions('marca')
+    return getDynamicSelectOptions('marca')
 })
 
 const unidadMedicaSuggestions = computed(() => {
-    return getMetaFieldSuggestions('unidadMedica')
+    return getDynamicSelectOptions('unidadMedica')
 })
 
-const estatusOptions = computed(() => {
-    const items = Array.isArray(allData.value) ? allData.value : []
 
-    const normalize = (v) => String(v ?? '').trim().replace(/\s+/g, ' ')
+// ===== ACTION HANDLERS & EVENT FUNCTIONS =====
 
-    // Prefer meta distinct values (these should match DB exactly)
-    const direct = getMetaField('estatus')
-    const byColumn = (metaFields.value || []).find(f => {
-        const col = getMetaFieldColumn(f?.id)
-        return String(col || '').toUpperCase() === 'ESTATUS'
-    })
-    const byLabel = (metaFields.value || []).find(f => String(f?.label || '').toLowerCase().includes('estatus'))
-
-    const field = direct || byColumn || byLabel
-    const metaValues = Array.isArray(field?.distinctValues) ? field.distinctValues : []
-
-    const set = new Map()
-    for (const v of metaValues) {
-        const n = normalize(v)
-        if (!n) continue
-        if (!set.has(n.toLowerCase())) set.set(n.toLowerCase(), n)
-    }
-
-    // Fallback: derive from loaded data (useful if meta doesn't include estatus)
-    if (set.size === 0) {
-        for (const it of items) {
-            const raw = it?.['ESTATUS']
-            const n = normalize(raw)
-            if (!n) continue
-            if (!set.has(n.toLowerCase())) set.set(n.toLowerCase(), n)
-        }
-    }
-
-    // Keep current selection visible even if not in meta list (but skip internal sentinel value)
-    if (filters.value.estatus && filters.value.estatus !== SIN_ESTADO_VALUE) {
-        const n = normalize(filters.value.estatus)
-        if (n && !set.has(n.toLowerCase())) set.set(n.toLowerCase(), n)
-    }
-
-    return Array.from(set.values()).sort((a, b) => String(a).localeCompare(String(b)))
-})
-
-const dynamicCatalog = computed(() => {
-    const all = Array.isArray(metaFields.value) ? metaFields.value : []
-    // No mostrar en el modal los aliases de filtros fijos (solo sirven para sugerencias)
-    return all.filter(f => !f?.fixed)
-})
-
-const dynamicCatalogByCategory = computed(() => {
-    const groups = new Map()
-    for (const field of dynamicCatalog.value) {
-        const category = field.category || 'Otros'
-        if (!groups.has(category)) groups.set(category, [])
-        groups.get(category).push(field)
-    }
-    return Array.from(groups.entries()).map(([category, fields]) => ({
-        category,
-        fields: fields.slice().sort((a, b) => String(a.label || '').localeCompare(String(b.label || '')))
-    }))
-})
-
-const vFlatpickr = {
-    mounted(el) {
-        // Only attach to date inputs (we only use this directive there)
-        flatpickr(el, {
-            dateFormat: 'd/m/Y',
-            allowInput: true,
-            disableMobile: true
-        })
-    },
-    unmounted(el) {
-        if (el && el._flatpickr) {
-            el._flatpickr.destroy()
-        }
-    }
-}
-
-// Métodos
 function goToDashboard() {
     navigateAndRefresh(router, { name: 'dashboard' })
 }
 
-function openAddFilterDrawer() {
-    // Trigger animated open from button position and position the drawer under the button
-    isAddFilterDrawerOpen.value = true
-    drawerAnimating.value = true
-    if (!metaFields.value.length) fetchMeta()
+function handleShowBarcode(item) {
+    const code = item?.['No DE INVENTARIO'] || ''
+    barcodeCode.value = String(code)
+    barcodeItem.value = item || null
+    barcodeModalOpen.value = true
+}
 
-    nextTick(() => {
+function handleExternalScan(code) {
+    if (!code) return
+    const found = (allData.value || []).find(i => String(i?.['No DE INVENTARIO'] || '').trim() === String(code).trim()) || null
+    if (found) {
+        selectedItem.value = found
+        nextTick(() => {
+            try {
+                const el = document.querySelector('.maintenance-card.active')
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            } catch (e) { }
+        })
+    } else {
+        barcodeCode.value = String(code)
+        barcodeItem.value = null
+        barcodeModalOpen.value = true
+    }
+
+    const token = getStoredToken()
+    if (!token) {
+        scanOverlayItem.value = found
+        scanOverlayCode.value = String(code)
+        scanOverlayOpen.value = true
+        return
+    }
+
+    ;(async () => {
         try {
-            const btn = document.querySelector('.btn-open-drawer')
-            const drawer = drawerEl.value
-            if (!drawer || !btn) { drawerAnimating.value = false; return }
-
-            const b = btn.getBoundingClientRect()
-            const d = drawer.getBoundingClientRect()
-
-            // Compute final left so the drawer is centered horizontally on the button
-            let left = Math.round(b.left + b.width / 2 - d.width / 2)
-            const margin = 12
-            const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
-            left = Math.max(margin, Math.min(left, vw - d.width - margin))
-
-            // Try to place below button; if not enough space, place above
-            const spaceBelow = window.innerHeight - b.bottom
-            let top
-            if (spaceBelow >= d.height + 20) {
-                top = Math.round(b.bottom + 10)
+            const res = await validateSession()
+            if (!res || !res.authenticated) {
+                scanOverlayItem.value = found
+                scanOverlayCode.value = String(code)
+                scanOverlayOpen.value = true
             } else {
-                top = Math.round(Math.max(margin, b.top - d.height - 10))
+                scanOverlayOpen.value = false
             }
-
-            // Final positioning
-            drawer.style.position = 'fixed'
-            drawer.style.left = `${left}px`
-            drawer.style.top = `${top}px`
-            drawer.style.transformOrigin = 'top center'
-
-            // Start small at the top origin so it looks like it unfolds from the button
-            const startScale = Math.max(0.12, Math.min(0.28, Math.min(b.width / d.width, b.height / d.height)))
-            drawer.style.transform = `translateY(-6px) scale(${startScale})`
-            drawer.style.opacity = '0'
-            // Force style flush
-            void drawer.offsetWidth
-
-            requestAnimationFrame(() => {
-                drawer.style.transition = 'transform 320ms cubic-bezier(0.22,1,0.36,1), opacity 220ms ease'
-                drawer.style.transform = ''
-                drawer.style.opacity = '1'
-            })
-
-            const onEnd = (e) => {
-                if (e && e.target !== drawer) return
-                drawer.removeEventListener('transitionend', onEnd)
-                drawer.style.transition = ''
-                drawerAnimating.value = false
-                const focusable = drawer.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
-                if (focusable) focusable.focus()
-                // Reposition after content settles (meta might fill the drawer)
-                positionDrawerUnderButton()
-            }
-            drawer.addEventListener('transitionend', onEnd)
-        } catch (err) {
-            drawerAnimating.value = false
+        } catch (e) {
+            scanOverlayItem.value = found
+            scanOverlayCode.value = String(code)
+            scanOverlayOpen.value = true
         }
-    })
+    })()
+}
+
+// ===== MISSING UI HELPERS (expuestos a los children) =====
+function openAddFilterDrawer() {
+    if (isAddFilterDrawerOpen.value) return
+    isAddFilterDrawerOpen.value = true
+    // ensure meta is loaded for dynamic fields
+    if (!metaFields.value.length) fetchMeta().catch(() => {})
 }
 
 function closeAddFilterDrawer() {
-    const drawer = drawerEl.value
-    const btn = document.querySelector('.btn-open-drawer')
-    if (drawer && btn) {
-        drawerAnimating.value = true
-        const b = btn.getBoundingClientRect()
-        const d = drawer.getBoundingClientRect()
-        // compute translate dx/dy from drawer final position to button center
-        const centerDrawerX = d.left + d.width / 2
-        const centerDrawerY = d.top + d.height / 2
-        const centerBtnX = b.left + b.width / 2
-        const centerBtnY = b.top + b.height / 2
-        const dx = Math.round(centerBtnX - centerDrawerX)
-        const dy = Math.round(centerBtnY - centerDrawerY)
-        // scale towards button size
-        const scale = Math.max(0.12, Math.min(0.28, Math.min(b.width / d.width, b.height / d.height)))
+    if (!isAddFilterDrawerOpen.value) return
+    drawerSearch.value = ''
+    isAddFilterDrawerOpen.value = false
+}
 
-        drawer.style.transition = 'transform 220ms cubic-bezier(0.4,0,0.2,1), opacity 180ms ease'
-        drawer.style.transformOrigin = 'top center'
-        drawer.style.transform = `translate(${dx}px, ${dy}px) scale(${scale})`
-        drawer.style.opacity = '0'
-
-        const onEnd = () => {
-            drawer.removeEventListener('transitionend', onEnd)
-            drawer.style.transition = ''
-            drawer.style.transform = ''
-            drawer.style.opacity = ''
-            drawer.style.left = ''
-            drawer.style.top = ''
-            drawer.style.position = ''
-            drawerAnimating.value = false
-            isAddFilterDrawerOpen.value = false
+function handleFilterCheckboxChange(fieldId, checked) {
+    try {
+        if (!fieldId) return
+        // If called with explicit checked boolean, treat as fixed-field checkbox
+        if (typeof checked === 'boolean') {
+            filters.value[fieldId] = checked ? String(filters.value[fieldId] || '1') : ''
+            return
         }
-        drawer.addEventListener('transitionend', onEnd)
-    } else {
-        isAddFilterDrawerOpen.value = false
+
+        // If called without checked (from the filters list checkbox),
+        // toggle dynamic filters when appropriate.
+        if (!isFixedField(fieldId)) {
+            if (activeDynamicFilterIds.value.includes(fieldId)) {
+                removeDynamicFilter(fieldId)
+            } else {
+                addDynamicFilter(fieldId)
+            }
+            return
+        }
+
+        // Fallback: set the value directly
+        filters.value[fieldId] = checked
+    } catch (e) {
+        // noop
     }
 }
 
-// Métodos para dropdown de filtros
+function getDynamicValue(fieldId) {
+    return dynamicFilterValues.value ? dynamicFilterValues.value[fieldId] : undefined
+}
+
+function setDynamicValue(fieldId, v) {
+    if (!dynamicFilterValues.value) return
+    dynamicFilterValues.value[fieldId] = v
+}
+
+function getFieldTypeLabel(field) {
+    // alias to existing helper
+    try { return getDynamicFieldLabel(field) } catch (e) { return String(field || '') }
+}
+
+function isDynamicFieldDuplicate(fieldId, value) {
+    // conservative default: check if the same value exists in other dynamic filters
+    try {
+        const vals = Object.entries(dynamicFilterValues.value || {})
+        return vals.some(([k, v]) => k !== String(fieldId) && String(v || '') === String(value || ''))
+    } catch (e) { return false }
+}
+
+
+function onRequestStartMaintenance(payload) {
+    const code = String(payload?.code || '')
+    if (!code) return
+    externalInitialCode.value = code
+    scanModalOpen.value = true
+}
+
+function openScanModal() {
+    scanModalOpen.value = true
+}
+
+function closeScanOverlay() {
+    scanOverlayOpen.value = false
+    const token = getStoredToken()
+    if (!token) {
+        router.push({ name: 'login', query: { next: router.currentRoute.value.fullPath || '/' } })
+    }
+}
+
+function onScanOverlayLogged() {
+    scanOverlayOpen.value = false
+    ;(async () => {
+        try {
+            const res = await validateSession()
+            if (!res || !res.authenticated) {
+                router.push({ name: 'login', query: { next: router.currentRoute.value.fullPath || '/' } })
+            }
+        } catch (e) {
+            router.push({ name: 'login', query: { next: router.currentRoute.value.fullPath || '/' } })
+        }
+    })()
+}
+
+function goLoginWithRedirect() {
+    const current = router.currentRoute.value
+    const redirectTo = current && current.fullPath ? current.fullPath : '/'
+    router.push({ name: 'login', query: { next: redirectTo } })
+}
+
+// Dev HTTPS helpers
+async function loadDevHosts() {
+    devHostsLoading.value = true
+    try {
+        const resp = await fetch('/dev-hosts.json')
+        if (resp && resp.ok) {
+            const j = await resp.json()
+            devHosts.value = j && j.hosts ? j.hosts : []
+        }
+    } catch (e) {
+        // ignore
+    }
+    devHostsLoading.value = false
+}
+
+async function fetchCloudflareUrl() {
+    try {
+        const resp = await fetch('/cloudflare-url.json')
+        if (resp && resp.ok) {
+            const j = await resp.json()
+            httpsUrl.value = j && j.url ? j.url : ''
+            cfInfo.value = j || null
+            return
+        }
+    } catch (e) {
+        // ignore
+    }
+    httpsUrl.value = ''
+    cfInfo.value = null
+}
+
+async function copyHttpsUrl() {
+    let url = httpsUrl.value
+    if (!url) {
+        if (devHosts.value && devHosts.value.length) {
+            url = `https://${devHosts.value[0]}:5173`
+        }
+    }
+    if (!url) return
+    try {
+        await navigator.clipboard.writeText(url)
+        try { window.dispatchEvent(new CustomEvent('app:toast', { detail: { msg: 'URL copiada al portapapeles' } })) } catch {}
+    } catch (e) {
+        alert('Copia la URL manualmente: ' + url)
+    }
+}
+
+async function showHttpsQr() {
+    await fetchCloudflareUrl()
+    if (!httpsUrl.value && devHosts.value && devHosts.value.length) {
+        httpsUrl.value = `https://${devHosts.value[0]}:5173`
+    }
+    if (!httpsUrl.value) return
+    try {
+        const { toDataURL } = await import('qrcode')
+        httpsQrData.value = await toDataURL(httpsUrl.value, { width: 512 })
+        httpsQrOpen.value = true
+    } catch (e) {
+        console.warn('Could not generate QR', e)
+    }
+}
+
+// UI Filter Drawer/Dropdown Management
+function getDrawerEl() {
+    return filtersSectionRef.value?.drawerEl?.value || null
+}
+
 function toggleFilterDropdown() {
     if (isFilterDropdownOpen.value) {
         closeFilterDropdown()
@@ -1148,6 +569,13 @@ function closeFilterDropdown() {
     dropdownSearch.value = ''
 }
 
+function handleGlobalKeydown(e) {
+    if (e && e.key === 'Escape') {
+        if (isAddFilterDrawerOpen.value) closeAddFilterDrawer()
+        if (isFilterDropdownOpen.value) closeFilterDropdown()
+    }
+}
+
 function positionFilterDropdown() {
     const button = document.querySelector('.btn-filter-primary')
     const menu = document.querySelector('.dropdown-filters-menu')
@@ -1162,11 +590,9 @@ function positionFilterDropdown() {
     const padding = 20
     const menuWidth = 380
 
-    // Desactivar transiciones temporalmente para la posición inicial
     const hadTransition = menu.style.transition
     menu.style.transition = 'none'
 
-    // ===== POSICIÓN VERTICAL =====
     const spaceBelow = viewportHeight - btnRect.bottom - padding
     const spaceAbove = btnRect.top - padding
     const minHeight = 300
@@ -1186,483 +612,20 @@ function positionFilterDropdown() {
         menu.classList.add('menu-below')
     }
 
-    // ===== POSICIÓN HORIZONTAL =====
-    // Calcular si el dropdown cabe a la derecha del contenedor
     const rightEdge = containerRect.left + menuWidth
-
     if (rightEdge > viewportWidth - padding) {
-        // No cabe a la derecha, alinear desde la derecha del contenedor
         menu.style.left = 'auto'
         menu.style.right = '0'
         menu.classList.add('menu-right-aligned')
     } else {
-        // Cabe a la derecha, alinear normal
         menu.style.left = '0'
         menu.style.right = 'auto'
         menu.classList.remove('menu-right-aligned')
     }
 
-    // Restaurar transiciones después de la siguiente frame
     requestAnimationFrame(() => {
         menu.style.transition = hadTransition || ''
     })
-}
-
-function handleFilterCheckboxChange(fieldId) {
-    if (activeDynamicFilterIds.value.includes(fieldId)) {
-        removeDynamicFilter(fieldId)
-    } else {
-        addDynamicFilter(fieldId)
-    }
-}
-
-function handleGlobalKeydown(e) {
-    if (e && e.key === 'Escape') {
-        if (isAddFilterDrawerOpen.value) closeAddFilterDrawer()
-        if (isFilterDropdownOpen.value) closeFilterDropdown()
-    }
-}
-
-function positionDrawerUnderButton() {
-    const drawer = drawerEl.value
-    const btn = document.querySelector('.btn-open-drawer')
-    if (!drawer || !btn) return
-    // ensure drawer has fixed positioning
-    drawer.style.position = 'fixed'
-    const b = btn.getBoundingClientRect()
-    const d = drawer.getBoundingClientRect()
-
-    const margin = 12
-    const vw = Math.max(document.documentElement.clientWidth || 0, window.innerWidth || 0)
-
-    // Compute horizontal position: center on the button but keep within viewport
-    let left = Math.round(b.left + b.width / 2 - d.width / 2)
-    left = Math.max(margin, Math.min(left, vw - d.width - margin))
-
-    // Compute vertical position ensuring the drawer does NOT overlap the button
-    const arrowHeight = 12
-    const gap = Math.max(8, Math.ceil(arrowHeight / 2)) // minimal gap between button and drawer
-    const spaceBelow = window.innerHeight - b.bottom
-    const spaceAbove = b.top
-
-    let top
-    let placeBelow = false
-
-    if (spaceBelow >= d.height + gap) {
-        // enough room below
-        top = Math.round(b.bottom + gap)
-        placeBelow = true
-    } else if (spaceAbove >= d.height + gap) {
-        // enough room above
-        top = Math.round(b.top - d.height - gap)
-        placeBelow = false
-    } else {
-        // not enough room either side; fit as best as possible below with caps
-        top = Math.round(Math.max(margin, Math.min(b.bottom + gap, window.innerHeight - d.height - margin)))
-        placeBelow = top >= b.bottom
-        // if still overlaps, nudge the top to be just below button
-        if (top < b.bottom && spaceBelow > 0) {
-            top = Math.min(Math.round(b.bottom + gap), window.innerHeight - d.height - margin)
-            placeBelow = top >= b.bottom
-        }
-    }
-
-    drawer.style.left = `${left}px`
-    drawer.style.top = `${top}px`
-
-    // Arrow: compute where to place an arrow so the drawer looks attached to the button
-    const arrowWidth = 12
-    let arrowLeft = Math.round((b.left + b.width / 2) - left - (arrowWidth / 2))
-    // Clamp arrow left so it never goes outside the drawer bounds
-    arrowLeft = Math.max(8, Math.min(arrowLeft, Math.round(d.width - arrowWidth - 8)))
-    drawer.style.setProperty('--arrow-left', `${arrowLeft}px`)
-
-    if (placeBelow) {
-        drawer.classList.add('drawer-below')
-        drawer.classList.remove('drawer-above')
-    } else {
-        drawer.classList.add('drawer-above')
-        drawer.classList.remove('drawer-below')
-    }
-}
-
-function handleResize() {
-    if (isAddFilterDrawerOpen.value) positionDrawerUnderButton()
-    if (isFilterDropdownOpen.value) positionFilterDropdown()
-}
-
-function handleScroll() {
-    if (isAddFilterDrawerOpen.value) positionDrawerUnderButton()
-    if (isFilterDropdownOpen.value) positionFilterDropdown()
-}
-
-
-function isFixedField(id) {
-    return FIXED_FIELD_IDS.has(id)
-}
-
-function addDynamicFilter(id) {
-    if (!id) return
-    if (isFixedField(id)) return
-    if (activeDynamicFilterIds.value.includes(id)) return
-    if (activeDynamicFilterIds.value.length >= 15) return
-    activeDynamicFilterIds.value = [...activeDynamicFilterIds.value, id]
-    if (!(id in dynamicFilterValues.value)) {
-        dynamicFilterValues.value = { ...dynamicFilterValues.value, [id]: '' }
-    }
-    closeAddFilterDrawer()
-}
-
-function removeDynamicFilter(id) {
-    activeDynamicFilterIds.value = activeDynamicFilterIds.value.filter(x => x !== id)
-    const next = { ...dynamicFilterValues.value }
-    delete next[id]
-    dynamicFilterValues.value = next
-}
-
-function clearDynamicFilters() {
-    activeDynamicFilterIds.value = []
-    dynamicFilterValues.value = {}
-}
-
-function getMetaField(id) {
-    return (metaFields.value || []).find(f => f.id === id)
-}
-
-function getMetaFieldSuggestions(id) {
-    const field = getMetaField(id)
-    const values = Array.isArray(field?.distinctValues) ? field.distinctValues : []
-    return values.slice(0, 50)
-}
-
-function getDynamicFieldLabel(id) {
-    return getMetaField(id)?.label || id
-}
-
-function getDynamicFieldKind(id) {
-    return getMetaField(id)?.kind || 'text'
-}
-
-function isDynamicSelectable(id) {
-    return Boolean(getMetaField(id)?.selectable)
-}
-
-function getDynamicSelectOptions(id) {
-    const field = getMetaField(id)
-    const values = Array.isArray(field?.distinctValues) ? field.distinctValues : []
-    return values.slice(0, 10)
-}
-
-function getDynamicSuggestions(id) {
-    return getMetaFieldSuggestions(id)
-}
-
-function getDynamicDatalistId(id) {
-    return `dyn-${id}-datalist`
-}
-
-function getDynamicValue(id) {
-    return String(dynamicFilterValues.value[id] ?? '')
-}
-
-function setDynamicValue(id, value) {
-    dynamicFilterValues.value = { ...dynamicFilterValues.value, [id]: value }
-}
-
-function getFieldTypeLabel(field) {
-    if (!field) return 'Texto'
-    if (field.kind === 'boolean') return 'Sí/No'
-    if (field.kind === 'date') return 'Fecha'
-    if (field.selectable) return 'Select'
-    return 'Texto'
-}
-
-function getMetaFieldColumn(id) {
-    const field = getMetaField(id)
-    if (!field) return null
-    // Prefer explicit fixed mapping first
-    if (field && field.id && FIXED_COLUMN_MAP[field.id]) return FIXED_COLUMN_MAP[field.id]
-    // Backend-provided column hints
-    if (field.column) return field.column
-    if (field.columnName) return field.columnName
-    if (field.dbColumn) return field.dbColumn
-    if (field.property) return field.property
-    if (field.key) return field.key
-    if (field.id) return field.id
-    return null
-}
-
-function getItemFieldValue(item, id) {
-    const col = getMetaFieldColumn(id)
-    if (!item) return null
-    const candidates = []
-    if (col) candidates.push(col)
-    // common alternates
-    try {
-        if (typeof col === 'string') {
-            candidates.push(col.toUpperCase())
-            candidates.push(col.replace(/_/g, ' ').toUpperCase())
-            candidates.push(col.replace(/\s+/g, '_').toLowerCase())
-            candidates.push(col.toLowerCase())
-        }
-    } catch (e) { }
-    const field = getMetaField(id)
-    if (field && field.label) {
-        candidates.push(field.label)
-        candidates.push(String(field.label).toUpperCase())
-        candidates.push(String(field.label).replace(/\s+/g, '_').toLowerCase())
-    }
-    // Always try raw id as last resort
-    if (id) candidates.push(id)
-
-    for (const c of candidates) {
-        if (!c) continue
-        if (Object.prototype.hasOwnProperty.call(item, c)) {
-            return item[c]
-        }
-    }
-    return null
-}
-
-function isDynamicFieldVisibleInItem(item, id) {
-    if (!item) return false
-    const v = getItemFieldValue(item, id)
-    if (v === null || v === undefined) return false
-    const s = String(v).trim()
-    if (!s) return false
-    const low = s.toLowerCase()
-    if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') return false
-    return true
-}
-
-function isColumnInDefaults(col) {
-    if (!col) return false
-    const defaults = [
-        'No DE INVENTARIO', 'EQUIPO MEDICO', 'ESTATUS', 'MARCA', 'MODELO', 'CLAVE CNIS',
-        'TIPO DE MANTENIMIENTO', 'FUNCIONAL SI NO', 'UNIDAD MEDICA'
-    ]
-    return defaults.includes(col)
-}
-
-function isDynamicFieldDuplicate(id) {
-    const col = getMetaFieldColumn(id)
-    return isColumnInDefaults(col)
-}
-
-async function fetchMeta() {
-    try {
-        metaLoading.value = true
-        const response = await fetch('/api/ops/historial-mantenimientos/meta')
-        const json = await response.json().catch(() => ({}))
-        metaFields.value = Array.isArray(json.fields) ? json.fields : []
-        // If drawer is open, reposition under button after data loads
-        if (isAddFilterDrawerOpen.value) {
-            nextTick(() => positionDrawerUnderButton())
-        }
-    } catch (e) {
-        console.error('Error cargando metadatos de filtros:', e)
-        metaFields.value = []
-    } finally {
-        metaLoading.value = false
-    }
-}
-
-let searchTimer = null
-function scheduleSearch() {
-    if (isRestoring) return
-    if (searchTimer) clearTimeout(searchTimer)
-    searchTimer = setTimeout(() => {
-        runSearch()
-    }, 300)
-}
-
-let persistTimer = null
-function schedulePersist() {
-    if (isRestoring) return
-    if (persistTimer) clearTimeout(persistTimer)
-    persistTimer = setTimeout(() => {
-        persistFilters()
-    }, 150)
-}
-
-function persistFilters() {
-    try {
-        const payload = {
-            fixed: { ...filters.value },
-            dynamicIds: [...activeDynamicFilterIds.value],
-            dynamicValues: { ...dynamicFilterValues.value }
-        }
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-    } catch (e) {
-        console.warn('No se pudo persistir filtros en localStorage:', e)
-    }
-}
-
-function restoreFilters() {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY)
-        if (!raw) return
-        const parsed = JSON.parse(raw)
-
-        const fixed = parsed && typeof parsed.fixed === 'object' ? parsed.fixed : {}
-        filters.value = { ...initialFilters, ...fixed }
-
-        const ids = Array.isArray(parsed?.dynamicIds) ? parsed.dynamicIds : []
-        const unique = []
-        for (const id of ids) {
-            if (!id || typeof id !== 'string') continue
-            if (isFixedField(id)) continue
-            if (unique.includes(id)) continue
-            if (unique.length >= 15) break
-            unique.push(id)
-        }
-        activeDynamicFilterIds.value = unique
-
-        const values = parsed && typeof parsed.dynamicValues === 'object' ? parsed.dynamicValues : {}
-        const nextValues = {}
-        for (const id of unique) {
-            nextValues[id] = String(values[id] ?? '')
-        }
-        dynamicFilterValues.value = nextValues
-    } catch (e) {
-        console.warn('No se pudo restaurar filtros desde localStorage:', e)
-    }
-}
-
-function buildQueryParams() {
-    const queryParams = new URLSearchParams()
-
-    if (filters.value.no.trim()) queryParams.append('no', filters.value.no.trim())
-    if ((filters.value.noRegistro || '').trim()) queryParams.append('no_registro', (filters.value.noRegistro || '').trim())
-    if (filters.value.equipoMedico.trim()) queryParams.append('equipoMedico', filters.value.equipoMedico.trim())
-    if (filters.value.marca.trim()) queryParams.append('marca', filters.value.marca.trim())
-    if (filters.value.tipoMantenimiento) queryParams.append('tipoMantenimiento', filters.value.tipoMantenimiento)
-    if (filters.value.estatus && filters.value.estatus !== SIN_ESTADO_VALUE) queryParams.append('estatus', filters.value.estatus)
-    if (filters.value.funcional) queryParams.append('funcional', filters.value.funcional)
-    if (filters.value.unidadMedica.trim()) queryParams.append('unidadMedica', filters.value.unidadMedica.trim())
-
-    for (const id of activeDynamicFilterIds.value) {
-        const value = String(dynamicFilterValues.value[id] || '').trim()
-        if (!value) continue
-        queryParams.append(`dyn_${id}`, value)
-    }
-
-    return queryParams
-}
-
-const SIN_ESTADO_VALUE = '__SIN_ESTADO__'
-
-async function runSearch() {
-    try {
-        loading.value = true
-        metaError.value = ''
-        const queryParams = buildQueryParams()
-        const url = `/api/ops/historial-mantenimientos${queryParams.toString() ? '?' + queryParams.toString() : ''}`
-        const response = await fetch(url)
-
-        if (!response.ok) {
-            const json = await response.json().catch(() => ({}))
-            throw new Error(json.msg || json.error || `HTTP ${response.status}`)
-        }
-
-        const data = await response.json().catch(() => null)
-        const items = Array.isArray(data)
-            ? data
-            : (Array.isArray(data && data.data) ? data.data : [])
-        allData.value = items
-        if (filters.value.estatus === SIN_ESTADO_VALUE) {
-            filteredData.value = items.filter(it => !hasRealValue(it?.['ESTATUS']))
-        } else {
-            filteredData.value = items
-        }
-    } catch (error) {
-        console.error('Error aplicando filtros avanzados:', error)
-        allData.value = []
-        filteredData.value = []
-    } finally {
-        loading.value = false
-    }
-    currentPage.value = 1
-    selectedItem.value = null
-}
-
-function getStatusAccentClass(item) {
-    const status = item['ESTATUS']?.toLowerCase()
-    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
-
-    if (funcional === 'no') return 'accent-critical'
-    if (status?.includes('mantenimiento')) return 'accent-warning'
-    if (status === 'inactivo' || status?.includes('no operativo')) return 'accent-warning'
-    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'accent-success'
-    return 'accent-default'
-}
-
-function getStatusGlowClass(item) {
-    const status = item['ESTATUS']?.toLowerCase()
-    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
-
-    if (funcional === 'no') return 'glow-critical'
-    if (status?.includes('mantenimiento')) return 'glow-warning'
-    if (status === 'inactivo' || status?.includes('no operativo')) return 'glow-warning'
-    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'glow-success'
-    return 'glow-default'
-}
-
-function getStatusPillClass(item) {
-    const statusRaw = item?.['ESTATUS']
-    const status = statusRaw ? String(statusRaw).toLowerCase() : ''
-    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
-
-    if (!hasRealValue(statusRaw)) return 'status-unknown'
-    if (status.includes('propio')) return 'status-success'
-
-    if (funcional === 'no') return 'status-critical'
-    if (status?.includes('mantenimiento')) return 'status-warning'
-    if (status === 'inactivo' || status?.includes('no operativo')) return 'status-warning'
-    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'status-success'
-    return 'status-default'
-}
-
-function getStatusTextClass(item) {
-    const raw = item?.['ESTATUS']
-    if (!hasRealValue(raw)) return 'sin-estado'
-    return String(raw).toLowerCase()
-}
-
-function selectItem(item) {
-    // Legacy single-select setter
-    selectedItem.value = item
-}
-
-function getItemKey(item, idx) {
-    if (!item || typeof item !== 'object') return `idx:${idx}`
-    const inv = item['No DE INVENTARIO']
-    const no = item['No']
-    const id = item._id
-    const key = (inv && String(inv).trim()) || (no && String(no).trim()) || (id && String(id).trim())
-    return key ? `k:${key}` : `idx:${idx}`
-}
-
-function isExpanded(item, idx) {
-    if (!selectedItem.value) return false
-    return getItemKey(selectedItem.value, -1) === getItemKey(item, idx)
-}
-
-function toggleSelect(item) {
-    if (!item) { selectedItem.value = null; return }
-    // Toggle: if the same item is selected, collapse; otherwise expand
-    if (selectedItem.value && getItemKey(selectedItem.value, -1) === getItemKey(item, -1)) {
-        selectedItem.value = null
-    } else {
-        selectedItem.value = item
-        // Smooth scroll the expanded card into center view
-        nextTick(() => {
-            try {
-                const el = document.querySelector('.maintenance-card.active')
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            } catch (e) { }
-        })
-    }
 }
 
 function nextPage() {
@@ -1694,36 +657,99 @@ function changePageSize(n) {
     currentPage.value = 1
 }
 
-// Ciclo de vida
+// ===== LIFECYCLE & INITIALIZATION =====
+
+let searchTimer = null
+function scheduleSearch() {
+    if (isRestoring) return
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+        runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE)
+        currentPage.value = 1
+        selectedItem.value = null
+    }, 300)
+}
+
+let persistTimer = null
+function schedulePersist() {
+    if (isRestoring) return
+    if (persistTimer) clearTimeout(persistTimer)
+    persistTimer = setTimeout(() => {
+        persistFilters()
+    }, 150)
+}
+
 function handleClickOutside(e) {
     if (isFilterDropdownOpen.value) {
         const container = document.querySelector('.dropdown-filters-container')
         const menu = document.querySelector('.dropdown-filters-menu')
-        const btn = filterDropdownBtn.value
-        // click outside both the container/menu/button closes the dropdown
+        const btn = document.querySelector('.btn-filter-primary')
         if (container && !container.contains(e.target) && (!menu || !menu.contains(e.target)) && (!btn || !btn.contains(e.target))) {
             closeFilterDropdown()
         }
     }
 }
 
+function queueInitialLoad() {
+    const route = useRoute()
+    const run = async () => {
+        const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now.bind(performance) : Date.now
+        const t0 = perfNow()
+        restoreFilters()
+        isRestoring = false
+        await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE)
+        try {
+            await nextTick()
+            await new Promise(requestAnimationFrame)
+            await new Promise(requestAnimationFrame)
+            const t1 = Math.round(perfNow() - t0)
+            if (typeof window !== 'undefined' && window.console) console.warn(`[perf] initial load -> first paint: ${t1}ms`)
+        } catch (e) {}
+        const sc = route.query?.scan
+        if (sc) {
+            handleExternalScan(String(sc))
+            try { router.replace({ query: { ...route.query, scan: undefined } }) } catch (e) { }
+        }
+    }
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        window.requestIdleCallback(() => run(), { timeout: 1200 })
+    } else {
+        setTimeout(() => run(), 200)
+    }
+}
+
 onMounted(async () => {
     window.addEventListener('keydown', handleGlobalKeydown)
-    window.addEventListener('resize', handleResize)
-    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', () => {
+        if (isFilterDropdownOpen.value) positionFilterDropdown()
+    })
+    window.addEventListener('scroll', () => {
+        if (isFilterDropdownOpen.value) positionFilterDropdown()
+    }, { passive: true })
     document.addEventListener('click', handleClickOutside)
-    restoreFilters()
-    await fetchMeta()
-    isRestoring = false
-    await runSearch()
+    
+    initMaintenanceMap()
+    
+    setTimeout(() => {
+        contentReady.value = true
+        // Reduce initial page size to speed up first paint (especially over tunnel)
+        try { pageSize.value = Math.min(Number(pageSize.value) || 6, 12) } catch (e) {}
+    }, 300)
+    
+    queueInitialLoad()
+
+    try { await loadDevHosts() } catch {}
+    try { await fetchCloudflareUrl() } catch {}
 })
 
 onBeforeUnmount(() => {
-    window.removeEventListener('resize', handleResize)
-    window.removeEventListener('scroll', handleScroll)
+    window.removeEventListener('resize', () => {})
+    window.removeEventListener('scroll', () => {})
     window.removeEventListener('keydown', handleGlobalKeydown)
     document.removeEventListener('click', handleClickOutside)
 })
+
+// ===== WATCHERS =====
 
 watch(filters, () => {
     schedulePersist()
@@ -1740,20 +766,22 @@ watch(dynamicFilterValues, () => {
     scheduleSearch()
 }, { deep: true })
 
-watch([dropdownSearch, filteredDropdownCatalog], () => {
-    // No need to reposition with the new absolute positioning system
-})
+watch(maintenanceMap, (val) => {
+    try {
+        persistMaintenanceMap()
+    } catch (e) {
+        // noop
+    }
+}, { deep: true })
 
 watch(isFilterDropdownOpen, (newVal) => {
     if (newVal) {
-        // Cuando se abre, posicionar inmediatamente
         nextTick(() => {
             positionFilterDropdown()
         })
     }
 })
 
-// Asegura que la página actual siempre esté dentro del rango válido
 watch(totalPages, (tp) => {
     if (currentPage.value > tp) currentPage.value = tp
 })
@@ -1762,51 +790,35 @@ watch(pageSize, (n) => {
     if (!n || Number(n) <= 0) pageSize.value = 6
     if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
 })
+
+watch(allData, (data) => {
+    if (data && data.length > 0 && !cardsReady.value) {
+        setTimeout(() => {
+            cardsReady.value = true
+        }, 150)
+    }
+}, { immediate: false })
+
 </script>
 
-<style scoped>
-.testing-environment-main {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.title-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-}
-
-.btn-back-to-dashboard {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: white;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-back-to-dashboard:hover {
-    background: #f3f4f6;
-    border-color: #9ca3af;
-    color: #1f2937;
-}
-
-.spacer {
-    flex: 1;
-}
+<style>
 
 .testing-content {
     display: flex;
     flex-direction: column;
     gap: 28px;
 }
+
+.tunnel-warning {
+    margin: 8px 0 14px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    background: linear-gradient(90deg, rgba(250,204,21,0.08), rgba(250,204,21,0.04));
+    border: 1px solid rgba(250,204,21,0.16);
+    color: #b45309;
+    font-weight: 600;
+}
+
 
 /* Sección de Filtros */
 .filters-section {
@@ -1943,11 +955,6 @@ watch(pageSize, (n) => {
     0% {
         transform: scale(1);
     }
-
-    50% {
-        transform: scale(1.15);
-    }
-
     100% {
         transform: scale(1);
     }
@@ -4749,4 +3756,170 @@ watch(pageSize, (n) => {
         transform: rotate(360deg);
     }
 }
+
+.scan-global-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    background: rgba(37, 99, 235, 0.18);
+    color: #e5f0ff;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.scan-global-btn:hover {
+    background: rgba(37, 99, 235, 0.3);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.25);
+}
+
+.mobile-limit-note {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: rgba(253, 186, 116, 0.9);
+    background: rgba(251, 146, 60, 0.12);
+    border: 1px solid rgba(251, 146, 60, 0.35);
+    padding: 6px 10px;
+    border-radius: 8px;
+    width: fit-content;
+}
+
+.maintenance-card.is-maintenance {
+    border-color: rgba(34, 197, 94, 0.55);
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4), 0 8px 24px rgba(16, 185, 129, 0.25);
+    animation: maintenancePulse 1.8s ease-in-out infinite;
+}
+
+@keyframes maintenancePulse {
+    0% { box-shadow: 0 0 0 1px rgba(34,197,94,0.35), 0 8px 24px rgba(16,185,129,0.15); }
+    50% { box-shadow: 0 0 0 2px rgba(34,197,94,0.6), 0 10px 28px rgba(16,185,129,0.35); }
+    100% { box-shadow: 0 0 0 1px rgba(34,197,94,0.35), 0 8px 24px rgba(16,185,129,0.15); }
+}
+.public-scan-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(3,8,20,0.6);
+  z-index: 6000;
+}
+.public-scan-card {
+  background: linear-gradient(180deg, rgba(13,22,34,0.98), rgba(7,12,18,0.98));
+  border-radius: 12px;
+  padding: 20px 22px;
+  width: min(520px, 94vw);
+  color: #f2f7ff;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  text-align: center;
+}
+.public-scan-card h3 {
+  margin: 0 0 8px 0;
+}
+.public-scan-card .muted { color: rgba(255,255,255,0.78); margin-bottom: 10px }
+.public-scan-card .overlay-item-info { margin: 8px 0 12px 0 }
+.public-scan-card .overlay-item-name { font-weight: 700; font-size: 1.05rem }
+.public-scan-card .overlay-item-meta { font-size: 0.9rem; color: rgba(255,255,255,0.72) }
+.public-scan-card .overlay-actions { margin-top: 14px; display:flex; gap:10px; justify-content:center }
+.public-scan-card .btn-primary { background:#4f8cff; color:#fff; border-radius:8px; padding:8px 14px; border:0 }
+.public-scan-card .btn-secondary { background:transparent; color:#cfe4ff; border-radius:8px; padding:8px 14px; border:1px solid rgba(255,255,255,0.06) }
+
+.title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.btn-back-to-dashboard {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    background: linear-gradient(135deg, rgba(46, 221, 90, 0.15), rgba(74, 144, 226, 0.15));
+    color: rgba(76, 186, 150, 0.9);
+    border: 1px solid rgba(76, 186, 150, 0.4);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+.btn-back-to-dashboard:hover {
+    background: linear-gradient(135deg, rgba(46, 221, 90, 0.25), rgba(74, 144, 226, 0.25));
+    border-color: rgba(76, 186, 150, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(76, 186, 150, 0.2);
+}
+
+.btn-back-to-dashboard:active {
+    transform: translateY(0);
+}
+
+/* Suspense fallback spinner */
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid rgba(76, 186, 150, 0.2);
+    border-top: 4px solid rgba(76, 186, 150, 0.9);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.suspense-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 200px;
+}
+
+.testing-environment-title {
+    flex: 1;
+    text-align: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #f1f5f9;
+}
+
+.testing-environment-main :deep(.panel-surface) {
+    /* Exact same visual as .topbar (glass + transparency) */
+    background: rgba(19, 31, 52, 0.50) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    backdrop-filter: blur(12px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+    box-shadow: 0 16px 48px rgba(2, 6, 23, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    background-clip: padding-box !important;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Ensure the single main panel (the one que contiene el título) appears identical to topbar
+   and inner sections look embedded by using transparent backgrounds. This targets only
+   the panel surface inside the testing environment — no extra wrapper created. */
+.testing-environment-main :deep(.panel-surface) .filters-section,
+.testing-environment-main :deep(.panel-surface) .cards-section,
+.testing-environment-main :deep(.panel-surface) .drawer,
+.testing-environment-main :deep(.panel-surface) .title-row {
+    background: transparent !important;
+    border-color: rgba(255,255,255,0.06) !important;
+}
+
 </style>

@@ -1,4 +1,3 @@
-*** End Patch
 <template>
   <div class="timepicker-wrapper" ref="wrapper">
     <div class="timepicker-input-container">

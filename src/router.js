@@ -22,6 +22,8 @@ const OrderManagement = () => import('./views/operations/OrderManagement.vue')
 
 const routes = [
     { path: '/', name: 'home', component: Home },
+    // Short scan URL: redirects to the biomedical testing view with scan param
+    { path: '/s/:code', name: 'short-scan', redirect: (to) => ({ path: '/op/testing-biomedical', query: { scan: String(to.params.code || '') } }) },
     { path: '/login', name: 'login', component: Login },
     { path: '/register', name: 'register', component: Register },
     { path: '/forgot', name: 'forgot', component: Forgot },
@@ -38,7 +40,7 @@ const routes = [
     { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
     { path: '/op/servicio', name: 'op-servicio', component: OpServicio, meta: { requiresAuth: true } },
     { path: '/op/inventario-biomedica', name: 'op-inventario-biomedica', component: OpInventarioBiomedica }, // Maqueta pública: renderiza sin requiresAuth
-    { path: '/op/testing-biomedical', name: 'testing-biomedical', component: BiomedicalTestingEnvironment, meta: { requiresAuth: true } }, // Entorno de pruebas para desarrollo
+    { path: '/op/testing-biomedical', name: 'testing-biomedical', component: BiomedicalTestingEnvironment }, // Entorno de pruebas para desarrollo (acceso público para deep-links/QR)
     { path: '/op/insumos-consumibles', name: 'op-insumos-consumibles', component: OpInsumosConsumibles, meta: { requiresAuth: true } }
 ]
 

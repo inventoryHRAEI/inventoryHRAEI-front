@@ -9,6 +9,8 @@ import './styles/operations-global.css'
 import './styles/enhancements.css'
 import './styles/forms.css'
 import './styles/datetime-inputs.css'
+// Tunnel performance optimizations (CSS for disabling animations over slow networks)
+import './styles/tunnel-performance.css'
 // Disabled vendor flowbite-datepicker.css import: causes PostCSS / @layer parsing errors if Tailwind is not configured
 // If you want the full Flowbite datepicker styling, follow the Tailwind integration steps (recommended) below and re-enable this import.
 // Import a minimal standalone CSS for datepickers (safe without Tailwind)
@@ -18,6 +20,14 @@ import './styles/datetime-inputs.css'
 import './styles/calendar-simple.scss'
 // Inicializar windowManager antes de crear la app
 import './utils/windowManager'
+// Detect if running through tunnel and apply performance optimizations
+if (typeof window !== 'undefined') {
+  const isTunnel = /\.trycloudflare\.com|\.ngrok-free\.dev|\.loca\.lt/.test(window.location.hostname)
+  if (isTunnel) {
+    document.documentElement.classList.add('tunnel-mode')
+    console.log('[perf] Tunnel detected - applying performance optimizations')
+  }
+}
 // Si este window fue abierto por script (query param scriptOpen=1), marcarlo en sessionStorage
 if (typeof window !== 'undefined') {
         try {
