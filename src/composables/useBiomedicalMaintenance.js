@@ -1,57 +1,105 @@
 import { ref } from 'vue'
 
-const MAINTENANCE_KEY = 'biomedical-maintenance-map'
+const API_BASE = '/api/ops/maintenance'
 
 export function useBiomedicalMaintenance() {
   const maintenanceMap = ref({})
 
+  const normalizeCode = (code) => String(code || '').trim()
+
+  async function fetchJson(url, options = {}) {
+    const resp = await fetch(url, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options
+    })
+    const data = await resp.json().catch(() => ({}))
+    if (!resp.ok) {
+      const msg = data && data.msg ? data.msg : 'Error en la petición'
+      throw new Error(msg)
+    }
+    return data
+  }
+
+  function setEntry(code, payload) {
+    maintenanceMap.value = {
+      ...maintenanceMap.value,
+      [code]: payload
+    }
+  }
+
+  async function refreshStatusForCodes(codes = []) {
+    const list = Array.from(new Set((codes || []).map(normalizeCode).filter(Boolean))).slice(0, 50)
+    if (!list.length) return
+    const qs = encodeURIComponent(list.join(','))
+    const data = await fetchJson(`${API_BASE}/status?codes=${qs}`, { method: 'GET' })
+    if (data && data.map) {
+      for (const [code, val] of Object.entries(data.map)) {
+        setEntry(code, {
+          status: val?.status === 'en_mantenimiento' || val?.maintenance?.status === 'in_progress' ? 'en_mantenimiento' : 'en_biomedica',
+          maintenance: val?.maintenance || null
+        })
+      }
+    }
+  }
+
+  async function onStartMaintenance(payload) {
+    const code = normalizeCode(payload?.code)
+    if (!code) throw new Error('Falta código de inventario')
+    const body = {
+      inventory_code: code,
+      reason: normalizeCode(payload?.reason || payload?.motivo || payload?.data?.motivo || ''),
+      provider: normalizeCode(payload?.provider || payload?.empresa || payload?.data?.empresa || ''),
+      expected_return_at: payload?.expected_return_at || null
+    }
+    const data = await fetchJson(`${API_BASE}/start`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+    setEntry(code, {
+      status: 'en_mantenimiento',
+      maintenance: data?.maintenance || null
+    })
+    return data
+  }
+
+  async function onFinishMaintenance(payload) {
+    const code = normalizeCode(payload?.code)
+    if (!code) throw new Error('Falta código de inventario')
+    const body = {
+      inventory_code: code,
+      return_condition: normalizeCode(payload?.return_condition || payload?.estado || payload?.data?.estado || ''),
+      return_notes: payload?.return_notes || payload?.observaciones || payload?.data?.observaciones || ''
+    }
+    const data = await fetchJson(`${API_BASE}/finish`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    })
+    setEntry(code, {
+      status: 'en_biomedica',
+      maintenance: data?.maintenance || null
+    })
+    return data
+  }
+
   function isInMaintenance(item) {
-    const code = String(item?.['No DE INVENTARIO'] || '').trim()
+    const code = normalizeCode(item?.['No DE INVENTARIO'] || item)
     if (!code) return false
-    return maintenanceMap.value?.[code]?.status === 'in_progress'
+    const entry = maintenanceMap.value?.[code]
+    return entry?.status === 'en_mantenimiento' || entry?.maintenance?.status === 'in_progress'
   }
 
-  function onStartMaintenance(payload) {
-    const code = String(payload?.code || '').trim()
-    if (!code) return
-    maintenanceMap.value = {
-      ...maintenanceMap.value,
-      [code]: {
-        status: 'in_progress',
-        startedAt: new Date().toISOString(),
-        data: payload?.data || {},
-        item: payload?.item || null
-      }
-    }
-  }
-
-  function onFinishMaintenance(payload) {
-    const code = String(payload?.code || '').trim()
-    if (!code) return
-    maintenanceMap.value = {
-      ...maintenanceMap.value,
-      [code]: {
-        ...(maintenanceMap.value?.[code] || {}),
-        status: 'done',
-        finishedAt: new Date().toISOString(),
-        finishData: payload?.data || {}
-      }
-    }
+  function getMaintenanceEntry(item) {
+    const code = normalizeCode(item?.['No DE INVENTARIO'] || item)
+    if (!code) return null
+    return maintenanceMap.value?.[code] || null
   }
 
   function initMaintenanceMap() {
-    try {
-      const raw = localStorage.getItem(MAINTENANCE_KEY)
-      maintenanceMap.value = raw ? JSON.parse(raw) : {}
-    } catch (e) {
-      maintenanceMap.value = {}
-    }
+    maintenanceMap.value = {}
   }
 
   function persistMaintenanceMap() {
-    try {
-      localStorage.setItem(MAINTENANCE_KEY, JSON.stringify(maintenanceMap.value))
-    } catch (e) { }
+    // Ya no persistimos en localStorage; estado viene del backend.
   }
 
   return {
@@ -60,6 +108,8 @@ export function useBiomedicalMaintenance() {
     onStartMaintenance,
     onFinishMaintenance,
     initMaintenanceMap,
-    persistMaintenanceMap
+    persistMaintenanceMap,
+    refreshStatusForCodes,
+    getMaintenanceEntry
   }
 }

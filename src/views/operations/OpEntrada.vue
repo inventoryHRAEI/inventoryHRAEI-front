@@ -3716,13 +3716,14 @@ async function onSubmit() {
             try {
                 await router.replace({ name: 'order-management', query: { t: Date.now() } })
             } catch (e) { /* ignore navigation errors */ }
-            // If SPA navigation didn't change the route (guards or other issues), force a full reload to the target
+            // If SPA navigation didn't change the route (guards or other issues), do a controlled remount instead of full reload
             try {
                 const currentName = router.currentRoute.value && router.currentRoute.value.name
                 if (currentName !== 'order-management') {
                     const ts = Date.now()
-                    const base = window.location.origin || ''
-                    window.location.href = `${base}/op/order-management?t=${ts}`
+                    // perform SPA navigation replace and emit force-recreate to remount components without reloading the page
+                    try { router.replace({ path: '/op/order-management', query: { t: ts } }).catch(()=>{}) } catch (e) { /* ignore */ }
+                    try { window.dispatchEvent(new CustomEvent('app:force-recreate')) } catch (e) { /* ignore */ }
                     return
                 }
             } catch (e) {

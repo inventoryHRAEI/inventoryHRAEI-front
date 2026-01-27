@@ -20,7 +20,6 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
 const props = defineProps({ items: { type: Array, default: () => [] } })
 
 function format(s) {

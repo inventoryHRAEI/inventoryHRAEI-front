@@ -724,11 +724,16 @@ onMounted(() => {
     try { reloadOrdersFromServer().catch(() => {}) } catch (e) {}
     try { console.debug('[OrderManagement] mounted, dispatching route:mounted', { name: route.name, path: route.fullPath }); window.dispatchEvent(new CustomEvent('route:mounted', { detail: { name: route.name, path: route.fullPath } })) } catch (e) {}
     // Reaccionar si se fuerza la recreación global (ej. navigateAndRefresh)
-    try { window.addEventListener('app:force-recreate', () => { try { reloadOrdersFromServer().catch(() => {}) } catch {} }) } catch (e) {}
+    try {
+        const handleForceRecreate = () => { try { console.debug('[OrderManagement] app:force-recreate received, reloading orders'); reloadOrdersFromServer().catch(() => {}) } catch (e) { /* ignore */ } }
+        window.addEventListener('app:force-recreate', handleForceRecreate)
+        // store reference for cleanup
+        window.__orderManagement_forceRecreate = handleForceRecreate
+    } catch (e) {}
 })
 onBeforeUnmount(() => {
     window.removeEventListener('resize', handleResizeForPreview)
-    try { window.removeEventListener('app:force-recreate', () => { try { reloadOrdersFromServer().catch(() => {}) } catch {} }) } catch (e) {}
+    try { if (window.__orderManagement_forceRecreate) { window.removeEventListener('app:force-recreate', window.__orderManagement_forceRecreate); delete window.__orderManagement_forceRecreate; console.debug('[OrderManagement] removed forceRecreate handler') } } catch (e) {}
     // Limpiar estado al abandonar el componente
     showEditModal.value = false
     showDocModal.value = false
@@ -1746,7 +1751,7 @@ function goToCreateOrder() {
 
 function goToDashboard() {
     console.debug('[OrderManagement] navigating to dashboard')
-    navigateAndRefresh(router, { name: 'dashboard', query: { t: Date.now() } })
+    navigateAndRefresh(router, { name: 'dashboard' })
 }
 
 function closeFiltersDropdown() {

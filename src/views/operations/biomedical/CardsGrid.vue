@@ -41,14 +41,15 @@
                 :item="item"
                 :index="idx"
                 :on-toggle-select="toggleSelect"
-                :on-show-barcode="handleShowBarcode"
+                :on-show-barcode="handleShowBarcodeWrapper"
                 :get-item-key="getItemKey"
                 :is-expanded="isExpanded"
-                :is-in-maintenance="isInMaintenance"
                 :get-status-accent-class="getStatusAccentClass"
                 :get-status-glow-class="getStatusGlowClass"
                 :get-status-pill-class="getStatusPillClass"
                 :get-status-text-class="getStatusTextClass"
+                :is-in-maintenance="isInMaintenance"
+                :get-maintenance-entry="getMaintenanceEntry"
                 :is-sparse="isSparse"
                 :is-field-visible="isFieldVisible"
                 :display-value="displayValue"
@@ -104,15 +105,19 @@ const props = defineProps({
         type: Function,
         required: true
     },
-    isInMaintenance: {
-        type: Function,
-        required: true
-    },
     getStatusAccentClass: {
         type: Function,
         required: true
     },
     getStatusGlowClass: {
+        type: Function,
+        required: true
+    },
+    isInMaintenance: {
+        type: Function,
+        required: true
+    },
+    getMaintenanceEntry: {
         type: Function,
         required: true
     },
@@ -157,6 +162,18 @@ const props = defineProps({
         default: 0
     }
 })
+
+// Local wrapper to log and forward show-barcode events
+function handleShowBarcodeWrapper(item) {
+    try {
+        console.log('[CardsGrid] handleShowBarcodeWrapper for', item && (item['No DE INVENTARIO'] || 'unknown'))
+    } catch (e) {}
+    try {
+        if (typeof props.handleShowBarcode === 'function') props.handleShowBarcode(item)
+    } catch (e) {
+        console.error('[CardsGrid] Error forwarding handleShowBarcode', e)
+    }
+}
 </script>
 
 <style scoped>
@@ -252,5 +269,5 @@ const props = defineProps({
 .no-results svg {
     color: rgba(255, 255, 255, 0.4);
     margin-bottom: 12px;
-}
+} 
 </style>

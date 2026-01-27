@@ -7,13 +7,15 @@ export function useBiomedicalMeta() {
   async function fetchMeta() {
     try {
       metaLoading.value = true
+      console.log('[fetchMeta] Iniciando la carga de metadatos...')
       // Request lightweight meta to avoid heavy DB counts on slow networks/tunnels
       const url = '/api/ops/historial-mantenimientos/meta?lite=1'
       const response = await fetch(url)
       const json = await response.json().catch(() => ({}))
       metaFields.value = Array.isArray(json.fields) ? json.fields : []
+      console.log('[fetchMeta] Metadatos cargados:', metaFields.value)
     } catch (e) {
-      console.error('Error cargando metadatos:', e)
+      console.error('[fetchMeta] Error cargando metadatos:', e)
       metaFields.value = []
     } finally {
       metaLoading.value = false

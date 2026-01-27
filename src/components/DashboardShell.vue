@@ -19,8 +19,6 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
-
 defineProps({
   hideHeader: { type: Boolean, default: false }
 })

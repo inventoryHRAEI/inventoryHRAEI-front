@@ -4,30 +4,57 @@
 
 import fs from 'fs'
 import path from 'path'
+import os from 'os'
 import { spawn } from 'child_process'
 
-const certFile = path.resolve(process.cwd(), '.certs', 'dev-cert.pem')
-const keyFile = path.resolve(process.cwd(), '.certs', 'dev-key.pem')
+const certFile = path.resolve(process.cwd(), '.certs', 'localhost.pem')
+const keyFile = path.resolve(process.cwd(), '.certs', 'localhost-key.pem')
+
+function generateDevHosts() {
+  const networkInterfaces = os.networkInterfaces()
+  const hosts = []
+  
+  // Get all IPv4 addresses (excluding internal ones)
+  Object.keys(networkInterfaces).forEach(interfaceName => {
+    const addresses = networkInterfaces[interfaceName]
+    addresses.forEach(addr => {
+      if (addr.family === 'IPv4' && !addr.internal) {
+        hosts.push(addr.address)
+      }
+    })
+  })
+  
+  // Always include localhost
+  hosts.unshift('localhost')
+  
+  // Write to public folder for frontend access
+  const publicDir = path.resolve(process.cwd(), 'public')
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true })
+  }
+  
+  const devHostsFile = path.resolve(publicDir, 'dev-hosts.json')
+  fs.writeFileSync(devHostsFile, JSON.stringify({ hosts }, null, 2))
+  
+  console.log('[dev:https] Generated dev-hosts.json with network addresses:', hosts)
+  return hosts
+}
 
 function ensureCerts() {
   if (fs.existsSync(certFile) && fs.existsSync(keyFile)) return true
 
-  console.log('[dev:https] certificates not found. Generating self-signed certs...')
-  const nodeCmd = process.platform === 'win32' ? 'node.exe' : 'node'
-  const genScript = path.resolve(process.cwd(), 'scripts', 'generate-selfsigned.js')
-  const res = spawn(nodeCmd, [genScript], { stdio: 'inherit' })
-
-  return new Promise((resolve) => {
-    res.on('exit', (code) => {
-      resolve(code === 0)
-    })
-  })
+  console.log('[dev:https] mkcert certificates not found. Please run: npm run mkcert:setup')
+  console.log('[dev:https] or generate manually: mkcert -key-file .certs/localhost-key.pem -cert-file .certs/localhost.pem localhost')
+  return false
 }
 
-async function startVite() {
-  const ok = await ensureCerts()
+function startVite() {
+  // Generate network hosts before starting
+  generateDevHosts()
+  
+  const ok = ensureCerts()
   if (!ok) {
-    console.error('[dev:https] failed to generate certs; aborting')
+    console.error('[dev:https] failed to find mkcert certificates; aborting')
     process.exit(1)
   }
 

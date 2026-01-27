@@ -9,112 +9,188 @@
                         <polyline points="12 19 5 12 12 5"></polyline>
                     </svg>
                 </button>
-                <span class="testing-environment-title">Trabajando - Entorno de Pruebas</span>
+                <span class="testing-environment-title">Inventario Biomédica</span>
                 <button class="btn-back-to-dashboard" style="visibility: hidden; pointer-events: none;"></button>
             </div>
         </template>
 
         <Breadcrumbs />
 
-        <BiomedicalSkeletonLoader v-if="!contentReady" />
+        <div class="tabs-navigation">
+            <button 
+                class="tab-link" 
+                :class="{ active: activeTab === 'inventory' }" 
+                @click="activeTab = 'inventory'"
+            >
+                <IIcon name="ic:baseline-medical-services" size="18" />
+                Inventario de Equipos
+            </button>
+            <button 
+                class="tab-link" 
+                :class="{ active: activeTab === 'subdireccion' }" 
+                @click="activeTab = 'subdireccion'"
+            >
+                <IIcon name="ic:baseline-inventory-2" size="18" />
+                Insumos y Refacciones
+            </button>
+        </div>
 
-        <div v-else class="testing-content" :style="{ animation: 'fadeIn 0.4s ease-in' }">
-            <ScanOverlay
-                :open="scanOverlayOpen"
-                :item="scanOverlayItem"
-                :code="scanOverlayCode"
-                @login="goLoginWithRedirect"
-                @close="closeScanOverlay"
-                @logged="onScanOverlayLogged"
-            />
-            <FiltersSection
-                ref="filtersSectionRef"
-                v-model:filters="filters"
-                v-model:dynamicFilterValues="dynamicFilterValues"
-                v-model:dropdownSearch="dropdownSearch"
-                v-model:drawerSearch="drawerSearch"
-                :filtered-count="filteredData.length"
-                :total-count="allData.length"
-                :mobile-limit-applied="mobileLimitApplied"
-                :active-dynamic-filter-ids="activeDynamicFilterIds"
-                :is-filter-dropdown-open="isFilterDropdownOpen"
-                :meta-loading="metaLoading"
-                :filtered-dropdown-catalog="filteredDropdownCatalog"
-                :toggle-filter-dropdown="toggleFilterDropdown"
-                :open-add-filter-drawer="openAddFilterDrawer"
-                :clear-dynamic-filters="clearDynamicFilters"
-                :handle-filter-checkbox-change="handleFilterCheckboxChange"
-                :get-dynamic-field-label="getDynamicFieldLabel"
-                :remove-dynamic-filter="removeDynamicFilter"
-                :get-dynamic-field-kind="getDynamicFieldKind"
-                :get-dynamic-value="getDynamicValue"
-                :set-dynamic-value="setDynamicValue"
-                :is-dynamic-selectable="isDynamicSelectable"
-                :get-dynamic-select-options="getDynamicSelectOptions"
-                :get-dynamic-datalist-id="getDynamicDatalistId"
-                :get-dynamic-suggestions="getDynamicSuggestions"
-                :sin-estado-value="SIN_ESTADO_VALUE"
-                :estatus-options="estatusOptions"
-                :equipo-medico-datalist-id="equipoMedicoDatalistId"
-                :equipo-medico-suggestions="equipoMedicoSuggestions"
-                :marca-datalist-id="marcaDatalistId"
-                :marca-suggestions="marcaSuggestions"
-                :unidad-medica-datalist-id="unidadMedicaDatalistId"
-                :unidad-medica-suggestions="unidadMedicaSuggestions"
-                :is-add-filter-drawer-open="isAddFilterDrawerOpen"
-                :close-add-filter-drawer="closeAddFilterDrawer"
-                :drawer-animating="drawerAnimating"
-                :filtered-dynamic-catalog="filteredDynamicCatalog"
-                :meta-error="metaError"
-                :dynamic-catalog="dynamicCatalog"
-                :get-field-type-label="getFieldTypeLabel"
-                :fetch-meta="fetchMeta"
-                :add-dynamic-filter="addDynamicFilter"
-                :is-fixed-field="isFixedField"
-            />
-            <CardsSkeletonLoader v-if="!cardsReady" />
-            <CardsSection
-                v-else
-                :loading="loading"
-                :filtered-count="filteredData.length"
-                :displayed-cards="displayedCards"
-                :visible-count="visibleCount"
-                :page-size="pageSize"
-                :current-page="currentPage"
-                :total-pages="totalPages"
-                :visible-page-numbers="visiblePageNumbers"
-                :displayed-start="displayedStart"
-                :displayed-end="displayedEnd"
-                :active-dynamic-filter-ids="activeDynamicFilterIds"
-                :handle-show-barcode="handleShowBarcode"
-                :get-item-key="getItemKey"
-                :toggle-select="toggleSelect"
-                :is-expanded="isExpanded"
-                :is-sparse="isSparse"
-                :is-in-maintenance="isInMaintenance"
-                :get-status-accent-class="getStatusAccentClass"
-                :get-status-glow-class="getStatusGlowClass"
-                :is-field-visible="isFieldVisible"
-                :display-value="displayValue"
-                :has-real-value="hasRealValue"
-                :get-status-text-class="getStatusTextClass"
-                :get-status-pill-class="getStatusPillClass"
-                :is-dynamic-field-duplicate="isDynamicFieldDuplicate"
-                :get-dynamic-field-label="getDynamicFieldLabel"
-                :get-item-field-value="getItemFieldValue"
-                :first-page="firstPage"
-                :previous-page="previousPage"
-                :next-page="nextPage"
-                :last-page="lastPage"
-                :go-to-page="goToPage"
-                :change-page-size="changePageSize"
-                :open-scan-modal="openScanModal"
-            />
-            <div v-if="filteredData.length === 0 && !loading && hasFilters" class="no-results">
-                <p>No se encontraron registros que coincidan con los filtros aplicados.</p>
+        <div v-if="activeTab === 'inventory'" class="tab-pane-content">
+            <BiomedicalSkeletonLoader v-if="!contentReady" />
+
+            <div v-else class="testing-content" :style="{ animation: 'fadeIn 0.4s ease-in' }">
+                <ScanOverlay
+                    :open="scanOverlayOpen"
+                    :item="scanOverlayItem"
+                    :code="scanOverlayCode"
+                    @login="goLoginWithRedirect"
+                    @close="closeScanOverlay"
+                    @logged="onScanOverlayLogged"
+                />
+                <FiltersSection
+                    ref="filtersSectionRef"
+                    v-model:filters="filters"
+                    v-model:dynamicFilterValues="dynamicFilterValues"
+                    v-model:dropdownSearch="dropdownSearch"
+                    v-model:drawerSearch="drawerSearch"
+                    :filtered-count="filteredData.length"
+                    :total-count="serverTotal || allData.length"
+                    :mobile-limit-applied="mobileLimitApplied"
+                    :active-dynamic-filter-ids="activeDynamicFilterIds"
+                    :is-filter-dropdown-open="isFilterDropdownOpen"
+                    :meta-loading="metaLoading"
+                    :filtered-dropdown-catalog="filteredDropdownCatalog"
+                    :toggle-filter-dropdown="toggleFilterDropdown"
+                    :open-add-filter-drawer="openAddFilterDrawer"
+                    :clear-dynamic-filters="clearDynamicFilters"
+                    :handle-filter-checkbox-change="handleFilterCheckboxChange"
+                    :get-dynamic-field-label="getDynamicFieldLabel"
+                    :remove-dynamic-filter="removeDynamicFilter"
+                    :get-dynamic-field-kind="getDynamicFieldKind"
+                    :get-dynamic-value="getDynamicValue"
+                    :set-dynamic-value="setDynamicValue"
+                    :is-dynamic-selectable="isDynamicSelectable"
+                    :get-dynamic-select-options="getDynamicSelectOptions"
+                    :get-dynamic-datalist-id="getDynamicDatalistId"
+                    :get-dynamic-suggestions="getDynamicSuggestions"
+                    :sin-estado-value="SIN_ESTADO_VALUE"
+                    :estatus-options="estatusOptions"
+                    :equipo-medico-datalist-id="equipoMedicoDatalistId"
+                    :equipo-medico-suggestions="equipoMedicoSuggestions"
+                    :marca-datalist-id="marcaDatalistId"
+                    :marca-suggestions="marcaSuggestions"
+                    :unidad-medica-datalist-id="unidadMedicaDatalistId"
+                    :unidad-medica-suggestions="unidadMedicaSuggestions"
+                    :is-add-filter-drawer-open="isAddFilterDrawerOpen"
+                    :close-add-filter-drawer="closeAddFilterDrawer"
+                    :drawer-animating="drawerAnimating"
+                    :filtered-dynamic-catalog="filteredDynamicCatalog"
+                    :meta-error="metaError"
+                    :dynamic-catalog="dynamicCatalog"
+                    :get-field-type-label="getFieldTypeLabel"
+                    :fetch-meta="fetchMeta"
+                    :add-dynamic-filter="addDynamicFilter"
+                    :is-fixed-field="isFixedField"
+                />
+                <CardsSkeletonLoader v-if="!cardsReady" />
+                <div v-if="largeDatasetMode" class="large-dataset-banner">
+                    <strong>Dataset grande:</strong> Se han detectado {{ serverTotal || 0 }} registros. Para evitar ralentizaciones, la vista usa paginación por servidor.
+                    <button class="btn small" :disabled="showAllLoading" @click.prevent="doStartShowAll">
+    <span v-if="!showAllLoading">Mostrar todo (virtualizado)</span>
+    <span v-else>Obteniendo datos...</span>
+    </button>
+                    <span style="margin-left:8px; opacity:0.9">o usa consola: <code>window.__BIOMED_TEST__.fetchAll()</code></span>
+                </div>
+                <template v-if="showAllVirtual">
+                <div class="large-dataset-banner" style="display:flex;align-items:center;gap:12px;">
+                    <button class="btn" @click.prevent="closeShowAll">Cerrar vista completa</button>
+                    <div style="opacity:0.9">Mostrando {{ allFetchedItems.length }} de {{ serverTotal || '—' }} registros (virtualizado)</div>
+                </div>
+                <CardsVirtual
+                    :items="allFetchedItems"
+                    :get-item-key="getItemKey"
+                    :is-expanded="isExpanded"
+                    :is-sparse="isSparse"
+                    :get-status-accent-class="getStatusAccentClass"
+                    :get-status-glow-class="getStatusGlowClass"
+                    :get-status-text-class="getStatusTextClass"
+                    :get-status-pill-class="getStatusPillClass"
+                    :is-in-maintenance="isInMaintenanceBase"
+                    :get-maintenance-entry="getMaintenanceEntry"
+                    :is-field-visible="isFieldVisible"
+                    :display-value="displayValue"
+                    :has-real-value="hasRealValue"
+                    :is-dynamic-field-duplicate="isDynamicFieldDuplicate"
+                    :get-dynamic-field-label="getDynamicFieldLabel"
+                    :get-item-field-value="getItemFieldValue"
+                    :active-dynamic-filter-ids="activeDynamicFilterIds"
+                    :toggle-select="toggleSelect"
+                    :on-show-barcode="handleShowBarcode"
+                    :on-show-update-panel="handleShowUpdatePanel"
+                    :on-show-history-panel="handleShowHistoryPanel"
+                />
+                </template>
+                <template v-else>
+                <CardsSection
+                    :loading="loading"
+                    :filtered-count="filteredData.length"
+                    :displayed-cards="displayedCards"
+                    :visible-count="useServerPagination ? (serverTotal || visibleCount) : visibleCount"
+                    :page-size="pageSize"
+                    :current-page="currentPage"
+                    :total-pages="totalPages"
+                    :visible-page-numbers="visiblePageNumbers"
+                    :displayed-start="displayedStart"
+                    :displayed-end="displayedEnd"
+                    :active-dynamic-filter-ids="activeDynamicFilterIds"
+                    :on-show-barcode="handleShowBarcode"
+                    :on-show-update-panel="handleShowUpdatePanel"
+                    :on-show-history-panel="handleShowHistoryPanel"
+                    :get-item-key="getItemKey"
+                    :toggle-select="toggleSelect"
+                    :is-expanded="isExpanded"
+                    :is-sparse="isSparse"
+                    :get-status-accent-class="getStatusAccentClass"
+                    :get-status-glow-class="getStatusGlowClass"
+                    :is-field-visible="isFieldVisible"
+                    :display-value="displayValue"
+                    :has-real-value="hasRealValue"
+                    :is-in-maintenance="isInMaintenanceBase"
+                    :get-maintenance-entry="getMaintenanceEntry"
+                    :get-status-text-class="getStatusTextClass"
+                    :get-status-pill-class="getStatusPillClass"
+                    :is-dynamic-field-duplicate="isDynamicFieldDuplicate"
+                    :get-dynamic-field-label="getDynamicFieldLabel"
+                    :get-item-field-value="getItemFieldValue"
+                    :first-page="firstPage"
+                    :previous-page="previousPage"
+                    :next-page="nextPage"
+                    :last-page="lastPage"
+                    :go-to-page="goToPage"
+                    :change-page-size="changePageSize"
+                    :open-scan-modal="openScanModal"
+                    :rendered-count="renderedCount"
+                    @load-more="handleLoadMore"
+                />
+                </template>
+                <div v-if="filteredData.length === 0 && !loading && hasFilters" class="no-results">
+                    <p>No se encontraron registros que coincidan con los filtros aplicados.</p>
+                </div>
             </div>
         </div>
+
+        <div v-else class="tab-pane-content">
+            <InventorySubdireccion />
+        </div>
         <BarcodeModal v-model="barcodeModalOpen" :code="barcodeCode" :item="barcodeItem" @request-start-maintenance="onRequestStartMaintenance" />
+        <UpdateItemPanel 
+          v-model="updateItemModalOpen" 
+          :item="updateItemData"
+          :dynamic-catalog="dynamicCatalog"
+          :get-dynamic-field-label="getDynamicFieldLabel"
+          :get-dynamic-field-kind="getDynamicFieldKind"
+          @item-updated="onItemUpdated" 
+        />
         <MaintenanceScannerModal
             v-model="scanModalOpen"
             :items="allData"
@@ -123,20 +199,28 @@
             @start-maintenance="onStartMaintenance"
             @finish-maintenance="onFinishMaintenance"
         />
+        <EquipmentHistoryPanel
+          v-model:visible="isHistoryPanelVisible"
+          :item="historyItem"
+          @close="isHistoryPanelVisible = false"
+        />
     </ActionPanel>
 </template>
 
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import VueIcon from '@kalimahapps/vue-icons/VueIcon'
 import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, defineAsyncComponent } from 'vue'
+import IIcon from '@/components/IIcon.vue'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import BarcodeModal from '@/components/BarcodeModal.vue'
+import UpdateItemPanel from '@/components/UpdateItemPanel_v2.vue'
 import MaintenanceScannerModal from '@/components/MaintenanceScannerModal.vue'
+import EquipmentHistoryPanel from '@/components/EquipmentHistoryPanel.vue'
 import ScanOverlay from '@/views/operations/biomedical/ScanOverlay.vue'
 import BiomedicalSkeletonLoader from '@/components/BiomedicalSkeletonLoader.vue'
 import CardsSkeletonLoader from '@/components/CardsSkeletonLoader.vue'
+import InventorySubdireccion from '@/views/operations/biomedical/InventorySubdireccion.vue'
 import { getStoredToken, validateSession } from '@/utils/auth.js'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import { useBiomedicalFilters } from '@/composables/useBiomedicalFilters.js'
@@ -144,10 +228,22 @@ import { useBiomedicalSearch } from '@/composables/useBiomedicalSearch.js'
 import { useBiomedicalMaintenance } from '@/composables/useBiomedicalMaintenance.js'
 import { useBiomedicalCardRendering } from '@/composables/useBiomedicalCardRendering.js'
 import { useBiomedicalMeta } from '@/composables/useBiomedicalMeta.js'
+import { createTunnel } from '@/lib/tunnelManager.js'
 
-// Lazy load heavy components
-const FiltersSection = defineAsyncComponent(() => import('@/views/operations/biomedical/FiltersSection.vue'))
-const CardsSection = defineAsyncComponent(() => import('@/views/operations/biomedical/CardsSection.vue'))
+// Helper to measure async component load times
+function measureAsync(importer, name) {
+    return defineAsyncComponent(async () => {
+        try { console.time(`[ASYNC LOAD] ${name}`) } catch (e) {}
+        const mod = await importer()
+        try { console.timeEnd(`[ASYNC LOAD] ${name}`) } catch (e) {}
+        return mod
+    })
+}
+
+// Lazy load heavy components (measured)
+const FiltersSection = measureAsync(() => import('@/views/operations/biomedical/FiltersSection.vue'), 'FiltersSection')
+const CardsSection = measureAsync(() => import('@/views/operations/biomedical/CardsSection.vue'), 'CardsSection')
+const CardsVirtual = measureAsync(() => import('@/views/operations/biomedical/CardsVirtual.vue'), 'CardsVirtual')
 
 // Lazy load QRCode only when needed
 let QRCode = null
@@ -157,19 +253,117 @@ const getQRCode = async () => {
 }
 
 const router = useRouter()
+const route = useRoute()
+const activeTab = ref('inventory') // Pestaña activa: 'inventory' o 'subdireccion'
+const showAllVirtual = ref(false)
+const allFetchedItems = ref([])
+const showAllLoading = ref(false)
+const largeDatasetMode = ref(false)
+
+function closeShowAll() {
+  showAllVirtual.value = false
+  allFetchedItems.value = []
+}
+
+function doStartShowAll() {
+  return startShowAll(1000)
+}
+
+async function startShowAll(pageSize = 1000) {
+  try {
+    showAllLoading.value = true
+    showAllVirtual.value = true
+    await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, full: true, pageSize })
+    // Pull items from global helper set by composable
+    try { allFetchedItems.value = (window.__BIOMED_TEST__ && window.__BIOMED_TEST__.lastFetchedItems) ? window.__BIOMED_TEST__.lastFetchedItems : [] } catch (e) { allFetchedItems.value = [] }
+  } catch (e) {
+    console.error('[startShowAll] error', e)
+  } finally {
+    showAllLoading.value = false
+  }
+}
 
 // Initialize composables
-const { metaFields, metaLoading, fetchMeta, getDynamicFieldLabel, getDynamicFieldKind, isDynamicSelectable, getDynamicSelectOptions, getDynamicSuggestions, getDynamicDatalistId } = useBiomedicalMeta()
-const { allData, filteredData, loading, metaError, mobileLimitApplied, hasRealValue, computeHasRealData, applyMobileLimit, runSearch: runSearchBase } = useBiomedicalSearch()
-const { maintenanceMap, isInMaintenance: isInMaintenanceBase, onStartMaintenance, onFinishMaintenance, initMaintenanceMap, persistMaintenanceMap } = useBiomedicalMaintenance()
+const {
+    metaFields,
+    metaLoading,
+    fetchMeta,
+    getDynamicFieldLabel: metaGetDynamicFieldLabel,
+    getDynamicFieldKind: metaGetDynamicFieldKind,
+    isDynamicSelectable: metaIsDynamicSelectable,
+    getDynamicSelectOptions: metaGetDynamicSelectOptions,
+    getDynamicSuggestions: metaGetDynamicSuggestions,
+    getDynamicDatalistId
+} = useBiomedicalMeta()
+const { allData, filteredData, loading, metaError, mobileLimitApplied, serverTotal, hasRealValue, computeHasRealData, applyMobileLimit, runSearch: runSearchBase } = useBiomedicalSearch()
+const { maintenanceMap, isInMaintenance: isInMaintenanceBase, getMaintenanceEntry, onStartMaintenance, onFinishMaintenance, initMaintenanceMap, persistMaintenanceMap, refreshStatusForCodes } = useBiomedicalMaintenance()
 const { selectedItem, currentPage, pageSize, getItemKey, isExpanded, toggleSelect, getStatusAccentClass, getStatusGlowClass, getStatusPillClass, getStatusTextClass, isSparse, isFieldVisible: isFieldVisibleBase } = useBiomedicalCardRendering()
-const { filters, activeDynamicFilterIds, dynamicFilterValues, estatusOptions, dynamicCatalog, dynamicCatalogByCategory, isRestoring: getIsRestoring, setRestoring, getMetaField, getMetaFieldColumn, getItemFieldValue, isFixedField, addDynamicFilter, removeDynamicFilter, clearDynamicFilters, buildQueryParams, persistFilters, restoreFilters, SIN_ESTADO_VALUE } = useBiomedicalFilters(metaFields)
+const {
+    filters,
+    activeDynamicFilterIds,
+    dynamicFilterValues,
+    estatusOptions,
+    dynamicCatalog,
+    dynamicCatalogByCategory,
+    isRestoring: getIsRestoring,
+    setRestoring,
+    getMetaField,
+    getMetaFieldColumn,
+    getItemFieldValue,
+    isFixedField,
+    addDynamicFilter,
+    removeDynamicFilter,
+    clearDynamicFilters,
+    getDynamicFieldOriginalId,
+    resolveDynamicFieldLabel,
+    buildQueryParams,
+    persistFilters,
+    restoreFilters,
+    SIN_ESTADO_VALUE
+} = useBiomedicalFilters(metaFields)
+
+const getDynamicFieldLabel = (id) => {
+    const resolved = resolveDynamicFieldLabel(id)
+    if (resolved) return resolved
+    const originalId = getDynamicFieldOriginalId(id)
+    return metaGetDynamicFieldLabel(originalId)
+}
+
+const getDynamicFieldKind = (id) => {
+    const originalId = getDynamicFieldOriginalId(id)
+    return metaGetDynamicFieldKind(originalId)
+}
+
+const isDynamicSelectable = (id) => {
+    const originalId = getDynamicFieldOriginalId(id)
+    return metaIsDynamicSelectable(originalId)
+}
+
+const normalizeSuggestionList = (items, limit) => {
+    return Array.from(new Set((items || []).map(opt => String(opt ?? '').trim()).filter(Boolean)))
+        .sort((a, b) => a.localeCompare(b))
+        .slice(0, limit)
+}
+
+const getDynamicSelectOptions = (id) => {
+    const originalId = getDynamicFieldOriginalId(id)
+    return normalizeSuggestionList(metaGetDynamicSelectOptions(originalId), 25)
+}
+
+const getDynamicSuggestions = (id) => {
+    const originalId = getDynamicFieldOriginalId(id)
+    return normalizeSuggestionList(metaGetDynamicSuggestions(originalId), 50)
+}
 
 
 // Local UI state
 const barcodeModalOpen = ref(false)
 const barcodeCode = ref('')
 const barcodeItem = ref(null)
+const updateItemModalOpen = ref(false)
+const updateItemData = ref(null)
+const isHistoryPanelVisible = ref(false)
+const historyItem = ref(null)
 const scanModalOpen = ref(false)
 const scanOverlayOpen = ref(false)
 const scanOverlayItem = ref(null)
@@ -189,6 +383,9 @@ const cfUnstable = computed(() => cfInfo.value && (cfInfo.value.hmrDisabled === 
 const contentReady = ref(false)
 const cardsReady = ref(false)
 
+// Progressive rendering state - not needed for traditional pagination
+const renderedCount = ref(0) // DISABLED for pagination (CardsSection shows all displayedCards)
+
 // UI state for filters drawer/dropdown
 const isAddFilterDrawerOpen = ref(false)
 const drawerAnimating = ref(false)
@@ -199,6 +396,7 @@ const filtersSectionRef = ref(null)
 
 // Computed properties for drawer/dropdown filtering
 const filteredDynamicCatalog = computed(() => {
+    if (!isAddFilterDrawerOpen.value) return []
     const q = String(drawerSearch.value || '').trim().toLowerCase()
     if (!q) return dynamicCatalogByCategory.value
     return dynamicCatalogByCategory.value.map(cat => ({
@@ -208,6 +406,7 @@ const filteredDynamicCatalog = computed(() => {
 })
 
 const filteredDropdownCatalog = computed(() => {
+    if (!isFilterDropdownOpen.value) return []
     const q = String(dropdownSearch.value || '').trim().toLowerCase()
     if (!q) return dynamicCatalogByCategory.value
     return dynamicCatalogByCategory.value.map(cat => ({
@@ -218,6 +417,7 @@ const filteredDropdownCatalog = computed(() => {
 
 // Helpers
 let isRestoring = true
+let tunnel = null
 
 // Filter helper: compute if item has real data
 function hasRealData(item) {
@@ -226,12 +426,7 @@ function hasRealData(item) {
     return computeHasRealData(item)
 }
 
-// Card rendering helpers that wrap maintenance logic
-function isInMaintenance(item) {
-    const code = String(item?.['No DE INVENTARIO'] || '').trim()
-    if (!code) return false
-    return maintenanceMap.value?.[code]?.status === 'in_progress'
-}
+
 
 function isFieldVisible(item, fieldName) {
     if (!item) return false
@@ -244,7 +439,7 @@ function displayValue(v) {
     const s = String(v).trim()
     if (!s) return 'N/A'
     const low = s.toLowerCase()
-    if (low === 'n/a' || low === 'sin clave' || low === 'sin datos' || low === 'no disponible') return 'N/A'
+    if (low === 'n/a' || low === 'na') return 'N/A'
     return v
 }
 
@@ -252,7 +447,8 @@ function displayValue(v) {
 const visibleItems = computed(() => {
     const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now.bind(performance) : Date.now
     const s = perfNow()
-    const res = Array.isArray(filteredData.value) ? filteredData.value.filter(hasRealData) : []
+    // Mostrar todas las filas reales retornadas por el backend, incluso si están "sparse".
+    const res = Array.isArray(filteredData.value) ? filteredData.value : []
     const d = Math.round(perfNow() - s)
     if (typeof window !== 'undefined' && window.console && d > 20) {
         console.warn(`[perf] visibleItems compute: ${d}ms for ${res.length} items`)
@@ -260,7 +456,37 @@ const visibleItems = computed(() => {
     return res
 })
 
+function isMobileOrNetworkNow() {
+    try {
+        const host = typeof window !== 'undefined' ? window.location.hostname : ''
+        const isLocal = host === 'localhost' || host === '127.0.0.1' || host === ''
+        const isTunnelHost = /\.trycloudflare\.|ngrok|loca/.test(host)
+        const isNetworkHost = !isLocal || isTunnelHost
+        const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 900 || (navigator.deviceMemory && navigator.deviceMemory <= 4))
+        return isMobile || isNetworkHost
+    } catch (e) { return false }
+}
+
+const SERVER_SIDE_FORCE_THRESHOLD = 500 // items; if server reports more, prefer server-side pagination
+
+const useServerPagination = computed(() => {
+    // ⭐ FORZAR server-side pagination si hay filtros dinámicos activos
+    // Esto asegura que cada cambio de página refetcha datos correctos
+    if (activeDynamicFilterIds.value && activeDynamicFilterIds.value.length > 0) {
+        return true
+    }
+    // Forzar server-side si sabemos que la tabla es grande
+    try {
+        if (serverTotal && typeof serverTotal.value === 'number' && serverTotal.value > SERVER_SIDE_FORCE_THRESHOLD) return true
+    } catch (e) {}
+    return isMobileOrNetworkNow()
+})
+
 const displayedCards = computed(() => {
+    // Si usamos paginación en servidor, visibleItems ya contiene sólo la página actual
+    if (useServerPagination.value) {
+        return visibleItems.value
+    }
     const startIndex = (currentPage.value - 1) * pageSize.value
     return visibleItems.value.slice(startIndex, startIndex + pageSize.value)
 })
@@ -270,7 +496,8 @@ const visibleCount = computed(() => {
 })
 
 const totalPages = computed(() => {
-    return Math.max(1, Math.ceil(visibleCount.value / pageSize.value))
+    const total = useServerPagination.value ? (serverTotal.value || visibleCount.value) : visibleCount.value
+    return Math.max(1, Math.ceil(total / pageSize.value))
 })
 
 const hasFilters = computed(() => {
@@ -280,16 +507,27 @@ const hasFilters = computed(() => {
 })
 
 const displayedStart = computed(() => {
+    if (useServerPagination.value) {
+        const total = serverTotal.value || 0
+        if (!total) return 0
+        return (currentPage.value - 1) * pageSize.value + 1
+    }
     if (!visibleCount.value) return 0
     return (currentPage.value - 1) * pageSize.value + 1
 })
 
 const displayedEnd = computed(() => {
+    if (useServerPagination.value) {
+        const total = serverTotal.value || 0
+        if (!total) return 0
+        return Math.min(currentPage.value * pageSize.value, total)
+    }
     if (!visibleCount.value) return 0
     return Math.min(currentPage.value * pageSize.value, visibleCount.value)
 })
 
 const visiblePageNumbers = computed(() => {
+    // HMR touch: no-op comment to trigger recompile and ensure syntax is valid
     const total = totalPages.value
     const cur = currentPage.value
     if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
@@ -332,10 +570,51 @@ function goToDashboard() {
 }
 
 function handleShowBarcode(item) {
-    const code = item?.['No DE INVENTARIO'] || ''
-    barcodeCode.value = String(code)
-    barcodeItem.value = item || null
-    barcodeModalOpen.value = true
+    try {
+        const code = item?.['No DE INVENTARIO'] || ''
+        barcodeCode.value = String(code)
+        barcodeItem.value = item || null
+        // ensure modal opens after DOM updates to avoid interference
+        nextTick(() => {
+            barcodeModalOpen.value = true
+            console.log('[handleShowBarcode] opened modal for', barcodeCode.value)
+        })
+    } catch (e) {
+        console.warn('[handleShowBarcode] Error opening modal', e)
+    }
+}
+
+function handleShowUpdatePanel(item) {
+    try {
+        updateItemData.value = item || null
+        // ensure modal opens after DOM updates to avoid interference
+        nextTick(() => {
+            updateItemModalOpen.value = true
+            console.log('[handleShowUpdatePanel] opened modal for', item?.['No DE INVENTARIO'] || 'unknown')
+        })
+    } catch (e) {
+        console.warn('[handleShowUpdatePanel] Error opening modal', e)
+    }
+}
+
+function handleShowHistoryPanel(item) {
+  historyItem.value = item
+  isHistoryPanelVisible.value = true
+}
+
+function onItemUpdated(result) {
+    try {
+        console.log('[onItemUpdated] Item updated successfully', result)
+        // Refrescar datos si es necesario
+        // TODO: actualizar el item en allData y mostrar notificación
+    } catch (e) {
+        console.warn('[onItemUpdated] Error handling update', e)
+    }
+}
+
+function handleLoadMore() {
+    // PAGINATION: Not needed with traditional pagination
+    console.log('[pagination] Using traditional page navigation instead')
 }
 
 function handleExternalScan(code) {
@@ -398,14 +677,31 @@ function closeAddFilterDrawer() {
 function handleFilterCheckboxChange(fieldId, checked) {
     try {
         if (!fieldId) return
-        // If called with explicit checked boolean, treat as fixed-field checkbox
+        console.log('[handleFilterCheckboxChange]', fieldId, 'checked:', checked, 'isFixed:', isFixedField(fieldId))
+        
+        // If called with explicit checked boolean, handle dynamic or fixed filters
         if (typeof checked === 'boolean') {
-            filters.value[fieldId] = checked ? String(filters.value[fieldId] || '1') : ''
+            if (isFixedField(fieldId)) {
+                // Fixed field - set value directly
+                filters.value[fieldId] = checked ? String(filters.value[fieldId] || '1') : ''
+                return
+            }
+            
+            // Dynamic field - add/remove based on checked state
+            const isActive = activeDynamicFilterIds.value.includes(fieldId)
+            if (checked && !isActive) {
+                // Need to add this filter
+                console.log('[handleFilterCheckboxChange] ADDING filter:', fieldId)
+                addDynamicFilter(fieldId)
+            } else if (!checked && isActive) {
+                // Need to remove this filter
+                console.log('[handleFilterCheckboxChange] REMOVING filter:', fieldId)
+                removeDynamicFilter(fieldId)
+            }
             return
         }
 
-        // If called without checked (from the filters list checkbox),
-        // toggle dynamic filters when appropriate.
+        // Fallback: toggle dynamic filters (legacy behavior)
         if (!isFixedField(fieldId)) {
             if (activeDynamicFilterIds.value.includes(fieldId)) {
                 removeDynamicFilter(fieldId)
@@ -414,11 +710,8 @@ function handleFilterCheckboxChange(fieldId, checked) {
             }
             return
         }
-
-        // Fallback: set the value directly
-        filters.value[fieldId] = checked
     } catch (e) {
-        // noop
+        console.error('[handleFilterCheckboxChange] Error:', e)
     }
 }
 
@@ -532,15 +825,103 @@ async function copyHttpsUrl() {
 }
 
 async function showHttpsQr() {
-    await fetchCloudflareUrl()
-    if (!httpsUrl.value && devHosts.value && devHosts.value.length) {
-        httpsUrl.value = `https://${devHosts.value[0]}:5173`
+    // RESET: Clear any previous URL to force fresh generation
+    httpsUrl.value = ''
+    
+    // PRIORITY: Use local network addresses FIRST, Cloudflare as fallback only
+    const currentHost = window.location.hostname
+    const currentProtocol = window.location.protocol
+    const currentPort = window.location.port
+    
+    console.log('[QR] Current access:', { host: currentHost, protocol: currentProtocol, port: currentPort })
+    
+    // Try to refresh network addresses from server first
+    try {
+        const refreshResp = await fetch('/refresh-hosts', { method: 'GET', cache: 'no-store' })
+        if (refreshResp && refreshResp.ok) {
+            const freshData = await refreshResp.json()
+            if (freshData && freshData.hosts) {
+                devHosts.value = freshData.hosts
+                console.log('[QR] ✅ Refreshed DYNAMIC network addresses:', freshData.hosts)
+            }
+        }
+    } catch (e) {
+        // Fallback: try to get existing file with cache busting
+        try {
+            const freshHostsResp = await fetch('/dev-hosts.json?t=' + Date.now(), { cache: 'no-store' })
+            if (freshHostsResp && freshHostsResp.ok) {
+                const freshData = await freshHostsResp.json()
+                if (freshData && freshData.hosts) {
+                    devHosts.value = freshData.hosts
+                    console.log('[QR] 📄 Fallback network addresses:', freshData.hosts)
+                }
+            }
+        } catch (e2) {
+            console.warn('[QR] Could not refresh network addresses:', e2.message)
+        }
     }
-    if (!httpsUrl.value) return
+    
+    // PRIORITY 1: Use local network addresses (ALWAYS preferred)
+    if (devHosts.value && devHosts.value.length > 0) {
+        let targetHost = currentHost
+        
+        // If accessing from localhost, prefer CURRENT network address (dynamic)
+        if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
+            const networkHosts = devHosts.value.filter(host => 
+                host !== 'localhost' && 
+                host !== '127.0.0.1' && 
+                !host.includes('172.') && // Skip Docker/VM networks
+                !host.includes('192.168.56.') && // Skip VirtualBox networks
+                !host.includes('10.0.') // Skip some VPN networks
+            )
+            if (networkHosts.length > 0) {
+                // Always use the LAST network address (most likely current WiFi)
+                targetHost = networkHosts[networkHosts.length - 1]
+                httpsUrl.value = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
+                console.log('[QR] 🏠→📱 From localhost → NETWORK address:', targetHost)
+            }
+        } else {
+            // If already on network, use the same network address (but verify it's still valid)
+            const isCurrentHostValid = devHosts.value.includes(currentHost)
+            if (isCurrentHostValid) {
+                targetHost = currentHost
+                httpsUrl.value = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
+                console.log('[QR] 📱→📱 From network → Same network address:', targetHost)
+            } else {
+                // Current host not in list, fall back to best available network
+                const networkHosts = devHosts.value.filter(host => 
+                    host !== 'localhost' && 
+                    host !== '127.0.0.1' && 
+                    !host.includes('172.') &&
+                    !host.includes('192.168.56.') &&
+                    !host.includes('10.0.')
+                )
+                if (networkHosts.length > 0) {
+                    targetHost = networkHosts[networkHosts.length - 1]
+                    httpsUrl.value = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
+                    console.log('[QR] 🔄 Network changed → DYNAMIC address:', targetHost)
+                }
+            }
+        }
+    }
+    
+    // PRIORITY 2: Fallback to Cloudflare only if no local network found
+    if (!httpsUrl.value) {
+        console.log('[QR] No local network found, trying Cloudflare fallback...')
+        await fetchCloudflareUrl()
+    }
+    
+    if (!httpsUrl.value) {
+        console.warn('[QR] Could not determine target URL (no network or tunnel)')
+        alert('No se pudo generar QR: no hay direcciones de red disponibles')
+        return
+    }
+    
     try {
         const { toDataURL } = await import('qrcode')
         httpsQrData.value = await toDataURL(httpsUrl.value, { width: 512 })
         httpsQrOpen.value = true
+        console.log('[QR] 🚀 Generated QR for NETWORK address:', httpsUrl.value)
     } catch (e) {
         console.warn('Could not generate QR', e)
     }
@@ -553,9 +934,11 @@ function getDrawerEl() {
 
 function toggleFilterDropdown() {
     if (isFilterDropdownOpen.value) {
-        closeFilterDropdown()
+        console.log('[toggleFilterDropdown] Cerrando el panel de filtros.');
+        closeFilterDropdown();
     } else {
-        openFilterDropdown()
+        console.log('[toggleFilterDropdown] Abriendo el panel de filtros.');
+        openFilterDropdown();
     }
 }
 
@@ -664,10 +1047,11 @@ function scheduleSearch() {
     if (isRestoring) return
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {
-        runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE)
+        renderedCount.value = 6 // ULTRA FAST: Reset to 6 items only
+        runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, useServerPagination.value ? { serverSide: true, page: currentPage.value, pageSize: pageSize.value, limitReactive: true } : { limitReactive: isMobileOrNetworkNow() })
         currentPage.value = 1
         selectedItem.value = null
-    }, 300)
+    }, 100) // Faster search scheduling
 }
 
 let persistTimer = null
@@ -691,65 +1075,180 @@ function handleClickOutside(e) {
 }
 
 function queueInitialLoad() {
-    const route = useRoute()
     const run = async () => {
         const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now.bind(performance) : Date.now
         const t0 = perfNow()
-        restoreFilters()
-        isRestoring = false
-        await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE)
+        let queueInitialLoadTimerStarted = false
         try {
-            await nextTick()
-            await new Promise(requestAnimationFrame)
-            await new Promise(requestAnimationFrame)
-            const t1 = Math.round(perfNow() - t0)
-            if (typeof window !== 'undefined' && window.console) console.warn(`[perf] initial load -> first paint: ${t1}ms`)
-        } catch (e) {}
-        const sc = route.query?.scan
-        if (sc) {
-            handleExternalScan(String(sc))
-            try { router.replace({ query: { ...route.query, scan: undefined } }) } catch (e) { }
+            console.time('[VIEW] queueInitialLoad')
+            queueInitialLoadTimerStarted = true
+        } catch (e) {
+            console.error('[VIEW] queueInitialLoad Timer could not be started:', e)
+        }
+
+        try {
+            console.time('[VIEW] runSearch');
+        } catch (e) {
+            console.error('[VIEW] runSearch Timer could not be started:', e);
+        }
+
+        let preferServer = useServerPagination.value;
+        try {
+            const nav = (performance && typeof performance.getEntriesByType === 'function') ? (performance.getEntriesByType('navigation')[0] || {}) : {};
+            const isDirectEntry = (typeof document !== 'undefined' && (!document.referrer || document.referrer === '')) && (nav.type === 'navigate' || nav.type === undefined);
+            const isMobileNow = (typeof window !== 'undefined') && (window.innerWidth <= 900 || (navigator.deviceMemory && navigator.deviceMemory <= 4));
+            if (isMobileNow) {
+                preferServer = true;
+            } else if (isDirectEntry) {
+                preferServer = false;
+            }
+        } catch (e) {
+            console.error('Error determining preferServer:', e);
+        }
+
+        await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, preferServer ? { serverSide: true, page: currentPage.value, pageSize: pageSize.value, limitReactive: true } : { limitReactive: isMobileOrNetworkNow() });
+
+        try {
+            console.timeEnd('[VIEW] runSearch');
+        } catch (e) {
+            console.error('[VIEW] runSearch Timer could not be ended:', e);
+        }
+
+        try { console.timeEnd('[VIEW] queueInitialLoad') } catch (e) {}
+        // Use the 'route' variable from the component's setup scope
+        try {
+            const routeCurrent = route
+            const sc = routeCurrent?.query?.scan
+            if (sc) {
+                handleExternalScan(String(sc))
+                try { router.replace({ query: { ...routeCurrent.query, scan: undefined } }) } catch (e) { }
+            }
+        } catch (e) {
+            console.warn('[queueInitialLoad] No se pudo leer la ruta actual:', e && e.message)
         }
     }
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        window.requestIdleCallback(() => run(), { timeout: 1200 })
+        window.requestIdleCallback(() => run(), { timeout: 100 }) // Ultra fast timeout
     } else {
-        setTimeout(() => run(), 200)
+        setTimeout(() => run(), 10) // Almost immediate
     }
 }
 
 onMounted(async () => {
-    window.addEventListener('keydown', handleGlobalKeydown)
-    window.addEventListener('resize', () => {
+    // Eliminar cachés/de candidatas a datos de prueba al montar para garantizar datos reales
+    try {
+      const { cacheClearAll } = await import('@/utils/persistentCache.js')
+      await cacheClearAll()
+      try { localStorage.removeItem('biomedical-filters') } catch (e) {}
+      console.log('[init] Caché persistente y filtros locales eliminados para forzar uso de datos reales')
+    } catch (e) {
+      console.warn('[init] No se pudo limpiar la caché persistente:', e && e.message)
+    }
+
+    // Scoped tunnel listeners (prevent duplicates across tunnel recreate)
+    tunnel = createTunnel()
+    tunnel.addEvent(window, 'keydown', handleGlobalKeydown)
+    tunnel.addEvent(window, 'resize', () => {
         if (isFilterDropdownOpen.value) positionFilterDropdown()
     })
-    window.addEventListener('scroll', () => {
+    tunnel.addEvent(window, 'scroll', () => {
         if (isFilterDropdownOpen.value) positionFilterDropdown()
     }, { passive: true })
-    document.addEventListener('click', handleClickOutside)
-    
+    tunnel.addEvent(document, 'click', handleClickOutside)
+
+    // initialize maintenance map
     initMaintenanceMap()
     
     setTimeout(() => {
         contentReady.value = true
-        // Reduce initial page size to speed up first paint (especially over tunnel)
-        try { pageSize.value = Math.min(Number(pageSize.value) || 6, 12) } catch (e) {}
-    }, 300)
+        // Default page size for traditional pagination
+        try { pageSize.value = Number(pageSize.value) || (useServerPagination.value ? 12 : 24) } catch (e) {} // 12-24 items por página
+    }, 0) // Instant rendering
     
     queueInitialLoad()
+    
+    // Finalize restoration - enable search scheduling
+    isRestoring = false
+
+    // Local flag to control showing in-UI virtualized "show all" view
+    showAllVirtual.value = false
+
+    // Monitor full-fetch completion to enable virtual view (window helper is set by composable)
+    try {
+      if (typeof window !== 'undefined') {
+        window.__BIOMED_TEST__ = window.__BIOMED_TEST__ || {}
+      }
+    } catch (e) {}
+
+
+    // Debug helper: trigger FULL server-side fetch (batches) from console
+    try {
+      if (typeof window !== 'undefined') {
+        window.__BIOMED_TEST__ = window.__BIOMED_TEST__ || {}
+        window.__BIOMED_TEST__.fetchAll = async (opts = {}) => {
+          try {
+            console.log('[__BIOMED_TEST__] Starting full fetch...')
+            await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, full: true, pageSize: opts.pageSize || 1000 })
+            console.log('[__BIOMED_TEST__] Full fetch done. items:', (window.__BIOMED_TEST__.lastFetchedItems || []).length)
+            return true
+          } catch (e) {
+            console.error('[__BIOMED_TEST__] Full fetch failed', e)
+            return false
+          }
+        }
+
+        // Debug helper: open barcode modal directly from console
+        window.__BIOMED_TEST__.openBarcode = async (it) => {
+          try {
+            const item = it || (allData.value && allData.value[0]) || { 'No DE INVENTARIO': 'TEST-000' }
+            console.log('[__BIOMED_TEST__] openBarcode helper called for', item && (item['No DE INVENTARIO'] || item['No DE INVENTARIO?']))
+            // ensure values set and modal opened after DOM updates
+            barcodeCode.value = String((item && (item['No DE INVENTARIO'] || item['No DE INVENTARIO?'])) || '')
+            barcodeItem.value = item || null
+            await nextTick()
+            barcodeModalOpen.value = true
+            return true
+          } catch (e) {
+            console.error('[__BIOMED_TEST__] openBarcode failed', e)
+            return false
+          }
+        }
+      }
+    } catch (e) { console.warn('[init] Could not attach __BIOMED_TEST__.fetchAll', e && e.message) }
 
     try { await loadDevHosts() } catch {}
     try { await fetchCloudflareUrl() } catch {}
-})
+    })
 
 onBeforeUnmount(() => {
-    window.removeEventListener('resize', () => {})
-    window.removeEventListener('scroll', () => {})
-    window.removeEventListener('keydown', handleGlobalKeydown)
-    document.removeEventListener('click', handleClickOutside)
+    // cleanup scoped tunnel listeners and timeouts
+    try { if (tunnel && typeof tunnel.destroy === 'function') tunnel.destroy() } catch (e) { }
+    if (searchTimer) { clearTimeout(searchTimer); searchTimer = null }
+    if (persistTimer) { clearTimeout(persistTimer); persistTimer = null }
+})
+// ===== WATCHERS =====
+
+// Cuando cambia página/tamaño: siempre refetch en server-side para evitar páginas vacías
+watch([currentPage, pageSize], ([p, ps], [op, ops]) => {
+    // Forzamos server-side pagination para garantizar que cada página consulte al backend
+    try {
+        runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, page: p, pageSize: ps })
+    } catch (e) {
+        console.warn('[pagination watch] Error al forzar refetch:', e && e.message)
+    }
 })
 
-// ===== WATCHERS =====
+// Si el servidor reporta un total muy grande, forzar refetch en server-side y volver a la página 1
+watch(serverTotal, (nv, ov) => {
+    try {
+        if (typeof nv === 'number' && nv > SERVER_SIDE_FORCE_THRESHOLD) {
+            currentPage.value = 1
+            runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, page: 1, pageSize: pageSize.value })
+        }
+    } catch (e) {
+        console.warn('[watch serverTotal] Error forcing server-side fetch:', e && e.message)
+    }
+})
 
 watch(filters, () => {
     schedulePersist()
@@ -773,6 +1272,16 @@ watch(maintenanceMap, (val) => {
         // noop
     }
 }, { deep: true })
+
+// Sync maintenance status from backend for visible cards (inventory codes)
+watch(displayedCards, (cards) => {
+    try {
+        const codes = (cards || []).map(it => it && (it['No DE INVENTARIO'] || it['No DE INVENTARIO?'])).filter(Boolean)
+        if (codes.length) refreshStatusForCodes(codes).catch(err => console.warn('[maintenance] status refresh failed', err && err.message))
+    } catch (e) {
+        console.warn('[maintenance] could not refresh statuses', e && e.message)
+    }
+}, { immediate: true })
 
 watch(isFilterDropdownOpen, (newVal) => {
     if (newVal) {
@@ -799,6 +1308,21 @@ watch(allData, (data) => {
     }
 }, { immediate: false })
 
+// Update large dataset UI flag when server reports a large total
+watch(serverTotal, (nv) => {
+    try {
+        largeDatasetMode.value = (typeof nv === 'number' && nv > SERVER_SIDE_FORCE_THRESHOLD)
+    } catch (e) {}
+})
+
+onMounted(() => {
+  console.log('[DEBUG] allData:', allData.value);
+  console.log('[DEBUG] filteredData:', filteredData.value);
+});
+
+watch(filteredData, (newVal) => {
+  console.log('[DEBUG] filteredData updated:', newVal);
+});
 </script>
 
 <style>
@@ -807,6 +1331,23 @@ watch(allData, (data) => {
     display: flex;
     flex-direction: column;
     gap: 28px;
+}
+
+/* Tiny viewport support: scale UI to 90% for very small mobile devices */
+@media (max-width: 350px) and (max-height: 600px) {
+    .testing-content {
+        transform: scale(0.9);
+        transform-origin: top center;
+    }
+    .cards-grid {
+        gap: 10px;
+    }
+    .biomedical-card-actions {
+        justify-content: center; /* ensure action visible */
+    }
+    .action-btn {
+        padding: 6px 10px;
+    }
 }
 
 .tunnel-warning {
@@ -844,7 +1385,8 @@ watch(allData, (data) => {
 .filters-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: stretch;
+    gap: 24px;
     margin-bottom: 20px;
     padding-bottom: 16px;
     border-bottom: 2px solid #374151;
@@ -961,9 +1503,83 @@ watch(allData, (data) => {
 }
 
 .filters-title-wrapper {
+    flex: 1;
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: 24px;
+}
+
+.filters-title-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    min-width: 260px;
+}
+
+.filters-title-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filters-subtitle {
+    margin: 0;
+    font-size: 0.82rem;
+    color: rgba(191, 219, 254, 0.9);
+    letter-spacing: 0.15px;
+}
+
+.filters-stats-grid {
+    flex: 1;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    align-items: stretch;
+}
+
+.stat-card {
+    position: relative;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(96, 165, 250, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(30, 64, 175, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px rgba(37, 99, 235, 0.25);
+}
+
+.stat-card.accent {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.18), rgba(59, 130, 246, 0.22));
+    border-color: rgba(45, 212, 191, 0.35);
+    box-shadow: inset 0 0 0 1px rgba(20, 184, 166, 0.25), 0 12px 28px rgba(20, 184, 166, 0.25);
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: rgba(191, 219, 254, 0.9);
+}
+
+.stat-value {
+    font-size: 1.55rem;
+    font-weight: 700;
+    color: #e0f2fe;
+    line-height: 1.1;
+}
+
+.stat-foot {
+    font-size: 0.75rem;
+    color: rgba(148, 163, 184, 0.9);
 }
 
 .filters-section h3 {
@@ -1406,10 +2022,6 @@ watch(allData, (data) => {
     font-weight: 900;
 }
 
-.drawer-item-type {
-    font-size: 0.8rem;
-    color: rgba(148, 163, 184, 0.9);
-}
 
 .drawer-badge {
     display: inline-flex;
@@ -2737,7 +3349,6 @@ watch(allData, (data) => {
     font-size: 0.75rem !important;
     font-weight: 700 !important;
     border: 1px solid rgba(6, 182, 212, 0.3);
-    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.1);
 }
 
 .card-footer {
@@ -3752,9 +4363,8 @@ watch(allData, (data) => {
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .scan-global-btn {
@@ -3922,4 +4532,55 @@ watch(allData, (data) => {
     border-color: rgba(255,255,255,0.06) !important;
 }
 
+/* Tabs Navigation Styles */
+.tabs-navigation {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    width: fit-content;
+}
+
+.tab-link {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.8rem 1.4rem;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-link.active {
+    color: #fff;
+    background: var(--primary-color, #06b6d4);
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+}
+
+.tab-pane-content {
+    animation: fadeInTab 0.4s ease-out;
+}
+
+@keyframes fadeInTab {
+    from { 
+        opacity: 0; 
+        transform: translateY(10px) scale(0.995);
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0) scale(1);
+    }
+}
 </style>

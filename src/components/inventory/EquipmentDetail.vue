@@ -112,26 +112,39 @@
                         Finalizar Mantenimiento
                     </button>
                     <button class="btn btn-download" @click="downloadPDF">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Descargar PDF
-                    </button>
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2">
+                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                             <polyline points="7 10 12 15 17 10"></polyline>
+                             <line x1="12" y1="15" x2="12" y2="3"></line>
+                         </svg>
+                         Descargar PDF
+                     </button>
+                    <button class="btn btn-qr" @click="barcodeModalOpen = true">
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2">
+                             <rect x="3" y="3" width="7" height="7"></rect>
+                             <rect x="14" y="3" width="7" height="7"></rect>
+                             <rect x="14" y="14" width="7" height="7"></rect>
+                             <rect x="3" y="14" width="7" height="7"></rect>
+                         </svg>
+                         QR/Código
+                     </button>
                 </div>
             </div>
         </div>
-    </div>
-</template>
+        <BarcodeModal v-model="barcodeModalOpen" :code="props.item.inventoryNo" :item="props.item" />
+        </div>
+        </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { ref } from 'vue'
 import MaintenanceHistory from './MaintenanceHistory.vue'
+import BarcodeModal from '@/components/BarcodeModal.vue'
 import { generateSimplePDF } from '@/services/pdfService.js'
 
 const props = defineProps({ item: { type: Object, required: true } })
+const barcodeModalOpen = ref(false)
 
 function stateClass(s) {
     if (s === 'DISPONIBLE') return 'is-green'
@@ -462,6 +475,18 @@ function downloadPDF() {
     background: #2563eb;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-qr {
+    background: #8b5cf6;
+    color: white;
+    flex-basis: auto;
+}
+
+.btn-qr:hover {
+    background: #7c3aed;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .btn svg {

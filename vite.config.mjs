@@ -3,9 +3,12 @@ import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import VueIconsPlugin from '@kalimahapps/vue-icons/vite';
 import fs from 'fs'
+import os from 'os'
 
 export default defineConfig({
   plugins: [vue(), VueIconsPlugin()],
+  // Keep Vite cache off OneDrive to avoid slow FS sync overhead on Windows.
+  cacheDir: path.join(os.tmpdir(), 'inventoryHRAEI-front-vite-cache'),
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
@@ -69,6 +72,42 @@ export default defineConfig({
 
     // Middleware for compression and performance optimization
     const middlewares = (app) => {
+      // Dynamic network address updater
+      app.use('/refresh-hosts', (req, res) => {
+        try {
+          // Update dev-hosts.json with current network addresses
+          const networkInterfaces = os.networkInterfaces()
+          const hosts = []
+          
+          Object.keys(networkInterfaces).forEach(interfaceName => {
+            const addresses = networkInterfaces[interfaceName]
+            addresses.forEach(addr => {
+              if (addr.family === 'IPv4' && !addr.internal) {
+                hosts.push(addr.address)
+              }
+            })
+          })
+          
+          hosts.unshift('localhost')
+          
+          const publicDir = path.resolve(process.cwd(), 'public')
+          if (!fs.existsSync(publicDir)) {
+            fs.mkdirSync(publicDir, { recursive: true })
+          }
+          
+          const devHostsFile = path.resolve(publicDir, 'dev-hosts.json')
+          const hostData = { hosts, timestamp: Date.now() }
+          fs.writeFileSync(devHostsFile, JSON.stringify(hostData, null, 2))
+          
+          res.setHeader('Content-Type', 'application/json')
+          res.end(JSON.stringify(hostData))
+          console.log('[vite] Refreshed network addresses:', hosts)
+        } catch (e) {
+          res.statusCode = 500
+          res.end(JSON.stringify({ error: e.message }))
+        }
+      })
+      
       // Add gzip compression for tunnel transmission
       app.use((req, res, next) => {
         // Add cache headers to JS/CSS chunks (1 hour for dev)
@@ -89,6 +128,16 @@ export default defineConfig({
       strictPort,
       allowedHosts,
       hmr: hmrConfig,
+      watch: {
+        ignored: [
+          '**/.git/**',
+          '**/node_modules/**',
+          '**/dist/**',
+          '**/tmp/**',
+          '**/uploads/**',
+          '**/inventoryHRAEI-back/**'
+        ]
+      },
       middlewares,
       proxy: {
         '/api': {

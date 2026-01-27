@@ -2,12 +2,7 @@
     <div class="card-body">
         <div class="card-info-row">
             <span class="card-label">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M6 2 3 6v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                    <line x1="3" x2="21" y1="6" y2="6" />
-                    <path d="M16 10a4 4 0 0 1-8 0" />
-                </svg>
+                <IIcon name="ic:baseline-business" size="14" />
                 Marca:
             </span>
             <span class="card-value" :class="{ 'value-na': !hasRealValue(item['MARCA']) }">
@@ -17,11 +12,7 @@
         
         <div class="card-info-row">
             <span class="card-label">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" stroke-width="2">
-                    <path
-                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                </svg>
+                <IIcon name="ic:baseline-architecture" size="14" />
                 Modelo:
             </span>
             <span class="card-value" :class="{ 'value-na': !hasRealValue(item['MODELO']) }">
@@ -31,11 +22,7 @@
         
         <div class="card-info-row">
             <span class="card-label">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
-                    fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M15 7h.01M7 7h.01M7 15h.01M15 15h.01M12 12V9" />
-                    <circle cx="12" cy="12" r="3" />
-                </svg>
+                <IIcon name="ic:baseline-qr-code" size="14" />
                 CNIS:
             </span>
             <span class="card-value card-cnis"
@@ -46,7 +33,7 @@
 
         <template v-for="id in activeDynamicFilterIds" :key="'dyn-' + id">
             <div v-if="!isDynamicFieldDuplicate(id)" class="card-info-row">
-                <span class="card-label">{{ getDynamicFieldLabel(id) }}:</span>
+                <span class="card-label"><IIcon name="ic:baseline-tune" size="12" /> {{ getDynamicFieldLabel(id) }}:</span>
                 <span v-if="id.includes('refaccion_accesorio_consumible') || id.includes('REFACCION_ACCESORIO_CONSUMIBLE')"
                     class="card-value card-value-wrap"
                     :class="{ 'value-na': !hasRealValue(getItemFieldValue(item, id)) }">
@@ -62,6 +49,8 @@
 </template>
 
 <script setup>
+import IIcon from '@/components/IIcon.vue'
+
 defineProps({
     item: {
         type: Object,
@@ -145,9 +134,9 @@ defineProps({
     overflow-wrap: break-word;
 }
 
-.card-label svg {
+.card-label svg, .card-label .vueicon, .card-label svg[data-vue-icon] {
     color: #06b6d4;
-    opacity: 0.8;
+    opacity: 0.95;
     flex-shrink: 0;
 }
 

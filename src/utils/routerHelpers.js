@@ -1,5 +1,24 @@
 // Helper para navegar y forzar recreación del componente raíz si es necesario
 export async function navigateAndRefresh(router, target) {
+  // Health-check post navegación: si por alguna razón el router-view queda vacío,
+  // forzamos un remount suave (sin recarga completa).
+  try {
+    const token = `${Date.now()}-${Math.random()}`
+    window.__last_nav_healthcheck = token
+    setTimeout(() => {
+      try {
+        if (window.__last_nav_healthcheck !== token) return
+        const main = document.querySelector('main.container')
+        if (!main) return
+        const childCount = main.children ? main.children.length : 0
+        if (childCount === 0) {
+          console.warn('[routerHelpers] post-nav healthcheck: main empty -> dispatching app:force-recreate')
+          window.dispatchEvent(new CustomEvent('app:force-recreate'))
+        }
+      } catch (e) { /* ignore */ }
+    }, 650)
+  } catch (e) { /* ignore */ }
+
   try {
     console.debug('[routerHelpers] navigateAndRefresh -> pushing to', target)
     // Esperar la navegación y atrapar rechazos para evitar errores no manejados
@@ -21,20 +40,28 @@ export async function navigateAndRefresh(router, target) {
     }
   } catch (e) { /* ignore */ }
 
-  // Pequeño retardo para dejar que el router complete transiciones
-  setTimeout(() => {
-    try {
-      // Emitir evento global que `App.vue` escucha para forzar recreación del componente
-      console.debug('[routerHelpers] dispatching app:force-recreate')
-      window.dispatchEvent(new CustomEvent('app:force-recreate'))
-    } catch (e) { /* ignore */ }
-  }, 40)
+  // NOTE: removed an early dispatch of `app:force-recreate` here to avoid duplicate rapid remounts.
+  // The router.afterEach will emit `app:force-recreate` when necessary; emitting here caused
+  // back-to-back events that could interrupt the target component's mount flow and leave
+  // the UI showing only the topbar/background. See commit notes for rationale.
 
   // Esperar a que el componente destino emita un 'route:mounted' o hacer fallback (recarga completa)
   try {
     const resolved = router.resolve(target)
     const expectedName = resolved && resolved.name ? String(resolved.name) : ''
     const expectedPath = resolved && resolved.fullPath ? String(resolved.fullPath) : ''
+    const norm = (p) => String(p || '').split('?')[0].replace(/\/$/, '')
+
+    // Immediate check: if current route already matches expected, resolve immediately to avoid race
+    try {
+      const cur = router && router.currentRoute && router.currentRoute.value ? router.currentRoute.value : null
+      const curName = cur && cur.name ? String(cur.name) : ''
+      const curPath = cur && cur.fullPath ? String(cur.fullPath) : ''
+      if ((expectedName && curName && expectedName === curName) || (expectedPath && curPath && (expectedPath === curPath || norm(expectedPath) === norm(curPath)))) {
+        console.debug('[routerHelpers] current route matches expected immediately', { curName, curPath, expectedName, expectedPath })
+        return
+      }
+    } catch (err) { /* ignore */ }
 
     await new Promise((resolve) => {
       let done = false
@@ -43,11 +70,16 @@ export async function navigateAndRefresh(router, target) {
           const detail = e && e.detail ? e.detail : {}
           const name = detail.name ? String(detail.name) : ''
           const path = detail.path ? String(detail.path) : ''
+          const norm = (p) => String(p || '').split('?')[0].replace(/\/$/, '')
           console.debug('[routerHelpers] route:mounted received', { name, path, expectedName, expectedPath })
-          if ((expectedName && name && expectedName === name) || (expectedPath && path && expectedPath === path)) {
+          const nameMatch = expectedName && name && expectedName === name
+          const pathMatch = expectedPath && path && (expectedPath === path || norm(expectedPath) === norm(path))
+          if (nameMatch || pathMatch) {
             done = true
             cleanup()
             resolve(true)
+          } else {
+            console.debug('[routerHelpers] route:mounted ignored (no match)', { name, path, expectedName, expectedPath })
           }
         } catch (err) { /* ignore */ }
       }
@@ -62,12 +94,12 @@ export async function navigateAndRefresh(router, target) {
       const timer = setTimeout(() => {
         if (done) return
         cleanup()
-        console.warn('[routerHelpers] route:mounted not received within timeout — performing hard reload to', expectedPath || target)
+        console.warn('[routerHelpers] route:mounted not received within timeout — performing force remount (no hard reload) to', expectedPath || target)
         try {
-          // Construct absolute URL for fallback
-          const dest = (expectedPath) ? (window.location.origin.replace(/\/$/, '') + expectedPath) : (typeof target === 'string' ? target : window.location.href)
-          window.location.href = dest
-        } catch (e) { console.error('[routerHelpers] hard reload failed', e) }
+          // Avoid hard reload which causes WS/HMR/tunnel re-negotiation; instead attempt a programmatic replace and emit event
+          try { if (expectedPath) { router.replace(expectedPath).catch(()=>{}) } else { router.replace(typeof target === 'string' ? target : router.currentRoute.value.fullPath).catch(()=>{}) } } catch (e) { /* ignore */ }
+          try { window.dispatchEvent(new CustomEvent('app:force-recreate')) } catch (e) { /* ignore */ }
+        } catch (e) { console.error('[routerHelpers] force remount failed', e) }
         resolve(false)
       }, 800)
     })

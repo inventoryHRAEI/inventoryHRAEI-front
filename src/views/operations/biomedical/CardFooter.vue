@@ -1,20 +1,22 @@
 <template>
     <div class="card-footer">
-        <div v-if="isFieldVisible(item, 'TIPO DE MANTENIMIENTO')" class="maintenance-badge"
-            :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()">
-            <div class="badge-icon" :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()"></div>
-            {{ item['TIPO DE MANTENIMIENTO'] }}
-        </div>
-        <div v-if="isFieldVisible(item, 'FUNCIONAL SI NO')" class="functional-indicator"
-            :class="item['FUNCIONAL SI NO']?.toLowerCase()">
-            <span class="indicator-dot"></span>
-            {{
-                item['FUNCIONAL SI NO'] === 'SI'
-                    ? 'Funcional'
-                    : item['FUNCIONAL SI NO'] === 'NO'
-                        ? 'No Funcional'
-                        : item['FUNCIONAL SI NO']
-            }}
+        <div class="footer-left">
+            <div v-if="isFieldVisible(item, 'TIPO DE MANTENIMIENTO')" class="maintenance-badge"
+                :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()">
+                <div class="badge-icon" :class="item['TIPO DE MANTENIMIENTO']?.toLowerCase()"></div>
+                {{ item['TIPO DE MANTENIMIENTO'] }}
+            </div>
+            <div v-if="isFieldVisible(item, 'FUNCIONAL SI NO')" class="functional-indicator"
+                :class="item['FUNCIONAL SI NO']?.toLowerCase()">
+                <span class="indicator-dot"></span>
+                {{
+                    item['FUNCIONAL SI NO'] === 'SI'
+                        ? 'Funcional'
+                        : item['FUNCIONAL SI NO'] === 'NO'
+                            ? 'No Funcional'
+                            : item['FUNCIONAL SI NO']
+                }}
+            </div>
         </div>
     </div>
 </template>
@@ -44,6 +46,14 @@ defineProps({
     position: relative;
     z-index: 2;
 }
+
+.footer-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
 
 .maintenance-badge {
     display: inline-flex;
@@ -122,6 +132,47 @@ defineProps({
     box-shadow: 0 0 10px rgba(34, 197, 94, 0.7);
     animation: pulse-green 2s infinite;
 }
+
+/* Maintenance bar */
+.maintenance-bar {
+    position: relative;
+    width: 180px;
+    height: 8px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.maintenance-bar.track-amber {
+    background: rgba(245, 158, 11, 0.18);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.maintenance-bar.track-green {
+    background: rgba(16, 185, 129, 0.18);
+    border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.bar-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+}
+
+.fill-loop {
+    background: linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.8) 50%, transparent 100%);
+    animation: progress-loop 2.4s ease-in-out infinite;
+}
+
+.fill-full {
+    background: linear-gradient(90deg, #10b981, #34d399);
+}
+
+@keyframes progress-loop {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
 
 @keyframes pulse-green {
     0%,

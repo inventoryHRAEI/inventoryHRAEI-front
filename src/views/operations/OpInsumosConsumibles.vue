@@ -8,13 +8,13 @@
         <form @submit.prevent="onSubmit" class="form-grid" id="insumos-form" novalidate>
           <div class="section-card combined-card">
             <div class="section-head">
-              <h4>Datos del artículo</h4>
-              <small class="hint">Descripción, cantidad y fecha de recibo</small>
+              <h4><VueIcon name="ic:baseline-description" size="16" class="section-title-icon" /> Datos del artículo</h4>
+              <small class="hint"><VueIcon name="ic:baseline-info" size="12" class="hint-icon" /> Descripción, cantidad y fecha de recibo</small>
             </div>
             <div class="section-grid main-form">
               <!-- Primera fila: Descripción y Fecha -->
               <div class="field descripcion-field">
-                <label>Descripción</label>
+                <label><VueIcon name="ic:baseline-description" size="12" class="label-icon" /> Descripción</label>
                 <input
                   class="control"
                   v-model.trim="form.descripcion"
@@ -22,7 +22,7 @@
                 />
               </div>
               <div class="field fecha-field">
-                <label>Fecha de recibo en biomédica</label>
+                <label><VueIcon name="ic:baseline-event" size="12" class="label-icon" /> Fecha de recibo en biomédica</label>
                 <DatePickerModern
                   v-model="form.fechaRecibo"
                   placeholder="Seleccionar fecha de recibo"
@@ -31,7 +31,7 @@
               
               <!-- Segunda fila: Cantidad centrada -->
               <div class="field quantity-field-centered">
-                <label>Cantidad</label>
+                <label><VueIcon name="ic:baseline-scale" size="12" class="label-icon" /> Cantidad</label>
                 <div class="counter">
                   <button class="ctr-btn wide" type="button" @click="decMainBy(5)" aria-label="Disminuir cinco">
                     -5
@@ -60,12 +60,12 @@
 
           <div class="section-card combined-card">
             <div class="section-head">
-              <h4>Información del Solicitante</h4>
-              <small class="hint">Datos de quien solicita los insumos</small>
+              <h4><VueIcon name="ic:baseline-person" size="16" class="section-title-icon" /> Información del Solicitante</h4>
+              <small class="hint"><VueIcon name="ic:baseline-account-box" size="12" class="hint-icon" /> Datos de quien solicita los insumos</small>
             </div>
             <div class="section-grid solicitante-form">
               <div class="field">
-                <label>Solicitante</label>
+                <label><VueIcon name="ic:baseline-person" size="12" class="label-icon" /> Solicitante</label>
                 <input
                   class="control w-32ch"
                   v-model.trim="form.solicitante"
@@ -73,11 +73,11 @@
                 />
               </div>
               <div class="field">
-                <label>Unidad</label>
+                <label><VueIcon name="ic:baseline-pin" size="12" class="label-icon" /> Unidad</label>
                 <input class="control w-14ch" v-model.trim="form.unidad" placeholder="Ej. Carga" />
               </div>
               <div class="field">
-                <label>Turno laboral</label>
+                <label><VueIcon name="ic:baseline-timelapse" size="12" class="label-icon" /> Turno laboral</label>
                 <input class="control w-14ch" v-model.trim="form.turno" placeholder="Ej. Matutino" />
               </div>
             </div>
@@ -85,8 +85,8 @@
 
           <div class="section-card items-card">
             <div class="section-head">
-              <h4>Consumibles (renglones) - {{ form.items.length }}</h4>
-              <small class="hint">Completa descripción y clave por cada renglón</small>
+              <h4><VueIcon name="ic:baseline-inventory-2" size="16" class="section-title-icon" /> Consumibles (renglones) - {{ form.items.length }}</h4>
+              <small class="hint"><VueIcon name="ic:baseline-list" size="12" class="hint-icon" /> Completa descripción y clave por cada renglón</small>
             </div>
             <div class="section-list">
               <p v-if="!form.items.length" class="empty-hint">
@@ -95,7 +95,7 @@
               <div class="item-row" v-for="(item, idx) in form.items" :key="idx">
                 <div class="item-head">
                   <span class="badge">#{{ idx + 1 }}</span>
-                  Consumible
+                  <VueIcon name="ic:baseline-precision-manufacturing" size="14" class="inline-item-icon" /> Consumible
                 </div>
                 <div class="item-grid">
                   <div class="field">
@@ -135,9 +135,11 @@
         
         <div class="form-actions">
           <button class="btn secondary cancel-btn" type="button" @click="onCancel" :disabled="loading">
-            Cancelar
+            <VueIcon name="ic:baseline-close" size="14" class="btn-icon" /> Cancelar
           </button>
           <button class="btn primary save-btn" type="submit" form="insumos-form" :disabled="loading || !isValid">
+            <VueIcon v-if="!loading" name="ic:baseline-save" size="14" class="btn-icon" />
+            <VueIcon v-else name="ic:baseline-autorenew" size="14" class="btn-icon anim-spin" />
             {{ loading ? 'Guardando...' : 'Guardar orden' }}
           </button>
         </div>
@@ -157,7 +159,7 @@
       }]"
       aria-label="Volver al inicio"
     >
-      <span class="scroll-icon">↑</span>
+      <VueIcon name="ic:baseline-arrow-upward" size="18" class="scroll-icon" />
       <span class="scroll-text">Volver al principio</span>
     </button>
   </Transition>
@@ -171,6 +173,7 @@ import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import FormShell from '@/components/FormShell.vue'
 import DatePickerModern from '@/components/DatePickerModern.vue'
 import TimePickerModern from '@/components/TimePickerModern.vue'
+import VueIcon from '@kalimahapps/vue-icons/VueIcon'
 import notifier from '@/utils/notifier'
 import { confirmDelete, showSuccess, showError, showLoading, closeModal } from '@/utils/sweetAlertConfig'
 
@@ -1232,6 +1235,14 @@ input[type="text"],
   align-items: center;
   gap: 0;
 }
+
+.label-icon { color: #94a3b8; margin-right: 8px; vertical-align: middle; opacity: 0.95; }
+.section-title-icon { color: #60a5fa; margin-right: 8px; vertical-align: middle; }
+.btn-icon { margin-right: 8px; vertical-align: middle; }
+.inline-item-icon { margin-right:6px; color:#cbd5e1; }
+.hint-icon { margin-right:6px; color:#94a3b8; }
+.anim-spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg) } to { transform: rotate(360deg) } }
 
 /* Scroll to top button - Reescrito simple */
 .scroll-to-top-btn {

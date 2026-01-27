@@ -151,7 +151,7 @@
 
         <!-- Datatable -->
         <BiomedicalInventoryTable :items="filteredItems" @view="openDetail" @start="startMaintenance"
-            @finish="finishMaintenance" :empty-state-message="computedEmptyMessage" />
+            @finish="finishMaintenance" @barcode="showBarcode" :empty-state-message="computedEmptyMessage" />
 
         <!-- Panel con resumen - integrado abajo -->
         <div class="summary-panel">
@@ -211,6 +211,8 @@
 
         <FinishMaintenanceModal v-if="finishModalVisible" :item="finishTarget"
             @close="() => (finishModalVisible = false, finishTarget = null)" @confirm="onConfirmFinish" />
+
+        <BarcodeModal v-model="barcodeModalOpen" :code="barcodeCode" :item="barcodeItem" />
     </ActionPanel>
 </template>
 
@@ -219,6 +221,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
+import BarcodeModal from '@/components/BarcodeModal.vue'
 import BiomedicalInventoryTable from '@/components/inventory/BiomedicalInventoryTable.vue'
 import EquipmentDetail from '@/components/inventory/EquipmentDetail.vue'
 import StartMaintenanceModal from '@/components/inventory/StartMaintenanceModal.vue'
@@ -232,12 +235,23 @@ const items = ref([])
 
 onMounted(async () => {
     try {
-        const resp = await fetch('/api/ops/historial-mantenimientos')
+        const resp = await fetch('/api/ops/historial-mantenimientos?limit=999999')
         if (resp.ok) {
             const json = await resp.json().catch(() => null)
             // API may return array or { data: [...] }
             const list = Array.isArray(json) ? json : (Array.isArray(json && json.data) ? json.data : [])
-            items.value = list
+            // Transformar datos: mapear campos de BD a propiedades frontend
+            items.value = list.map(item => ({
+                ...item,
+                inventoryNo: item['No DE INVENTARIO'] || item['No'] || '',
+                name: item['EQUIPO MEDICO'] || '',
+                brand: item['MARCA'] || '',
+                model: item['MODELO'] || '',
+                area: item['UNIDAD MEDICA'] || '',
+                status: item['ESTATUS'] || 'DISPONIBLE',
+                type: (item['TIPO'] || item['TIPO DE MANTENIMIENTO'] || 'equipo').toLowerCase().trim(),
+                history: item.history || []
+            }))
         } else {
             items.value = []
         }
@@ -251,6 +265,9 @@ const startTarget = ref(null)
 const finishModalVisible = ref(false)
 const finishTarget = ref(null)
 const selected = ref(null)
+const barcodeModalOpen = ref(false)
+const barcodeCode = ref('')
+const barcodeItem = ref(null)
 
 // Filtros
 const filterInventoryNo = ref('')
@@ -373,6 +390,13 @@ function goToTestingEnvironment() {
 }
 
 function openDetail(item) { selected.value = item }
+
+function showBarcode(item) {
+    if (!item) return
+    barcodeCode.value = item.inventoryNo || ''
+    barcodeItem.value = item
+    barcodeModalOpen.value = true
+}
 
 function startMaintenance(item) {
     if (!item) return

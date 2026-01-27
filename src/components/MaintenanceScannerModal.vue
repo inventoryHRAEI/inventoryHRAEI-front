@@ -1,71 +1,107 @@
 <template>
-    <transition name="scan-fade">
-        <div v-if="visible" class="scan-overlay" @click.self="close">
-            <div class="scan-modal">
-                <button class="scan-close" @click="close" aria-label="Cerrar">✕</button>
+    <Teleport to="body">
+        <transition name="scan-fade">
+            <div v-if="visible" class="scan-overlay" @click.self="close">
+                <div class="scan-modal">
+                <button class="scan-close" @click="close" aria-label="Cerrar">
+                    <XMarkIcon class="icon" />
+                </button>
 
                 <header class="scan-header">
-                    <div class="scan-title">Escanear equipo</div>
-                    <div class="scan-subtitle">Usa cámara o sube una imagen del código de barras</div>
+                    <div class="scan-title">Escanear Equipo Médico</div>
+                    <div class="scan-subtitle">Utiliza cámara, sube una imagen o ingresa el código manualmente</div>
                 </header>
 
                 <div class="scan-body">
                     <section class="scan-panel">
                         <div class="scan-actions">
                             <button class="scan-btn" @click="startScan('select')" :disabled="scanning">
-                                Activar cámara
+                                <CameraIcon class="icon" />
+                                Activar Cámara
                             </button>
                             <label class="scan-upload">
                                 <input type="file" accept="image/*" @change="handleUpload" />
-                                Subir imagen
+                                <DocumentArrowUpIcon class="icon" />
+                                Subir Imagen
                             </label>
                         </div>
+
                         <div class="scan-manual">
                             <input v-model="manualCode" placeholder="Escribe el No. de Inventario" />
-                            <button @click="applyManualCode">Buscar</button>
+                            <button @click="applyManualCode" :disabled="!manualCode" title="Buscar">
+                                <MagnifyingGlassIcon class="icon" />
+                            </button>
                         </div>
 
                         <div class="scan-preview">
                             <div v-if="scanning" class="scan-skeleton"></div>
-                            <video v-show="scannerActive" ref="videoEl" class="scan-video" autoplay muted playsinline></video>
-                            <div v-if="scanError" class="scan-error">{{ scanError }}</div>
-                            <div v-if="!scannerActive && !scanning" class="scan-hint">Apunta la cámara al código</div>
+                            <video v-show="scannerActive" ref="videoEl" class="scan-video" autoplay muted
+                                playsinline></video>
+                            <div v-if="scanError" class="scan-error">
+                                <ExclamationCircleIcon class="icon" />
+                                {{ scanError }}
+                            </div>
+                            <div v-if="!scannerActive && !scanning" class="scan-hint">
+                                <CameraIcon class="icon-lg" />
+                                <span>Apunta la cámara al código</span>
+                            </div>
                         </div>
                     </section>
 
                     <section class="scan-panel scan-info">
-                        <div class="scan-info-title">Resultado</div>
-                        <div v-if="!selectedCode" class="scan-empty">Aún no se ha detectado ningún código.</div>
+                        <div class="scan-info-title">Resultado del Escaneo</div>
 
-                        <div v-else class="scan-result">
+                        <div v-if="!selectedCode" class="scan-empty">
+                            <QrCodeIcon class="icon-lg" />
+                            <p>Aún no se ha escaneado ningún código</p>
+                        </div>
+
+                        <div v-else>
                             <div class="scan-chip">{{ selectedCode }}</div>
+
                             <div v-if="selectedItem" class="scan-item">
-                                <div><strong>Equipo:</strong> {{ selectedItem?.['EQUIPO MEDICO'] || 'N/A' }}</div>
-                                <div><strong>Marca:</strong> {{ selectedItem?.['MARCA'] || 'N/A' }}</div>
-                                <div><strong>Modelo:</strong> {{ selectedItem?.['MODELO'] || 'N/A' }}</div>
-                                <div><strong>No. Serie:</strong> {{ selectedItem?.['NUMERO DE SERIE'] || 'N/A' }}</div>
-                                <div><strong>Estatus:</strong> {{ selectedItem?.['ESTATUS'] || 'N/A' }}</div>
+                                <div><strong>Equipo:</strong> <span>{{ selectedItem?.['EQUIPO MEDICO'] || 'N/A'
+                                }}</span></div>
+                                <div><strong>Marca:</strong> <span>{{ selectedItem?.['MARCA'] || 'N/A' }}</span>
+                                </div>
+                                <div><strong>Modelo:</strong> <span>{{ selectedItem?.['MODELO'] || 'N/A' }}</span>
+                                </div>
+                                <div><strong>No. Serie:</strong> <span>{{ selectedItem?.['NUMERO DE SERIE'] || 'N/A'
+                                }}</span></div>
+                                <div><strong>Estatus:</strong> <span>{{ selectedItem?.['ESTATUS'] || 'N/A' }}</span>
+                                </div>
                             </div>
-                            <div v-else class="scan-empty">No se encontró el equipo en la base de datos.</div>
+                            <div v-else class="scan-empty">
+                                <ExclamationTriangleIcon class="icon-lg" />
+                                <p>Equipo no encontrado</p>
+                            </div>
 
                             <div class="scan-maintenance">
                                 <div v-if="!isInMaintenance" class="scan-form">
-                                    <h4>Iniciar mantenimiento</h4>
+                                    <h4>Iniciar Mantenimiento</h4>
                                     <input v-model="startForm.responsable" placeholder="Responsable" />
+                                    <input v-model="startForm.empresa" placeholder="Empresa de Mantenimiento" />
                                     <input v-model="startForm.tipo" placeholder="Tipo (preventivo/correctivo)" />
                                     <textarea v-model="startForm.observaciones" placeholder="Observaciones"></textarea>
-                                    <button class="scan-primary" @click="startMaintenance" :disabled="!canStart">Iniciar mantenimiento</button>
+                                    <button class="scan-primary" @click="startMaintenance" :disabled="!canStart">
+                                        Iniciar Mantenimiento
+                                    </button>
                                 </div>
 
                                 <div v-else class="scan-form">
-                                    <h4>Finalizar mantenimiento</h4>
+                                    <h4>Finalizar Mantenimiento</h4>
                                     <div class="scan-verify">
-                                        <input v-model="verificationCode" placeholder="Escanea o escribe nuevamente el código" />
-                                        <button @click="startScan('verify')" :disabled="scanning">Escanear</button>
+                                        <input v-model="verificationCode" placeholder="Confirma el código" />
+                                        <button @click="startScan('verify')" :disabled="scanning" title="Escanear">
+                                            <MagnifyingGlassIcon class="icon" />
+                                        </button>
                                     </div>
-                                    <textarea v-model="finishForm.trabajoRealizado" placeholder="Trabajo realizado"></textarea>
+                                    <textarea v-model="finishForm.trabajoRealizado"
+                                        placeholder="Trabajo realizado"></textarea>
                                     <textarea v-model="finishForm.observaciones" placeholder="Observaciones"></textarea>
-                                    <button class="scan-primary" @click="finishMaintenance" :disabled="!canFinish">Finalizar mantenimiento</button>
+                                    <button class="scan-primary" @click="finishMaintenance" :disabled="!canFinish">
+                                        Finalizar Mantenimiento
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -74,11 +110,22 @@
             </div>
         </div>
     </transition>
+    </Teleport>
 </template>
 
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { BrowserMultiFormatReader } from '@zxing/browser'
+import Swal from 'sweetalert2'
+import {
+    XMarkIcon,
+    CameraIcon,
+    DocumentArrowUpIcon,
+    MagnifyingGlassIcon,
+    ExclamationCircleIcon,
+    QrCodeIcon,
+    ExclamationTriangleIcon
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     modelValue: Boolean,
@@ -107,12 +154,23 @@ const videoEl = ref(null)
 let stream = null
 let zxingReader = null
 
-const startForm = ref({ responsable: '', tipo: '', observaciones: '' })
-const finishForm = ref({ trabajoRealizado: '', observaciones: '' })
+const startForm = ref({ responsable: '', tipo: '', empresa: '', observaciones: '' })
+const finishForm = ref({ estado: 'funcional', trabajoRealizado: '', observaciones: '' })
 
 watch(() => props.modelValue, (val) => {
     visible.value = val
     if (val) resetState()
+})
+
+// Control de scroll en el documento
+watch(visible, (val) => {
+    if (val) {
+        document.documentElement.style.overflow = 'hidden'
+        document.body.style.overflow = 'hidden'
+    } else {
+        document.documentElement.style.overflow = ''
+        document.body.style.overflow = ''
+    }
 })
 
 watch(visible, (val) => emit('update:modelValue', val))
@@ -126,14 +184,34 @@ const selectedItem = computed(() => {
 const isInMaintenance = computed(() => {
     const code = selectedCode.value
     if (!code) return false
-    return props.maintenanceMap?.[code]?.status === 'in_progress'
+    const entry = props.maintenanceMap?.[code] || null
+    if (!entry) return false
+    return entry.status === 'in_progress'
+        || entry.status === 'en_mantenimiento'
+        || entry.maintenance?.status === 'in_progress'
 })
 
-const canStart = computed(() => !!selectedCode.value && !!startForm.value.responsable)
+const canStart = computed(() => {
+    if (!selectedCode.value) return false
+    const reason = startForm.value.tipo || startForm.value.observaciones
+    return !!startForm.value.responsable && !!reason
+})
 const canFinish = computed(() => {
     return !!selectedCode.value
         && verificationCode.value === selectedCode.value
         && !!finishForm.value.trabajoRealizado
+})
+
+const hasChanges = computed(() => {
+    return scanning.value ||
+           manualCode.value ||
+           selectedCode.value ||
+           startForm.value.responsable ||
+           startForm.value.tipo ||
+           startForm.value.empresa ||
+           startForm.value.observaciones ||
+           finishForm.value.trabajoRealizado ||
+           finishForm.value.observaciones
 })
 
 function resetState() {
@@ -141,12 +219,36 @@ function resetState() {
     selectedCode.value = ''
     manualCode.value = ''
     verificationCode.value = ''
-    startForm.value = { responsable: '', tipo: '', observaciones: '' }
+    startForm.value = { responsable: '', tipo: '', empresa: '', observaciones: '' }
     finishForm.value = { trabajoRealizado: '', observaciones: '' }
     stopScan()
 }
 
-function close() {
+async function close() {
+    const hasPendingChanges = hasChanges.value
+    const result = await Swal.fire({
+        title: hasPendingChanges ? '¿Cerrar panel de escaneo?' : '¿Cerrar panel?',
+        text: hasPendingChanges
+            ? 'Hay un proceso de escaneo activo o datos pendientes. ¿Estás seguro de que quieres cerrar?'
+            : '¿Estás seguro de que quieres cerrar este panel?',
+        icon: hasPendingChanges ? 'warning' : 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cerrar',
+        cancelButtonText: 'Cancelar',
+        background: 'rgba(13, 20, 35, 0.98)',
+        color: 'rgba(255, 255, 255, 0.95)',
+        backdrop: 'rgba(2, 8, 18, 0.7)',
+        confirmButtonColor: '#ff6b6b',
+        cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
+        customClass: {
+            container: 'swal-high-z-index'
+        }
+    })
+
+    if (!result.isConfirmed) {
+        return
+    }
+
     visible.value = false
     stopScan()
 }
@@ -240,16 +342,28 @@ function stopScan() {
         stream.getTracks().forEach(t => t.stop())
         stream = null
     }
-    if (zxingReader) {
-        zxingReader.reset()
+    try {
+        if (zxingReader && typeof zxingReader.reset === 'function') {
+            zxingReader.reset()
+        }
+    } catch (e) {
+        // ignore reset errors to avoid crashing modal
     }
 }
 
 function startMaintenance() {
+    const reason = startForm.value.tipo || startForm.value.observaciones || startForm.value.responsable || 'Mantenimiento'
+    const provider = startForm.value.empresa || startForm.value.responsable || 'Proveedor'
     emit('start-maintenance', {
         code: selectedCode.value,
         item: selectedItem.value,
-        data: { ...startForm.value }
+        data: {
+            ...startForm.value,
+            motivo: reason,
+            reason,
+            provider,
+            empresa: startForm.value.empresa
+        }
     })
 }
 
@@ -261,102 +375,222 @@ function finishMaintenance() {
     })
 }
 
-onBeforeUnmount(() => stopScan())
+onBeforeUnmount(() => {
+    stopScan()
+    document.documentElement.style.overflow = ''
+    document.body.style.overflow = ''
+})
 </script>
 
 <style scoped>
+/* ==================== OVERLAY BACKDROP ==================== */
 .scan-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(3, 8, 20, 0.68);
-    z-index: 5000;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(800px 600px at 30% 20%, rgba(30, 58, 138, 0.4), rgba(3, 8, 20, 0.75));
+    z-index: 99999;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(6px) saturate(1.05);
+    -webkit-backdrop-filter: blur(6px) saturate(1.05);
+    padding: 16px;
+    overflow: hidden;
+    contain: layout style paint;
 }
 
+/* ==================== MODAL CONTAINER ==================== */
 .scan-modal {
-    width: min(1100px, 94vw);
-    background: linear-gradient(180deg, rgba(9, 20, 40, 0.98), rgba(5, 12, 24, 0.98));
-    border: 1px solid rgba(79, 140, 255, 0.35);
-    border-radius: 18px;
-    padding: 26px 26px 22px;
+    width: 100%;
+    max-width: 1200px;
+    max-height: calc(100vh - 40px);
+    height: auto;
+    background: linear-gradient(135deg, rgba(10, 25, 47, 0.95), rgba(5, 15, 35, 0.98));
+    border: 1px solid rgba(99, 150, 255, 0.5);
+    border-radius: 24px;
+    padding: 28px;
     position: relative;
-    box-shadow: 0 16px 50px rgba(0,0,0,0.45);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.6),
+        0 0 40px rgba(59, 130, 246, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
+.scan-modal::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 24px;
+    background: radial-gradient(800px 400px at 10% -10%, rgba(99, 150, 255, 0.2), transparent),
+        radial-gradient(500px 500px at 90% 110%, rgba(59, 130, 246, 0.1), transparent);
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* Modal scrollbar styling */
+.scan-modal::-webkit-scrollbar {
+    width: 10px;
+}
+
+.scan-modal::-webkit-scrollbar-track {
+    background: rgba(99, 150, 255, 0.08);
+    border-radius: 6px;
+}
+
+.scan-modal::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(99, 150, 255, 0.5), rgba(125, 211, 252, 0.4));
+    border-radius: 6px;
+}
+
+.scan-modal::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgba(99, 150, 255, 0.7), rgba(125, 211, 252, 0.6));
+}
+
+/* ==================== CLOSE BUTTON ==================== */
 .scan-close {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    border: 1px solid rgba(239,68,68,0.4);
-    background: rgba(239,68,68,0.12);
-    color: #f87171;
+    top: 16px;
+    right: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.1);
+    color: #ff6b6b;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 10;
+    padding: 0;
 }
 
+.scan-close:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.7);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+    transform: scale(1.1);
+}
+
+.scan-close .icon {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+}
+
+/* ==================== HEADER ==================== */
 .scan-header {
-    text-align: left;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
+    padding-top: 8px;
 }
 
 .scan-title {
-    color: #e5f0ff;
-    font-size: 1.35rem;
-    font-weight: 700;
+    background: linear-gradient(135deg, #e0f2fe, #bae6fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.3px;
 }
 
 .scan-subtitle {
-    color: rgba(255,255,255,0.7);
+    color: rgba(255, 255, 255, 0.65);
     font-size: 0.95rem;
-    margin-top: 4px;
+    margin-top: 6px;
+    font-weight: 500;
 }
 
+/* ==================== BODY LAYOUT ==================== */
 .scan-body {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 20px;
+    flex: 1;
 }
 
+/* ==================== PANELS ==================== */
 .scan-panel {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(125,211,252,0.2);
-    border-radius: 14px;
-    padding: 16px;
+    background: linear-gradient(135deg, rgba(20, 40, 80, 0.5), rgba(15, 30, 60, 0.4));
+    border: 1.5px solid rgba(99, 150, 255, 0.35);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
+.scan-panel.scan-info {
+    background: linear-gradient(135deg, rgba(25, 50, 100, 0.5), rgba(15, 35, 70, 0.4));
+}
+
+/* ==================== ACTIONS SECTION ==================== */
 .scan-actions {
     display: flex;
     gap: 10px;
-    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.scan-btn,
+.scan-upload {
+    flex: 1;
+    min-width: 120px;
+    padding: 11px 16px;
+    border-radius: 11px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 }
 
 .scan-btn {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 8px 16px;
-    font-weight: 600;
-    cursor: pointer;
+    background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+    color: white;
+    border: 1px solid rgba(6, 182, 212, 0.5);
+    box-shadow: 0 8px 16px rgba(6, 182, 212, 0.25);
+}
+
+.scan-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0284c7, #0891b2);
+    box-shadow: 0 12px 24px rgba(6, 182, 212, 0.4);
+    transform: translateY(-2px);
+}
+
+.scan-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .scan-upload {
-    border: 1px dashed rgba(125,211,252,0.5);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(99, 150, 255, 0.2));
     color: #7dd3fc;
-    border-radius: 10px;
-    padding: 8px 14px;
-    cursor: pointer;
+    border: 2px dashed rgba(125, 211, 252, 0.5);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.scan-upload:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(99, 150, 255, 0.3));
+    border-color: rgba(125, 211, 252, 0.8);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.25);
 }
 
 .scan-upload input {
     display: none;
 }
 
+/* ==================== MANUAL INPUT SECTION ==================== */
 .scan-manual {
     display: flex;
     gap: 8px;
@@ -364,33 +598,60 @@ onBeforeUnmount(() => stopScan())
 
 .scan-manual input {
     flex: 1;
-    background: rgba(15,23,42,0.6);
-    border: 1px solid rgba(125,211,252,0.3);
-    border-radius: 8px;
-    padding: 8px 10px;
-    color: #e2e8f0;
+    background: rgba(10, 20, 40, 0.6);
+    border: 1.5px solid rgba(125, 211, 252, 0.25);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: #e0f2fe;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.scan-manual input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.scan-manual input:focus {
+    outline: none;
+    border-color: rgba(125, 211, 252, 0.7);
+    background: rgba(10, 20, 40, 0.8);
+    box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.15);
 }
 
 .scan-manual button {
-    background: rgba(34,197,94,0.12);
-    color: #22c55e;
-    border: 1px solid rgba(34,197,94,0.5);
-    border-radius: 8px;
-    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(99, 150, 255, 0.2));
+    color: #7dd3fc;
+    border: 1.5px solid rgba(125, 211, 252, 0.5);
+    border-radius: 10px;
+    padding: 11px 14px;
     font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+.scan-manual button:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(99, 150, 255, 0.4));
+    border-color: rgba(125, 211, 252, 0.8);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+}
+
+/* ==================== PREVIEW SECTION ==================== */
 .scan-preview {
-    margin-top: 12px;
-    min-height: 210px;
-    background: rgba(255,255,255,0.04);
+    min-height: 240px;
+    background: linear-gradient(135deg, rgba(10, 20, 40, 0.5), rgba(5, 15, 35, 0.4));
     border-radius: 12px;
-    border: 1px dashed rgba(125,211,252,0.2);
+    border: 1.5px dashed rgba(125, 211, 252, 0.3);
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     overflow: hidden;
+    color: rgba(255, 255, 255, 0.6);
 }
 
 .scan-video {
@@ -402,101 +663,347 @@ onBeforeUnmount(() => stopScan())
 .scan-skeleton {
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+    background: linear-gradient(90deg,
+            rgba(125, 211, 252, 0.1),
+            rgba(125, 211, 252, 0.2),
+            rgba(125, 211, 252, 0.1));
     background-size: 200% 100%;
-    animation: shimmer 1.2s infinite;
+    animation: shimmer 1.5s infinite;
 }
 
 .scan-error {
-    color: #fda4af;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #fca5a5;
     font-size: 0.9rem;
-    padding: 8px;
+    padding: 12px;
+    text-align: center;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 8px;
+}
+
+.scan-error .icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
 }
 
 .scan-hint {
-    color: rgba(255,255,255,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.95rem;
+    text-align: center;
 }
 
+.scan-hint .icon-lg {
+    stroke: rgba(125, 211, 252, 0.6);
+}
+
+/* ==================== RESULTS SECTION ==================== */
 .scan-info-title {
     font-weight: 700;
-    color: #e2e8f0;
-    margin-bottom: 8px;
+    color: #bae6fd;
+    margin-bottom: 12px;
+    font-size: 1.05rem;
 }
 
 .scan-empty {
-    color: rgba(255,255,255,0.6);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.95rem;
+    padding: 20px 14px;
+    text-align: center;
+    background: rgba(99, 150, 255, 0.08);
+    border-radius: 8px;
+}
+
+.scan-empty .icon-lg {
+    stroke: rgba(125, 211, 252, 0.5);
+    opacity: 0.8;
 }
 
 .scan-chip {
     display: inline-flex;
-    padding: 6px 12px;
-    border-radius: 999px;
-    background: rgba(125,211,252,0.12);
+    padding: 8px 14px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(99, 150, 255, 0.2));
     color: #7dd3fc;
     font-weight: 700;
-    margin-bottom: 10px;
+    font-size: 0.9rem;
+    border: 1px solid rgba(125, 211, 252, 0.4);
+    margin-bottom: 12px;
 }
 
 .scan-item {
-    color: rgba(255,255,255,0.85);
+    background: rgba(20, 40, 80, 0.3);
+    color: rgba(255, 255, 255, 0.9);
     display: grid;
-    gap: 4px;
+    gap: 6px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(125, 211, 252, 0.2);
     margin-bottom: 14px;
+    font-size: 0.9rem;
+}
+
+.scan-item div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.scan-item strong {
+    color: #bae6fd;
+    font-weight: 600;
+    min-width: max-content;
+}
+
+.scan-item span {
+    text-align: right;
+    flex: 1;
+}
+
+/* ==================== MAINTENANCE SECTION ==================== */
+.scan-maintenance {
+    margin-top: 12px;
 }
 
 .scan-maintenance h4 {
-    color: #e2e8f0;
-    margin: 6px 0 10px;
+    color: #bae6fd;
+    font-size: 1.05rem;
+    margin: 0 0 14px 0;
+    font-weight: 700;
+}
+
+.scan-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .scan-form input,
 .scan-form textarea {
     width: 100%;
-    margin-bottom: 8px;
-    background: rgba(15,23,42,0.6);
-    border: 1px solid rgba(125,211,252,0.3);
-    border-radius: 8px;
-    padding: 8px 10px;
-    color: #e2e8f0;
+    background: rgba(10, 20, 40, 0.6);
+    border: 1.5px solid rgba(125, 211, 252, 0.25);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: #e0f2fe;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+    font-weight: 500;
+}
+
+.scan-form input::placeholder,
+.scan-form textarea::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.scan-form input:focus,
+.scan-form textarea:focus {
+    outline: none;
+    border-color: rgba(125, 211, 252, 0.7);
+    background: rgba(10, 20, 40, 0.8);
+    box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.15);
+}
+
+.scan-form textarea {
     resize: vertical;
+    min-height: 80px;
+    max-height: 150px;
 }
 
 .scan-primary {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    padding: 8px 14px;
+    background: linear-gradient(135deg, #0ea5e9, #06b6d4);
+    color: white;
+    border: 1px solid rgba(6, 182, 212, 0.5);
+    border-radius: 11px;
+    padding: 12px 16px;
     font-weight: 700;
+    font-size: 0.95rem;
     cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 8px 16px rgba(6, 182, 212, 0.25);
+}
+
+.scan-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, #0284c7, #0891b2);
+    box-shadow: 0 12px 24px rgba(6, 182, 212, 0.4);
+    transform: translateY(-2px);
+}
+
+.scan-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .scan-verify {
     display: flex;
     gap: 8px;
-    margin-bottom: 8px;
+}
+
+.scan-verify input {
+    flex: 1;
+    background: rgba(10, 20, 40, 0.6);
+    border: 1.5px solid rgba(125, 211, 252, 0.25);
+    border-radius: 10px;
+    padding: 11px 14px;
+    color: #e0f2fe;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.scan-verify input:focus {
+    outline: none;
+    border-color: rgba(125, 211, 252, 0.7);
+    background: rgba(10, 20, 40, 0.8);
+    box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.15);
 }
 
 .scan-verify button {
-    background: rgba(34,197,94,0.12);
-    color: #22c55e;
-    border: 1px solid rgba(34,197,94,0.5);
-    border-radius: 8px;
-    padding: 8px 12px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(99, 150, 255, 0.2));
+    color: #7dd3fc;
+    border: 1.5px solid rgba(125, 211, 252, 0.5);
+    border-radius: 10px;
+    padding: 11px 12px;
     font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+.scan-verify button:hover {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.5), rgba(99, 150, 255, 0.4));
+    border-color: rgba(125, 211, 252, 0.8);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+}
+
+.scan-verify button .icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* ==================== ICON SIZES ==================== */
+.icon {
+    width: 18px;
+    height: 18px;
+}
+
+.icon-lg {
+    width: 40px;
+    height: 40px;
+}
+
+/* ==================== ANIMATIONS ==================== */
 @keyframes shimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .scan-fade-enter-active,
-.scan-fade-leave-active { transition: opacity 0.2s ease; }
-.scan-fade-enter-from,
-.scan-fade-leave-to { opacity: 0; }
+.scan-fade-leave-active {
+    transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-@media (max-width: 900px) {
-    .scan-body { grid-template-columns: 1fr; }
+.scan-fade-enter-from,
+.scan-fade-leave-to {
+    opacity: 0;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 1400px) {
+    .scan-modal {
+        max-width: 1000px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .scan-modal {
+        padding: 24px;
+        max-width: 900px;
+    }
+
+    .scan-body {
+        grid-template-columns: 1fr;
+    }
+
+    .scan-preview {
+        min-height: 220px;
+    }
+}
+
+@media (max-width: 640px) {
+    .scan-overlay {
+        padding: 12px;
+    }
+
+    .scan-modal {
+        padding: 18px;
+        border-radius: 18px;
+        max-height: 90vh;
+        max-width: 100%;
+    }
+
+    .scan-title {
+        font-size: 1.35rem;
+    }
+
+    .scan-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .scan-actions {
+        gap: 8px;
+    }
+
+    .scan-btn,
+    .scan-upload {
+        min-width: 100px;
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .scan-preview {
+        min-height: 180px;
+    }
+
+    .scan-form input,
+    .scan-form textarea {
+        padding: 10px 12px;
+        font-size: 0.9rem;
+    }
+
+    .scan-item {
+        font-size: 0.85rem;
+    }
+
+    .scan-item div {
+        flex-direction: column;
+    }
+
+    .scan-item span {
+        text-align: left;
+    }
+}
+
+/* SweetAlert2 high z-index override */
+:global(.swal-high-z-index) {
+    z-index: 200000 !important;
 }
 </style>

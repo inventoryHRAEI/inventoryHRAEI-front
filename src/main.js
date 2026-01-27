@@ -68,6 +68,12 @@ const notivue = createNotivue({
 app.use(router)
 app.use(notivue)
 
+import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
+
+const queryClient = new QueryClient();
+
+app.use(VueQueryPlugin, { queryClient });
+
 // Ajuste dinámico de variables CSS relacionadas con la topbar.
 function updateTopbarCSSVars(){
         try{

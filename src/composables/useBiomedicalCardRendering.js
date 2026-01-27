@@ -1,9 +1,47 @@
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 
 export function useBiomedicalCardRendering() {
   const selectedItem = ref(null)
   const currentPage = ref(1)
-  const pageSize = ref(3)
+  const pageSize = ref(6)
+  const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
+  const windowHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 768)
+
+  // Detect if mobile device (width < 480px OR height < 600px)
+  const isMobileDevice = computed(() => {
+    return windowWidth.value < 480 || windowHeight.value < 600
+  })
+
+  // Responsive pageSize
+  const responsivePageSize = computed(() => {
+    return isMobileDevice.value ? 3 : 6
+  })
+
+  // Update pageSize when screen size changes
+  watch(responsivePageSize, (newSize) => {
+    pageSize.value = newSize
+    currentPage.value = 1 // Reset to first page
+  })
+
+  // Listen for window resize
+  const handleResize = () => {
+    windowWidth.value = window.innerWidth
+    windowHeight.value = window.innerHeight
+  }
+
+  onMounted(() => {
+    if (typeof window !== 'undefined') {
+      windowWidth.value = window.innerWidth
+      windowHeight.value = window.innerHeight
+      window.addEventListener('resize', handleResize)
+    }
+  })
+
+  onBeforeUnmount(() => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('resize', handleResize)
+    }
+  })
   
   // Tunnel performance optimizations
   const isTunnel = typeof window !== 'undefined' && /\.trycloudflare\.com|\.ngrok-free\.dev|\.loca\.lt/.test(window.location.hostname)

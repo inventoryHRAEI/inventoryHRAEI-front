@@ -31,6 +31,111 @@ export function useBiomedicalFilters(metaFields) {
   const dynamicFilterValues = ref({})
   let isRestoring = true
 
+  const dynamicCatalog = ref([])
+
+  function findDynamicCatalogEntry(id) {
+    if (!id) return null
+    const current = dynamicCatalog.value || []
+    return current.find(f => f.id === id)
+      || current.find(f => f.originalId === id)
+      || null
+  }
+
+  function normalizeCandidate(value) {
+    if (!value) return ''
+    return String(value).trim()
+  }
+
+  function formatLabelCandidate(value) {
+    if (value === null || value === undefined) return ''
+    const raw = String(value).replace(/_/g, ' ').replace(/\s+/g, ' ').trim()
+    if (!raw) return ''
+    const isAllUpper = /^[A-Z0-9\s-]+$/.test(raw) && raw === raw.toUpperCase()
+    if (isAllUpper) return raw
+    return raw
+      .split(' ')
+      .map(part => {
+        if (!part) return part
+        return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()
+      })
+      .join(' ')
+  }
+
+  function deriveFieldLabel(field, fallbackId) {
+    const direct = typeof field?.label === 'string' ? field.label.trim() : ''
+    if (direct) return direct
+    const candidates = [
+      field?.displayName,
+      field?.name,
+      field?.columnLabel,
+      field?.columnName,
+      field?.column,
+      field?.dbColumn,
+      field?.property,
+      field?.key
+    ]
+    for (const candidate of candidates) {
+      const formatted = formatLabelCandidate(candidate)
+      if (formatted) return formatted
+    }
+    return formatLabelCandidate(fallbackId)
+  }
+
+  function buildSlug(field, fallbackIndex) {
+    const base = normalizeCandidate(
+      field.id ||
+      field.column ||
+      field.columnName ||
+      field.dbColumn ||
+      field.property ||
+      field.key ||
+      field.label ||
+      `field_${fallbackIndex}`
+    )
+    return base.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '') || `field_${fallbackIndex}`
+  }
+
+  watch(metaFields, (newMeta) => {
+    if (!Array.isArray(newMeta) || newMeta.length === 0) {
+      dynamicCatalog.value = []
+      return
+    }
+
+    const candidates = newMeta.filter(f => !f?.fixed)
+    const seen = new Set()
+    const slugCounts = new Map()
+
+    const catalog = candidates.map((field, index) => {
+      const originalId = typeof field?.id === 'string' ? field.id : null
+      let candidateId = normalizeCandidate(field.id)
+      if (candidateId && !seen.has(candidateId)) {
+        seen.add(candidateId)
+        const label = deriveFieldLabel(field, candidateId)
+        return { ...field, id: candidateId, originalId: originalId || candidateId, label }
+      }
+
+      const baseSlug = buildSlug(field, index)
+      const currentCount = slugCounts.get(baseSlug) || 0
+      let nextCount = currentCount + 1
+      let uniqueId = `${baseSlug}_${nextCount}`
+      while (seen.has(uniqueId)) {
+        nextCount += 1
+        uniqueId = `${baseSlug}_${nextCount}`
+      }
+      slugCounts.set(baseSlug, nextCount)
+      seen.add(uniqueId)
+      const label = deriveFieldLabel(field, uniqueId)
+      return { ...field, id: uniqueId, originalId: originalId || uniqueId, label }
+    })
+
+    dynamicCatalog.value = catalog
+
+    const availableIds = new Set(catalog.map(f => f.id))
+    activeDynamicFilterIds.value = activeDynamicFilterIds.value.filter(id => availableIds.has(id))
+  }, { immediate: true, deep: true })
+
   const estatusOptions = computed(() => {
     const normalize = (v) => String(v ?? '').trim().replace(/\s+/g, ' ')
     const direct = getMetaField('estatus')
@@ -57,11 +162,6 @@ export function useBiomedicalFilters(metaFields) {
     return Array.from(set.values()).sort((a, b) => String(a).localeCompare(String(b)))
   })
 
-  const dynamicCatalog = computed(() => {
-    const all = Array.isArray(metaFields.value) ? metaFields.value : []
-    return all.filter(f => !f?.fixed)
-  })
-
   const dynamicCatalogByCategory = computed(() => {
     const groups = new Map()
     for (const field of dynamicCatalog.value) {
@@ -76,7 +176,16 @@ export function useBiomedicalFilters(metaFields) {
   })
 
   function getMetaField(id) {
-    return (metaFields.value || []).find(f => f.id === id)
+    if (!id) return null
+    const catalogEntry = findDynamicCatalogEntry(id)
+    if (catalogEntry) return catalogEntry
+    const metaEntry = (metaFields.value || []).find(f => f.id === id)
+    if (metaEntry) return metaEntry
+    if (catalogEntry && catalogEntry.originalId && catalogEntry.originalId !== id) {
+      const original = (metaFields.value || []).find(f => f.id === catalogEntry.originalId)
+      if (original) return original
+    }
+    return null
   }
 
   function getMetaFieldColumn(id) {
@@ -93,30 +202,42 @@ export function useBiomedicalFilters(metaFields) {
   }
 
   function getItemFieldValue(item, id) {
-    const col = getMetaFieldColumn(id)
-    if (!item) return null
-    const candidates = []
-    if (col) candidates.push(col)
-    try {
-      if (typeof col === 'string') {
-        candidates.push(col.toUpperCase())
-        candidates.push(col.replace(/_/g, ' ').toUpperCase())
-        candidates.push(col.replace(/\s+/g, '_').toLowerCase())
-        candidates.push(col.toLowerCase())
+    // ⭐ ARREGLO: id es el nombre exacto de la columna (post-backend-fix)
+    if (!item || !id) return null
+    
+    // Búsqueda directa primero
+    if (Object.prototype.hasOwnProperty.call(item, id)) {
+      const value = item[id]
+      if (typeof window !== 'undefined' && window.__FIELD_VALUE_DEBUG__?.logOnce) {
+        console.log(`[getItemFieldValue] id=${id}, DIRECT match, value=`, value)
       }
-    } catch (e) { }
-    const field = getMetaField(id)
-    if (field && field.label) {
-      candidates.push(field.label)
-      candidates.push(String(field.label).toUpperCase())
-      candidates.push(String(field.label).replace(/\s+/g, '_').toLowerCase())
+      return value
     }
-    if (id) candidates.push(id)
-    for (const c of candidates) {
-      if (!c) continue
-      if (Object.prototype.hasOwnProperty.call(item, c)) {
-        return item[c]
+    
+    // Fallback: algunos drivers o browsers pueden tener variaciones case/encoding
+    const lower = String(id).toLowerCase()
+    const upper = String(id).toUpperCase()
+    
+    for (const key of Object.keys(item)) {
+      if (key === id) {
+        const value = item[key]
+        if (typeof window !== 'undefined' && window.__FIELD_VALUE_DEBUG__?.logOnce) {
+          console.log(`[getItemFieldValue] id=${id}, found via exact match, value=`, value)
+        }
+        return value
       }
+      if (key.toLowerCase() === lower || key.toUpperCase() === upper) {
+        const value = item[key]
+        if (typeof window !== 'undefined' && window.__FIELD_VALUE_DEBUG__?.logOnce) {
+          console.log(`[getItemFieldValue] id=${id}, found via case-insensitive (key=${key}), value=`, value)
+        }
+        return value
+      }
+    }
+    
+    // Log si no está
+    if (typeof window !== 'undefined' && window.__FIELD_VALUE_DEBUG__?.logNotFound) {
+      console.warn(`[getItemFieldValue] id=${id} NOT FOUND in item. Item keys (first 10):`, Object.keys(item).slice(0, 10))
     }
     return null
   }
@@ -126,7 +247,11 @@ export function useBiomedicalFilters(metaFields) {
   }
 
   function addDynamicFilter(id) {
-    if (!id || isFixedField(id) || activeDynamicFilterIds.value.includes(id) || activeDynamicFilterIds.value.length >= 15) return
+    if (!id || isFixedField(id) || activeDynamicFilterIds.value.includes(id) || activeDynamicFilterIds.value.length >= 15) {
+      console.warn(`[addDynamicFilter] No se pudo añadir el filtro con ID: ${id}`);
+      return;
+    }
+    console.log(`[addDynamicFilter] Añadiendo filtro con ID: ${id}`);
     activeDynamicFilterIds.value = [...activeDynamicFilterIds.value, id]
     if (!(id in dynamicFilterValues.value)) {
       dynamicFilterValues.value = { ...dynamicFilterValues.value, [id]: '' }
@@ -145,6 +270,31 @@ export function useBiomedicalFilters(metaFields) {
     dynamicFilterValues.value = {}
   }
 
+  function getDynamicFieldOriginalId(id) {
+    const entry = findDynamicCatalogEntry(id)
+    if (entry && entry.originalId) return entry.originalId
+    return id
+  }
+
+  function resolveDynamicFieldLabel(id) {
+    if (!id) return ''
+    try {
+      const entry = findDynamicCatalogEntry(id)
+      if (entry && typeof entry.label === 'string' && entry.label.trim()) {
+        return entry.label.trim()
+      }
+      const originalId = entry && entry.originalId ? entry.originalId : id
+      const metaField = (metaFields.value || []).find(f => f.id === originalId)
+      if (metaField && typeof metaField.label === 'string' && metaField.label.trim()) {
+        return metaField.label.trim()
+      }
+      const fallbackCandidate = entry && entry.column ? entry.column : originalId
+      return formatLabelCandidate(fallbackCandidate) || String(originalId)
+    } catch (e) {
+      return formatLabelCandidate(id) || String(id)
+    }
+  }
+
   function buildQueryParams() {
     const queryParams = new URLSearchParams()
     if (filters.value.no.trim()) queryParams.append('no', filters.value.no.trim())
@@ -155,13 +305,41 @@ export function useBiomedicalFilters(metaFields) {
     if (filters.value.estatus && filters.value.estatus !== SIN_ESTADO_VALUE) queryParams.append('estatus', filters.value.estatus)
     if (filters.value.funcional) queryParams.append('funcional', filters.value.funcional)
     if (filters.value.unidadMedica.trim()) queryParams.append('unidadMedica', filters.value.unidadMedica.trim())
+    // ⭐ ARREGLO: IDs dinámicos YA SON nombres exactos de columna
+    const includeColumns = new Set()
+
     for (const id of activeDynamicFilterIds.value) {
-      const value = String(dynamicFilterValues.value[id] || '').trim()
+      // id es el nombre exacto de la columna (ej: 'OBSERVACIONES', 'ACCESORIOS')
+      // Lo usamos directamente como columna en SELECT
+      if (id) {
+        includeColumns.add(String(id))
+      }
+
+      const rawValue = dynamicFilterValues.value[id]
+      const value = String(rawValue ?? '').trim()
       if (!value) continue
+      // Para filtros dinámicos, usar el nombre de columna exacto
       queryParams.append(`dyn_${id}`, value)
     }
-    // Limitar resultados para optimizar transferencia en tunnel
-    queryParams.append('limit', '1500')
+
+    try {
+      if (includeColumns.size > 0) {
+        // Codificar espacios para URL-safe (AREA EN LA QUE SE ENTREGO → AREA%20EN%20LA%20QUE%20SE%20ENTREGO)
+        const encoded = Array.from(includeColumns)
+          .map(col => encodeURIComponent(String(col)))
+          .join(',')
+        queryParams.append('include', encoded)
+        // Debug log
+        if (typeof window !== 'undefined' && window.__FIELD_VALUE_DEBUG__?.logInclude) {
+          console.log(`[buildQueryParams] include param built: "${encoded}" (${includeColumns.size} columns)`)
+          console.log(`  activeDynamicFilterIds: `, Array.from(activeDynamicFilterIds.value || []))
+          console.log(`  columns: `, Array.from(includeColumns))
+        }
+      }
+    } catch (e) {
+      console.error('[buildQueryParams] Error building include:', e)
+    }
+
     return queryParams
   }
 
@@ -219,6 +397,8 @@ export function useBiomedicalFilters(metaFields) {
     addDynamicFilter,
     removeDynamicFilter,
     clearDynamicFilters,
+    getDynamicFieldOriginalId,
+    resolveDynamicFieldLabel,
     buildQueryParams,
     persistFilters,
     restoreFilters,

@@ -15,15 +15,14 @@ const OpEntrada = () => import('./views/operations/OpEntrada.vue')
 const OpSalida = () => import('./views/operations/OpSalida.vue')
 const OpResguardo = () => import('./views/operations/OpResguardo.vue')
 const OpServicio = () => import('./views/operations/OpServicio.vue')
-const OpInventarioBiomedica = () => import('./views/operations/OpInventarioBiomedica.vue')
-const BiomedicalTestingEnvironment = () => import('./views/operations/BiomedicalTestingEnvironment.vue')
+const OpInventarioBiomedica = () => import('./views/operations/BiomedicalTestingEnvironment.vue')
 const OpInsumosConsumibles = () => import('./views/operations/OpInsumosConsumibles.vue')
 const OrderManagement = () => import('./views/operations/OrderManagement.vue')
 
 const routes = [
     { path: '/', name: 'home', component: Home },
-    // Short scan URL: redirects to the biomedical testing view with scan param
-    { path: '/s/:code', name: 'short-scan', redirect: (to) => ({ path: '/op/testing-biomedical', query: { scan: String(to.params.code || '') } }) },
+    // Short scan URL: redirects to the biomedical view with scan param
+    { path: '/s/:code', name: 'short-scan', redirect: (to) => ({ path: '/op/inventario-biomedica', query: { scan: String(to.params.code || '') } }) },
     { path: '/login', name: 'login', component: Login },
     { path: '/register', name: 'register', component: Register },
     { path: '/forgot', name: 'forgot', component: Forgot },
@@ -39,8 +38,7 @@ const routes = [
     { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
     { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
     { path: '/op/servicio', name: 'op-servicio', component: OpServicio, meta: { requiresAuth: true } },
-    { path: '/op/inventario-biomedica', name: 'op-inventario-biomedica', component: OpInventarioBiomedica }, // Maqueta pública: renderiza sin requiresAuth
-    { path: '/op/testing-biomedical', name: 'testing-biomedical', component: BiomedicalTestingEnvironment }, // Entorno de pruebas para desarrollo (acceso público para deep-links/QR)
+    { path: '/op/inventario-biomedica', name: 'op-inventario-biomedica', component: OpInventarioBiomedica }, // Inventario Biomédica (Acceso Público)
     { path: '/op/insumos-consumibles', name: 'op-insumos-consumibles', component: OpInsumosConsumibles, meta: { requiresAuth: true } }
 ]
 
@@ -54,6 +52,7 @@ let initialSessionValidated = false
 
 // Guard global de rutas: valida sesión con el backend
 router.beforeEach(async (to, from, next) => {
+    console.debug('[ROUTER] beforeEach', { from: from && from.fullPath, to: to && to.fullPath })
     // Purga agresiva: limpiar caché cuando se sale de ciertas rutas
     const routesToPurge = ['order-management', 'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio']
     if (routesToPurge.includes(from.name) && to.name !== from.name) {
@@ -112,6 +111,7 @@ let lastRoute = null
 
 // Al montar el router, validar sesión inicial en caso de recarga
 router.afterEach((to, from) => {
+    console.debug('[ROUTER] afterEach', { from: from && from.fullPath, to: to && to.fullPath })
     // Marcar que hemos validado al menos una vez
     if (!initialSessionValidated) {
         initialSessionValidated = true
@@ -129,8 +129,11 @@ router.afterEach((to, from) => {
             try { localStorage.removeItem('orders_list') } catch { }
             try { localStorage.removeItem('op_entrada_form') } catch { }
             try { sessionStorage.clear() } catch { }
-            try { window.dispatchEvent(new CustomEvent('app:force-recreate')) } catch { }
-            console.debug('[ROUTER] afterEach triggered app:force-recreate for navigation', { from: fromName, to: toName })
+
+            // Disabled automatic force-recreate scheduling: it produced interleaved remounts
+            // that interrupted destination component's mounting. Keep cache purge only and
+            // let components decide how to recover if they need to (safer and deterministic).
+            console.debug('[ROUTER] afterEach cleaned up for navigation', { from: fromName, to: toName })
         }
     } catch (e) { /* ignore */ }
 })

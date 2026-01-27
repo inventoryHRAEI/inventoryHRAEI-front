@@ -72,6 +72,19 @@
                 </svg>
                 <span>Ver</span>
               </button>
+              <button
+                class="btn-action qr"
+                @click.stop="$emit('barcode', item)"
+                title="Mostrar QR/Código de barras"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                <span>QR</span>
+              </button>
             </div>
           </td>
         </tr>
@@ -103,7 +116,7 @@ const props = defineProps({
   emptyStateMessage: { type: String, default: 'Sin equipos registrados.' }
 })
 
-defineEmits(['view', 'start', 'finish'])
+defineEmits(['view', 'start', 'finish', 'barcode'])
 
 function statusClass(status) {
   if (!status) return ''
@@ -328,14 +341,25 @@ tbody tr.empty-row:hover {
 }
 
 .btn-action.view {
-  background: #3b82f6;
-  color: white;
+   background: #3b82f6;
+   color: white;
 }
 
 .btn-action.view:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+   background: #2563eb;
+   transform: translateY(-1px);
+   box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+}
+
+.btn-action.qr {
+   background: #8b5cf6;
+   color: white;
+}
+
+.btn-action.qr:hover {
+   background: #7c3aed;
+   transform: translateY(-1px);
+   box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3);
 }
 
 .table-footer {

@@ -90,7 +90,7 @@ const operations = [
   { name: 'op-resguardo', label: 'Resguardo', desc: 'Asignaciones y resguardos.', img: imgResguardo, icon: ShieldCheckIcon },
   { name: 'op-servicio', label: 'Servicio', desc: 'Órdenes de servicio y mantenimiento.', img: imgServicio, icon: WrenchScrewdriverIcon },
   { name: 'op-inventario-biomedica', label: 'Inventario Biomédica', desc: 'Inventario y conteos.', img: imgInventario, icon: ClipboardDocumentListIcon },
-  { name: 'op-insumos-consumibles', label: 'Insumos y Consumibles', desc: 'Gestión de insumos.', img: imgConsumibles, icon: CubeIcon }
+  { name: 'op-insumos-consumibles', label: 'Inventario de Subdirección', desc: 'Accesorios y Refacciones.', img: imgConsumibles, icon: CubeIcon }
 ]
 
 const showRequests = ref(false)
@@ -111,8 +111,15 @@ function go(name) {
 }
 
 onMounted(() => {
-  setTimeout(() => {
+  setTimeout(async () => {
     loading.value = false
+    // Diagnostic: check main container children after a frame
+    try {
+      await new Promise(r => requestAnimationFrame(r))
+      const main = document.querySelector('main.container')
+      const count = main ? main.children.length : null
+      console.debug('[UserDashboard] DIAG main children count', count)
+    } catch (e) { console.warn('[UserDashboard] diagnostic check failed', e) }
   }, 1500)
 
   try { window.dispatchEvent(new CustomEvent('route:mounted', { detail: { name: route.name, path: route.fullPath } })); console.debug('[UserDashboard] dispatched route:mounted', { name: route.name, path: route.fullPath }) } catch (e) {}

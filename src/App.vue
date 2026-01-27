@@ -62,8 +62,10 @@
         <main
             :class="['container', { 'op-embed-active': isOperationRoute(), 'dashboard-main-active': isOnDashboard() }]">
             <router-view v-slot="{ Component }">
-                <transition name="page" mode="out-in">
-                    <component :is="Component" :key="componentKey" />
+                <transition name="page">
+                    <component :is="Component" :key="`${$route.fullPath}::${componentKey}`" />
+                    <!-- NOTE: using $route.fullPath as key forces remount on route change and avoids hard reloads which
+                         cause WS/HMR and Cloudflare Tunnel reconnections (see routerHelpers.js) -->
                 </transition>
             </router-view>
         </main>
@@ -125,6 +127,12 @@ const isAdmin = ref(false)
 const user = ref(null)
 const avatarError = ref(false)
 const isInitializing = ref(true)
+
+// EMERGENCY FAST INIT: Reduce initial loading time
+setTimeout(() => {
+    isInitializing.value = false
+    console.log('[perf] Emergency fast init - app ready')
+}, 50) // Ultra fast app initialization
 
 const route = useRoute()
 const router = useRouter()
@@ -263,7 +271,7 @@ const dashboardRoutes = [
     'dashboard', 'admin-dashboard', 'admin-users', 'user-dashboard', 'forgot', 'reset',
     // Operaciones
     'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio', 'op-inventario-biomedica', 'op-insumos-consumibles',
-    'order-management', 'create-order', 'testing-biomedical'
+    'order-management', 'create-order'
 ]
 
 // Inicializar la topbar skeleton al cargar
@@ -350,7 +358,7 @@ onMounted(() => {
 let refreshTimeout = null
 watch(() => route.fullPath, () => {
     menuOpen.value = false
-    componentKey.value++ // Forzar recreación del componente al cambiar ruta
+
 
     // Purga de memoria al navegar entre operaciones o desde operaciones
     try {
@@ -369,7 +377,21 @@ watch(() => route.fullPath, () => {
 
 // Escuchar eventos externos para forzar recreación (usado por navigateAndRefresh)
 onMounted(() => {
-    const onForce = () => { try { componentKey.value++; /* extra increment to ensure fresh remount */ componentKey.value++ } catch { } }
+    let lastForce = 0
+    const DEBOUNCE_MS = 300
+    const onForce = () => {
+      try {
+        const now = Date.now()
+        if (now - lastForce < DEBOUNCE_MS) {
+          console.debug('[App] app:force-recreate ignored (debounced)')
+          return
+        }
+        lastForce = now
+        console.debug('[App] app:force-recreate event received - triggering remount')
+        componentKey.value++
+      } catch (e) { console.warn('[App] onForce error', e) }
+    }
+    try { window.addEventListener('app:force-recreate', onForce) } catch (e) {}
     onBeforeUnmount(() => { window.removeEventListener('app:force-recreate', onForce) })
 })
 

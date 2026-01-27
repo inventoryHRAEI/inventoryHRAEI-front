@@ -49,16 +49,23 @@ export function generateSimplePDF(equipment) {
 }
 
 function buildEquipmentHTML(item) {
-    const historyHtml = (item.history || [])
-        .map((h, i) => `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${i + 1}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${h.start ? new Date(h.start).toLocaleString('es-ES') : '—'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${h.end ? new Date(h.end).toLocaleString('es-ES') : 'En curso'}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${h.notes || '—'}</td>
-      </tr>
-    `)
-        .join('')
+     const historyHtml = (item.history || [])
+         .map((h, i) => {
+             const startDate = h.start ? new Date(h.start).toLocaleString('es-ES') : '—';
+             const endDate = h.end ? new Date(h.end).toLocaleString('es-ES') : 'En curso';
+             const status = h.end ? 'Completado' : 'En progreso';
+             const statusClass = h.end ? 'completed' : 'in-progress';
+             return `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${startDate}</td>
+                <td>${endDate}</td>
+                <td><span class="badge ${statusClass === 'completed' ? 'green' : 'yellow'}">${status}</span></td>
+                <td>${h.notes || '—'}</td>
+              </tr>
+         `;
+         })
+         .join('')
 
     return `
     <!DOCTYPE html>
@@ -94,13 +101,11 @@ function buildEquipmentHTML(item) {
           color: #6b7280;
         }
         .grid-2 {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 30px;
-          margin-bottom: 30px;
+          display: none;
         }
         .section {
           page-break-inside: avoid;
+          margin-bottom: 30px;
         }
         .section h2 {
           font-size: 16px;
@@ -111,13 +116,7 @@ function buildEquipmentHTML(item) {
           color: #1f2937;
         }
         .info-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 10px 0;
-          border-bottom: 1px solid #f3f4f6;
-        }
-        .info-row:last-child {
-          border-bottom: none;
+          display: none;
         }
         .label {
           font-weight: 600;
@@ -128,6 +127,47 @@ function buildEquipmentHTML(item) {
           color: #1f2937;
           flex: 1;
           text-align: right;
+        }
+        .info-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 15px;
+        }
+        .info-table thead tr {
+          background-color: #1f2937;
+          border-bottom: 2px solid #d1d5db;
+        }
+        .info-table th {
+          padding: 12px;
+          text-align: left;
+          font-weight: 700;
+          color: white;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .info-table tbody tr {
+          border-bottom: 1px solid #e5e7eb;
+          background-color: #ffffff;
+        }
+        .info-table tbody tr:nth-child(even) {
+          background-color: #f9fafb;
+        }
+        .info-table td {
+          padding: 12px;
+          font-size: 12px;
+          color: #1f2937;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          white-space: normal;
+          vertical-align: top;
+          line-height: 1.4;
+        }
+        .info-table td:first-child {
+          font-weight: 600;
+          width: 35%;
+          background-color: #f3f4f6;
+          color: #374151;
         }
         .badge {
           display: inline-block;
@@ -141,6 +181,155 @@ function buildEquipmentHTML(item) {
         .badge.green { background:#10b981 }
         .badge.yellow { background:#f59e0b }
         .badge.blue { background:#3b82f6 }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 15px;
+          table-layout: fixed;
+        }
+        table thead tr {
+          background-color: #1f2937;
+          border-bottom: 2px solid #d1d5db;
+        }
+        table th {
+          padding: 14px;
+          text-align: left;
+          font-weight: 700;
+          color: white;
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        table tbody tr {
+          border-bottom: 1px solid #e5e7eb;
+          background-color: #ffffff;
+        }
+        table tbody tr:nth-child(even) {
+          background-color: #f9fafb;
+        }
+        table td {
+          padding: 14px;
+          font-size: 12px;
+          color: #1f2937;
+          word-wrap: break-word;
+          overflow-wrap: break-word;
+          white-space: normal;
+          vertical-align: top;
+          line-height: 1.4;
+        }
+        table th:nth-child(1) {
+          width: 5%;
+        }
+        table th:nth-child(2) {
+          width: 20%;
+        }
+        table th:nth-child(3) {
+          width: 20%;
+        }
+        table th:nth-child(4) {
+          width: 12%;
+        }
+        table th:nth-child(5) {
+          width: 43%;
+        }
+        table td:nth-child(1) {
+          width: 5%;
+          font-weight: 600;
+          text-align: center;
+        }
+        table td:nth-child(2) {
+          width: 20%;
+          font-size: 11px;
+        }
+        table td:nth-child(3) {
+          width: 20%;
+          font-size: 11px;
+        }
+        table td:nth-child(4) {
+          width: 12%;
+          font-size: 11px;
+          text-align: center;
+        }
+        table td:nth-child(5) {
+          width: 43%;
+          font-size: 11px;
+        }
+        .history-item {
+          background-color: #f9fafb;
+          border-left: 4px solid #3b82f6;
+          padding: 16px;
+          margin-bottom: 16px;
+          border-radius: 4px;
+          page-break-inside: avoid;
+        }
+        .history-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 12px;
+          padding-bottom: 10px;
+          border-bottom: 1px solid #e5e7eb;
+        }
+        .history-number {
+          font-weight: 700;
+          color: #1f2937;
+          font-size: 14px;
+        }
+        .history-status {
+          padding: 4px 10px;
+          border-radius: 3px;
+          font-size: 11px;
+          font-weight: 600;
+          text-transform: uppercase;
+          color: white;
+        }
+        .history-status.status-completed {
+          background-color: #10b981;
+        }
+        .history-status.status-in-progress {
+          background-color: #f59e0b;
+        }
+        .history-dates {
+          margin-bottom: 12px;
+        }
+        .date-row {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
+        .date-row:last-child {
+          margin-bottom: 0;
+        }
+        .date-label {
+          font-weight: 600;
+          color: #374151;
+          min-width: 60px;
+        }
+        .date-value {
+          color: #1f2937;
+          flex: 1;
+        }
+        .history-notes {
+          background-color: white;
+          padding: 10px;
+          border-radius: 3px;
+          border: 1px solid #e5e7eb;
+        }
+        .notes-label {
+          display: block;
+          font-weight: 600;
+          color: #374151;
+          margin-bottom: 6px;
+          font-size: 13px;
+        }
+        .history-notes p {
+          margin: 0;
+          color: #1f2937;
+          font-size: 13px;
+          line-height: 1.5;
+          word-wrap: break-word;
+        }
       </style>
     </head>
     <body>
@@ -150,41 +339,46 @@ function buildEquipmentHTML(item) {
           <div class="subtitle">Reporte de Equipo Biomédico • ${new Date().toLocaleDateString('es-ES')}</div>
         </div>
 
-        <div class="grid-2">
-          <div class="section">
-            <h2>📋 Información General</h2>
-            <div class="info-row">
-              <span class="label">No. Inventario:</span>
-              <span class="value"><strong>${item.inventoryNo}</strong></span>
-            </div>
-            <div class="info-row">
-              <span class="label">Nombre:</span>
-              <span class="value">${item.name}</span>
-            </div>
-          </div>
-
-          <div class="section">
-            <h2>📍 Ubicación y Estado</h2>
-            <div class="info-row">
-              <span class="label">Área:</span>
-              <span class="value">${item.area || '—'}</span>
-            </div>
-            <div class="info-row">
-              <span class="label">Estado:</span>
-              <span class="value"><span class="badge ${getStatusBadgeClass(item.status)}">${item.status}</span></span>
-            </div>
-          </div>
+        <div class="section">
+          <h2>📋 Información del Equipo</h2>
+          <table class="info-table">
+            <thead>
+              <tr>
+                <th>Campo</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>No. Inventario</td>
+                <td><strong>${item.inventoryNo}</strong></td>
+              </tr>
+              <tr>
+                <td>Nombre del Equipo</td>
+                <td>${item.name}</td>
+              </tr>
+              <tr>
+                <td>Área</td>
+                <td>${item.area || '—'}</td>
+              </tr>
+              <tr>
+                <td>Estado</td>
+                <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status}</span></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         ${item.history && item.history.length > 0 ? `
           <div class="section">
             <h2>🔧 Historial de Mantenimiento</h2>
-            <table>
+            <table class="info-table">
               <thead>
                 <tr>
                   <th>#</th>
                   <th>Inicio</th>
                   <th>Fin</th>
+                  <th>Estado</th>
                   <th>Notas</th>
                 </tr>
               </thead>

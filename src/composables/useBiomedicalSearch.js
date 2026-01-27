@@ -1,15 +1,55 @@
 import { ref, computed } from 'vue'
+import { cacheGet, cacheSet, cacheDel } from '@/utils/persistentCache.js'
 
 // Simple cache para evitar búsquedas repetidas
 const searchCache = new Map()
 const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+const PERSIST_TTL = 24 * 60 * 60 * 1000 // 24 horas (se revalida en background)
+
+// Timer tracking to avoid console.time collisions
+const activeTimers = new Set()
+
+function startTimer(label) {
+  try {
+    if (activeTimers.has(label)) {
+      console.timeEnd(label)
+      activeTimers.delete(label)
+    }
+    console.time(label)
+    activeTimers.add(label)
+  } catch (e) {}
+}
+
+function endTimer(label) {
+  try {
+    if (activeTimers.has(label)) {
+      console.timeEnd(label)
+      activeTimers.delete(label)
+    }
+  } catch (e) {}
+}
 
 export function useBiomedicalSearch() {
   const allData = ref([])
   const filteredData = ref([])
   const loading = ref(false)
   const metaError = ref('')
+  const serverTotal = ref(null)
   const mobileLimitApplied = ref(false)
+  // Local, non-reactive storage for remaining items per queryKey
+  const localRemaining = new Map()
+  const FIRST_BATCH = 12
+  const SERVER_SIDE_FORCE_THRESHOLD = 500 // keep in sync with view threshold
+  // --- Instrumentation for hypothesis testing ---
+  let runSearchCalls = 0
+  let fetchCalls = 0
+  let lastFetchedItems = null
+  // expose a simple test API on window for remote phases
+  try {
+    if (typeof window !== 'undefined') {
+      window.__BIOMED_TEST__ = window.__BIOMED_TEST__ || {}
+    }
+  } catch (e) {}
 
   function hasRealValue(v) {
     if (v === null || v === undefined) return false
@@ -21,14 +61,29 @@ export function useBiomedicalSearch() {
     const fieldsToCheck = ['EQUIPO MEDICO', 'MARCA', 'MODELO', 'CLAVE CNIS', 'No DE INVENTARIO']
     let realCount = 0
     for (const f of fieldsToCheck) {
-      if (hasRealValue(it?.[f])) realCount++
+      if (hasRealValue(it && it[f])) realCount++
     }
     return realCount >= 3
   }
 
+  // Heurística para detectar filas *probablemente* mock o de prueba
+  // - Todas las columnas clave vacías o no-reales
+  // - O el texto contiene palabras indicadoras como 'mock', 'test', 'maqueta', 'placeholder'
+  function isLikelyMock(item) {
+    try {
+      if (!item || typeof item !== 'object') return true
+      const keys = ['EQUIPO MEDICO', 'MARCA', 'MODELO', 'CLAVE CNIS', 'No DE INVENTARIO']
+      const allEmpty = keys.every(k => !hasRealValue(item[k]))
+      if (allEmpty) return true
+      const s = JSON.stringify(item).toLowerCase()
+      if (s.includes('mock') || s.includes('test') || s.includes('maqueta') || s.includes('placeholder')) return true
+      return false
+    } catch (e) { return false }
+  }
+
   function applyMobileLimit(items) {
     try {
-      const isMobile = window.innerWidth <= 900 || (navigator.deviceMemory && navigator.deviceMemory <= 4)
+      const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 900 || (navigator.deviceMemory && navigator.deviceMemory <= 4))
       const limit = isMobile ? 300 : 1000
       if (Array.isArray(items) && items.length > limit) {
         mobileLimitApplied.value = true
@@ -37,6 +92,38 @@ export function useBiomedicalSearch() {
     } catch (e) { }
     mobileLimitApplied.value = false
     return items
+  }
+
+  function isMobileOrNetwork() {
+    try {
+      const host = typeof window !== 'undefined' ? window.location.hostname : ''
+      const isLocal = host === 'localhost' || host === '127.0.0.1' || host === ''
+      const isMobile = typeof window !== 'undefined' && (window.innerWidth <= 900 || (navigator.deviceMemory && navigator.deviceMemory <= 4))
+      return isMobile || !isLocal
+    } catch (e) {
+      return false
+    }
+  }
+
+  function transformItems(items) {
+    if (!Array.isArray(items)) return []
+    return items.map(it => {
+      try { it.__hasRealData = computeHasRealData(it) } catch (e) {}
+      return it
+    })
+  }
+
+  function assignFirstBatch(queryParams, items, filterStateCheck) {
+    const key = getCacheKey(queryParams)
+    const limited = applyMobileLimit(items)
+    localRemaining.set(key, { remaining: limited.slice(FIRST_BATCH), total: limited.length })
+    const first = limited.slice(0, FIRST_BATCH)
+    allData.value = first
+    if (filterStateCheck && filterStateCheck()) {
+      filteredData.value = first.filter(it => !hasRealValue(it && it['ESTATUS']))
+    } else {
+      filteredData.value = first
+    }
   }
 
   function getCacheKey(queryParams) {
@@ -63,143 +150,392 @@ export function useBiomedicalSearch() {
     }
   }
 
-  async function runSearch(buildQueryParams, filterStateCheck) {
+  async function runSearch(buildQueryParams, filterStateCheck, options = {}) {
+    runSearchCalls++
+    try { if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.runSearchCalls = runSearchCalls } catch (e) {}
     const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now.bind(performance) : Date.now
     const _start = perfNow()
+    let hasDisplayedCache = false
+
     try {
       loading.value = true
       metaError.value = ''
       const queryParams = buildQueryParams()
-      
+
+      // expose a small test API for manual phases (2/3/4) in browser console
+      try {
+        if (typeof window !== 'undefined' && window.__BIOMED_TEST__) {
+          window.__BIOMED_TEST__.phase2 = () => {
+            try { window.__TEST_ITEMS__ = lastFetchedItems || []; return (lastFetchedItems || []).length } catch (e) { return 0 }
+          }
+          window.__BIOMED_TEST__.phase3 = () => {
+            try { allData.value = (lastFetchedItems && lastFetchedItems.length) ? [lastFetchedItems[0]] : []; return allData.value.length } catch (e) { return 0 }
+          }
+          window.__BIOMED_TEST__.phase4 = () => {
+            try {
+              const arr = lastFetchedItems || []
+              const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+              allData.value = arr
+              const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+              return Math.round(t1 - t0)
+            } catch (e) { return -1 }
+          }
+          window.__BIOMED_TEST__.phase5 = async () => {
+            try {
+              const arr = lastFetchedItems || []
+              const t0 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+              allData.value = arr
+              try { await nextTick() } catch (e) {}
+              await new Promise(requestAnimationFrame)
+              await new Promise(requestAnimationFrame)
+              const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now()
+              return Math.round(t1 - t0)
+            } catch (e) { return -1 }
+          }
+          window.__BIOMED_TEST__.meta = () => ({ runSearchCalls, fetchCalls, lastLength: (lastFetchedItems && lastFetchedItems.length) || 0 })
+        }
+      } catch (e) {}
+
+      // Request full payload to ensure all fields are available
+      // This is needed for proper equipment detail display after scanning
+      // The backend can still optimize by not fetching unnecessary relations
+      // try { queryParams.set('lite', '1') } catch (e) {}
+
       // Verificar caché primero
       const cached = getFromCache(queryParams)
       if (cached) {
-        allData.value = cached.allData
-        filteredData.value = cached.filteredData
-        console.log('[perf] runSearch: from cache')
+        try {
+          const localItems = Array.isArray(cached.allData) ? cached.allData : []
+          if ((options && options.limitReactive) || isMobileOrNetwork()) {
+            assignFirstBatch(queryParams, localItems, filterStateCheck)
+          } else {
+            allData.value = localItems
+            filteredData.value = Array.isArray(cached.filteredData) ? cached.filteredData : localItems
+          }
+        } catch (e) {
+          allData.value = cached.allData || []
+          filteredData.value = cached.filteredData || []
+        }
+        console.log('[perf] runSearch: from cache (serving first batch)')
         return
       }
-      
-      // Detect tunnel for optimizations
-      const isTunnel = typeof window !== 'undefined' && /\.trycloudflare\.com|\.ngrok-free\.dev|\.loca\.lt/.test(window.location.hostname)
-      
-      // AGGRESSIVE TUNNEL MODE: Progressive loading
-      if (isTunnel) {
-        console.log('[perf] TÚNEL: Iniciando carga progresiva...')
-        
-        // ETAPA 1: Cargar PRIMEROS 50 items RÁPIDO (máximo 5 segundos)
-        const queryParams1 = new URLSearchParams(queryParams.toString())
-        queryParams1.set('limit', '50')
-        queryParams1.set('skip', '0')
-        
-        const url1 = `/api/ops/historial-mantenimientos?${queryParams1.toString()}`
-        const controller1 = new AbortController()
-        const timeout1 = setTimeout(() => controller1.abort(), 5000) // 5s max
-        
-        try {
-          const response1 = await fetch(url1, { signal: controller1.signal })
-          clearTimeout(timeout1)
-          
-          if (!response1.ok) {
-            throw new Error(`HTTP ${response1.status}`)
-          }
-          
-          const data1 = await response1.json().catch(() => null)
-          const items1 = Array.isArray(data1) ? data1 : (Array.isArray(data1?.data) ? data1.data : [])
-          const enriched1 = items1.map(it => ({ ...it, __hasRealData: computeHasRealData(it) }))
-          
-          // MOSTRAR INMEDIATAMENTE
-          allData.value = enriched1
-          if (filterStateCheck && filterStateCheck()) {
-            filteredData.value = enriched1.filter(it => !hasRealValue(it?.['ESTATUS']))
+
+      // Cache persistente (IndexedDB): pinta inmediato y revalida
+      const persistKey = getCacheKey(queryParams)
+      const _cacheStart = perfNow()
+      const persisted = await cacheGet(persistKey, { ttlMs: PERSIST_TTL })
+      const _cacheDur = Math.round(perfNow() - _cacheStart)
+      if (persisted && persisted.allData && persisted.filteredData) {
+        const persistedAll = Array.isArray(persisted.allData) ? persisted.allData : []
+        const sanitized = persistedAll.filter(it => !isLikelyMock(it))
+
+        // Si la cache persistente estaba compuesta exclusivamente por mocks, eliminarla y tratar como MISS
+        if (sanitized.length === 0 && persistedAll.length > 0) {
+          try { await cacheDel(persistKey); console.warn('[cache] Eliminada caché persistente: contenía solo datos de prueba/no reales', persistKey) } catch (e) {}
+          console.log(`[perf] ⚠ Persistent cache contained only mock/test items - cleared (${_cacheDur}ms)`)
+        } else {
+          // Usar versión saneada si fue necesario
+          if ((options && options.limitReactive) || isMobileOrNetwork()) {
+            assignFirstBatch(queryParams, sanitized.length ? sanitized : persistedAll, filterStateCheck)
           } else {
-            filteredData.value = enriched1
+            allData.value = sanitized.length ? sanitized : persistedAll
+            filteredData.value = sanitized.length ? (persisted.filteredData || []).filter(it => !isLikelyMock(it)) : persisted.filteredData
           }
-          
-          const _dur1 = Math.round(perfNow() - _start)
-          console.log(`[perf] ✓ Primeros 50 items en ${_dur1}ms. Cargando resto en background...`)
-          loading.value = false  // PERMITIR INTERACCIÓN YA
-          
-          // ETAPA 2: Cargar RESTO en BACKGROUND (sin bloquear UI)
-          // Sin timeout, puede tardar lo que sea
-          setTimeout(async () => {
-            try {
-              const queryParams2 = new URLSearchParams(queryParams.toString())
-              queryParams2.set('limit', '450')
-              queryParams2.set('skip', '50')
-              
-              const url2 = `/api/ops/historial-mantenimientos?${queryParams2.toString()}`
-              const response2 = await fetch(url2)
-              
-              if (!response2.ok) throw new Error(`HTTP ${response2.status}`)
-              
-              const data2 = await response2.json().catch(() => null)
-              const items2 = Array.isArray(data2) ? data2 : (Array.isArray(data2?.data) ? data2.data : [])
-              const enriched2 = items2.map(it => ({ ...it, __hasRealData: computeHasRealData(it) }))
-              
-              // MERGE: agregar al final
-              allData.value = [...allData.value, ...enriched2]
-              if (filterStateCheck && filterStateCheck()) {
-                filteredData.value = allData.value.filter(it => !hasRealValue(it?.['ESTATUS']))
-              } else {
-                filteredData.value = allData.value
-              }
-              
-              const _dur2 = Math.round(perfNow() - _start)
-              console.log(`[perf] ✓ ${enriched2.length} items adicionales cargados en background (${_dur2}ms total)`)
-            } catch (bgError) {
-              console.warn('[perf] Background load error (no crítico):', bgError.message)
-            }
-          }, 50)  // Empezar background después de 50ms
-          
-        } catch (error1) {
-          clearTimeout(timeout1)
-          if (error1.name === 'AbortError') {
-            console.error('[perf] Túnel: Load cancelled by timeout')
+
+          // Si saneamos la cache persistente, actualizarla para evitar re-usos futuros
+          if (sanitized.length && sanitized.length !== persistedAll.length) {
+            try { await cacheSet(persistKey, { allData: sanitized, filteredData: (persisted.filteredData || []).filter(it => !isLikelyMock(it)) }) } catch (e) {}
           }
-          throw error1
+
+          hasDisplayedCache = true
+          loading.value = false
+          console.log(`[perf] ✓ Persistent cache hit: ${(sanitized.length ? sanitized.length : persistedAll.length)} items in ${_cacheDur}ms (SWR)`)
+        }
+      } else {
+
+      }
+
+      // Detect tunnel for optimizations
+      const serverSide = Boolean(options.serverSide)
+      const isTunnel = typeof window !== 'undefined' && /\.trycloudflare\.com|\.ngrok-free\.dev|\.loca\.lt/.test(window.location.hostname)
+
+      // PAGINATION MODE: Load ALL data at once for traditional pagination (tunnel)
+      if (isTunnel && !serverSide) {
+        console.log('[pagination] TÚNEL: Cargando TODOS los datos...')
+
+        // Single request for ALL data
+        const url = `/api/ops/historial-mantenimientos?${queryParams.toString()}`
+        console.log(`[pagination] 🚀 Loading ALL items: ${url}`)
+        const controller = new AbortController()
+        const timeout = setTimeout(() => controller.abort(), 3000) // 3s for complete load
+
+          try {
+          fetchCalls++
+          try { if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.fetchCalls = fetchCalls } catch (e) {}
+          console.time('[FETCH_START:TUNNEL]')
+          const response = await fetch(url, { signal: controller.signal })
+          clearTimeout(timeout)
+
+          console.log('[FETCH] status', response.status, 'url', url)
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`)
+          }
+
+          const data = await response.json().catch(() => null)
+          console.timeEnd('[FETCH_START:TUNNEL]')
+          console.time('[FETCH_END:TUNNEL]')
+          const items = Array.isArray(data) ? data : (Array.isArray(data && data.data) ? data.data : [])
+          const enriched = transformItems(items)
+          try { lastFetchedItems = enriched; if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.lastFetchedItems = enriched } catch (e) {}
+          console.log('[FETCH] items length', enriched.length)
+          console.timeEnd('[FETCH_END:TUNNEL]')
+          console.log(`[pagination] ✓ Loaded ${enriched.length} total items`)
+
+          assignFirstBatch(queryParams, enriched, filterStateCheck)
+
+          // Cache the full results for SWR; but we don't assign full array to reactive state
+          setCache(queryParams, { allData: limited, filteredData: limited })
+          await cacheSet(persistKey, { allData: limited, filteredData: limited })
+
+          const _dur = Math.round(perfNow() - _start)
+          console.log(`[pagination] ✓ Complete load (first-batch served): ${_dur}ms totalItems=${limited.length}`)
+
+        } catch (error) {
+          clearTimeout(timeout)
+          if (error.name === 'AbortError') {
+            console.error('[pagination] Load cancelled by timeout')
+          }
+          throw error
         }
         return  // IMPORTANTE: No ejecutar código local abajo
       }
-      
-      // LOCAL: Comportamiento normal (todo de una)
-      if (!isTunnel && !queryParams.toString().includes('limit')) {
-        queryParams.append('limit', '500')  // Local: full load
+
+      // Server-side pagination (useful for mobile devices on network)
+      if (serverSide) {
+        try {
+          // ensure lite for minimal columns
+          try { queryParams.set('lite', '1') } catch (e) {}
+
+          // Support asking for a FULL server-backed download in batches
+          if (options.full) {
+            queryParams.set('withTotal', '1')
+            const pageSize = Math.max(1000, Number(options.pageSize || 1000))
+            let page = Number(options.page || 1)
+            let totalCount = Infinity
+            const allItems = []
+            const startFull = perfNow()
+
+            while (allItems.length < totalCount) {
+              queryParams.set('limit', String(pageSize))
+              queryParams.set('skip', String((page - 1) * pageSize))
+              const url = `/api/ops/historial-mantenimientos?${queryParams.toString()}`
+              const controller = new AbortController()
+              const timeoutMs = 15000
+              const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+              try {
+                fetchCalls++
+                try { if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.fetchCalls = fetchCalls } catch (e) {}
+                console.log('[full-fetch] requesting page', page, 'size', pageSize)
+
+                const response = await fetch(url, { signal: controller.signal })
+                clearTimeout(timeoutId)
+                if (!response.ok) {
+                  const json = await response.json().catch(() => ({}))
+                  throw new Error(json.msg || json.error || `HTTP ${response.status}`)
+                }
+                const data = await response.json().catch(() => null)
+
+                let items = []
+                if (Array.isArray(data)) {
+                  items = data
+                  // if we get a raw array, we assume it's the full set for that request
+                  totalCount = items.length
+                } else if (data && typeof data === 'object') {
+                  items = Array.isArray(data.data) ? data.data : []
+                  totalCount = typeof data.total === 'number' ? data.total : totalCount
+                }
+
+                const enrichedPage = transformItems(items)
+                allItems.push(...enrichedPage)
+
+                console.log('[full-fetch] got', items.length, 'items; accumulated', allItems.length, 'of', totalCount)
+
+                // Safety: if server returns fewer than pageSize and totalCount not provided, break to avoid infinite loop
+                if ((!Array.isArray(data) && (!data || !('total' in data))) && items.length < pageSize) {
+                  break
+                }
+
+                page++
+
+                // small delay to avoid hammering the DB if it's huge; can be tuned or disabled
+                await new Promise(r => setTimeout(r, 50))
+              } catch (errPage) {
+                clearTimeout(timeoutId)
+                console.error('[full-fetch] page fetch error', errPage)
+                // stop full fetching on error and fallthrough to partial results if any
+                break
+              }
+            }
+
+            const enriched = allItems
+            lastFetchedItems = enriched
+
+            // If dataset is large, avoid assigning the whole array to reactive state to prevent UI slowdown
+            if (typeof totalCount === 'number' && totalCount > SERVER_SIDE_FORCE_THRESHOLD) {
+              // Keep full results in lastFetchedItems, expose summary, and set reactive state to first page only
+              serverTotal.value = totalCount
+              const samplePageSize = Number(options.pageSize || 24)
+              allData.value = enriched.slice(0, samplePageSize)
+              filteredData.value = enriched.slice(0, samplePageSize)
+              console.warn('[full-fetch] Large dataset detected - buffered results without rendering all items. Use pagination or fetchAll with caution.')
+
+              // Persist the buffered first page and metadata only
+              try { setCache(queryParams, { allData: allData.value, filteredData: filteredData.value }) } catch (e) {}
+              try { await cacheSet(getCacheKey(queryParams), { allData: allData.value, filteredData: filteredData.value, meta: { total: totalCount } }) } catch (e) {}
+
+              const durFull = Math.round(perfNow() - startFull)
+              console.log(`[full-fetch] Buffered: ${allData.value.length}/${serverTotal.value} in ${durFull}ms`)
+              return
+            }
+
+            // Small datasets: safe to assign fully
+            lastFetchedItems = enriched
+            allData.value = enriched
+            filteredData.value = enriched
+            serverTotal.value = (typeof totalCount === 'number' && isFinite(totalCount)) ? totalCount : enriched.length
+
+            // Persist/cache the full set lightly (may be large)
+            try { setCache(queryParams, { allData: allData.value, filteredData: filteredData.value }) } catch (e) {}
+            try { await cacheSet(getCacheKey(queryParams), { allData: allData.value, filteredData: filteredData.value }) } catch (e) {}
+
+            const durFull = Math.round(perfNow() - startFull)
+            console.log(`[full-fetch] Completed: ${allData.value.length}/${serverTotal.value} in ${durFull}ms`)
+            return
+          }
+
+          // Default: single page server-side fetch
+          queryParams.set('withTotal', '1')
+          const page = Number(options.page || 1)
+          const pageSize = Number(options.pageSize || 24)
+          queryParams.set('limit', String(pageSize))
+          queryParams.set('skip', String((page - 1) * pageSize))
+
+          const url = `/api/ops/historial-mantenimientos?${queryParams.toString()}`
+          const controller = new AbortController()
+          const timeoutMs = 10000
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+          fetchCalls++
+          try { if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.fetchCalls = fetchCalls } catch (e) {}
+          startTimer('[FETCH:SERVERPAGE]');
+
+          const response = await fetch(url, { signal: controller.signal });
+          clearTimeout(timeoutId);
+          console.log('[FETCH] status', response.status, 'url', url);
+          if (!response.ok) {
+            const json = await response.json().catch(() => ({}));
+            throw new Error(json.msg || json.error || `HTTP ${response.status}`);
+          }
+          const data = await response.json().catch(() => null);
+          endTimer('[FETCH:SERVERPAGE]');
+
+          // ⭐ FIX: Procesar response correctamente
+          let items = []
+          let totalCount = 0
+          
+          if (Array.isArray(data)) {
+            // Backend retorna array simple (sin withTotal)
+            items = data
+            totalCount = data.length
+          } else if (data && typeof data === 'object') {
+            // Backend retorna { ok, data, total }
+            items = Array.isArray(data.data) ? data.data : []
+            totalCount = typeof data.total === 'number' ? data.total : items.length
+          }
+          
+          const enriched = transformItems(items)
+          try {
+            lastFetchedItems = enriched;
+            if (typeof window !== 'undefined' && window.__BIOMED_TEST__) {
+              window.__BIOMED_TEST__.lastFetchedItems = enriched;
+            }
+          } catch (e) {}
+          console.log('[FETCH] items length', enriched.length, 'total:', totalCount)
+          allData.value = enriched
+          filteredData.value = enriched
+          serverTotal.value = totalCount
+          // cache page-level data lightly (in-memory)
+          setCache(queryParams, { allData: allData.value, filteredData: filteredData.value })
+          await cacheSet(getCacheKey(queryParams), { allData: allData.value, filteredData: filteredData.value })
+          return
+        } catch (err) {
+          console.error('[server pagination] error', err)
+          // fallthrough to full-load fallback below if needed
+        }
       }
-      
+
+      // LOCAL: Load ALL data for pagination
+      // No limit - load everything for traditional pagination
+
       const url = `/api/ops/historial-mantenimientos${queryParams.toString() ? '?' + queryParams.toString() : ''}`
       const controller = new AbortController()
-      const timeoutMs = isTunnel ? 12000 : 8000 // More tolerance in tunnel
+      const timeoutMs = isTunnel ? 2000 : 1000 // Maximum speed - instant for local
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-      
+
+      fetchCalls++
+      try { if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.fetchCalls = fetchCalls } catch (e) {}
+      startTimer('[FETCH:LOCAL]')
       const response = await fetch(url, { signal: controller.signal })
       clearTimeout(timeoutId)
-      
+      console.log('[FETCH] status', response.status, 'url', url)
       if (!response.ok) {
         const json = await response.json().catch(() => ({}))
         throw new Error(json.msg || json.error || `HTTP ${response.status}`)
       }
       const data = await response.json().catch(() => null)
+      endTimer('[FETCH:LOCAL]')
       const rawItems = Array.isArray(data) ? data : (Array.isArray(data && data.data) ? data.data : [])
-      const items = Array.isArray(rawItems) ? rawItems.map(it => ({ ...it, __hasRealData: computeHasRealData(it) })) : []
-      const limited = applyMobileLimit(items)
-      allData.value = limited
-      if (filterStateCheck && filterStateCheck()) {
-        filteredData.value = limited.filter(it => !hasRealValue(it?.['ESTATUS']))
+      const items = transformItems(Array.isArray(rawItems) ? rawItems : [])
+      try { lastFetchedItems = items; if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.lastFetchedItems = items } catch (e) {}
+      console.log('[FETCH] items length', items.length)
+      const shouldLimitReactive = (options && options.limitReactive) || isMobileOrNetwork()
+      if (shouldLimitReactive) {
+        assignFirstBatch(queryParams, items, filterStateCheck)
       } else {
-        filteredData.value = limited
+        const limited = applyMobileLimit(items)
+        allData.value = limited
+        if (filterStateCheck && filterStateCheck()) {
+          filteredData.value = limited.filter(it => !hasRealValue(it && it['ESTATUS']))
+        } else {
+          filteredData.value = limited
+        }
       }
-      
+
       // Guardar en caché
-      setCache(queryParams, { allData: allData.value, filteredData: filteredData.value })
+      setCache(queryParams, { allData: shouldLimitReactive ? applyMobileLimit(items) : allData.value, filteredData: shouldLimitReactive ? applyMobileLimit(items) : filteredData.value })
+      await cacheSet(persistKey, { allData: applyMobileLimit(items), filteredData: applyMobileLimit(items) })
     } catch (error) {
       if (error.name === 'AbortError') {
         console.error('Búsqueda cancelada por timeout')
       } else {
         console.error('Error en búsqueda:', error)
       }
-      allData.value = []
-      filteredData.value = []
+
+      if (!hasDisplayedCache && (!allData.value || allData.value.length === 0)) {
+        metaError.value = 'No fue posible obtener datos del historial. Verifica la conexión con el backend.'
+      }
+
+      // Si hubo un fallo de red/servidor, eliminar caché persistente para evitar mostrar datos obsoletos o de prueba
+      try {
+        await cacheDel(persistKey)
+        if (!hasDisplayedCache) {
+          allData.value = []
+          filteredData.value = []
+        }
+        console.warn('[cache] Se ha eliminado la caché persistente para la queryKey:', persistKey)
+      } catch (e) {
+        console.warn('[cache] No se pudo eliminar la cache persistente:', e && e.message)
+      }
     } finally {
       loading.value = false
       const _dur = Math.round(perfNow() - _start)
@@ -213,6 +549,7 @@ export function useBiomedicalSearch() {
     loading,
     metaError,
     mobileLimitApplied,
+    serverTotal,
     hasRealValue,
     computeHasRealData,
     applyMobileLimit,
