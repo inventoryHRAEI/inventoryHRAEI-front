@@ -78,12 +78,24 @@ const breadcrumbsComputed = computed(() => {
     'op-resguardo': [
       { label: 'Inicio', to: '/dashboard', icon: HomeIcon },
       { label: 'Dashboard', to: '/dashboard', icon: CheckCircleIcon },
-      { label: 'Resguardo', to: currentPath, icon: DocumentCheckIcon }
+      { label: 'Gestión de Órdenes de Resguardo', to: '/op/order-management-resguardo', icon: DocumentCheckIcon },
+      { label: 'Crear / Editar Resguardo', to: currentPath, icon: PlusIcon }
+    ],
+    'order-management-resguardo': [
+      { label: 'Inicio', to: '/dashboard', icon: HomeIcon },
+      { label: 'Dashboard', to: '/dashboard', icon: CheckCircleIcon },
+      { label: 'Gestión de Órdenes de Resguardo', to: '/op/order-management-resguardo', icon: DocumentCheckIcon }
+    ],
+    'order-management-servicio': [
+      { label: 'Inicio', to: '/dashboard', icon: HomeIcon },
+      { label: 'Dashboard', to: '/dashboard', icon: CheckCircleIcon },
+      { label: 'Gestión de Órdenes de Servicio', to: '/op/order-management-servicio', icon: DocumentCheckIcon }
     ],
     'op-servicio': [
       { label: 'Inicio', to: '/dashboard', icon: HomeIcon },
       { label: 'Dashboard', to: '/dashboard', icon: CheckCircleIcon },
-      { label: 'Servicio', to: currentPath, icon: DocumentCheckIcon }
+      { label: 'Gestión de Órdenes de Servicio', to: '/op/order-management-servicio', icon: DocumentCheckIcon },
+      { label: 'Crear / Editar Servicio', to: currentPath, icon: PlusIcon }
     ],
     'op-inventario-biomedica': [
       { label: 'Inicio', to: '/dashboard', icon: HomeIcon },

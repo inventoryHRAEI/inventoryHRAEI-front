@@ -27,7 +27,7 @@
             <label class="field-label">Contraseña</label>
             <div class="input-wrapper password-field">
               <component :is="KeyIcon" class="input-icon" />
-              <input v-model="password" :type="show ? 'text' : 'password'" placeholder="••••••••" required class="input" />
+              <input v-model="password" :type="show ? 'text' : 'password'" placeholder=" • • • • • • • •" required class="input" />
               <button type="button" class="toggle-eye" @click="show = !show" :aria-label="show ? 'Ocultar contraseña' : 'Mostrar contraseña'" :aria-pressed="show">
                 <transition name="eye" mode="out-in">
                   <component :is="show ? EyeSlashIcon : EyeIcon" class="eye-icon" :key="show ? 'off' : 'on'" aria-hidden="true" />

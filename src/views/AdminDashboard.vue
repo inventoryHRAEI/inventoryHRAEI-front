@@ -22,7 +22,7 @@
           :key="op.name"
           :class="{ embedded: isEmbedded(op.name) }"
           role="button"
-          @click.prevent="go(op.name)"
+          @click.prevent="handleCardClick(op.name)"
         >
           <div class="card-media">
             <img class="card-img" :src="op.img" :alt="op.label" />
@@ -37,10 +37,11 @@
             <div class="card-title">{{ op.label }}</div>
             <div class="card-sub small">{{ op.desc }}</div>
             <div class="card-actions">
-              <button class="btn ghost btn-ripple" @click.stop.prevent="go(op.name)">
+              <button class="btn ghost btn-ripple" @click.stop.prevent="go(op.name === 'op-resguardo' ? 'order-management-resguardo' : op.name === 'op-servicio' ? 'order-management-servicio' : op.name)">
                 <ArrowRightIcon class="btn-icon" />
                 Ir
               </button>
+
             </div>
           </div>
         </div>
@@ -79,10 +80,11 @@ import imgConsumibles from '@/images/Consumibles_bajo_pedido.png'
 const router = useRouter()
 const route = useRoute()
 const loading = ref(true)
+let loadingTimeout = null
 
 const operations = [
-  { name: 'op-entrada', label: 'Órdenes de Entrada', desc: 'Captura de entradas de equipo/material.', img: imgEntrada, icon: ArrowDownTrayIcon },
-  { name: 'op-salida', label: 'Órdenes de Salida', desc: 'Registro de salidas y egresos.', img: imgSalida, icon: ArrowUpTrayIcon },
+  { name: 'order-management', label: 'Órdenes de Entrada', desc: 'Gestión y administración de órdenes de entrada.', img: imgEntrada, icon: ArrowDownTrayIcon },
+  { name: 'order-management-salida', label: 'Órdenes de Salida', desc: 'Gestión y administración de órdenes de salida.', img: imgSalida, icon: ArrowUpTrayIcon },
   { name: 'op-resguardo', label: 'Resguardo', desc: 'Asignaciones y resguardos.', img: imgResguardo, icon: ShieldCheckIcon },
   { name: 'op-servicio', label: 'Servicio', desc: 'Órdenes de servicio y mantenimiento.', img: imgServicio, icon: WrenchScrewdriverIcon },
   { name: 'op-inventario-biomedica', label: 'Inventario Biomédica', desc: 'Inventario y conteos.', img: imgInventario, icon: ClipboardDocumentListIcon },
@@ -94,6 +96,18 @@ const pendingByOperation = ref({})
 function go(name) {
   try { navigateAndRefresh(router, { name }) } catch {}
 }
+
+function handleCardClick(name) {
+   if (name === 'op-resguardo') {
+     try { navigateAndRefresh(router, { name: 'order-management-resguardo' }) } catch {}
+     return
+   }
+   if (name === 'op-servicio') {
+     try { navigateAndRefresh(router, { name: 'order-management-servicio' }) } catch {}
+     return
+   }
+   try { navigateAndRefresh(router, { name }) } catch {}
+ }
 
 function isEmbedded(opName) {
   try {
@@ -116,7 +130,7 @@ const showUsers = ref(false)
 const users = ref([])
 
 onMounted(async () => {
-  setTimeout(() => {
+  loadingTimeout = setTimeout(() => {
     loading.value = false
   }, 1500)
   
@@ -136,7 +150,10 @@ onMounted(async () => {
   // Refresh permission requests when global recreate event triggers
   const onRecreate = () => { try { loadPermissionRequests().catch(() => {}) } catch {} }
   window.addEventListener('app:force-recreate', onRecreate)
-  onBeforeUnmount(() => { window.removeEventListener('app:force-recreate', onRecreate) })
+  onBeforeUnmount(() => { 
+    if (loadingTimeout) clearTimeout(loadingTimeout)
+    window.removeEventListener('app:force-recreate', onRecreate) 
+  })
 })
 
 async function loadPermissionRequests() {
@@ -395,6 +412,19 @@ async function rejectRequest(id) {
     transform: scale(1.15); 
     opacity: 0.4;
   }
+}
+
+.area-card .card-body {
+  position: relative;
+}
+
+.card-actions {
+  margin-top: 12px;
+}
+.card-actions .btn.small {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  border-radius: 8px;
 }
 
 .area-card .card-body {

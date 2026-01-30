@@ -1,6 +1,6 @@
 <template>
   <div class="folio-input">
-    <span class="folio-prefix">E-</span>
+    <span class="folio-prefix">{{ prefix }}</span>
     <input
       class="control folio-num"
       :value="displayNumber"
@@ -17,8 +17,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-const props = defineProps({ modelValue: { type: String, default: '' }, digits: { type: Number, default: 6 } })
+import { computed, toRef } from 'vue'
+const props = defineProps({ modelValue: { type: String, default: '' }, digits: { type: Number, default: 6 }, prefix: { type: String, default: 'E-' } })
+const prefix = toRef(props, 'prefix')
 const emit = defineEmits(['update:modelValue'])
 
 // Extrae solo la parte numérica del folio si existe
@@ -42,7 +43,7 @@ function emitFull(num) {
     emit('update:modelValue', '')
   } else {
     const padded = cleaned.padStart(props.digits, '0')
-    emit('update:modelValue', `E-${padded}`)
+    emit('update:modelValue', `${props.prefix}${padded}`)
   }
 }
 

@@ -18,6 +18,9 @@ const OpServicio = () => import('./views/operations/OpServicio.vue')
 const OpInventarioBiomedica = () => import('./views/operations/BiomedicalTestingEnvironment.vue')
 const OpInsumosConsumibles = () => import('./views/operations/OpInsumosConsumibles.vue')
 const OrderManagement = () => import('./views/operations/OrderManagement.vue')
+const OrderManagementSalida = () => import('./views/operations/OrderManagementSalida.vue')
+const OrderManagementResguardo = () => import('./views/operations/OrderManagementResguardo.vue')
+const OrderManagementServicio = () => import('./views/operations/OrderManagementServicio.vue')
 
 const routes = [
     { path: '/', name: 'home', component: Home },
@@ -34,6 +37,9 @@ const routes = [
 
     // Rutas de operaciones (accesibles desde los dashboards)
     { path: '/op/order-management', name: 'order-management', component: OrderManagement, meta: { requiresAuth: true } },
+    { path: '/op/order-management-salida', name: 'order-management-salida', component: OrderManagementSalida, meta: { requiresAuth: true } },
+    { path: '/op/order-management-resguardo', name: 'order-management-resguardo', component: OrderManagementResguardo, meta: { requiresAuth: true } },
+    { path: '/op/order-management-servicio', name: 'order-management-servicio', component: OrderManagementServicio, meta: { requiresAuth: true } },
     { path: '/op/entrada', name: 'op-entrada', component: OpEntrada, meta: { requiresAuth: true } },
     { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
     { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
@@ -54,7 +60,7 @@ let initialSessionValidated = false
 router.beforeEach(async (to, from, next) => {
     console.debug('[ROUTER] beforeEach', { from: from && from.fullPath, to: to && to.fullPath })
     // Purga agresiva: limpiar caché cuando se sale de ciertas rutas
-    const routesToPurge = ['order-management', 'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio']
+    const routesToPurge = ['order-management', 'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio', 'order-management-salida', 'order-management-resguardo', 'order-management-servicio']
     if (routesToPurge.includes(from.name) && to.name !== from.name) {
         try {
             localStorage.removeItem('orders_list')

@@ -271,7 +271,7 @@ const dashboardRoutes = [
     'dashboard', 'admin-dashboard', 'admin-users', 'user-dashboard', 'forgot', 'reset',
     // Operaciones
     'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio', 'op-inventario-biomedica', 'op-insumos-consumibles',
-    'order-management', 'create-order'
+    'order-management', 'order-management-resguardo', 'order-management-servicio', 'create-order' 
 ]
 
 // Inicializar la topbar skeleton al cargar

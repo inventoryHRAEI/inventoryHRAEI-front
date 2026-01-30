@@ -26,8 +26,8 @@
           :class="{ embedded: isEmbedded(op.name) }"
           role="button"
           tabindex="0"
-          @click.prevent="go(op.name)"
-          @keyup.enter="go(op.name)"
+          @click.prevent="handleCardClick(op.name)"
+          @keyup.enter="handleCardClick(op.name)"
           :aria-label="`Ir a ${op.label}`"
         >
           <div class="card-media">
@@ -39,6 +39,7 @@
           <div class="card-body">
             <div class="card-title">{{ op.label }}</div>
             <div class="card-desc">{{ op.desc }}</div>
+
             <div v-if="op.badge" class="badge-modern badge-success badge-pulse">
               {{ op.badge }}
             </div>
@@ -76,6 +77,7 @@ const router = useRouter()
 const route = useRoute()
 const user = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre') }
 const loading = ref(true)
+let loadingTimeout = null
 
 import imgEntrada from '@/images/entrada_equips.png'
 import imgSalida from '@/images/salida_equipo.png'
@@ -86,7 +88,7 @@ import imgConsumibles from '@/images/Consumibles_bajo_pedido.png'
 
 const operations = [
   { name: 'order-management', label: 'Órdenes de Entrada', desc: 'Gestión y administración de órdenes de entrada.', img: imgEntrada, icon: ArrowDownTrayIcon },
-  { name: 'op-salida', label: 'Órdenes de Salida', desc: 'Registro de salidas y egresos.', img: imgSalida, icon: ArrowUpTrayIcon },
+  { name: 'order-management-salida', label: 'Órdenes de Salida', desc: 'Gestión y administración de órdenes de salida.', img: imgSalida, icon: ArrowUpTrayIcon },
   { name: 'op-resguardo', label: 'Resguardo', desc: 'Asignaciones y resguardos.', img: imgResguardo, icon: ShieldCheckIcon },
   { name: 'op-servicio', label: 'Servicio', desc: 'Órdenes de servicio y mantenimiento.', img: imgServicio, icon: WrenchScrewdriverIcon },
   { name: 'op-inventario-biomedica', label: 'Inventario Biomédica', desc: 'Inventario y conteos.', img: imgInventario, icon: ClipboardDocumentListIcon },
@@ -110,8 +112,22 @@ function go(name) {
   try { navigateAndRefresh(router, { name }) } catch {}
 }
 
+function handleCardClick(name) {
+   // For Resguardo, route the main card click to the order-management screen
+   if (name === 'op-resguardo') {
+     try { navigateAndRefresh(router, { name: 'order-management-resguardo' }) } catch {}
+     return
+   }
+   // For Servicio, route the main card click to the order-management-servicio screen
+   if (name === 'op-servicio') {
+     try { navigateAndRefresh(router, { name: 'order-management-servicio' }) } catch {}
+     return
+   }
+   try { navigateAndRefresh(router, { name }) } catch {}
+ }
+
 onMounted(() => {
-  setTimeout(async () => {
+  loadingTimeout = setTimeout(async () => {
     loading.value = false
     // Diagnostic: check main container children after a frame
     try {
@@ -125,10 +141,13 @@ onMounted(() => {
   try { window.dispatchEvent(new CustomEvent('route:mounted', { detail: { name: route.name, path: route.fullPath } })); console.debug('[UserDashboard] dispatched route:mounted', { name: route.name, path: route.fullPath }) } catch (e) {}
 
   const onRecreate = () => {
-    try { pendingStore.refresh().catch(() => {}) } catch {}
+    // try { pendingStore.refresh().catch(() => {}) } catch {}
   }
   window.addEventListener('app:force-recreate', onRecreate)
-  onBeforeUnmount(() => { window.removeEventListener('app:force-recreate', onRecreate) })
+  onBeforeUnmount(() => { 
+    if (loadingTimeout) clearTimeout(loadingTimeout)
+    window.removeEventListener('app:force-recreate', onRecreate) 
+  })
 })
 </script>
 
@@ -197,6 +216,15 @@ onMounted(() => {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.card-actions {
+  margin-top: 12px;
+}
+.card-actions .btn.small {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  border-radius: 8px;
 }
 
 .area-card {

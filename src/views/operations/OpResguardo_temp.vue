@@ -1,27 +1,19 @@
 <template>
-    <div
-        :class="{ 'opresguardo-readonly': isReadOnly }"
-        :aria-readonly="isReadOnly ? 'true' : 'false'"
-        @beforeinput.capture="onReadOnlyBeforeInput"
-        @input.capture="onReadOnlyInput"
-        @change.capture="onReadOnlyChange"
-        @paste.capture="onReadOnlyPaste"
-        @keydown.capture="onReadOnlyKeydown"
-        @focusin.capture="onReadOnlyFocusIn"
-        @mousedown.capture="onReadOnlyMouseDown"
-    >
+    <div :class="{ 'opentrada-readonly': isReadOnly }" :aria-readonly="isReadOnly ? 'true' : 'false'"
+        @beforeinput.capture="onReadOnlyBeforeInput" @input.capture="onReadOnlyInput" @change.capture="onReadOnlyChange"
+        @paste.capture="onReadOnlyPaste" @keydown.capture="onReadOnlyKeydown" @focusin.capture="onReadOnlyFocusIn"
+        @mousedown.capture="onReadOnlyMouseDown">
         <FormShell>
             <template #title v-if="props.modo !== 'editar'">
-                <div class="resguardo-title-row">
+                <div class="entrada-title-row">
                     <button class="btn-back-to-orders" @click="goToOrderManagement" title="Volver a gestión de órdenes">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="19" y1="12" x2="5" y2="12"></line>
                             <polyline points="12 19 5 12 12 5"></polyline>
                         </svg>
                     </button>
-                    <span>Órdenes de Resguardo</span>
+                    <span>Órdenes de Entrada</span>
                 </div>
             </template>
 
@@ -35,15 +27,15 @@
                         </svg>
                         <span>Editando</span>
                     </div>
-                    <h2 class="edit-title">Editando orden de resguardo</h2>
+                    <h2 class="edit-title">Editando orden de entrada</h2>
                     <p class="edit-subtitle" v-if="ordenInfo.folio">Folio: <strong>{{ ordenInfo.folio }}</strong></p>
                 </div>
             </template>
 
             <template #body>
                 <Breadcrumbs v-if="props.modo !== 'editar'" />
-                <div class="op-card insumos op-resguardo-form" ref="rootRef">
-                    <form @submit.prevent="onSubmit" class="form-grid" id="resguardo-form" novalidate>
+                <div class="op-card insumos op-entrada-form" ref="rootRef">
+                    <form @submit.prevent="onSubmit" class="form-grid" id="entrada-form" novalidate>
                         <div class="section-card combined-card observaciones-support">
                             <div class="section-head">
                                 <div class="section-title-with-icon">
@@ -55,7 +47,7 @@
                                     </svg>
                                     <h4>Datos del Solicitante</h4>
                                 </div>
-                                <small class="hint">Información de quien solicita el resguardo</small>
+                                <small class="hint">Información de quien solicita la entrada</small>
                             </div>
                             <div class="section-grid combined">
                                 <!-- Primera fila -->
@@ -79,8 +71,8 @@
                                 <div :class="['field', diffFieldClass('folio')]">
                                     <label>Folio</label>
                                     <div style="display:flex; flex-direction:column; gap:6px">
-                                        <FolioInput v-model="form.folio" prefix="R-" />
-                                        <small class="hint">Formato requerido: <code>R-001</code></small>
+                                        <FolioInput v-model="form.folio" />
+                                        <small class="hint">Formato requerido: <code>E-001</code></small>
                                     </div>
                                 </div>
 
@@ -128,7 +120,7 @@
                             </div>
                         </div>
 
-                        <!-- Motivo y Descripción de Resguardo -->
+                        <!-- Motivo y Descripción de Entrada -->
                         <div class="section-card combined-card">
                             <div class="section-head">
                                 <div class="section-title-with-icon">
@@ -137,34 +129,34 @@
                                         stroke-linejoin="round">
                                         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                                     </svg>
-                                    <h4>Motivo y Descripción de Resguardo</h4>
+                                    <h4>Motivo y Descripción de Entrada</h4>
                                 </div>
-                                <small class="hint">Especifica el motivo y una descripción del resguardo</small>
+                                <small class="hint">Especifica el motivo y una descripción de la entrada</small>
                             </div>
                             <div class="section-grid combined">
-                                <div :class="['field', diffFieldClass('motivoResguardo')]" style="grid-column: span 6;">
-                                    <label>Motivo de Resguardo</label>
-                                    <CustomSelect v-model="form.motivoResguardo" :options="motivoResguardoOptions"
+                                <div :class="['field', diffFieldClass('motivoEntrada')]" style="grid-column: span 6;">
+                                    <label>Motivo de Entrada</label>
+                                    <CustomSelect v-model="form.motivoEntrada" :options="motivoEntradaOptions"
                                         placeholder="Seleccionar motivo" />
                                 </div>
 
-                                <div v-if="form.motivoResguardo === 'otro'"
+                                <div v-if="form.motivoEntrada === 'otro'"
                                     :class="['field', diffFieldClass('otroMotivo')]" style="grid-column: span 6;">
-                                    <label>Especifique Motivo de Resguardo</label>
+                                    <label>Especifique Motivo de Entrada</label>
                                     <input class="control" v-model.trim="form.otroMotivo"
                                         placeholder="Especifique el motivo" />
                                 </div>
 
                                 <div :class="['field', diffFieldClass('descripcion')]" style="grid-column: 1 / -1;">
-                                    <label>Descripción de Resguardo</label>
+                                    <label>Descripción de Entrada</label>
                                     <textarea class="control" v-model.trim="form.descripcion"
-                                        placeholder="Describe los detalles del resguardo"
+                                        placeholder="Describe los detalles de la entrada"
                                         style="resize: vertical; min-height: 180px; padding: 12px 18px;"></textarea>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Equipo Médico, Accesorio o Consumible para Resguardo -->
+                        <!-- Equipo Médico, Accesorio o Consumible que Entra -->
                         <div class="section-card combined-card">
                             <div class="section-head">
                                 <div class="section-title-with-icon">
@@ -175,9 +167,9 @@
                                         <line x1="12" y1="8" x2="12" y2="16"></line>
                                         <line x1="8" y1="12" x2="16" y2="12"></line>
                                     </svg>
-                                    <h4>Equipo Médico, Accesorio o Consumible para Resguardo</h4>
+                                    <h4>Equipo Médico, Accesorio o Consumible que Entra</h4>
                                 </div>
-                                <small class="hint">Agrega uno o más elementos para resguardo</small>
+                                <small class="hint">Agrega uno o más elementos que ingresan</small>
                             </div>
 
                             <!-- Formulario para agregar nuevo item -->
@@ -187,8 +179,8 @@
                                     <div class="add-item-controls">
                                         <div class="field field--tipo" :class="{ 'is-shifted': newItem.tipo }"
                                             :style="{ position: 'relative', zIndex: 1001 }">
-                                            <label class="form-label form-label--center">¿Qué se resguarda?</label>
-                                            <CustomSelect v-model="newItem.tipo" :options="tipoResguardoOptions"
+                                            <label class="form-label form-label--center">¿Qué entra?</label>
+                                            <CustomSelect v-model="newItem.tipo" :options="tipoEntradaOptions"
                                                 placeholder="Seleccionar tipo" @toggle="tipoDropdownOpen = $event" />
                                         </div>
                                         <transition name="slide-cantidad" @enter="onEnterCantidad"
@@ -615,9 +607,9 @@
                                     </div>
                                 </div>
                             </div>
-                            <p v-if="!(form.equiposEntrada && form.equiposEntrada.length)" class="section-empty-hint"
+                            <p v-if="form.equiposEntrada.length === 0" class="section-empty-hint"
                                 :class="{ 'is-covered': tipoDropdownOpen }">
-                                No se han agregado equipos para resguardo
+                                No se han agregado equipos, accesorios, consumibles o refacciones
                             </p>
                         </div>
 
@@ -742,7 +734,7 @@
                             </svg>
                             Cancelar
                         </button>
-                        <button class="btn primary save-btn" type="submit" form="resguardo-form"
+                        <button class="btn primary save-btn" type="submit" form="entrada-form"
                             :disabled="loading || !isValid">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -877,7 +869,7 @@ import { saveAs } from 'file-saver'
 import { authedFetch } from '@/utils/api.js'
 import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 
-const LOCAL_KEY = 'op-resguardo'
+const LOCAL_KEY = 'op-entrada'
 const ORDERS_LIST_KEY = 'orders_list'
 
 // Router para navegación
