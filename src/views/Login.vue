@@ -98,19 +98,25 @@ onMounted(() => {
   } catch {}
 })
 
+/**
+ * Procesa el inicio de sesión del usuario.
+ * Realiza validaciones de ventana activa, autenticación con el backend,
+ * y persistencia de datos de sesión en localStorage.
+ */
 const login = async () => {
   error.value = ''
   
-  // Verificar si ya hay una ventana activa antes de hacer login
+  // SEGURIDAD: Verificar si ya hay una ventana activa con sesión para evitar duplicados
   const activeWindowId = localStorage.getItem('activeWindowId')
   const currentWindowId = sessionStorage.getItem('windowId')
   
   if (activeWindowId && activeWindowId !== currentWindowId) {
-    // Verificar si la ventana activa sigue viva
+    // Validar si la otra ventana sigue reportando actividad (heartbeat)
     const lastHeartbeat = localStorage.getItem('activeWindowHeartbeat')
     if (lastHeartbeat) {
       const timeSinceHeartbeat = Date.now() - parseInt(lastHeartbeat)
-      if (timeSinceHeartbeat < 3000) { // Ventana activa detectada en los últimos 3 segundos
+      // Si la otra ventana tuvo actividad hace menos de 3s, bloqueamos el nuevo login
+      if (timeSinceHeartbeat < 3000) {
         error.value = 'Ya existe una sesión activa en otra ventana. Cierra esa ventana primero.'
         notifier.error(error.value)
         return
@@ -119,45 +125,52 @@ const login = async () => {
   }
   
   try {
+    // API CALL: Enviamos credenciales al endpoint de autenticación
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // IMPORTANTE: permite que el backend establezca la cookie
+      credentials: 'include', // Necesario para recibir la cookie httpOnly del servidor
       body: JSON.stringify({ email: email.value, password: password.value })
     })
+
     let data
-    try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Respuesta vacía' } }
+    try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Error en respuesta' } }
     if (!res.ok) throw new Error(data.msg || 'Credenciales inválidas')
     
-    // El token ya está en una cookie httpOnly, solo guardamos datos del usuario
+    // PERSISTENCIA: El token reside en la cookie, guardamos metadata del perfil
     if (data.role) localStorage.setItem('role', data.role)
     if (data.nombre) localStorage.setItem('nombre', data.nombre)
     if (data.email) localStorage.setItem('email', data.email)
-    const usuario = { nombre: data.nombre, role: data.role, email: data.email, foto: data.foto }
+    
+    const usuario = { 
+      nombre: data.nombre, 
+      role: data.role, 
+      email: data.email, 
+      foto: data.foto 
+    }
     localStorage.setItem('user', JSON.stringify(usuario))
     
-    // Guardar o limpiar el email recordado
+    // OPCIÓN RECORDAR: Guardar email para futuros accesos si el usuario lo marcó
     try {
       if (remember.value) localStorage.setItem('rememberedEmail', email.value)
       else localStorage.removeItem('rememberedEmail')
     } catch {}
     
-    // Marcar esta ventana como la activa
+    // GESTIÓN DE VENTANAS: Marcamos esta instancia como la principal activa
     try {
-      console.log('login: reclamando este window como activo')
       windowManager.setAsActive()
-      // Si esta ventana fue abierta por script desde otra, intentar cerrar la ventana que abrió este (opener)
-      try {
-        if (window.opener && typeof window.opener.close === 'function') {
-          console.log('Cerrando la ventana que abrió este login (opener)')
-          window.opener.close()
-        }
-      } catch (err) {
-        console.warn('No se pudo cerrar la ventana opener:', err)
+      // Limpieza de ventanas huérfanas si este login fue disparado por un popup
+      if (window.opener && typeof window.opener.close === 'function') {
+        window.opener.close()
       }
-    } catch (e) { console.warn('windowManager no disponible', e) }
-    notifier.success('Sesión iniciada')
+    } catch (e) { console.warn('Sync manager logic skipped', e) }
+
+    notifier.success('¡Bienvenido al sistema!')
+    
+    // Notificamos a otros componentes que la sesión ha cambiado
     try { window.dispatchEvent(new Event('session:updated')) } catch {}
+    
+    // Redirección al área principal
     router.push({ name: 'dashboard' })
   } catch (e) {
     error.value = e.message

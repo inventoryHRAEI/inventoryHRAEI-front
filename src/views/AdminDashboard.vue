@@ -17,7 +17,7 @@
       
       <div v-else class="area-grid">
         <div
-          class="area-card card-shimmer"
+          class="area-card"
           v-for="op in operations"
           :key="op.name"
           :class="{ embedded: isEmbedded(op.name) }"
@@ -115,9 +115,10 @@ const showUsers = ref(false)
 const users = ref([])
 
 onMounted(async () => {
+  // Optimización de carga: 600ms
   setTimeout(() => {
     loading.value = false
-  }, 1500)
+  }, 600)
   
   try { await pendingStore.refresh() } catch {}
   
@@ -225,31 +226,28 @@ async function rejectRequest(id) {
 
 .area-card {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 20px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border: 1px solid rgba(16, 24, 40, 0.06);
-  box-shadow: 0 6px 18px rgba(11, 37, 64, 0.04);
-  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              box-shadow 0.28s ease,
-              border-color 0.28s ease;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   cursor: pointer;
+  position: relative;
 }
 
 .area-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 28px 56px rgba(11, 37, 64, 0.15),
-              0 0 0 1px rgba(46, 221, 90, 0.15);
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  border-color: rgba(46, 221, 90, 0.5);
 }
 
 .area-card .card-media {
-  height: 130px;
+  height: 140px;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
 }
 
@@ -257,41 +255,45 @@ async function rejectRequest(id) {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
-  border-top-left-radius: 14px;
-  border-top-right-radius: 14px;
-  transition: transform 0.3s ease;
+  filter: brightness(0.9) contrast(1.1);
+  transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .area-card:hover .card-media img {
-  transform: scale(1.05);
+  transform: scale(1.1);
+  filter: brightness(1);
 }
 
 .card-icon-badge {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  width: 44px;
-  height: 44px;
+  top: 15px;
+  left: 15px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   z-index: 5;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.4s ease;
 }
 
 .card-icon-badge svg {
-  width: 24px;
-  height: 24px;
-  color: #0bb828;
+  width: 26px;
+  height: 26px;
+  color: #10b981;
 }
 
 .area-card:hover .card-icon-badge {
-  transform: scale(1.1) rotate(-5deg);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform: scale(1.15) rotate(-8deg);
+  background: #10b981;
+}
+
+.area-card:hover .card-icon-badge svg {
+  color: white;
 }
 
 .pending-badge {
@@ -305,6 +307,7 @@ async function rejectRequest(id) {
   font-weight: 700;
   font-size: 0.75rem;
   box-shadow: 0 4px 12px rgba(11, 184, 40, 0.3);
+  z-index: 10;
 }
 
 .badge-pulse {
@@ -327,22 +330,21 @@ async function rejectRequest(id) {
 }
 
 .area-card .card-body {
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  padding: 20px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.5), rgba(255,255,255,0.8));
 }
 
 .area-card .card-title {
   font-weight: 800;
-  font-size: 1rem;
-  color: #0b2540;
+  font-size: 1.1rem;
+  color: #1e293b;
+  margin-bottom: 4px;
 }
 
 .area-card .card-sub.small {
-  font-size: 0.85rem;
-  color: #52607a;
-  line-height: 1.4;
+  font-size: 0.9rem;
+  color: #64748b;
+  line-height: 1.5;
 }
 
 .card-actions {
@@ -383,8 +385,7 @@ async function rejectRequest(id) {
 }
 
 .area-card.embedded .card-title,
-.area-card.embedded .card-sub,
-.area-card.embedded .card-desc {
+.area-card.embedded .card-sub {
   color: #e6ebf5;
 }
 

@@ -111,7 +111,7 @@ function go(name) {
 onMounted(() => {
   setTimeout(() => {
     loading.value = false
-  }, 1500)
+  }, 600)
 })
 </script>
 
@@ -165,40 +165,28 @@ onMounted(() => {
 
 .area-card {
   width: 100%;
-  border-radius: 14px;
+  border-radius: 20px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border: 1px solid rgba(16, 24, 40, 0.06);
-  box-shadow: 0 6px 18px rgba(11, 37, 64, 0.04);
-  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), 
-              box-shadow 0.28s ease,
-              border-color 0.28s ease;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.07);
+  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   cursor: pointer;
-}
-
-.area-card:focus {
-  outline: 2px solid rgba(46, 221, 90, 0.4);
-  outline-offset: 4px;
+  position: relative;
 }
 
 .area-card:hover {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 28px 56px rgba(11, 37, 64, 0.15),
-              0 0 0 1px rgba(46, 221, 90, 0.15);
-}
-
-.area-card:active {
-  transform: translateY(-4px) scale(1.01);
+  transform: translateY(-10px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  border-color: rgba(46, 221, 90, 0.5);
 }
 
 .area-card .card-media {
-  height: 130px;
+  height: 140px;
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
 }
 
@@ -206,61 +194,63 @@ onMounted(() => {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
-  border-top-left-radius: 14px;
-  border-top-right-radius: 14px;
-  transition: transform 0.3s ease;
+  filter: brightness(0.9) contrast(1.1);
+  transition: transform 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
 }
 
 .area-card:hover .card-media img {
-  transform: scale(1.05);
+  transform: scale(1.1);
+  filter: brightness(1);
 }
 
 .card-icon-badge {
   position: absolute;
-  top: 12px;
-  left: 12px;
-  width: 44px;
-  height: 44px;
+  top: 15px;
+  left: 15px;
+  width: 50px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   z-index: 5;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: all 0.4s ease;
 }
 
 .card-icon-badge svg {
-  width: 24px;
-  height: 24px;
-  color: #0bb828;
+  width: 26px;
+  height: 26px;
+  color: #10b981;
 }
 
 .area-card:hover .card-icon-badge {
-  transform: scale(1.1) rotate(-5deg);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform: scale(1.15) rotate(-8deg);
+  background: #10b981;
+}
+
+.area-card:hover .card-icon-badge svg {
+  color: white;
 }
 
 .area-card .card-body {
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  padding: 20px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.5), rgba(255,255,255,0.8));
 }
 
 .area-card .card-title {
   font-weight: 800;
-  font-size: 1rem;
-  color: #0b2540;
+  font-size: 1.1rem;
+  color: #1e293b;
 }
 
 .card-desc {
   margin-top: 4px;
-  color: #52607a;
-  font-size: 0.85rem;
-  line-height: 1.4;
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 .badge-modern {
