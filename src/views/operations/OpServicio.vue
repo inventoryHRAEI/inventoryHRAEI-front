@@ -3,6 +3,7 @@
         @beforeinput.capture="onReadOnlyBeforeInput" @input.capture="onReadOnlyInput" @change.capture="onReadOnlyChange"
         @paste.capture="onReadOnlyPaste" @keydown.capture="onReadOnlyKeydown" @focusin.capture="onReadOnlyFocusIn"
         @mousedown.capture="onReadOnlyMouseDown">
+        
         <FormShell>
             <template #title v-if="props.modo !== 'editar'">
                 <div class="servicio-title-row">
@@ -14,6 +15,9 @@
                         </svg>
                     </button>
                     <span>Órdenes de Servicio</span>
+                    <button v-if="isAdmin" class="admin-settings-btn" @click="openAdminSettings" title="Configuración de administrador">
+                        <Settings :size="20" />
+                    </button>
                 </div>
             </template>
 
@@ -29,6 +33,9 @@
                     </div>
                     <h2 class="edit-title">Editando orden de servicio</h2>
                     <p class="edit-subtitle" v-if="ordenInfo.folio">Folio: <strong>{{ ordenInfo.folio }}</strong></p>
+                    <button v-if="isAdmin" class="admin-settings-btn" @click="openAdminSettings" title="Configuración de administrador">
+                        <Settings :size="20" />
+                    </button>
                 </div>
             </template>
 
@@ -51,25 +58,26 @@
                             </div>
                             <div class="section-grid combined">
                                 <!-- Primera fila -->
-                                <div :class="['field', diffFieldClass('nombreSolicitante')]">
-                                    <label>Nombre del Solicitante</label>
+                                <div v-if="!isBaseReplaced('nombreSolicitante')" :class="['field', diffFieldClass('nombreSolicitante')]">
+                                    <label>{{ getBaseLabel('nombreSolicitante', 'Nombre del Solicitante') }}</label>
                                     <input class="control" v-model.trim="form.nombreSolicitante"
-                                        placeholder="Ej. Dr. Juan Pérez" />
+                                        :placeholder="getBasePlaceholder('nombreSolicitante', 'Ej. Juan Pérez')" />
                                 </div>
 
-                                <div :class="['field', diffFieldClass('servicio')]">
-                                    <label>Servicio</label>
-                                    <input class="control" v-model.trim="form.servicio" placeholder="Ej. Urgencias" />
+                                <div v-if="!isBaseReplaced('servicio')" :class="['field', diffFieldClass('servicio')]">
+                                    <label>{{ getBaseLabel('servicio', 'Servicio') }}</label>
+                                    <input class="control" v-model.trim="form.servicio"
+                                        :placeholder="getBasePlaceholder('servicio', 'Ej. Urgencias')" />
                                 </div>
 
-                                <div :class="['field', diffFieldClass('especialidad')]">
-                                    <label>Especialidad</label>
+                                <div v-if="!isBaseReplaced('especialidad')" :class="['field', diffFieldClass('especialidad')]">
+                                    <label>{{ getBaseLabel('especialidad', 'Especialidad') }}</label>
                                     <input class="control" v-model.trim="form.especialidad"
-                                        placeholder="Ej. Urgencias" />
+                                        :placeholder="getBasePlaceholder('especialidad', 'Ej. Cardiología')" />
                                 </div>
 
-                                <div :class="['field', diffFieldClass('folio')]">
-                                    <label>Folio</label>
+                                <div v-if="!isBaseReplaced('folio')" :class="['field', diffFieldClass('folio')]">
+                                    <label>{{ getBaseLabel('folio', 'Folio') }}</label>
                                     <div style="display:flex; flex-direction:column; gap:6px">
                                         <FolioInput v-model="form.folio" prefix="O-" />
                                         <small class="hint">Formato requerido: <code>O-001</code></small>
@@ -77,27 +85,27 @@
                                 </div>
 
                                 <!-- Segunda fila -->
-                                <div :class="['field', diffFieldClass('fecha')]">
-                                    <label>Fecha</label>
+                                <div v-if="!isBaseReplaced('fecha')" :class="['field', diffFieldClass('fecha')]">
+                                    <label>{{ getBaseLabel('fecha', 'Fecha') }}</label>
                                     <div style="display:flex; flex-direction:column; gap:6px">
                                         <DatePicker v-model="form.fechaISO" :forceFlowbite="true"
-                                            placeholder="Seleccionar fecha" />
+                                            :placeholder="getBasePlaceholder('fecha', 'Seleccionar fecha')" />
                                         <small class="hint" style="font-size:0.9rem">Seleccionado: <strong>{{
                                             formatDate(form.fecha) }}</strong></small>
                                     </div>
                                 </div>
 
-                                <div :class="['field', diffFieldClass('horaInicio')]">
-                                    <label>Hora de inicio</label>
-                                    <TimePicker v-model="form.horaInicio" placeholder="14:00" />
+                                <div v-if="!isBaseReplaced('horaInicio')" :class="['field', diffFieldClass('horaInicio')]">
+                                    <label>{{ getBaseLabel('horaInicio', 'Hora de inicio') }}</label>
+                                    <TimePicker v-model="form.horaInicio" :placeholder="getBasePlaceholder('horaInicio', 'Ej. 08:30')" />
                                 </div>
 
-                                <div :class="['field', diffFieldClass('horaTermino')]">
-                                    <label>Hora de término</label>
+                                <div v-if="!isBaseReplaced('horaTermino')" :class="['field', diffFieldClass('horaTermino')]">
+                                    <label>{{ getBaseLabel('horaTermino', 'Hora de término') }}</label>
                                     <div class="term-input-row">
                                         <input ref="endTimeInputRef" class="control term-input" type="text"
                                             :value="displayEndTime" readonly tabindex="-1" aria-disabled="true"
-                                            placeholder="Se calcula automáticamente" />
+                                            :placeholder="getBasePlaceholder('horaTermino', 'Se calcula automáticamente')" />
                                         <button ref="helpIconRef" type="button" class="help-icon-btn"
                                             aria-label="La hora de término se establece al pulsar Guardar orden. No editable."
                                             @mouseenter="showTermTooltip" @mouseleave="hideTermTooltip"
@@ -117,6 +125,11 @@
                                         </Teleport>
                                     </div>
                                 </div>
+                                <DynamicFieldsSection
+                                    :schema="formSchema"
+                                    :model="form.extraFields"
+                                    sectionId="solicitante"
+                                />
                             </div>
                         </div>
 
@@ -134,25 +147,30 @@
                                 <small class="hint">Especifica el motivo y una descripción del servicio</small>
                             </div>
                             <div class="section-grid combined">
-                                <div :class="['field', diffFieldClass('motivoEntrada')]" style="grid-column: span 6;">
-                                    <label>Motivo de Servicio</label>
-                                    <CustomSelect v-model="form.motivoEntrada" :options="motivoEntradaOptions"
-                                        placeholder="Seleccionar motivo" />
+                                <div v-if="!isBaseReplaced('motivoEntrada')" :class="['field', diffFieldClass('motivoEntrada')]" style="grid-column: span 6;">
+                                    <label>{{ getBaseLabel('motivoEntrada', 'Motivo de Servicio') }}</label>
+                                    <CustomSelect v-model="form.motivoEntrada" :options="motivoEntradaOptionsComputed"
+                                        :placeholder="getBasePlaceholder('motivoEntrada', 'Seleccionar motivo')" />
                                 </div>
 
-                                <div v-if="form.motivoEntrada === 'otro'"
+                                <div v-if="!isBaseReplaced('otroMotivo') && form.motivoEntrada === 'otro'"
                                     :class="['field', diffFieldClass('otroMotivo')]" style="grid-column: span 6;">
-                                    <label>Especifique Motivo de Servicio</label>
+                                    <label>{{ getBaseLabel('otroMotivo', 'Especifique Motivo de Servicio') }}</label>
                                     <input class="control" v-model.trim="form.otroMotivo"
-                                        placeholder="Especifique el motivo" />
+                                        :placeholder="getBasePlaceholder('otroMotivo', 'Escribe el motivo')" />
                                 </div>
 
-                                <div :class="['field', diffFieldClass('descripcion')]" style="grid-column: 1 / -1;">
-                                    <label>Descripción del Servicio</label>
+                                <div v-if="!isBaseReplaced('descripcion')" :class="['field', diffFieldClass('descripcion')]" style="grid-column: 1 / -1;">
+                                    <label>{{ getBaseLabel('descripcion', 'Descripción de Servicio') }}</label>
                                     <textarea class="control" v-model.trim="form.descripcion"
-                                        placeholder="Describe los detalles del servicio"
+                                        :placeholder="getBasePlaceholder('descripcion', 'Describe los detalles')"
                                         style="resize: vertical; min-height: 180px; padding: 12px 18px;"></textarea>
                                 </div>
+                                <DynamicFieldsSection
+                                    :schema="formSchema"
+                                    :model="form.extraFields"
+                                    sectionId="motivo"
+                                />
                             </div>
                         </div>
 
@@ -229,8 +247,14 @@
                                                     <div class="field field-compact">
                                                         <label class="field-label">{{
                                                             getNombreLabel() }}</label>
-                                                        <input class="control" v-model.trim="unidad.nombre"
-                                                            :placeholder="getNombrePlaceholder()" />
+                                                        <SearchableInput
+                                                            v-model="unidad.nombre"
+                                                            :suggestions="dynamicSuggestions"
+                                                            :tipo="newItem.tipo"
+                                                            field-name="nombre"
+                                                            :placeholder="getNombrePlaceholder()"
+                                                            @select="(suggestion) => fillUnitFromSuggestion(unidad, suggestion)"
+                                                        />
                                                     </div>
                                                     <!-- colocar cantidad a la derecha del nombre -->
                                                     <div class="field field-medium unit-qty-field">
@@ -242,8 +266,14 @@
                                                     <!-- Fila 2: Marca y Ubicación -->
                                                     <div class="field field-medium">
                                                         <label class="field-label">Marca</label>
-                                                        <input class="control" v-model.trim="unidad.marca"
-                                                            placeholder="Ej. Philips" />
+                                                        <SearchableInput
+                                                            v-model="unidad.marca"
+                                                            :suggestions="dynamicSuggestions"
+                                                            :tipo="newItem.tipo"
+                                                            field-name="marca"
+                                                            placeholder="Ej. Philips"
+                                                            @select="(suggestion) => fillUnitFromSuggestion(unidad, suggestion)"
+                                                        />
                                                     </div>
                                                     <div class="field field-medium">
                                                         <label class="field-label">Ubicación</label>
@@ -300,8 +330,13 @@
                                                     <div class="field field-medium">
                                                         <label class="field-label">{{
                                                             getNombreLabel() }}</label>
-                                                        <input class="control" v-model.trim="unidad.nombre"
-                                                            :placeholder="getNombrePlaceholder()" />
+                                                        <SearchableInput
+                                                            v-model="unidad.nombre"
+                                                            :suggestions="insumosRefaccionesList"
+                                                            field-name="nombre"
+                                                            :placeholder="getNombrePlaceholder()"
+                                                            @select="(suggestion) => fillUnitFromSuggestion(unidad, suggestion)"
+                                                        />
                                                     </div>
                                                     <!-- cantidad al lado del nombre para mantener layout de 2 columnas -->
                                                     <div class="field field-medium unit-qty-field">
@@ -313,8 +348,13 @@
 
                                                     <div class="field field-medium">
                                                         <label class="field-label">Marca</label>
-                                                        <input class="control" v-model.trim="unidad.marca"
-                                                            placeholder="Ej. Philips" />
+                                                        <SearchableInput
+                                                            v-model="unidad.marca"
+                                                            :suggestions="insumosRefaccionesList"
+                                                            field-name="marca"
+                                                            placeholder="Ej. Philips"
+                                                            @select="(suggestion) => fillUnitFromSuggestion(unidad, suggestion)"
+                                                        />
                                                     </div>
 
                                                     <div class="field field-medium">
@@ -611,6 +651,13 @@
                                 :class="{ 'is-covered': tipoDropdownOpen }">
                                 No se han agregado equipos para servicio
                             </p>
+                            <div class="section-grid combined">
+                                <DynamicFieldsSection
+                                    :schema="formSchema"
+                                    :model="form.extraFields"
+                                    sectionId="equipos"
+                                />
+                            </div>
                         </div>
 
                         <!-- Observaciones e Ingeniero Residente (Apoyo) -->
@@ -630,10 +677,10 @@
                                     apoyo</small>
                             </div>
                             <div class="section-grid combined">
-                                <div :class="['field', diffFieldClass('observaciones')]" style="grid-column: span 12;">
-                                    <label>Observaciones</label>
+                                <div v-if="!isBaseReplaced('observaciones')" :class="['field', diffFieldClass('observaciones')]" style="grid-column: span 12;">
+                                    <label>{{ getBaseLabel('observaciones', 'Observaciones') }}</label>
                                     <textarea class="control" v-model.trim="form.observaciones"
-                                        placeholder="Escribe observaciones aquí" style="min-height: 120px;"></textarea>
+                                        :placeholder="getBasePlaceholder('observaciones', 'Escribe observaciones aquí')" style="min-height: 120px;"></textarea>
                                     <div style="display:flex; gap:12px; align-items:center; margin-top:8px;">
                                         <label v-if="!isReadOnly" class="btn secondary"
                                             style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; padding:8px 12px;">
@@ -655,11 +702,16 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div :class="['field', 'ing-res', diffFieldClass('nombreIngeniero')]">
-                                    <label>Ingeniero residente (apoyo)</label>
+                                <div v-if="!isBaseReplaced('nombreIngeniero')" :class="['field', 'ing-res', diffFieldClass('nombreIngeniero')]">
+                                    <label>{{ getBaseLabel('nombreIngeniero', 'Ingeniero residente (apoyo)') }}</label>
                                     <input class="control" v-model.trim="form.nombreIngeniero"
-                                        placeholder="Nombre del ingeniero residente" />
+                                        :placeholder="getBasePlaceholder('nombreIngeniero', 'Nombre del ingeniero residente')" />
                                 </div>
+                                <DynamicFieldsSection
+                                    :schema="formSchema"
+                                    :model="form.extraFields"
+                                    sectionId="observaciones"
+                                />
                             </div>
                         </div>
 
@@ -721,6 +773,13 @@
                              </div>
                          </div>
                         </div>
+                        <div class="section-grid combined">
+                            <DynamicFieldsSection
+                                :schema="formSchema"
+                                :model="form.extraFields"
+                                sectionId="firmas"
+                            />
+                        </div>
                         </div>
 
                     <div v-if="!isReadOnly" class="form-actions">
@@ -748,6 +807,18 @@
                 </div>
             </template>
         </FormShell>
+
+        <FormSchemaAdminPanel
+            v-if="showSchemaPanel"
+            :visible="showSchemaPanel"
+            module-key="servicio"
+            module-label="Servicio"
+            :schema="formSchema"
+            :sections="schemaSections"
+            :option-sets="schemaOptionSets"
+            @close="showSchemaPanel = false"
+            @save="handleSaveSchema"
+        />
 
         <!-- Edit Unit Modal -->
         <Teleport v-if="!isReadOnly" to="body">
@@ -849,6 +920,7 @@ import TimePicker from '@/components/TimePicker.vue'
 import notifier from '@/utils/notifier'
 import { confirmDelete, showSuccess, showError, showLoading, closeModal, darkThemeConfig, showAlert } from '@/utils/sweetAlertConfig'
 import Swal from 'sweetalert2'
+import { Settings } from 'lucide-vue-next'
 import {
     IdentificationIcon,
     TagIcon,
@@ -862,18 +934,118 @@ import {
 import { HashtagIcon } from '@heroicons/vue/24/outline'
 import TrashButton from '@/components/TrashButton.vue'
 import FolioInput from '@/components/FolioInput.vue'
+import DynamicFieldsSection from '@/components/DynamicFieldsSection.vue'
+import FormSchemaAdminPanel from '@/components/FormSchemaAdminPanel.vue'
 // Nota: cargamos ExcelJS dinámicamente dentro de generarExcelEntrada para evitar
 // que la librería (que tiene partes orientadas a node) sea importada al cargar
 // el componente; esto previene fallos en el dev server y reduce el bundle inicial.
 import { saveAs } from 'file-saver'
 import { authedFetch } from '@/utils/api.js'
 import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
+import { getDefaultSchema } from '@/data/defaultFormSchemas.js'
+import { fetchFormSchema, saveFormSchema } from '@/services/formSchemaService.js'
+import SearchableInput from '@/components/SearchableInput.vue'
+import { useInventorySuggestions } from '@/composables/useInventorySuggestions.js'
 
 const LOCAL_KEY = 'op-servicio'
 const ORDERS_LIST_KEY = 'orders_list'
 
 // Router para navegación
 const router = useRouter()
+
+// Initialize suggestions composable
+const {
+  equipoMedicoList,
+  insumosRefaccionesList,
+  loading: suggestionsLoading,
+  error: suggestionsError,
+  initSuggestions,
+  getDynamicSuggestions,
+  fillUnitFromSuggestion
+} = useInventorySuggestions()
+
+// Admin state
+const isAdmin = ref(false)
+
+const schemaModuleKey = 'servicio'
+const schemaSections = [
+    { id: 'solicitante', title: 'Datos del Solicitante' },
+    { id: 'motivo', title: 'Motivo y Descripción de Servicio' },
+    { id: 'equipos', title: 'Equipo Médico, Accesorio o Consumible' },
+    { id: 'observaciones', title: 'Observaciones y Soporte' },
+    { id: 'firmas', title: 'Firmas' }
+]
+const schemaOptionSets = [
+    { key: 'motivoEntrada', label: 'Motivo de Servicio' }
+]
+const formSchema = ref(getDefaultSchema(schemaModuleKey))
+const showSchemaPanel = ref(false)
+const schemaLoading = ref(false)
+
+const baseFieldSectionMap = {
+    nombreSolicitante: 'solicitante',
+    servicio: 'solicitante',
+    especialidad: 'solicitante',
+    folio: 'solicitante',
+    fecha: 'solicitante',
+    horaInicio: 'solicitante',
+    horaTermino: 'solicitante',
+    motivoEntrada: 'motivo',
+    otroMotivo: 'motivo',
+    descripcion: 'motivo',
+    observaciones: 'observaciones',
+    nombreIngeniero: 'observaciones'
+}
+
+function getBaseFieldConfig(key) {
+    const sectionId = baseFieldSectionMap[key]
+    if (!sectionId) return null
+    const list = formSchema.value?.baseFields?.[sectionId] || []
+    return list.find((f) => f.key === key) || null
+}
+
+function getBaseLabel(key, fallback) {
+    const cfg = getBaseFieldConfig(key)
+    return cfg?.label || fallback
+}
+
+function getBasePlaceholder(key, fallback) {
+    const cfg = getBaseFieldConfig(key)
+    return cfg?.placeholder || fallback
+}
+
+function isBaseReplaced(key) {
+    const sectionId = baseFieldSectionMap[key]
+    if (!sectionId) return false
+    const fields = formSchema.value?.sections?.[sectionId]?.fields || []
+    return fields.some((f) => f.replaces === key)
+}
+
+const motivoEntradaOptionsComputed = computed(() => {
+    const override = formSchema.value?.optionSets?.motivoEntrada
+    return Array.isArray(override) && override.length ? override : motivoEntradaOptions
+})
+
+// Computed properties para sugerencias dinámicas basadas en el tipo
+const dynamicSuggestions = computed(() => {
+    return (tipo, searchText = '', fieldName = null) => {
+        return getDynamicSuggestions(tipo, searchText, fieldName)
+    }
+})
+
+// Check admin status on mount
+onMounted(() => {
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}')
+        isAdmin.value = user.role === 'admin'
+    } catch {
+        isAdmin.value = false
+    }
+})
+
+onMounted(() => {
+    loadFormSchema()
+})
 
 // Props para el componente
 const props = defineProps({
@@ -898,6 +1070,40 @@ const mostRecentItemIndex = ref(null)
 // Regla fuerte: si hay snapshot (vista de versiones), debe ser solo lectura SIEMPRE.
 // En modo editar, solo el item más reciente es editable
 const isReadOnly = computed(() => !!(props.readOnly || props.readonly || props.snapshot))
+
+// Admin settings function
+function openAdminSettings() {
+    showSchemaPanel.value = true
+    if (!schemaLoading.value) loadFormSchema()
+}
+
+async function loadFormSchema() {
+    schemaLoading.value = true
+    try {
+        const remote = await fetchFormSchema(schemaModuleKey)
+        if (remote) {
+            formSchema.value = mergeSchema(getDefaultSchema(schemaModuleKey), remote)
+        }
+    } catch (e) {
+        console.warn('No se pudo cargar esquema, usando default:', e?.message || e)
+    } finally {
+        schemaLoading.value = false
+    }
+}
+
+async function handleSaveSchema(nextSchema) {
+    const merged = mergeSchema(getDefaultSchema(schemaModuleKey), nextSchema)
+    await saveFormSchema(schemaModuleKey, merged)
+    formSchema.value = merged
+    showSchemaPanel.value = false
+}
+
+function mergeSchema(base, incoming) {
+    const merged = { ...base, ...incoming }
+    merged.sections = { ...base.sections, ...(incoming.sections || {}) }
+    merged.optionSets = { ...base.optionSets, ...(incoming.optionSets || {}) }
+    return merged
+}
 
 const _lockState = new WeakMap()
 
@@ -1041,6 +1247,16 @@ function applySnapshotToForm(snapshot) {
     form.descripcion = orden.descripcion || ''
     form.observaciones = orden.observaciones || ''
     form.nombreIngeniero = orden.nombre_ingeniero || ''
+    try {
+        const rawExtra = orden.extra_fields_json || orden.extraFields || orden.extra_fields
+        if (rawExtra) {
+            form.extraFields = typeof rawExtra === 'string' ? JSON.parse(rawExtra) : rawExtra
+        } else {
+            form.extraFields = {}
+        }
+    } catch {
+        form.extraFields = {}
+    }
 
     // Firmas: aceptar array si viene en el snapshot/orden. Si no, usar defaults
     try {
@@ -1267,6 +1483,9 @@ const form = reactive({
     // Firmas: array centralizado. Mantener orden fijo para PDF
     signatures: JSON.parse(JSON.stringify(DEFAULT_SIGNATURES)),
 
+    // Campos dinámicos por sección
+    extraFields: {},
+
     // Otros campos heredados
     cantidad: 0,
     solicitante: '',
@@ -1348,6 +1567,7 @@ async function generarPdfEntrada(payloadParam) {
         equiposEntrada: form.equiposEntrada,
         observacionesImg: form.observacionesImg ? form.observacionesImg.dataUrl : null,
         signatures: form.signatures,
+        extraFields: form.extraFields,
         logoDataUrl: null
     }
 
@@ -1794,9 +2014,9 @@ const onCancel = async () => {
             try { localStorage.removeItem(LOCAL_KEY) } catch { }
             // Regresar a order-management en lugar de dashboard
             try {
-                await navigateAndRefresh(router, { name: 'order-management-servicio' })
+                await navigateAndRefresh(router, { name: 'order-management' })
             } catch {
-                try { await navigateAndRefresh(router, '/op/order-management-servicio') } catch { }
+                try { await navigateAndRefresh(router, '/op/order-management') } catch { }
             }
         }
     }
@@ -1806,7 +2026,7 @@ const goToOrderManagement = () => {
     // Limpiar localStorage antes de regresar
     try { localStorage.removeItem(LOCAL_KEY) } catch { }
     // Regresar a order-management sin confirmación
-    navigateAndRefresh(router, { name: 'order-management-servicio' })
+    navigateAndRefresh(router, { name: 'order-management' })
 }
 
 const scrollToTop = () => {
@@ -1888,6 +2108,7 @@ async function generarExcelEntrada(payloadParam) {
         nombreIngeniero: form.nombreIngeniero,
         equiposEntrada: form.equiposEntrada,
         observacionesImg: form.observacionesImg ? form.observacionesImg.dataUrl : null,
+        extraFields: form.extraFields,
     }
 
     // Intentar delegar la generación al backend (Excel COM) — si falla, caer al flujo local con ExcelJS
@@ -2058,19 +2279,9 @@ async function generarExcelEntrada(payloadParam) {
 
 
 
-        const motivosMap = {
-            'mantenimiento-preventivo-externo': 0,
-            'mantenimiento-correctivo-externo': 1,
-            'calibracion-externa': 2,
-            'diagnostico': 3,
-            'inicio-contrato': 4,
-            'inicio-demostracion': 5,
-            'reemplazo-equipo': 6,
-            'otro': 7
-        }
-
         const celdaMotivos = ['A7', 'A8', 'A9', 'A10', 'A11', 'A12', 'A13', 'A14']
-        const indiceMotivo = motivosMap[form.motivoEntrada]
+        const motiveOptions = (motivoEntradaOptionsComputed.value || []).filter(o => o && o.value)
+        const indiceMotivo = motiveOptions.findIndex(o => o.value === form.motivoEntrada)
         celdaMotivos.forEach((celda, idx) => {
             setCellValuePreserveStyle(worksheet, celda, idx === indiceMotivo ? 'X' : '')
         })
@@ -3533,6 +3744,7 @@ function clearForm() {
     form.observaciones = ''
     form.nombreIngeniero = ''
     form.observacionesImg = null
+    form.extraFields = {}
     form.cantidad = 0
     form.fechaRecibo = ''
     form.solicitante = ''
@@ -3603,7 +3815,7 @@ async function onSubmit() {
 
     const motivoLabel = (() => {
         if (form.motivoEntrada === 'otro') return `OTRO: ${escapeHtml(form.otroMotivo || '')}`
-        const opt = motivoEntradaOptions.find(o => o.value === form.motivoEntrada)
+        const opt = motivoEntradaOptionsComputed.value.find(o => o.value === form.motivoEntrada)
         return opt ? escapeHtml(opt.label) : ''
     })()
 
@@ -3670,6 +3882,7 @@ async function onSubmit() {
         equiposEntrada: form.equiposEntrada,
         observacionesImg: form.observacionesImg ? form.observacionesImg.dataUrl : null,
         signatures: form.signatures, // centralized signature model
+        extraFields: form.extraFields,
         createdAt: new Date().toISOString()
     }
 
@@ -3874,6 +4087,16 @@ const loadOrderData = async () => {
         form.descripcion = data.descripcion || ''
         form.observaciones = data.observaciones || ''
         form.nombreIngeniero = data.nombre_ingeniero || data.nombreIngeniero || ''
+        try {
+            const rawExtra = data.extra_fields_json || data.extraFields || data.extra_fields
+            if (rawExtra) {
+                form.extraFields = typeof rawExtra === 'string' ? JSON.parse(rawExtra) : rawExtra
+            } else {
+                form.extraFields = {}
+            }
+        } catch {
+            form.extraFields = {}
+        }
 
         // Procesar items que vienen de la BD
         if (response.items && Array.isArray(response.items)) {
@@ -4097,6 +4320,11 @@ watch(
 )
 
 onMounted(async () => {
+    // Inicializar sugerencias de inventario
+    await initSuggestions().catch(err => {
+        console.warn('[OpServicio] Error initializing suggestions:', err)
+    })
+    
     // Limpiar observacionesImg del localStorage para evitar caching de imágenes antiguas
     try {
         const raw = localStorage.getItem(LOCAL_KEY)
@@ -4295,6 +4523,106 @@ defineExpose({
 </script>
 
 <style scoped>
+/* Admin Settings Button (now inside header) */
+.admin-settings-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 2;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.1));
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    color: #374151;
+    box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.12),
+        0 2px 8px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    transform: translateY(0);
+    animation: adminButtonSlideIn 0.6s ease-out;
+}
+
+@keyframes adminButtonSlideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(100px) scale(0.8);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes adminButtonPulse {
+    0%, 100% {
+        box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.12),
+            0 2px 8px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4),
+            0 0 0 0 rgba(99, 102, 241, 0);
+    }
+    50% {
+        box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.12),
+            0 2px 8px rgba(0, 0, 0, 0.08),
+            inset 0 1px 0 rgba(255, 255, 255, 0.4),
+            0 0 0 8px rgba(99, 102, 241, 0.15);
+    }
+}
+
+.admin-settings-btn:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0.2));
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 
+        0 16px 48px rgba(0, 0, 0, 0.18),
+        0 4px 16px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 0 0 4px rgba(99, 102, 241, 0.2);
+    animation: adminButtonPulse 2s infinite;
+}
+
+.admin-settings-btn:active {
+    transform: translateY(-2px) scale(1.02);
+    transition: all 0.15s ease;
+}
+
+/* Dark theme support */
+@media (prefers-color-scheme: dark) {
+    .admin-settings-btn {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.9));
+        color: #e2e8f0;
+        border-color: rgba(148, 163, 184, 0.2);
+        box-shadow: 
+            0 8px 32px rgba(0, 0, 0, 0.3),
+            0 2px 8px rgba(0, 0, 0, 0.2),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    
+    .admin-settings-btn:hover {
+        background: linear-gradient(135deg, rgba(51, 65, 85, 0.9), rgba(30, 41, 59, 0.95));
+        box-shadow: 
+            0 16px 48px rgba(0, 0, 0, 0.4),
+            0 4px 16px rgba(0, 0, 0, 0.3),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15),
+            0 0 0 4px rgba(129, 140, 248, 0.3);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .admin-settings-btn {
+        width: 52px;
+        height: 52px;
+    }
+}
+
 .opservicio-readonly {
     cursor: not-allowed !important;
 }
@@ -4412,6 +4740,8 @@ defineExpose({
     align-items: center;
     gap: 12px;
     width: 100%;
+    position: relative;
+    padding-right: 64px; /* espacio para botón admin */
 }
 
 .btn-back-to-orders {
@@ -7422,6 +7752,8 @@ html {
     flex-direction: column;
     gap: 8px;
     padding: 12px 0;
+    position: relative;
+    padding-right: 64px; /* espacio para botón admin */
 }
 
 .edit-title-badge {

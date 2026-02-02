@@ -1,6 +1,5 @@
 <template>
   <div class="inventory-subdireccion">
-    <!-- Header de la sección -->
     <div class="sub-header">
       <div class="header-left">
         <h2 class="title">

@@ -1794,9 +1794,9 @@ const onCancel = async () => {
             try { localStorage.removeItem(LOCAL_KEY) } catch { }
             // Regresar a order-management en lugar de dashboard
             try {
-                await navigateAndRefresh(router, { name: 'order-management-resguardo' })
+                await navigateAndRefresh(router, { name: 'order-management' })
             } catch {
-                try { await navigateAndRefresh(router, '/op/order-management-resguardo') } catch { }
+                try { await navigateAndRefresh(router, '/op/order-management') } catch { }
             }
         }
     }
@@ -1806,7 +1806,7 @@ const goToOrderManagement = () => {
     // Limpiar localStorage antes de regresar
     try { localStorage.removeItem(LOCAL_KEY) } catch { }
     // Regresar a order-management sin confirmación
-    navigateAndRefresh(router, { name: 'order-management-resguardo' })
+    navigateAndRefresh(router, { name: 'order-management' })
 }
 
 const scrollToTop = () => {
