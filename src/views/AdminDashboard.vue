@@ -37,7 +37,7 @@
             <div class="card-title">{{ op.label }}</div>
             <div class="card-sub small">{{ op.desc }}</div>
             <div class="card-actions">
-              <button class="btn ghost btn-ripple" @click.stop.prevent="go(op.name === 'op-resguardo' ? 'order-management-resguardo' : op.name === 'op-servicio' ? 'order-management-servicio' : op.name)">
+              <button class="btn ghost btn-ripple" @click.stop.prevent="go(op.name === 'op-resguardo' ? 'order-management-resguardo' : op.name)">
                 <ArrowRightIcon class="btn-icon" />
                 Ir
               </button>
@@ -98,16 +98,12 @@ function go(name) {
 }
 
 function handleCardClick(name) {
-   if (name === 'op-resguardo') {
-     try { navigateAndRefresh(router, { name: 'order-management-resguardo' }) } catch {}
-     return
-   }
-   if (name === 'op-servicio') {
-     try { navigateAndRefresh(router, { name: 'order-management-servicio' }) } catch {}
-     return
-   }
-   try { navigateAndRefresh(router, { name }) } catch {}
- }
+  if (name === 'op-resguardo') {
+    try { navigateAndRefresh(router, { name: 'order-management-resguardo' }) } catch {}
+    return
+  }
+  try { navigateAndRefresh(router, { name }) } catch {}
+}
 
 function isEmbedded(opName) {
   try {

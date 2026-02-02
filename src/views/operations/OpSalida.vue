@@ -942,6 +942,7 @@
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
+import { gsap } from 'gsap'
 import FormShell from '@/components/FormShell.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import CustomSelect from '@/components/CustomSelect.vue'
@@ -979,6 +980,28 @@ import { useInventorySuggestions } from '@/composables/useInventorySuggestions.j
 
 const LOCAL_KEY = 'op-salida'
 const ORDERS_LIST_KEY = 'orders_list'
+
+onMounted(async () => {
+    // Animation for sections
+    await nextTick()
+    gsap.from('.section-card', {
+        duration: 0.8,
+        y: 60,
+        opacity: 0,
+        stagger: 0.15,
+        ease: 'power3.out',
+        clearProps: 'all'
+    })
+    
+    // Animate title elements
+    gsap.from('.salida-title-row', {
+        duration: 0.8,
+        x: -30,
+        opacity: 0,
+        ease: 'back.out(1.7)',
+        delay: 0.2
+    })
+})
 
 // Router para navegación
 const router = useRouter()
@@ -8118,6 +8141,77 @@ html {
     .edit-form-grid {
         grid-template-columns: 1fr;
     }
+}
+
+/* Redesign Enhancements */
+.section-card {
+    background: rgba(255, 255, 255, 0.04) !important;
+    backdrop-filter: blur(12px) saturate(140%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+
+.section-card:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+    transform: translateY(-2px);
+}
+
+.control, .input, .textarea, input[type="text"], input[type="number"], select {
+    background: rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    color: #e2e8f0 !important;
+    transition: all 0.2s ease !important;
+}
+
+.control:focus, .input:focus, .textarea:focus, input:focus {
+    box-shadow: 0 0 0 3px rgba(46, 221, 90, 0.25) !important;
+    border-color: #2edd5a !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+}
+
+.section-title-with-icon svg {
+    color: #2edd5a !important;
+    filter: drop-shadow(0 0 8px rgba(46, 221, 90, 0.5));
+}
+
+.section-head h4 {
+    font-size: 1.15rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.02em !important;
+    color: #fff !important;
+}
+
+.btn-primary, .btn-submit, .action-btn.primary {
+    background: linear-gradient(135deg, #2edd5a 0%, #10b981 100%) !important;
+    border: none !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.03em !important;
+    text-transform: uppercase !important;
+    font-size: 0.9rem !important;
+    padding: 12px 24px !important;
+    border-radius: 12px !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-primary:hover, .btn-submit:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6) !important;
+    filter: brightness(1.1) !important;
+}
+
+/* Pulsating animation for status badges */
+.badge-status, .status-pill {
+    animation: pulse-soft 2s infinite;
+}
+
+@keyframes pulse-soft {
+    0% { opacity: 1; }
+    50% { opacity: 0.8; }
+    100% { opacity: 1; }
 }
 </style>
 

@@ -18,6 +18,8 @@ import './styles/tunnel-performance.css'
 // import '@/assets/vendor/flowbite-datepicker-standalone.css'
 // 🚀 SASS Simple para calendario
 import './styles/calendar-simple.scss'
+// Estilos para módulos de operaciones
+import './styles/operations.css'
 // Inicializar windowManager antes de crear la app
 import './utils/windowManager'
 // Detect if running through tunnel and apply performance optimizations
