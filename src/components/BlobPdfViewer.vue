@@ -1,5 +1,5 @@
 <template>
-  <div class="blob-pdf-shell">
+  <div class="blob-pdf-shell" style="height:100%; display:flex; flex-direction:column;">
     <div v-if="loading" class="pdf-loading">Cargando PDF...</div>
       <div v-else-if="error" class="pdf-error">{{ error }}</div>
       <div v-else class="pdf-embed" style="width:100%; height:100%; position:relative;">
@@ -15,7 +15,7 @@
           </div>
         </div>
 
-        <iframe v-if="blobUrl && embedMode === 'iframe'" :src="blobUrl" title="PDF embebido" style="width:100%; height:100%; border:0; min-height:360px;"></iframe>
+        <iframe v-if="blobUrl && embedMode === 'iframe'" :src="blobUrl" title="PDF embebido" style="width:100%; height:100%; border:0;"></iframe>
         <object v-else-if="blobUrl" :data="blobUrl" type="application/pdf" width="100%" height="100%">
           <p>Tu navegador no puede mostrar PDFs embebidos. Usa el botón azul para abrir el PDF.</p>
         </object>
@@ -30,11 +30,11 @@
         </div>
       </div>
   </div>
-</template>
+</template> 
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-const props = defineProps({ src: { type: String, required: true } })
+import { ref, onMounted, onBeforeUnmount, watch } from 'vue'
+const props = defineProps({ src: { type: String }, blob: { type: [Object], required: false } })
 
 const loading = ref(true)
 const error = ref('')
@@ -138,6 +138,25 @@ async function fetchAsBlob() {
   }
 }
 
+function initFromBlobInput(b) {
+  try {
+    loading.value = false
+    error.value = ''
+    isPlaceholder.value = false
+    placeholderReason.value = ''
+    lastStatus.value = null
+    lastContentType.value = b && b.type ? b.type : 'application/pdf'
+    lastBytes.value = b && b.size ? b.size : 0
+    // coerce type if missing
+    const coerced = (b && !b.type) ? new Blob([b], { type: 'application/pdf' }) : b
+    if (blobUrl.value) try { URL.revokeObjectURL(blobUrl.value) } catch(e){}
+    blobUrl.value = URL.createObjectURL(coerced)
+  } catch (e) {
+    console.error('Error initializing BlobPdfViewer from blob prop', e)
+    error.value = 'Error procesando PDF binario'
+  }
+}
+
 function downloadPlaceholder() {
   // Use client-side placeholder generator
   try {
@@ -155,7 +174,17 @@ function downloadPlaceholder() {
 
 
 onMounted(() => {
-  fetchAsBlob()
+  if (props.blob) initFromBlobInput(props.blob)
+  else if (props.src) fetchAsBlob()
+  else {
+    loading.value = false
+    error.value = 'No hay fuente de PDF especificada'
+  }
+})
+
+// watch blob prop to support dynamic updates
+watch(() => props.blob, (nv) => {
+  if (nv) initFromBlobInput(nv)
 })
 
 onBeforeUnmount(() => {
@@ -164,7 +193,8 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.blob-pdf-shell { height:100%; display:flex; flex-direction:column; }
 .pdf-loading, .pdf-error { color: rgba(230,235,245,0.9); padding:12px }
-.pdf-embed { position:relative; width:100%; height:100%; }
+.pdf-embed { position:relative; width:100%; height:100%; flex:1; }
 .btn-open { background:#1866f2; color:#fff; padding:8px 12px; border-radius:8px; border:0; text-decoration:none; box-shadow: 0 2px 6px rgba(24,102,242,0.24) }
 </style>

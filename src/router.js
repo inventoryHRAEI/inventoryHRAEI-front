@@ -11,10 +11,12 @@ const AdminUsers = () => import('./views/AdminUsers.vue')
 const AdminUserDetail = () => import('./views/AdminUserDetail.vue')
 const AddAccount = () => import('./views/Login.vue')
 // Operaciones
-const OpEntrada = () => import('./views/operations/OpEntrada.vue')
-const OpSalida = () => import('./views/operations/OpSalida.vue')
-const OpResguardo = () => import('./views/operations/OpResguardo.vue')
-const OpServicio = () => import('./views/operations/OpServicio.vue')
+const OpEntrada = () => import('./views/operations/OpEntradaNew.vue') // NUEVO DISEÑO WIZARD
+const OpEntradaNew = () => import('./views/operations/OpEntradaNew.vue')
+const OpEntradaLegacy = () => import('./views/operations/OpEntrada.vue') // Legacy backup
+const OpSalida = () => import('./views/operations/OpSalidaNew.vue')
+const OpResguardo = () => import('./views/operations/OpResguardoNew.vue')
+const OpServicio = () => import('./views/operations/OpServicioNew.vue')
 const OpInventarioBiomedica = () => import('./views/operations/BiomedicalTestingEnvironment.vue')
 const OpInsumosConsumibles = () => import('./views/operations/OpInsumosConsumibles.vue')
 const OrderManagement = () => import('./views/operations/OrderManagement.vue')
@@ -41,6 +43,8 @@ const routes = [
     { path: '/op/order-management-resguardo', name: 'order-management-resguardo', component: OrderManagementResguardo, meta: { requiresAuth: true } },
     { path: '/op/order-management-servicio', name: 'order-management-servicio', component: OrderManagementServicio, meta: { requiresAuth: true } },
     { path: '/op/entrada', name: 'op-entrada', component: OpEntrada, meta: { requiresAuth: true } },
+    { path: '/op/entrada-new', name: 'op-entrada-new', component: OpEntradaNew, meta: { requiresAuth: true } },
+    { path: '/op/entrada-legacy', name: 'op-entrada-legacy', component: OpEntradaLegacy, meta: { requiresAuth: true } },
     { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
     { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
     { path: '/op/servicio', name: 'op-servicio', component: OpServicio, meta: { requiresAuth: true } },

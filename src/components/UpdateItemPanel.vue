@@ -589,12 +589,19 @@ function showErrorToast(message) {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 16px;
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .update-panel {
@@ -603,12 +610,24 @@ function showErrorToast(message) {
   max-width: 650px;
   width: 100%;
   max-height: 90vh;
-  background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: linear-gradient(135deg, #1a1f2e 0%, #0f1419 100%);
+  border: 1px solid rgba(46, 221, 90, 0.2);
   border-radius: 16px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  animation: modal-pop 0.3s ease;
+  animation: slideUpPanel 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
   outline: none;
+  overflow: hidden;
+}
+
+@keyframes slideUpPanel {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes modal-pop {
@@ -840,14 +859,14 @@ function showErrorToast(message) {
 }
 
 .action-save {
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  background: linear-gradient(135deg, #2edd5a 0%, #2bc54c 100%);
   color: #fff;
-  border: 1px solid rgba(59, 130, 246, 0.6);
+  border: 1px solid rgba(46, 221, 90, 0.6);
 }
 
 .action-save:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(46, 221, 90, 0.4);
   background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
 }
 

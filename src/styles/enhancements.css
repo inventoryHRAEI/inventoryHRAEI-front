@@ -798,6 +798,13 @@
   }
 }
 
+/* Dropdown Divider */
+.dropdown-divider {
+  height: 1px;
+  background: rgba(45, 221, 90, 0.15);
+  margin: 8px 0;
+}
+
 /* Respect reduced motion preference */
 @media (prefers-reduced-motion: reduce) {
   .page-enter-active,

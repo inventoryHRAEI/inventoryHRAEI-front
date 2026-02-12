@@ -77,9 +77,9 @@
           </div>
           <div class="form-group">
             <label class="field-label">Foto de Perfil <span class="optional">(opcional)</span></label>
-            <div class="file-input-wrapper">
+            <div class="file-input-wrapper" @click="$refs.photoInput?.click()">
               <component :is="PhotoIcon" class="upload-icon" />
-              <input type="file" @change="onFileChange" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml" class="file-input" />
+              <input ref="photoInput" type="file" @change="onFileChange" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml" class="file-input" />
               <span class="file-label">Selecciona una imagen</span>
             </div>
             <div v-if="previewUrl || nombre" class="mt-10">

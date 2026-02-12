@@ -431,6 +431,11 @@ input[type="date"] {
   text-overflow: ellipsis
 }
 
+/* Notification Bell */
+.notif-bell-action {
+  flex: 0 0 auto;
+}
+
 /* Bloque de bienvenida dentro del topbar */
 .welcome {
   display: flex;

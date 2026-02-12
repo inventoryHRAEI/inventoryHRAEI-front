@@ -41,20 +41,29 @@
 
             <template #body>
                 <Breadcrumbs v-if="props.modo !== 'editar'" />
-                <div class="op-card insumos op-entrada-form" ref="rootRef">
+                
+                <!-- Skeleton Loading State -->
+                <div v-if="formLoading" class="skeleton-container">
+                    <SkeletonFormSection :fieldCount="4" :columns="4" showAction />
+                    <SkeletonFormSection :fieldCount="3" :columns="2" />
+                    <SkeletonFormSection :fieldCount="2" :columns="2" showItems :itemCount="2" />
+                    <SkeletonFormSection :fieldCount="2" :columns="2" />
+                </div>
+                
+                <!-- Main Form Content -->
+                <div v-else class="op-card insumos op-entrada-form" ref="rootRef">
                     <form @submit.prevent="onSubmit" class="form-grid" id="entrada-form" novalidate>
-                        <div class="section-card combined-card observaciones-support">
-                            <div class="section-head">
-                                <div class="section-title-with-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                        <circle cx="12" cy="7" r="4"></circle>
-                                    </svg>
-                                    <h4>Datos del Solicitante</h4>
+                        <div class="section-card combined-card observaciones-support op-enhanced">
+                            <div class="section-head op-enhanced">
+                                <div class="section-title-with-icon op-enhanced">
+                                    <div class="icon-wrapper">
+                                        <OpIcon name="user" size="lg" color="primary" />
+                                    </div>
+                                    <div>
+                                        <h4>Datos del Solicitante</h4>
+                                        <small class="hint op-animated">Información de quien solicita la entrada</small>
+                                    </div>
                                 </div>
-                                <small class="hint">Información de quien solicita la entrada</small>
                             </div>
                             <div class="section-grid combined">
                                 <!-- Primera fila -->
@@ -134,33 +143,33 @@
                         </div>
 
                         <!-- Motivo y Descripción de Entrada -->
-                        <div class="section-card combined-card">
-                            <div class="section-head">
-                                <div class="section-title-with-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                    </svg>
-                                    <h4>Motivo y Descripción de Entrada</h4>
+                        <div class="section-card combined-card op-enhanced">
+                            <div class="section-head op-enhanced">
+                                <div class="section-title-with-icon op-enhanced">
+                                    <div class="icon-wrapper">
+                                        <OpIcon name="chat" size="lg" color="info" />
+                                    </div>
+                                    <div>
+                                        <h4>Motivo y Descripción de Entrada</h4>
+                                        <small class="hint op-animated">Especifica el motivo y una descripción de la entrada</small>
+                                    </div>
                                 </div>
-                                <small class="hint">Especifica el motivo y una descripción de la entrada</small>
                             </div>
                             <div class="section-grid combined">
-                                <div v-if="!isBaseReplaced('motivoEntrada')" :class="['field', diffFieldClass('motivoEntrada')]" style="grid-column: span 6;">
+                                <div v-if="!isBaseReplaced('motivoEntrada')" :class="['field op-modern', diffFieldClass('motivoEntrada')]" style="grid-column: span 6;">
                                     <label>{{ getBaseLabel('motivoEntrada', 'Motivo de Entrada') }}</label>
                                     <CustomSelect v-model="form.motivoEntrada" :options="motivoEntradaOptionsComputed"
                                         :placeholder="getBasePlaceholder('motivoEntrada', 'Seleccionar motivo')" />
                                 </div>
 
                                 <div v-if="!isBaseReplaced('otroMotivo') && form.motivoEntrada === 'otro'"
-                                    :class="['field', diffFieldClass('otroMotivo')]" style="grid-column: span 6;">
+                                    :class="['field op-modern', diffFieldClass('otroMotivo')]" style="grid-column: span 6;">
                                     <label>{{ getBaseLabel('otroMotivo', 'Especifique Motivo de Entrada') }}</label>
                                     <input class="control" v-model.trim="form.otroMotivo"
                                         :placeholder="getBasePlaceholder('otroMotivo', 'Escribe el motivo')" />
                                 </div>
 
-                                <div v-if="!isBaseReplaced('descripcion')" :class="['field', diffFieldClass('descripcion')]" style="grid-column: 1 / -1;">
+                                <div v-if="!isBaseReplaced('descripcion')" :class="['field op-modern', diffFieldClass('descripcion')]" style="grid-column: 1 / -1;">
                                     <label>{{ getBaseLabel('descripcion', 'Descripción de Entrada') }}</label>
                                     <textarea class="control" v-model.trim="form.descripcion"
                                         :placeholder="getBasePlaceholder('descripcion', 'Describe los detalles')"
@@ -175,19 +184,20 @@
                         </div>
 
                         <!-- Equipo Médico, Accesorio o Consumible que Entra -->
-                        <div class="section-card combined-card">
-                            <div class="section-head">
-                                <div class="section-title-with-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                        <line x1="12" y1="8" x2="12" y2="16"></line>
-                                        <line x1="8" y1="12" x2="16" y2="12"></line>
-                                    </svg>
-                                    <h4>Equipo Médico, Accesorio o Consumible que Entra</h4>
+                        <div class="section-card combined-card op-enhanced">
+                            <div class="section-head op-enhanced">
+                                <div class="section-title-with-icon op-enhanced">
+                                    <div class="icon-wrapper" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%); color: #4ade80;">
+                                        <OpIcon name="cube" size="lg" />
+                                    </div>
+                                    <div>
+                                        <h4>Equipo Médico, Accesorio o Consumible que Entra</h4>
+                                        <small class="hint op-animated">Agrega uno o más elementos que ingresan</small>
+                                    </div>
                                 </div>
-                                <small class="hint">Agrega uno o más elementos que ingresan</small>
+                                <div class="op-item-count" v-if="form.items && form.items.length > 0">
+                                    {{ form.items.length }}
+                                </div>
                             </div>
 
                             <!-- Formulario para agregar nuevo item -->
@@ -843,11 +853,11 @@
             :visible="showSchemaPanel"
             module-key="entrada"
             module-label="Entrada"
-            :schema="formSchema"
+            :modelValue="formSchema"
             :sections="schemaSections"
             :option-sets="schemaOptionSets"
             @close="showSchemaPanel = false"
-            @save="handleSaveSchema"
+            @update:modelValue="handleSaveSchema"
         />
 
         <!-- Edit Unit Modal -->
@@ -967,6 +977,9 @@ import TrashButton from '@/components/TrashButton.vue'
 import FolioInput from '@/components/FolioInput.vue'
 import DynamicFieldsSection from '@/components/DynamicFieldsSection.vue'
 import FormSchemaAdminPanel from '@/components/FormSchemaAdminPanel.vue'
+// Componentes modernos de operaciones
+import { useFormAnimations } from '@/composables/useFormAnimations.js'
+import { OpIcon, SkeletonFormSection, OpEmptyState } from '@/components/operations'
 // Nota: cargamos ExcelJS dinámicamente dentro de generarExcelEntrada para evitar
 // que la librería (que tiene partes orientadas a node) sea importada al cargar
 // el componente; esto previene fallos en el dev server y reduce el bundle inicial.
@@ -981,24 +994,47 @@ import { useInventorySuggestions } from '@/composables/useInventorySuggestions.j
 const LOCAL_KEY = 'op-entrada'
 const ORDERS_LIST_KEY = 'orders_list'
 
+// Use form animations composable
+const {
+    animateSectionsIn,
+    animateItemAdded,
+    animateItemRemoved,
+    animateFieldError,
+    animateFieldSuccess
+} = useFormAnimations({ autoInit: false })
+
+// Form loading state
+const formLoading = ref(true)
+
 onMounted(async () => {
-    // Animation for sections
+    // Show skeleton while loading
+    formLoading.value = true
+    
     await nextTick()
-    gsap.from('.section-card', {
-        duration: 0.8,
-        y: 60,
+    
+    // Simulate minimum load time for smooth transition
+    await new Promise(r => setTimeout(r, 300))
+    formLoading.value = false
+    
+    await nextTick()
+    
+    // Enhanced animation for sections using composable
+    animateSectionsIn('.section-card')
+    
+    // Animate title elements with enhanced effect
+    gsap.from('.entrada-title-row', {
+        duration: 0.6,
+        x: -20,
         opacity: 0,
-        stagger: 0.15,
         ease: 'power3.out',
-        clearProps: 'all'
+        delay: 0.1
     })
     
-    // Animate title elements
-    gsap.from('.entrada-title-row', {
-        duration: 0.8,
-        x: -30,
+    // Add subtle entrance animation for form elements
+    gsap.from('.form-grid', {
+        duration: 0.4,
         opacity: 0,
-        ease: 'back.out(1.7)',
+        ease: 'power2.out',
         delay: 0.2
     })
 })
@@ -8212,6 +8248,89 @@ html {
     0% { opacity: 1; }
     50% { opacity: 0.8; }
     100% { opacity: 1; }
+}
+
+/* Skeleton Container */
+.skeleton-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 0;
+}
+
+/* Enhanced section card styles */
+.section-card.op-enhanced {
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.section-card.op-enhanced:hover {
+    transform: translateY(-2px);
+}
+
+.section-head.op-enhanced {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    margin: -26px -26px 20px -26px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 22px 22px 0 0;
+}
+
+.section-title-with-icon.op-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.section-title-with-icon.op-enhanced .icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%);
+    color: #60a5fa;
+    transition: all 0.3s ease;
+}
+
+.section-title-with-icon.op-enhanced:hover .icon-wrapper {
+    transform: scale(1.08);
+}
+
+.section-title-with-icon.op-enhanced h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.hint.op-animated {
+    transition: color 0.2s ease;
+}
+
+.section-head.op-enhanced:hover .hint.op-animated {
+    color: rgba(15, 23, 42, 0.85);
+}
+
+/* Modern field styles */
+.field.op-modern {
+    position: relative;
+}
+
+.field.op-modern label {
+    transition: color 0.2s ease;
+}
+
+.field.op-modern:focus-within label {
+    color: #3b82f6;
+}
+
+.field.op-modern .control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
 </style>

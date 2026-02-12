@@ -25,6 +25,9 @@
                         <router-link v-if="!logged" to="/login" class="top-action">Iniciar sesión</router-link>
                         <router-link v-if="!logged" to="/register" class="top-action">Registrarse</router-link>
 
+                        <!-- Notification Bell (mostrar cuando está logueado) -->
+                        <NotificationBell v-if="logged" class="notif-bell-action" />
+
                         <!-- Mostrar menú de usuario SOLO en el dashboard -->
                         <div v-if="logged && isOnDashboard()" class="user-menu" ref="userMenu" @keyup.esc="closeMenu">
                             <transition name="btn-float">
@@ -42,15 +45,15 @@
                             </transition>
                             <transition name="slide-down">
                                 <div v-if="menuOpen" class="dropdown expanded" role="menu">
-                                    <button class="dropdown-item" @click="goToProfile">Cerrar Sesión</button>
+                                    <button class="dropdown-item" @click="goToSettings">Configurar Perfil</button>
+                                    <button class="dropdown-item" @click="resetPassword">Reestablecer Contraseña</button>
                                     <button class="dropdown-item" @click="switchAccount">Añadir otra cuenta</button>
-                                    <button class="dropdown-item" @click="resetPassword">Reestablecer
-                                        Contraseña</button>
-                                    <button class="dropdown-item" @click="goHome">Ir al inicio</button>
                                     <button v-if="isAdmin" class="dropdown-item admin" @click="manageUsers">
                                         Gestionar Usuarios
                                         <span v-if="pendingCount > 0" class="badge">{{ pendingCount }}</span>
                                     </button>
+                                    <div class="dropdown-divider"></div>
+                                    <button class="dropdown-item" @click="goToProfile">Cerrar Sesión</button>
                                 </div>
                             </transition>
                         </div>
@@ -89,13 +92,17 @@ import { ref, watch, onMounted, onBeforeUnmount, computed } from 'vue'
 import MobileModal from '@/components/MobileModal.vue'
 import InactiveWindowOverlay from '@/components/InactiveWindowOverlay.vue'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
+import NotificationBell from '@/components/NotificationBell.vue'
 import { confirmDelete, showSuccess, showError, showLoading, closeModal } from '@/utils/sweetAlertConfig'
 import { useRouter, useRoute } from 'vue-router'
 import pendingRequestsStore from '@/stores/pendingRequestsStore'
+import notificationStore from '@/stores/notificationStore'
 import { validateSession, logout } from '@/utils/auth'
 // Notivue components
 import { Notivue, Notification, NotivueSwipe, slateTheme } from 'notivue'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
+// Critical stock monitor
+import { useCriticalStockMonitor } from '@/composables/useCriticalStockMonitor'
 
 // Tema elegante y compacto para Notivue
 const nvTheme = {
@@ -268,7 +275,7 @@ watch(() => user.value && user.value.foto, () => { avatarError.value = false })
 // Incluir 'forgot' y 'reset' para que la topbar global se muestre cuando
 // el flujo de recuperación de contraseña se use desde el dashboard.
 const dashboardRoutes = [
-    'dashboard', 'admin-dashboard', 'admin-users', 'user-dashboard', 'forgot', 'reset',
+    'dashboard', 'admin-dashboard', 'admin-users', 'user-dashboard', 'user-settings', 'forgot', 'reset',
     // Operaciones
     'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio', 'op-inventario-biomedica', 'op-insumos-consumibles',
     'order-management', 'order-management-resguardo', 'order-management-servicio', 'create-order' 
@@ -338,7 +345,18 @@ async function manageUsers() {
     await navigateAndRefresh(router, { name: 'admin-users' })
 }
 
+async function goToSettings() {
+    closeMenu()
+    await navigateAndRefresh(router, { name: 'user-settings' })
+}
+
 const pendingCount = computed(() => pendingRequestsStore.totalPending.value || 0)
+
+// Inicializar notificaciones del sistema
+notificationStore.init()
+
+// Inicializar monitor de stock crítico
+useCriticalStockMonitor()
 
 // refrescar conteo al montar y cada vez que la sesión cambia (solo en rutas protegidas)
 onMounted(() => {

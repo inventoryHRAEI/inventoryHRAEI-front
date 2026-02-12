@@ -41,20 +41,29 @@
 
             <template #body>
                 <Breadcrumbs v-if="props.modo !== 'editar'" />
-                <div class="op-card insumos op-salida-form" ref="rootRef">
+                
+                <!-- Skeleton Loading State -->
+                <div v-if="formLoading" class="skeleton-container">
+                    <SkeletonFormSection :fieldCount="4" :columns="4" showAction />
+                    <SkeletonFormSection :fieldCount="3" :columns="2" />
+                    <SkeletonFormSection :fieldCount="2" :columns="2" showItems :itemCount="2" />
+                    <SkeletonFormSection :fieldCount="2" :columns="2" />
+                </div>
+                
+                <!-- Main Form Content -->
+                <div v-else class="op-card insumos op-salida-form" ref="rootRef">
                     <form @submit.prevent="onSubmit" class="form-grid" id="salida-form" novalidate>
-                        <div class="section-card combined-card observaciones-support">
-                            <div class="section-head">
-                                <div class="section-title-with-icon">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                        <circle cx="12" cy="7" r="4"></circle>
-                                    </svg>
-                                    <h4>Datos del Solicitante</h4>
+                        <div class="section-card combined-card observaciones-support op-enhanced">
+                            <div class="section-head op-enhanced">
+                                <div class="section-title-with-icon op-enhanced">
+                                    <div class="icon-wrapper">
+                                        <OpIcon name="user" size="lg" color="primary" />
+                                    </div>
+                                    <div>
+                                        <h4>Datos del Solicitante</h4>
+                                        <small class="hint op-animated">Información de quien solicita la salida</small>
+                                    </div>
                                 </div>
-                                <small class="hint">Información de quien solicita la salida</small>
                             </div>
                             <div class="section-grid combined">
                                 <!-- Primera fila -->
@@ -221,6 +230,10 @@
                                                 </div>
                                             </div>
                                         </transition>
+                                        <!-- Botón Item N/A -->
+                                        <button type="button" class="btn-item-na" @click="addBlankItem" title="Agregar item sin especificar tipo">
+                                            Item N/A
+                                        </button>
                                     </div>
 
                                     <!-- Campos para Equipo Médico o Mobiliario -->
@@ -967,6 +980,9 @@ import TrashButton from '@/components/TrashButton.vue'
 import FolioInput from '@/components/FolioInput.vue'
 import DynamicFieldsSection from '@/components/DynamicFieldsSection.vue'
 import FormSchemaAdminPanel from '@/components/FormSchemaAdminPanel.vue'
+// Componentes modernos de operaciones
+import { useFormAnimations } from '@/composables/useFormAnimations.js'
+import { OpIcon, SkeletonFormSection, OpEmptyState } from '@/components/operations'
 // Nota: cargamos ExcelJS dinámicamente dentro de generarExcelSalida para evitar
 // que la librería (que tiene partes orientadas a node) sea importada al cargar
 // el componente; esto previene fallos en el dev server y reduce el bundle inicial.
@@ -981,24 +997,47 @@ import { useInventorySuggestions } from '@/composables/useInventorySuggestions.j
 const LOCAL_KEY = 'op-salida'
 const ORDERS_LIST_KEY = 'orders_list'
 
+// Use form animations composable
+const {
+    animateSectionsIn,
+    animateItemAdded,
+    animateItemRemoved,
+    animateFieldError,
+    animateFieldSuccess
+} = useFormAnimations({ autoInit: false })
+
+// Form loading state
+const formLoading = ref(true)
+
 onMounted(async () => {
-    // Animation for sections
+    // Show skeleton while loading
+    formLoading.value = true
+    
     await nextTick()
-    gsap.from('.section-card', {
-        duration: 0.8,
-        y: 60,
+    
+    // Simulate minimum load time for smooth transition
+    await new Promise(r => setTimeout(r, 300))
+    formLoading.value = false
+    
+    await nextTick()
+    
+    // Enhanced animation for sections using composable
+    animateSectionsIn('.section-card')
+    
+    // Animate title elements with enhanced effect
+    gsap.from('.salida-title-row', {
+        duration: 0.6,
+        x: -20,
         opacity: 0,
-        stagger: 0.15,
         ease: 'power3.out',
-        clearProps: 'all'
+        delay: 0.1
     })
     
-    // Animate title elements
-    gsap.from('.salida-title-row', {
-        duration: 0.8,
-        x: -30,
+    // Add subtle entrance animation for form elements
+    gsap.from('.form-grid', {
+        duration: 0.4,
         opacity: 0,
-        ease: 'back.out(1.7)',
+        ease: 'power2.out',
         delay: 0.2
     })
 })
@@ -1825,6 +1864,28 @@ const agregarItem = () => {
     }
 
     notifier.success('Item(s) agregado(s) correctamente')
+    resetNewItem()
+}
+
+// Agregar item en blanco con todos los campos como N/A
+const addBlankItem = () => {
+    const blankItem = {
+        tipo: 'n/a',
+        cantidad: 1,
+        descripcion: 'N/A',
+        marca: 'N/A',
+        modelo: 'N/A',
+        serie: 'N/A',
+        lote: 'N/A',
+        referencia: 'N/A',
+        ubicacion: 'N/A',
+        claveHRAEI: 'N/A',
+        equipoAsociado: 'N/A',
+        unidades: []
+    }
+    
+    form.equiposSalida.push(blankItem)
+    notifier.success('Item N/A agregado')
     resetNewItem()
 }
 
@@ -8213,6 +8274,126 @@ html {
     50% { opacity: 0.8; }
     100% { opacity: 1; }
 }
+
+/* Skeleton Container */
+.skeleton-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 0;
+}
+
+/* Enhanced section card styles */
+.section-card.op-enhanced {
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.section-card.op-enhanced:hover {
+    transform: translateY(-2px);
+}
+
+.section-head.op-enhanced {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    margin: -26px -26px 20px -26px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 22px 22px 0 0;
+}
+
+.section-title-with-icon.op-enhanced {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.section-title-with-icon.op-enhanced .icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(234, 88, 12, 0.1) 100%);
+    color: #fbbf24;
+    transition: all 0.3s ease;
+}
+
+.section-title-with-icon.op-enhanced:hover .icon-wrapper {
+    transform: scale(1.08);
+}
+
+.section-title-with-icon.op-enhanced h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.hint.op-animated {
+    transition: color 0.2s ease;
+}
+
+.section-head.op-enhanced:hover .hint.op-animated {
+    color: rgba(15, 23, 42, 0.85);
+}
+
+/* Modern field styles */
+.field.op-modern {
+    position: relative;
+}
+
+.field.op-modern label {
+    transition: color 0.2s ease;
+}
+
+.field.op-modern:focus-within label {
+    color: #fbbf24;
+}
+
+.field.op-modern .control:focus {
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+}
+
+/* Botón Item N/A */
+.btn-item-na {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 2px solid rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.1);
+    color: rgba(239, 68, 68, 0.9);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-item-na:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.8);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.btn-item-na:active {
+    transform: translateY(0);
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.btn-item-na:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
 </style>
 
 

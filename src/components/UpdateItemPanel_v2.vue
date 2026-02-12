@@ -6,9 +6,15 @@
                 <div class="update-panel" tabindex="0" role="dialog" aria-modal="true">
                     <!-- Encabezado -->
                     <div class="update-panel-header">
-                        <div class="update-panel-title">Actualizar Equipo</div>
-                        <div class="update-panel-subtitle">{{ itemLabel }}</div>
-                        <button class="update-panel-close-icon" @click="close" aria-label="Cerrar">✕</button>
+                        <div>
+                          <div class="update-panel-title">Actualizar Equipo</div>
+                          <div class="update-panel-subtitle">{{ itemLabel }}</div>
+                        </div>
+
+                        <div class="header-actions">
+                          <div v-if="saveSuccess" class="save-indicator">Guardado</div>
+                          <button class="update-panel-close-icon" @click="close" aria-label="Cerrar">✕</button>
+                        </div>
                     </div>
 
                     <!-- Contenido con scroll -->
@@ -197,10 +203,11 @@
                             <VueIcon name="ic:baseline-close" size="18" />
                             Cancelar
                         </button>
-                        <button class="action-btn action-save" @click="saveChanges" :disabled="!hasChanges || isSaving">
+                        <button :class="['action-btn action-save', { saved: saveSuccess }]" @click="saveChanges" :disabled="!hasChanges || isSaving">
                             <span v-if="isSaving" class="spinner"></span>
                             <VueIcon v-if="!isSaving" name="ic:baseline-save" size="18" />
-                            <span>{{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}</span>
+                            <span>{{ isSaving ? 'Guardando...' : (saveSuccess ? 'Guardado' : 'Guardar Cambios') }}</span>
+                            <VueIcon v-if="saveSuccess" name="ic:baseline-check" size="18" class="check-icon" />
                         </button>
                     </div>
                 </div>
@@ -450,6 +457,8 @@ function handleImagesUpdate(imageData) {
     }
 }
 
+const saveSuccess = ref(false)
+
 async function saveChanges() {
     if (!hasChanges.value || isSaving.value) return
 
@@ -476,6 +485,8 @@ async function saveChanges() {
             pendingImages.value.captions
         )
 
+        // Inline success feedback
+        saveSuccess.value = true
         showToast('Cambios guardados exitosamente', 'success')
         originalData.value = JSON.parse(JSON.stringify(formData.value))
         pendingImages.value = { newFiles: [], captions: [] }
@@ -485,9 +496,11 @@ async function saveChanges() {
 
         emit('item-updated', result)
 
+        // Keep the success visible briefly before closing
         setTimeout(() => {
+            saveSuccess.value = false
             visible.value = false
-        }, 500)
+        }, 700)
     } catch (error) {
         console.error('[UpdateItemPanel] Error saving changes:', error)
         showToast(`Error al guardar: ${error.message}`, 'error')
@@ -893,12 +906,23 @@ function showErrorToast(message) {
     display: flex;
     gap: 12px;
     padding: 16px 24px;
-    border-top: 1px solid rgba(59, 130, 246, 0.2);
-    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(59, 130, 246, 0.12);
+    background: linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.12));
     justify-content: flex-end;
     flex-wrap: wrap;
     flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    z-index: 12;
+    box-shadow: 0 -8px 24px rgba(2,6,23,0.6);
 }
+
+.action-save { position: relative; overflow: hidden; }
+.action-save .check-icon {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%); opacity: 0; transition: opacity .18s ease, transform .18s ease;
+}
+.action-save.saved .check-icon { opacity: 1; transform: translateY(-50%) scale(1.05); }
+.save-indicator { background: rgba(34,197,94,.12); color: #a7f3d0; padding: 6px 10px; border-radius: 8px; font-weight:700; border:1px solid rgba(34,197,94,.18) }
 
 .action-btn {
     display: inline-flex;

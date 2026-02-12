@@ -705,7 +705,7 @@ import BlobPdfViewer from '@/components/BlobPdfViewer.vue'
 import { confirmDelete, showSuccess } from '@/utils/sweetAlertConfig'
 import Swal from 'sweetalert2'
 import { darkThemeConfig } from '@/utils/sweetAlertConfig'
-const OpServicio = defineAsyncComponent(() => import('@/views/operations/OpServicio.vue'))
+const OpServicio = defineAsyncComponent(() => import('@/views/operations/OpServicioNew.vue'))
 
 // Mock helper para versiones de PDF (se puede reemplazar por API real)
 import { mockFetchVersions } from '@/utils/mockPDFData'

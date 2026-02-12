@@ -1,220 +1,232 @@
 <template>
-  <div class="step-indicator">
-    <div class="steps-container">
-      <div 
-        v-for="(step, index) in steps" 
-        :key="step.id"
-        class="step"
-        :class="{ 
-          'active': index === currentStep,
-          'completed': index < currentStep,
-          'pending': index > currentStep
-        }"
-      >
-        <div class="step-marker">
-          <svg v-if="index < currentStep" class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+  <div class="form-step-indicator">
+    <div 
+      v-for="(step, index) in steps" 
+      :key="index"
+      class="step-item"
+      :class="{ 
+        'is-active': currentStep === index,
+        'is-completed': currentStep > index,
+        'is-clickable': allowNavigation && index <= maxReachedStep
+      }"
+      @click="handleStepClick(index)"
+    >
+      <div class="step-connector" v-if="index > 0">
+        <div class="connector-line" :class="{ filled: currentStep >= index }"></div>
+      </div>
+      
+      <div class="step-bubble">
+        <transition name="check-pop" mode="out-in">
+          <svg 
+            v-if="currentStep > index" 
+            key="check"
+            class="check-icon"
+            xmlns="http://www.w3.org/2000/svg" 
+            width="16" 
+            height="16" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            stroke-width="3" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"
+          >
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
-          <span v-else class="step-number">{{ index + 1 }}</span>
-        </div>
-        <span class="step-label">{{ step.label }}</span>
-
-        <svg v-if="index < steps.length - 1" class="step-connector" viewBox="0 0 100 2" fill="none" stroke="currentColor">
-          <line x1="0" y1="1" x2="100" y2="1"></line>
-        </svg>
+          <span v-else key="number" class="step-number">{{ index + 1 }}</span>
+        </transition>
       </div>
-    </div>
-
-    <div class="step-info">
-      <p class="step-description">{{ steps[currentStep]?.description }}</p>
+      
+      <span class="step-label">{{ step.label }}</span>
     </div>
   </div>
 </template>
 
 <script setup>
-defineProps({
+import { ref, computed } from 'vue'
+
+const props = defineProps({
   steps: {
     type: Array,
     required: true,
-    validator: (steps) => steps.every(s => s.id && s.label)
+    validator: (val) => val.every(s => s.label)
   },
-  currentStep: {
-    type: Number,
-    required: true,
-    validator: (val) => val >= 0
-  }
+  currentStep: { type: Number, default: 0 },
+  allowNavigation: { type: Boolean, default: false }
 })
+
+const emit = defineEmits(['step-click'])
+
+const maxReachedStep = ref(props.currentStep)
+
+// Track max reached step
+if (props.currentStep > maxReachedStep.value) {
+  maxReachedStep.value = props.currentStep
+}
+
+function handleStepClick(index) {
+  if (props.allowNavigation && index <= maxReachedStep.value) {
+    emit('step-click', index)
+  }
+}
 </script>
 
 <style scoped>
-.step-indicator {
-  margin-bottom: 32px;
-}
-
-.steps-container {
+.form-step-indicator {
   display: flex;
+  align-items: flex-start;
+  justify-content: center;
   gap: 0;
-  margin-bottom: 16px;
+  padding: 20px 16px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+  border-radius: 16px;
+  margin-bottom: 24px;
 }
 
-.step {
-  flex: 1;
+.step-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   position: relative;
+  flex: 1;
+  max-width: 140px;
 }
 
-.step-marker {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 1.1rem;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 2;
+.step-item.is-clickable {
+  cursor: pointer;
 }
 
-.step.completed .step-marker {
-  background: linear-gradient(135deg, #2edd5a, #10b981);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
-}
-
-.step.active .step-marker {
-  background: linear-gradient(135deg, #2edd5a, #10b981);
-  color: #fff;
-  box-shadow: 0 0 0 4px rgba(46, 221, 90, 0.2);
-  animation: pulse-ring 2s infinite;
-}
-
-.step.pending .step-marker {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.5);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-}
-
-@keyframes pulse-ring {
-  0% {
-    box-shadow: 0 0 0 4px rgba(46, 221, 90, 0.2);
-  }
-  50% {
-    box-shadow: 0 0 0 8px rgba(46, 221, 90, 0.1);
-  }
-  100% {
-    box-shadow: 0 0 0 4px rgba(46, 221, 90, 0.2);
-  }
-}
-
-.check-icon {
-  width: 24px;
-  height: 24px;
-  animation: checkBounce 0.5s ease-out;
-}
-
-@keyframes checkBounce {
-  0% {
-    transform: scale(0) rotate(-45deg);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1) rotate(0);
-    opacity: 1;
-  }
-}
-
-.step-number {
-  display: block;
-}
-
-.step-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-align: center;
-  color: rgba(255, 255, 255, 0.8);
-  transition: color 0.3s ease;
-}
-
-.step.active .step-label,
-.step.completed .step-label {
-  color: #fff;
+.step-item.is-clickable:hover .step-bubble {
+  transform: scale(1.1);
 }
 
 .step-connector {
   position: absolute;
-  top: 24px;
-  left: 50%;
-  width: 100%;
+  top: 18px;
+  right: calc(50% + 22px);
+  width: calc(100% - 44px);
   height: 2px;
+}
+
+.connector-line {
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.1);
+  border-radius: 1px;
+  position: relative;
+  overflow: hidden;
+}
+
+.connector-line::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.connector-line.filled::after {
+  width: 100%;
+}
+
+.step-bubble {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 2px solid rgba(255,255,255,0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 1;
-  stroke-width: 2;
-  stroke: rgba(255, 255, 255, 0.1);
 }
 
-.step.completed .step-connector {
-  stroke: #2edd5a;
-  stroke-width: 2;
+.step-item.is-active .step-bubble {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-color: transparent;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
 }
 
-.step:last-child .step-connector {
-  display: none;
+.step-item.is-completed .step-bubble {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border-color: transparent;
 }
 
-.step-info {
-  text-align: center;
-  padding: 12px 16px;
-  background: rgba(46, 221, 90, 0.08);
-  border: 1px solid rgba(46, 221, 90, 0.2);
-  border-radius: 12px;
-}
-
-.step-description {
-  margin: 0;
+.step-number {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-weight: 500;
+  font-weight: 700;
+  color: rgba(255,255,255,0.5);
 }
 
-@media (max-width: 768px) {
-  .steps-container {
-    gap: 8px;
-  }
-
-  .step-marker {
-    width: 44px;
-    height: 44px;
-    font-size: 1rem;
-  }
-
-  .step-label {
-    font-size: 0.75rem;
-  }
-
-  .step-connector {
-    top: 22px;
-  }
+.step-item.is-active .step-number {
+  color: white;
 }
 
-@media (max-width: 480px) {
-  .step {
+.check-icon {
+  color: white;
+}
+
+.step-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+  line-height: 1.3;
+  transition: color 0.3s ease;
+}
+
+.step-item.is-active .step-label,
+.step-item.is-completed .step-label {
+  color: rgba(255,255,255,0.85);
+}
+
+/* Animation */
+.check-pop-enter-active {
+  animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.check-pop-leave-active {
+  animation: popOut 0.2s ease;
+}
+
+@keyframes popIn {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes popOut {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .form-step-indicator {
+    padding: 16px 8px;
     gap: 4px;
   }
-
-  .step-marker {
-    width: 40px;
-    height: 40px;
+  
+  .step-item {
+    max-width: 80px;
   }
-
+  
+  .step-bubble {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .step-connector {
+    top: 15px;
+    right: calc(50% + 18px);
+    width: calc(100% - 36px);
+  }
+  
   .step-label {
-    font-size: 0.7rem;
+    font-size: 0.68rem;
   }
 }
 </style>

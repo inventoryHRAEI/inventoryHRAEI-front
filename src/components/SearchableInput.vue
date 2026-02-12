@@ -35,46 +35,58 @@
                             <!-- Mostrar campos disponibles como badges - Detectar correctamente si tienen valor -->
                             <span v-if="hasValidValue(suggestion.nombre) && fieldName !== 'nombre'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">📦</span>Nombre
+                                <span class="badge-dot" aria-hidden="true"></span>Nombre
                             </span>
                             <span v-if="hasValidValue(suggestion.marca) && fieldName !== 'marca'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">🏭</span>Marca
+                                <span class="badge-dot" aria-hidden="true"></span>Marca
                             </span>
                             <span v-if="hasValidValue(suggestion.modelo) && fieldName !== 'modelo'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">⚙️</span>Modelo
+                                <span class="badge-dot" aria-hidden="true"></span>Modelo
                             </span>
                             <span v-if="hasValidValue(suggestion.serie) && fieldName !== 'serie'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">🔢</span>Serie
+                                <span class="badge-dot" aria-hidden="true"></span>Serie
                             </span>
                             <span v-if="hasValidValue(suggestion.lote) && fieldName !== 'lote'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">📋</span>Lote
+                                <span class="badge-dot" aria-hidden="true"></span>Lote
                             </span>
                             <span v-if="hasValidValue(suggestion.referencia) && fieldName !== 'referencia'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">📌</span>Ref
+                                <span class="badge-dot" aria-hidden="true"></span>Ref
                             </span>
                             <span v-if="hasValidValue(suggestion.ubicacion) && fieldName !== 'ubicacion'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">📍</span>{{ suggestion.ubicacion }}
+                                <span class="badge-dot" aria-hidden="true"></span>{{ suggestion.ubicacion }}
                             </span>
                             <span v-if="hasValidValue(suggestion.claveHRAEI) && fieldName !== 'claveHRAEI'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">🏷️</span>HRAEI
+                                <span class="badge-dot" aria-hidden="true"></span>HRAEI
                             </span>
                             <span v-if="hasValidValue(suggestion.claveCNIS) && fieldName !== 'claveCNIS'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">🏷️</span>CNIS
+                                <span class="badge-dot" aria-hidden="true"></span>CNIS
                             </span>
                             <span v-if="hasValidValue(suggestion.noInventario) && fieldName !== 'noInventario'"
                                 class="detail-badge detail-available">
-                                <span class="badge-icon">📋</span>Inv
+                                <span class="badge-dot" aria-hidden="true"></span>Inv
                             </span>
                         </div>
                     </div>
+                </div>
+
+                <!-- Source hint -->
+                <div class="suggestions-source" v-if="showDropdown">
+                    <small>
+                        <template v-if="tipo === 'equipo-medico' || tipo === 'mobiliario'">
+                            Sugerencias desde historial de mantenimientos
+                        </template>
+                        <template v-else>
+                            Sugerencias desde inventario (accesorios/consumibles/refacciones)
+                        </template>
+                    </small>
                 </div>
 
                 <!-- Opción para agregar valor personalizado -->
@@ -487,10 +499,109 @@ const clearSuggestion = () => {
     transition: opacity 0.15s, transform 0.15s;
 }
 
+.suggestions-source {
+    padding: 6px 10px;
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.55);
+    border-top: 1px solid rgba(255,255,255,0.03);
+    margin-top: 6px;
+}
 .dropdown-fade-enter-from,
 .dropdown-fade-leave-to {
     opacity: 0;
     transform: translateY(-4px);
+}
+
+/* Scroll personalizado para dropdown */
+.suggestions-dropdown {
+    background: #0f1724;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 10px 40px rgba(2,6,23,0.6);
+}
+
+.suggestion-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s, transform 0.08s;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+    background: rgba(59,130,246,0.06);
+}
+
+.suggestion-main {
+    font-weight: 600;
+    color: #e6eef8;
+    font-size: 0.95rem;
+}
+
+.suggestion-details {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.detail-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.75);
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.detail-available {
+    background: rgba(34,197,94,0.06);
+    color: #86efac;
+}
+
+.badge-dot {
+    width: 8px;
+    height: 8px;
+    background: rgba(99,102,241,0.9);
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.no-suggestions {
+    padding: 12px;
+    text-align: center;
+    background: transparent;
+    border-radius: 8px;
+}
+
+.no-suggestions p {
+    margin: 0 0 8px 0;
+    color: rgba(255,255,255,0.55);
+    font-size: 0.95rem;
+}
+
+.add-custom-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(59,130,246,0.14), rgba(99,102,241,0.06));
+    color: #e6eef8;
+    border: 1px solid rgba(59,130,246,0.22);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+
+.add-custom-btn:hover {
+    transform: translateY(-1px);
 }
 
 /* Scroll personalizado para dropdown */
@@ -503,11 +614,11 @@ const clearSuggestion = () => {
 }
 
 .suggestions-dropdown::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
+    background: rgba(148,163,184,0.4);
     border-radius: 3px;
 }
 
 .suggestions-dropdown::-webkit-scrollbar-thumb:hover {
-    background: #94a3b8;
+    background: rgba(148,163,184,0.6);
 }
 </style>

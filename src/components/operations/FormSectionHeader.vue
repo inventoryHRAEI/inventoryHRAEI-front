@@ -1,235 +1,243 @@
 <template>
-  <div class="form-section-header" :class="{ 'is-collapsed': collapsed }">
-    <button 
-      type="button"
-      class="section-toggle"
-      @click="toggleCollapse"
-      :aria-expanded="!collapsed"
-      :aria-label="`${collapsed ? 'Expandir' : 'Contraer'} sección ${title}`"
-    >
-      <div class="section-header-content">
-        <div class="section-icon-wrapper">
-          <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <slot name="icon">
-              <circle cx="12" cy="12" r="1"></circle>
-            </slot>
-          </svg>
-        </div>
-        <div class="section-text">
-          <h3 class="section-title">{{ title }}</h3>
-          <p v-if="subtitle" class="section-subtitle">{{ subtitle }}</p>
-        </div>
+  <div 
+    class="form-section-header" 
+    :class="{ 'is-collapsible': collapsible, 'is-collapsed': isCollapsed }"
+    @click="collapsible && toggleCollapse()"
+  >
+    <div class="header-content">
+      <div class="icon-wrapper" :class="iconColorClass">
+        <component :is="resolvedIcon" class="section-icon" />
       </div>
-
-      <div class="section-controls">
-        <span v-if="badge" class="section-badge">{{ badge }}</span>
-        <svg class="toggle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <div class="title-group">
+        <h4 class="section-title">{{ title }}</h4>
+        <p v-if="subtitle" class="section-subtitle">{{ subtitle }}</p>
+      </div>
+    </div>
+    
+    <div class="header-actions">
+      <slot name="actions" />
+      <button 
+        v-if="collapsible" 
+        type="button" 
+        class="collapse-btn"
+        :aria-expanded="!isCollapsed"
+        :aria-label="isCollapsed ? 'Expandir sección' : 'Contraer sección'"
+      >
+        <svg 
+          class="chevron-icon" 
+          :class="{ rotated: !isCollapsed }"
+          xmlns="http://www.w3.org/2000/svg" 
+          width="20" 
+          height="20" 
+          viewBox="0 0 24 24" 
+          fill="none" 
+          stroke="currentColor" 
+          stroke-width="2" 
+          stroke-linecap="round" 
+          stroke-linejoin="round"
+        >
           <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
-      </div>
-    </button>
-
-    <transition name="section-expand">
-      <div v-show="!collapsed" class="section-body">
-        <slot></slot>
-      </div>
-    </transition>
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, h } from 'vue'
+import { 
+  UserIcon, 
+  DocumentTextIcon, 
+  CubeIcon,
+  WrenchScrewdriverIcon,
+  ClipboardDocumentListIcon,
+  ShieldCheckIcon,
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon
+} from '@heroicons/vue/24/outline'
 
-defineProps({
-  title: {
-    type: String,
-    required: true
-  },
-  subtitle: {
-    type: String,
-    default: null
-  },
-  badge: {
-    type: String,
-    default: null
-  },
-  defaultCollapsed: {
-    type: Boolean,
-    default: false
-  }
+const props = defineProps({
+  title: { type: String, required: true },
+  subtitle: { type: String, default: '' },
+  icon: { type: String, default: 'document' },
+  iconColor: { type: String, default: 'blue' },
+  collapsible: { type: Boolean, default: false },
+  defaultCollapsed: { type: Boolean, default: false }
 })
 
-const collapsed = ref(false)
+const emit = defineEmits(['toggle'])
 
-const toggleCollapse = () => {
-  collapsed.value = !collapsed.value
+const isCollapsed = ref(props.defaultCollapsed)
+
+const iconMap = {
+  user: UserIcon,
+  document: DocumentTextIcon,
+  cube: CubeIcon,
+  wrench: WrenchScrewdriverIcon,
+  clipboard: ClipboardDocumentListIcon,
+  shield: ShieldCheckIcon,
+  'arrow-down': ArrowDownTrayIcon,
+  'arrow-up': ArrowUpTrayIcon
 }
+
+const resolvedIcon = computed(() => iconMap[props.icon] || DocumentTextIcon)
+
+const iconColorClass = computed(() => `icon-${props.iconColor}`)
+
+function toggleCollapse() {
+  isCollapsed.value = !isCollapsed.value
+  emit('toggle', isCollapsed.value)
+}
+
+defineExpose({ isCollapsed })
 </script>
 
 <style scoped>
 .form-section-header {
-  margin-bottom: 20px;
-  animation: slideInUp 0.5s ease-out;
-}
-
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.section-toggle {
-  width: 100%;
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 16px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  cursor: pointer;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+  border-radius: 14px 14px 0 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: inherit;
 }
 
-.section-toggle:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+.form-section-header.is-collapsible {
+  cursor: pointer;
 }
 
-.section-toggle:active {
-  transform: scale(0.98);
+.form-section-header.is-collapsible:hover {
+  background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 100%);
 }
 
-.section-header-content {
+.form-section-header.is-collapsed {
+  border-radius: 14px;
+  border-bottom: none;
+}
+
+.header-content {
   display: flex;
   align-items: center;
   gap: 14px;
-  flex: 1;
-  text-align: left;
 }
 
-.section-icon-wrapper {
-  width: 44px;
-  height: 44px;
+.icon-wrapper {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(46, 221, 90, 0.2), rgba(16, 185, 129, 0.15));
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  flex-shrink: 0;
+  transition: all 0.3s ease;
+}
+
+.icon-wrapper.icon-blue {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2) 0%, rgba(59, 130, 246, 0.1) 100%);
+  color: #60a5fa;
+}
+
+.icon-wrapper.icon-green {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(34, 197, 94, 0.1) 100%);
+  color: #4ade80;
+}
+
+.icon-wrapper.icon-purple {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2) 0%, rgba(168, 85, 247, 0.1) 100%);
+  color: #c084fc;
+}
+
+.icon-wrapper.icon-amber {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
+  color: #fbbf24;
+}
+
+.icon-wrapper.icon-cyan {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(6, 182, 212, 0.1) 100%);
+  color: #22d3ee;
 }
 
 .section-icon {
-  width: 24px;
-  height: 24px;
-  color: #2edd5a;
-  filter: drop-shadow(0 0 4px rgba(46, 221, 90, 0.4));
+  width: 22px;
+  height: 22px;
 }
 
-.section-text {
+.title-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
 .section-title {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.3px;
+  color: rgba(255,255,255,0.95);
+  letter-spacing: -0.02em;
 }
 
 .section-subtitle {
   margin: 0;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.82rem;
+  color: rgba(255,255,255,0.55);
   font-weight: 500;
 }
 
-.section-controls {
+.header-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
-.section-badge {
-  background: rgba(46, 221, 90, 0.2);
-  color: #a6ffcb;
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border: 1px solid rgba(46, 221, 90, 0.3);
+.collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255,255,255,0.06);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.6);
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.toggle-icon {
-  width: 20px;
-  height: 20px;
-  color: rgba(255, 255, 255, 0.6);
-  transition: transform 0.3s ease;
+.collapse-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.9);
 }
 
-.is-collapsed .toggle-icon {
-  transform: rotate(-180deg);
+.chevron-icon {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.section-body {
-  margin-top: 16px;
-  padding: 0 4px;
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.section-expand-enter-active,
-.section-expand-leave-active {
-  transition: all 0.3s ease;
-}
-
-.section-expand-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.section-expand-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
+.chevron-icon.rotated {
+  transform: rotate(180deg);
 }
 
 @media (max-width: 640px) {
-  .section-toggle {
-    padding: 12px 16px;
+  .form-section-header {
+    padding: 14px 16px;
   }
-
-  .section-icon-wrapper {
-    width: 40px;
-    height: 40px;
+  
+  .icon-wrapper {
+    width: 36px;
+    height: 36px;
   }
-
+  
+  .section-icon {
+    width: 18px;
+    height: 18px;
+  }
+  
   .section-title {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
-
+  
   .section-subtitle {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
   }
 }
 </style>

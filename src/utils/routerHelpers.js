@@ -1,4 +1,3 @@
-// Helper para navegar y forzar recreación del componente raíz si es necesario
 export async function navigateAndRefresh(router, target) {
   // Health-check post navegación: si por alguna razón el router-view queda vacío,
   // forzamos un remount suave (sin recarga completa).
@@ -39,12 +38,6 @@ export async function navigateAndRefresh(router, target) {
       console.debug('[routerHelpers] purged local caches for op/dashboard navigation')
     }
   } catch (e) { /* ignore */ }
-
-  // NOTE: removed an early dispatch of `app:force-recreate` here to avoid duplicate rapid remounts.
-  // The router.afterEach will emit `app:force-recreate` when necessary; emitting here caused
-  // back-to-back events that could interrupt the target component's mount flow and leave
-  // the UI showing only the topbar/background. See commit notes for rationale.
-
   // Esperar a que el componente destino emita un 'route:mounted' o hacer fallback (recarga completa)
   try {
     const resolved = router.resolve(target)

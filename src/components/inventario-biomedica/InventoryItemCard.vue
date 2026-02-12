@@ -1,6 +1,19 @@
 <template>
-  <div class="inventory-item-card" :class="statusClass">
+  <div class="inventory-item-card" :class="[statusClass, { 'is-new': isNew }]">
     <div class="card-glow"></div>
+    <!-- Floating update button (more prominent) -->
+    <button class="btn-update floating" @click.prevent.stop="$emit('edit', item)" aria-label="Actualizar información del equipo">
+      <VueIcon name="ic:baseline-edit" size="16" />
+      <span class="btn-label">Actualizar</span>
+    </button>
+    <button class="btn-kardex floating" @click.prevent.stop="downloadKardex" title="Ver kardex (historial)">
+      <VueIcon name="ic:baseline-description" size="16" />
+      <span class="btn-label">Ver kardex</span>
+    </button>
+    <div v-if="isNew" class="new-beacon"></div>
+    <div v-if="isNew" class="new-ribbon">
+      <span>Ingreso reciente</span>
+    </div>
     
     <div class="card-top">
       <div class="meta-stack">
@@ -21,10 +34,16 @@
         </h3>
       </div>
 
-      <div class="availability-badge" :class="stockStatusClass">
-        <VueIcon :name="stockIcon" size="16" />
-        <span class="count">{{ displayValue(item['TOTAL EXISTENCIAS']) }}</span>
-        <span class="unit"><VueIcon name="ic:baseline-scale" size="10" class="unit-icon" />{{ displayValue(item['Unidad de medida (presentación)']) }}</span>
+      <div class="badge-row">
+        <div class="availability-badge" :class="stockStatusClass">
+          <VueIcon :name="stockIcon" size="16" />
+          <span class="count">{{ displayValue(item['TOTAL EXISTENCIAS']) }}</span>
+          <span class="unit"><VueIcon name="ic:baseline-scale" size="10" class="unit-icon" />{{ displayValue(item['Unidad de medida (presentación)']) }}</span>
+        </div>
+        <div v-if="isNew" class="new-badge">
+          <VueIcon name="ic:baseline-star" size="16" />
+          <span>ITEM NUEVO</span>
+        </div>
       </div>
     </div>
 
@@ -79,19 +98,38 @@
         <span class="loc-val"><VueIcon name="ic:baseline-box" size="12" class="loc-val-icon" /> {{ displayValue(item[' Almacén IB (OFICINA)']) }}</span>
       </div>
     </div>
+
+    <!-- Modal de preview del kardex -->
+    <KardexPreviewModal
+      :isOpen="showKardexModal"
+      :itemData="item"
+      title="Vista Previa del Kardex"
+      @close="showKardexModal = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import VueIcon from '@kalimahapps/vue-icons/VueIcon';
+import KardexPreviewModal from '@/components/KardexPreviewModal.vue';
+import { getStoredToken } from '@/utils/auth.js';
 
 const props = defineProps({
   item: {
     type: Object,
     required: true
+  },
+  isNew: {
+    type: Boolean,
+    default: false
   }
 });
+
+const emit = defineEmits(['edit']);
+
+// Estado para modal de kardex
+const showKardexModal = ref(false);
 
 const totalCount = computed(() => {
   return parseInt(props.item['TOTAL EXISTENCIAS']) || 0;
@@ -153,6 +191,11 @@ const stockIcon = computed(() => {
 const isExpiringSoon = computed(() => {
   return hasRealValue(props.item['CADUCIDAD']);
 });
+
+const downloadKardex = () => {
+  // Abrir modal con vista previa del kardex
+  showKardexModal.value = true
+}
 </script>
 
 <style scoped>
@@ -162,17 +205,16 @@ const isExpiringSoon = computed(() => {
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 34px;
-  padding: 30px;
+  border-radius: 24px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   transition: all 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
   box-shadow: 
     0 10px 40px -15px rgba(0, 0, 0, 0.6),
     inset 0 0 20px rgba(255, 255, 255, 0.03);
-  min-height: 330px;
 }
 
 .inventory-item-card::after {
@@ -227,9 +269,8 @@ const isExpiringSoon = computed(() => {
 
 .card-top {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 18px;
+  flex-direction: column;
+  gap: 14px;
 }
 
 .meta-stack {
@@ -307,17 +348,17 @@ const isExpiringSoon = computed(() => {
 }
 
 .title {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 800;
   color: #ffffff;
-  line-height: 1.35;
+  line-height: 1.4;
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-shadow: 0 2px 10px rgba(0,0,0,0.5);
-  height: 2.7em;
   letter-spacing: -0.01em;
 }
 
@@ -348,10 +389,15 @@ const isExpiringSoon = computed(() => {
   font-size: 0.85rem;
   color: #f1f5f9;
   margin: 0;
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 700;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  word-break: break-word;
 }
 
 .card-locations {
@@ -404,4 +450,228 @@ const isExpiringSoon = computed(() => {
 }
 
 .warning-text { color: #f87171; font-weight: 900; text-shadow: 0 0 10px rgba(248, 113, 113, 0.3); }
+
+.badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Update button */
+.btn-update {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  color: #cbd5e1;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-update:hover { background: rgba(255,255,255,.06); color: #fff; }
+
+.btn-update.floating{
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 22;
+  background: linear-gradient(135deg,#2563eb,#60a5fa);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(37,99,235,0.28), 0 2px 6px rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.06);
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 800;
+}
+.btn-update.floating .btn-label { font-size: 12px; }
+.btn-update.floating:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(37,99,235,0.36); }
+
+.btn-kardex {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  color: #cbd5e1;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn-kardex.floating{
+  position: absolute;
+  top: 56px;
+  right: 14px;
+  z-index: 22;
+  background: linear-gradient(135deg,#059669,#34d399);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(5,150,105,0.26);
+  border: 1px solid rgba(255,255,255,0.06);
+  display: inline-flex; align-items: center; gap: 8px;
+  font-weight: 800;
+}
+.btn-kardex.floating:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(5,150,105,0.34); }
+
+.new-badge {
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.4) 0%, rgba(16, 185, 129, 0.3) 100%);
+  border: 2px solid rgba(34, 197, 94, 0.8);
+  color: #d1fae5;
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  box-shadow: 
+    0 0 32px rgba(34, 197, 94, 0.5),
+    inset 0 0 16px rgba(255, 255, 255, 0.1);
+  animation: pulse-new 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite, 
+             badge-float 3s ease-in-out infinite;
+}
+
+.new-beacon {
+  position: absolute;
+  inset: -30px;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.15), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+  animation: beacon-pulse 2.6s ease-in-out infinite;
+}
+
+.new-ribbon {
+  position: absolute;
+  top: 18px;
+  left: -48px;
+  background: linear-gradient(135deg, #22c55e, #4ade80, #86efac);
+  color: #052e16;
+  text-transform: uppercase;
+  font-weight: 900;
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  padding: 6px 60px;
+  transform: rotate(-45deg);
+  box-shadow: 0 10px 25px rgba(34, 197, 94, 0.35);
+  border: 1px solid rgba(5, 46, 22, 0.2);
+  animation: ribbon-pop 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.new-ribbon span {
+  display: inline-block;
+}
+
+@keyframes pulse-new {
+  0% {
+    opacity: 1;
+    box-shadow: 
+      0 0 32px rgba(34, 197, 94, 0.5),
+      inset 0 0 16px rgba(255, 255, 255, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    box-shadow: 
+      0 0 64px rgba(34, 197, 94, 0.8),
+      inset 0 0 20px rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 
+      0 0 32px rgba(34, 197, 94, 0.5),
+      inset 0 0 16px rgba(255, 255, 255, 0.1);
+    transform: scale(1);
+  }
+}
+
+@keyframes badge-float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes ribbon-pop {
+  0% {
+    opacity: 0;
+    transform: rotate(-45deg) scale(0.6);
+  }
+  60% {
+    opacity: 1;
+    transform: rotate(-45deg) scale(1.08);
+  }
+  100% {
+    transform: rotate(-45deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes beacon-pulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.1);
+  }
+}
+
+.inventory-item-card.is-new {
+  animation: slide-in-top 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards, 
+             highlight-pulse 6s cubic-bezier(0.4, 0, 0.6, 1) 0.8s infinite;
+  border-color: rgba(34, 197, 94, 0.6);
+  box-shadow: 
+    0 10px 40px -15px rgba(0, 0, 0, 0.6),
+    0 0 60px rgba(34, 197, 94, 0.4),
+    inset 0 0 30px rgba(34, 197, 94, 0.1);
+}
+
+.inventory-item-card.is-new .card-glow {
+  background: linear-gradient(90deg, #22c55e, #34d399, #22c55e) !important;
+  box-shadow: 0 8px 32px rgba(34, 197, 94, 0.6) !important;
+  animation: glow-pulse-intense 1.5s ease-in-out infinite;
+  opacity: 1 !important;
+}
+
+@keyframes glow-pulse-intense {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@keyframes highlight-pulse {
+  0%, 100% {
+    border-color: rgba(34, 197, 94, 0.8);
+    box-shadow: 
+      0 10px 40px -15px rgba(0, 0, 0, 0.6),
+      0 0 80px rgba(34, 197, 94, 0.5),
+      inset 0 0 30px rgba(34, 197, 94, 0.15);
+    background: rgba(30, 41, 59, 0.6);
+  }
+  50% {
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 
+      0 10px 40px -15px rgba(0, 0, 0, 0.6),
+      0 0 40px rgba(34, 197, 94, 0.25),
+      inset 0 0 20px rgba(34, 197, 94, 0.05);
+    background: rgba(30, 41, 59, 0.5);
+  }
+}
+
+@keyframes slide-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-60px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
 </style>

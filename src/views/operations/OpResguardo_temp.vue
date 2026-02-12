@@ -3689,7 +3689,7 @@ async function onSubmit() {
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ ...payload, stockMovement: 'auto', module: 'resguardo' })
         })
 
         if (!res.ok) {

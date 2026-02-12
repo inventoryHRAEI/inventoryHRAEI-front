@@ -1,5 +1,22 @@
 <template>
   <div class="inventory-subdireccion">
+    <!-- Toast Notification -->
+    <Transition name="toast-fade">
+      <div v-if="showNotification" class="toast-notification" :class="`toast-${notificationType} toast-${actionType}`">
+        <div class="toast-content">
+          <IIcon 
+            :name="notificationType === 'success' ? 'ic:baseline-check-circle' : 'ic:baseline-info'" 
+            size="20" 
+            class="toast-icon"
+          />
+          <span class="toast-message">{{ notificationMessage }}</span>
+        </div>
+        <button class="toast-close" @click="showNotification = false">
+          <IIcon name="ic:baseline-close" size="18" />
+        </button>
+      </div>
+    </Transition>
+
     <div class="sub-header">
       <div class="header-left">
         <h2 class="title">
@@ -11,22 +28,68 @@
           Gestión de existencias y control de almacén biomédico
         </p>
       </div>
-
-      <div class="header-actions">
-         <div class="search-box">
-           <IIcon name="ic:baseline-search" size="20" class="search-icon" />
-           <input 
-             v-model="searchQuery" 
-             type="text" 
-             placeholder="Buscar por nombre, clave o fabricante..." 
-             class="search-input"
-           />
-         </div>
-         <button class="btn-refresh" @click="fetchArticulos" :disabled="loading" title="Actualizar lista">
-           <IIcon name="ic:baseline-refresh" :class="{ 'anim-spin': loading }" />
-         </button>
-       </div>
     </div>
+
+    <div class="header-toolbar">
+      <div class="action-buttons-container">
+        <button 
+          class="btn-warehouse-transfer" 
+          @click="openMovement" 
+          title="Mover stock entre bodegas"
+        >
+          <IIcon name="ic:baseline-swap-horiz" size="20" />
+          <span class="btn-text">Mover Stock</span>
+        </button>
+        <button 
+          class="btn-consumable-intake" 
+          @click="openIntake" 
+          title="Resurtir o crear nuevos consumibles"
+        >
+          <IIcon name="ic:baseline-add-circle-outline" size="20" />
+          <span class="btn-text">Ingresar Bienes</span>
+        </button>
+        <button 
+          class="btn-decommission" 
+          @click="openDecommission" 
+          title="Dar de baja artículos del inventario"
+        >
+          <IIcon name="ic:baseline-delete-forever" size="20" />
+          <span class="btn-text">Dar de Baja</span>
+        </button>
+      </div>
+      
+      <div class="search-and-refresh">
+        <div class="search-box">
+          <IIcon name="ic:baseline-search" size="20" class="search-icon" />
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Buscar por nombre, clave o fabricante..." 
+            class="search-input"
+          />
+        </div>
+        <button class="btn-refresh" @click="fetchArticulos" :disabled="loading" title="Actualizar lista">
+          <IIcon name="ic:baseline-refresh" :class="{ 'anim-spin': loading }" />
+        </button>
+      </div>
+    </div>
+
+    <!-- Modales -->
+    <MovementWizard 
+      :open="movementOpen" 
+      @close="movementOpen = false"
+      @success="handleWizardSuccess"
+    />
+    <IntakeWizard 
+      :open="intakeOpen" 
+      @close="intakeOpen = false"
+      @success="handleWizardSuccess"
+    />
+    <DecommissionWizard 
+      :open="decommissionOpen" 
+      @close="decommissionOpen = false"
+      @success="handleWizardSuccess"
+    />
 
     <div class="quick-filters">
       <button class="chip" :class="{ active: filterType === 'all' }" @click="filterType = 'all'">
@@ -62,13 +125,22 @@
     </div>
 
     <div v-else-if="filteredArticulos.length > 0">
-      <div class="stock-grid">
+      <div class="stock-grid" ref="gridRef">
         <InventoryItemCard 
-          v-for="item in paginatedArticulos" 
-          :key="item.N" 
-          :item="item" 
+          v-for="(item, idx) in paginatedArticulos" 
+          :key="item['Clave  HRAEI'] || `item-${idx}`" 
+          :item="item"
+          :is-new="newItemIds.has(item['Clave  HRAEI'])"
+          @edit="handleEditItem"
         />
       </div>
+
+      <!-- Update consumable/refacción panel -->
+      <UpdateConsumablePanel
+        v-model="updateItemModalOpen"
+        :item="updateItemData"
+        @item-updated="onItemUpdated"
+      />
 
       <!-- Controles de Paginación -->
       <div class="pagination-container" v-if="totalPages > 1">
@@ -134,19 +206,144 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
+import UpdateConsumablePanel from '@/components/UpdateConsumablePanel.vue'
 import IIcon from '@/components/IIcon.vue';
 import InventoryItemCard from '@/components/inventario-biomedica/InventoryItemCard.vue';
+import MovementWizard from '@/components/inventario-biomedica/MovementWizard.vue';
+import IntakeWizard from '@/components/inventario-biomedica/IntakeWizard.vue';
+import DecommissionWizard from '@/components/inventario-biomedica/DecommissionWizard.vue';
+
+// Inicializa notificaciones push
+const initNotifications = async () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        console.log('Notificaciones push habilitadas');
+      }
+    } catch (error) {
+      console.warn('Error solicitando permiso de notificaciones:', error);
+    }
+  }
+};
+
+const sendPushNotification = (title, options = {}) => {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification(title, {
+        icon: '/vite.svg',
+        badge: '/vite.svg',
+        tag: 'inventory-alert',
+        requireInteraction: true,
+        ...options
+      });
+    } catch (error) {
+      console.warn('Error enviando notificación:', error);
+    }
+  }
+};
 
 const loading = ref(true);
 const fetchError = ref(false);
 const articulos = ref([]);
 const searchQuery = ref('');
 const filterType = ref('all');
+const movementOpen = ref(false);
+const intakeOpen = ref(false);
+const decommissionOpen = ref(false);
+const newItemIds = ref(new Map()); // Ahora es Map con item ID -> timestamp
+const notificationMessage = ref('');
+const showNotification = ref(false);
+const notificationType = ref('success'); // 'success', 'warning', 'info'
+const actionType = ref(null); // 'consumable', 'transfer'
 
 // Paginación
 const currentPage = ref(1);
-const itemsPerPage = ref(12);
+// Preferencia inicial (mantiene compatibilidad con el valor anterior)
+const preferredItemsPerPage = ref(12);
+// Items por página se calcula dinámicamente para llenar filas completas
+const itemsPerPage = ref(preferredItemsPerPage.value);
+// Referencia al contenedor del grid para medir columnas
+const gridRef = ref(null);
+const MIN_CARD_WIDTH = 380; // Debe coincidir con el minmax del CSS
+
+function updateItemsPerPage() {
+  // Determina el ancho disponible del grid (fallback a window.innerWidth)
+  const w = gridRef.value ? gridRef.value.clientWidth : (window.innerWidth || 1024);
+  const cols = Math.max(1, Math.floor(w / MIN_CARD_WIDTH));
+  // Calcular un tamaño de página cercano al preferido pero múltiplo de las columnas
+  const rows = Math.max(1, Math.round(preferredItemsPerPage.value / cols));
+  const newSize = cols * rows;
+  if (newSize !== itemsPerPage.value) {
+    itemsPerPage.value = newSize;
+    // Ajustar página actual si excede totalPages
+    const tp = Math.max(1, Math.ceil(filteredArticulos.value.length / newSize));
+    if (currentPage.value > tp) currentPage.value = tp;
+  }
+}
+
+// Escuchar resize del contenedor (mejor que solo window)
+let _ro = null;
+onMounted(() => {
+  // Inicializar tamaño
+  updateItemsPerPage();
+  if (typeof ResizeObserver !== 'undefined' && gridRef.value) {
+    _ro = new ResizeObserver(() => updateItemsPerPage());
+    _ro.observe(gridRef.value);
+  }
+  // Fallback window resize
+  window.addEventListener('resize', updateItemsPerPage);
+});
+onBeforeUnmount(() => {
+  if (_ro && gridRef.value) _ro.unobserve(gridRef.value);
+  window.removeEventListener('resize', updateItemsPerPage);
+});
+
+const openMovement = () => { movementOpen.value = true; };
+const openIntake = () => { intakeOpen.value = true; };
+const openDecommission = () => { decommissionOpen.value = true; };
+
+// Update Item panel state
+const updateItemModalOpen = ref(false);
+const updateItemData = ref(null);
+
+function handleEditItem(item) {
+  updateItemData.value = item;
+  updateItemModalOpen.value = true;
+}
+
+function onItemUpdated(updated) {
+  // Replace item in articulos with updated data (matching by Clave  HRAEI)
+  const clave = updated['Clave  HRAEI'];
+  const idx = articulos.value.findIndex(a => a['Clave  HRAEI'] === clave);
+  if (idx >= 0) {
+    articulos.value.splice(idx, 1, updated);
+  }
+  showNotificationToast('Información de equipo actualizada', 'success', 'update');
+  updateItemModalOpen.value = false;
+}
+
+const handleWizardSuccess = (detail) => {
+  // Mostrar notificación si el wizard envía un mensaje
+  if (detail && typeof detail === 'string') {
+    showNotificationToast(detail, 'success');
+  } else if (detail && detail.message) {
+    showNotificationToast(detail.message, detail.type || 'success', detail.action || null);
+  }
+  fetchArticulos();
+};
+
+const showNotificationToast = (message, type = 'success', action = null) => {
+  notificationMessage.value = message;
+  notificationType.value = type;
+  actionType.value = action;
+  showNotification.value = true;
+  
+  setTimeout(() => {
+    showNotification.value = false;
+  }, 5000);
+};
 
 const fetchArticulos = async () => {
   loading.value = true;
@@ -156,9 +353,115 @@ const fetchArticulos = async () => {
     if (!response.ok) throw new Error('Servidor offline');
     const data = await response.json();
     if (data.ok) {
-        articulos.value = data.data;
+      const items = data.data;
+      const now = Date.now();
+      const newItems = new Map();
+      const changedItems = new Map();
+      
+      // Recupera snapshot anterior (actualizado con cada fetch)
+      let currentSnapshot = {};
+      try {
+        currentSnapshot = JSON.parse(localStorage.getItem('inventorySnapshot') || '{}');
+      } catch (e) {
+        currentSnapshot = {};
+      }
+      
+      // Detecta items nuevos y cambios de stock
+      items.forEach(item => {
+        const itemId = item['Clave  HRAEI'];
+        const previousData = currentSnapshot[itemId];
+        const currentStock = parseInt(item['TOTAL EXISTENCIAS']) || 0;
+        
+        // Item nuevo (no existía antes en el snapshot)
+        if (!previousData) {
+          newItems.set(itemId, now);
+        }
+        // Item con cambio de stock
+        else if (previousData.stock !== currentStock) {
+          changedItems.set(itemId, now);
+        }
+      });
+      
+      // Solo items NUEVOS obtienen animación (no los modificados)
+      newItemIds.value = newItems;
+      
+      // Reordena: nuevos primero, luego todo lo demás
+      const sortedItems = [...items].sort((a, b) => {
+        const aId = a['Clave  HRAEI'];
+        const bId = b['Clave  HRAEI'];
+        const aIsNew = newItems.has(aId);
+        const bIsNew = newItems.has(bId);
+        
+        // Solo nuevos al tope (no modificados)
+        if (aIsNew && !bIsNew) return -1;
+        if (!aIsNew && bIsNew) return 1;
+        return 0;
+      });
+      
+      articulos.value = sortedItems;
+      
+      // Si hay items nuevos, ir a página 1
+      if (newItems.size > 0) {
+        currentPage.value = 1;
+      }
+      
+      // Actualiza snapshot y detecta stock bajo
+      const newSnapshot = {};
+      const lowStockItems = [];
+      const criticalStockItems = [];
+      
+      items.forEach(item => {
+        const stock = parseInt(item['TOTAL EXISTENCIAS']) || 0;
+        newSnapshot[item['Clave  HRAEI']] = {
+          stock,
+          timestamp: now
+        };
+        
+        // Detecta stock bajo (1-5 unidades)
+        if (stock > 0 && stock <= 5) {
+          lowStockItems.push({
+            name: item['Descripción del bien'],
+            code: item['Clave  HRAEI'],
+            stock
+          });
+        }
+        
+        // Detecta stock crítico (0 unidades)
+        if (stock === 0) {
+          criticalStockItems.push({
+            name: item['Descripción del bien'],
+            code: item['Clave  HRAEI']
+          });
+        }
+      });
+      
+      localStorage.setItem('inventorySnapshot', JSON.stringify(newSnapshot));
+      
+      // Envía notificaciones push para stock bajo
+      if (criticalStockItems.length > 0) {
+        sendPushNotification('⚠️ STOCK CRÍTICO', {
+          body: `${criticalStockItems.length} artículo(s) sin stock:\n${criticalStockItems.slice(0, 3).map(i => `• ${i.name}`).join('\n')}`,
+          tag: 'critical-stock'
+        });
+      }
+      
+      if (lowStockItems.length > 0) {
+        sendPushNotification('📦 Stock Bajo', {
+          body: `${lowStockItems.length} artículo(s) con stock bajo:\n${lowStockItems.slice(0, 3).map(i => `• ${i.name} (${i.stock} und)`).join('\n')}`,
+          tag: 'low-stock'
+        });
+      }
+      
+      // Limpia animaciones después de 3 horas (10800000 ms) - solo para items NUEVOS
+      if (newItems.size > 0) {
+        const ANIMATION_DURATION = 3 * 60 * 60 * 1000; // 3 horas
+        setTimeout(() => {
+          newItemIds.value.clear();
+        }, ANIMATION_DURATION);
+      }
+      
     } else {
-        fetchError.value = true;
+      fetchError.value = true;
     }
   } catch (error) {
     console.error('Error fetching inventory:', error);
@@ -216,12 +519,28 @@ const paginatedArticulos = computed(() => {
   return filteredArticulos.value.slice(start, start + itemsPerPage.value);
 });
 
+// Recalcular itemsPerPage cuando cambian los resultados (filtrado/búsqueda)
+watch(filteredArticulos, () => {
+  updateItemsPerPage();
+  // Ajustar página actual si sobrepasa el total
+  const tp = Math.max(1, Math.ceil(filteredArticulos.value.length / itemsPerPage.value));
+  if (currentPage.value > tp) currentPage.value = tp;
+});
+
 // Reiniciar a página 1 cuando se filtra o busca
 watch([searchQuery, filterType], () => {
   currentPage.value = 1;
 });
 
-onMounted(fetchArticulos);
+onMounted(async () => {
+  await initNotifications();
+  fetchArticulos();
+  
+  // Actualiza cada 30 minutos y verifica stock
+  setInterval(() => {
+    fetchArticulos();
+  }, 30 * 60 * 1000);
+});
 </script>
 
 <style scoped>
@@ -266,10 +585,236 @@ onMounted(fetchArticulos);
   color: #60a5fa;
 }
 
-.header-actions {
+.header-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-top: 28px;
+  padding: 0 0 24px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.action-buttons-container {
+  display: flex;
+  gap: 3px;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 5px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.action-buttons-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(16, 185, 129, 0.04) 100%);
+  pointer-events: none;
+  border-radius: 15px;
+}
+
+.search-and-refresh {
   display: flex;
   gap: 12px;
   align-items: center;
+}
+
+.btn-warehouse-transfer,
+.btn-consumable-intake,
+.btn-decommission {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  z-index: 1;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.btn-warehouse-transfer {
+  color: #bfdbfe;
+}
+
+.btn-warehouse-transfer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.25) 0%, rgba(59, 130, 246, 0.1) 100%);
+  z-index: -1;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-warehouse-transfer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.4s ease;
+}
+
+.btn-warehouse-transfer:hover {
+  color: #dbeafe;
+  transform: translateY(-2px);
+}
+
+.btn-warehouse-transfer:hover::before {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.4) 0%, rgba(59, 130, 246, 0.2) 100%);
+  box-shadow: 0 0 24px rgba(59, 130, 246, 0.35);
+}
+
+.btn-warehouse-transfer:hover::after {
+  left: 100%;
+}
+
+.btn-consumable-intake {
+  color: #a7f3d0;
+}
+
+.btn-consumable-intake::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.25) 0%, rgba(16, 185, 129, 0.1) 100%);
+  z-index: -1;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-consumable-intake::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.4s ease;
+}
+
+.btn-consumable-intake:hover {
+  color: #d1fae5;
+  transform: translateY(-2px);
+}
+
+.btn-consumable-intake:hover::before {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.4) 0%, rgba(16, 185, 129, 0.2) 100%);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.35);
+}
+
+.btn-consumable-intake:hover::after {
+  left: 100%;
+}
+
+.btn-decommission {
+  color: #fecaca;
+}
+
+.btn-decommission::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(239, 68, 68, 0.1) 100%);
+  z-index: -1;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-decommission::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.4s ease;
+}
+
+.btn-decommission:hover {
+  color: #fee2e2;
+  transform: translateY(-2px);
+}
+
+.btn-decommission:hover::before {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.4) 0%, rgba(239, 68, 68, 0.2) 100%);
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.35);
+}
+
+.btn-decommission:hover::after {
+  left: 100%;
+}
+
+.btn-text {
+  white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+  .btn-warehouse-transfer .btn-text,
+  .btn-consumable-intake .btn-text,
+  .btn-decommission .btn-text {
+    display: none;
+  }
+  
+  .btn-warehouse-transfer,
+  .btn-consumable-intake,
+  .btn-decommission {
+    padding: 10px 14px;
+  }
+}
+
+.btn-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #93c5fd;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-refresh:hover {
+  background: rgba(30, 41, 59, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.anim-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .quick-filters {
@@ -345,26 +890,6 @@ onMounted(fetchArticulos);
   background: rgba(15, 23, 42, 0.8);
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
   outline: none;
-}
-
-.btn-refresh {
-  background: rgba(30, 41, 59, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.btn-refresh:hover:not(:disabled) {
-  background: #334155;
-  color: #f1f5f9;
-  transform: rotate(30deg);
 }
 
 .status-summary {
@@ -447,13 +972,13 @@ onMounted(fetchArticulos);
 
 .stock-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 24px;
 }
 
 .loading-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 24px;
 }
 
@@ -628,5 +1153,76 @@ onMounted(fetchArticulos);
 @media (max-width: 768px) {
   .sub-header { flex-direction: column; align-items: flex-start; }
   .search-box { width: 100%; }
+}
+
+/* Toast Notifications */
+.toast-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 16px 24px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  z-index: 9999;
+  max-width: 450px;
+}
+
+.toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.toast-success {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2) 0%, rgba(16, 185, 129, 0.1) 100%);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #86efac;
+}
+
+.toast-success .toast-icon {
+  color: #34d399;
+}
+
+.toast-consumable {
+  border-left: 4px solid #22c55e;
+}
+
+.toast-transfer {
+  border-left: 4px solid #0ea5e9;
+}
+
+.toast-close {
+  border: none;
+  background: transparent;
+  color: currentColor;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease;
+}
+
+.toast-close:hover {
+  transform: scale(1.1);
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateX(100px) scale(0.95);
 }
 </style>

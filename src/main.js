@@ -6,6 +6,7 @@ import './styles/tailwind.css'
 // Legacy global styles
 import './styles.css'
 import './styles/operations-global.css'
+import './styles/operations.css'
 import './styles/enhancements.css'
 import './styles/forms.css'
 import './styles/datetime-inputs.css'
@@ -18,8 +19,6 @@ import './styles/tunnel-performance.css'
 // import '@/assets/vendor/flowbite-datepicker-standalone.css'
 // 🚀 SASS Simple para calendario
 import './styles/calendar-simple.scss'
-// Estilos para módulos de operaciones
-import './styles/operations.css'
 // Inicializar windowManager antes de crear la app
 import './utils/windowManager'
 // Detect if running through tunnel and apply performance optimizations
@@ -47,6 +46,7 @@ if (typeof window !== 'undefined') {
 // Notivue (notificaciones elegantes)
 import { createNotivue } from 'notivue'
 import 'notivue/notification.css'
+
 const app = createApp(App)
 
 // Configuración de Notivue: posición, límite y animaciones fade ultra rápidas
@@ -71,10 +71,14 @@ app.use(router)
 app.use(notivue)
 
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
+import { vPermission } from './utils/permissionDirective.js'
 
 const queryClient = new QueryClient();
 
 app.use(VueQueryPlugin, { queryClient });
+
+// Registrar directiva de permisos
+app.directive('permission', vPermission);
 
 // Ajuste dinámico de variables CSS relacionadas con la topbar.
 function updateTopbarCSSVars(){

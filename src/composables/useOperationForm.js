@@ -1,141 +1,241 @@
-import { ref, computed, reactive, watch } from 'vue'
+/**
+ * Composable for shared operation form logic
+ * Provides common functionality for OpEntrada, OpSalida, OpResguardo, OpServicio
+ */
+import { ref, reactive, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { gsap } from 'gsap'
 
-export function useOperationForm(initialData = {}) {
-  // Estado del formulario
-  const formData = reactive({
-    ...initialData
-  })
+export function useOperationForm(options = {}) {
+  const {
+    type = 'entrada',
+    localStorageKey = '',
+    initialForm = {},
+    validationRules = {}
+  } = options
 
-  const isLoading = ref(false)
-  const isSubmitting = ref(false)
+  const router = useRouter()
+  
+  // State
+  const loading = ref(true)
+  const submitting = ref(false)
   const errors = reactive({})
   const currentStep = ref(0)
-  const showSkeleton = ref(true)
+  const formMounted = ref(false)
+  
+  // Form data with defaults
+  const form = reactive({
+    nombreSolicitante: '',
+    servicio: '',
+    especialidad: '',
+    folio: '',
+    fecha: '',
+    fechaISO: '',
+    horaInicio: '',
+    horaTermino: '',
+    descripcion: '',
+    items: [],
+    ...initialForm
+  })
 
-  // Timers
-  let skeletonTimer = null
+  // Computed
+  const isValid = computed(() => {
+    return Object.keys(errors).length === 0
+  })
 
-  // Simular carga inicial del formulario
-  const initializeForm = async (duration = 800) => {
-    showSkeleton.value = true
-    return new Promise((resolve) => {
-      skeletonTimer = setTimeout(() => {
-        showSkeleton.value = false
-        resolve()
-      }, duration)
-    })
-  }
+  const itemCount = computed(() => form.items?.length || 0)
 
-  // Validar un campo
-  const validateField = (fieldName, value, rules = {}) => {
-    if (rules.required && (!value || value.toString().trim() === '')) {
-      errors[fieldName] = 'Este campo es requerido'
-      return false
-    }
+  const hasUnsavedChanges = computed(() => {
+    // Check if form has any data
+    return form.nombreSolicitante || 
+           form.servicio || 
+           form.descripcion || 
+           form.items?.length > 0
+  })
 
-    if (rules.minLength && value.toString().length < rules.minLength) {
-      errors[fieldName] = `Mínimo ${rules.minLength} caracteres`
-      return false
-    }
+  // Methods
+  function validateField(fieldName, value) {
+    const rules = validationRules[fieldName]
+    if (!rules) return true
 
-    if (rules.maxLength && value.toString().length > rules.maxLength) {
-      errors[fieldName] = `Máximo ${rules.maxLength} caracteres`
-      return false
-    }
-
-    if (rules.pattern && !rules.pattern.test(value)) {
-      errors[fieldName] = rules.patternMessage || 'Formato inválido'
-      return false
+    for (const rule of rules) {
+      if (rule.required && !value) {
+        errors[fieldName] = rule.message || 'Este campo es requerido'
+        return false
+      }
+      if (rule.pattern && !rule.pattern.test(value)) {
+        errors[fieldName] = rule.message || 'Formato inválido'
+        return false
+      }
+      if (rule.minLength && value.length < rule.minLength) {
+        errors[fieldName] = rule.message || `Mínimo ${rule.minLength} caracteres`
+        return false
+      }
     }
 
     delete errors[fieldName]
     return true
   }
 
-  // Validar todo el formulario
-  const validateForm = (schema) => {
+  function validateForm() {
     let isValid = true
-    Object.keys(schema).forEach((fieldName) => {
-      if (!validateField(fieldName, formData[fieldName], schema[fieldName])) {
+    Object.keys(validationRules).forEach(fieldName => {
+      if (!validateField(fieldName, form[fieldName])) {
         isValid = false
       }
     })
     return isValid
   }
 
-  // Limpiar errores
-  const clearErrors = () => {
-    Object.keys(errors).forEach((key) => {
-      delete errors[key]
+  function clearErrors() {
+    Object.keys(errors).forEach(key => delete errors[key])
+  }
+
+  function resetForm() {
+    Object.keys(form).forEach(key => {
+      if (Array.isArray(initialForm[key])) {
+        form[key] = []
+      } else {
+        form[key] = initialForm[key] || ''
+      }
     })
+    clearErrors()
+    currentStep.value = 0
   }
 
-  // Actualizar un campo con validación
-  const updateField = (fieldName, value, rules = {}) => {
-    formData[fieldName] = value
-    validateField(fieldName, value, rules)
-  }
-
-  // Animar entrada de elementos
-  const animateIn = (selector, delay = 0) => {
-    return gsap.from(selector, {
+  // Animation helpers
+  function animateSectionsIn() {
+    if (!formMounted.value) return
+    
+    gsap.from('.form-section', {
       duration: 0.6,
+      y: 30,
       opacity: 0,
-      y: 20,
       stagger: 0.1,
       ease: 'power3.out',
-      delay,
       clearProps: 'all'
     })
   }
 
-  // Limpiar el formulario
-  const resetForm = () => {
-    Object.keys(formData).forEach((key) => {
-      formData[key] = initialData[key] || null
+  function animateItemAdded(element) {
+    gsap.from(element, {
+      duration: 0.4,
+      scale: 0.9,
+      opacity: 0,
+      ease: 'back.out(1.7)'
     })
-    clearErrors()
   }
 
-  // Calcular progreso del formulario (campos completados)
-  const formProgress = computed(() => {
-    const totalFields = Object.keys(formData).length
-    const completedFields = Object.keys(formData).filter((key) => formData[key]).length
-    return Math.round((completedFields / totalFields) * 100)
-  })
-
-  // Estado de validez
-  const isFormValid = computed(() => {
-    return Object.keys(errors).length === 0
-  })
-
-  // Cleanup
-  const cleanup = () => {
-    if (skeletonTimer) clearTimeout(skeletonTimer)
+  function animateItemRemoved(element) {
+    return new Promise(resolve => {
+      gsap.to(element, {
+        duration: 0.3,
+        scale: 0.9,
+        opacity: 0,
+        x: -20,
+        ease: 'power2.in',
+        onComplete: resolve
+      })
+    })
   }
+
+  // Local storage
+  function saveToLocalStorage() {
+    if (!localStorageKey) return
+    try {
+      localStorage.setItem(localStorageKey, JSON.stringify(form))
+    } catch (e) {
+      console.warn('Could not save to localStorage:', e)
+    }
+  }
+
+  function loadFromLocalStorage() {
+    if (!localStorageKey) return false
+    try {
+      const saved = localStorage.getItem(localStorageKey)
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        Object.assign(form, parsed)
+        return true
+      }
+    } catch (e) {
+      console.warn('Could not load from localStorage:', e)
+    }
+    return false
+  }
+
+  function clearLocalStorage() {
+    if (!localStorageKey) return
+    try {
+      localStorage.removeItem(localStorageKey)
+    } catch (e) {
+      console.warn('Could not clear localStorage:', e)
+    }
+  }
+
+  // Navigation
+  function goBack() {
+    const routeMap = {
+      entrada: 'order-management',
+      salida: 'order-management-salida',
+      resguardo: 'order-management-resguardo',
+      servicio: 'order-management-servicio'
+    }
+    router.push({ name: routeMap[type] || 'dashboard' })
+  }
+
+  // Lifecycle
+  onMounted(async () => {
+    formMounted.value = true
+    
+    // Simulate loading
+    await new Promise(r => setTimeout(r, 300))
+    loading.value = false
+    
+    // Try to restore from localStorage
+    loadFromLocalStorage()
+    
+    // Animate sections
+    requestAnimationFrame(() => {
+      animateSectionsIn()
+    })
+  })
+
+  // Auto-save on changes
+  watch(form, () => {
+    if (formMounted.value) {
+      saveToLocalStorage()
+    }
+  }, { deep: true })
 
   return {
     // State
-    formData,
-    isLoading,
-    isSubmitting,
+    form,
+    loading,
+    submitting,
     errors,
     currentStep,
-    showSkeleton,
-
+    
+    // Computed
+    isValid,
+    itemCount,
+    hasUnsavedChanges,
+    
     // Methods
-    initializeForm,
     validateField,
     validateForm,
     clearErrors,
-    updateField,
-    animateIn,
     resetForm,
-    cleanup,
-
-    // Computed
-    formProgress,
-    isFormValid
+    goBack,
+    
+    // Animation
+    animateSectionsIn,
+    animateItemAdded,
+    animateItemRemoved,
+    
+    // Storage
+    saveToLocalStorage,
+    loadFromLocalStorage,
+    clearLocalStorage
   }
 }

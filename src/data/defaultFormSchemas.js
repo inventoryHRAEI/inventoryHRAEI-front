@@ -4,11 +4,43 @@ import motivoResguardoOptions from './motivoResguardoOptions.js'
 
 const clone = (value) => JSON.parse(JSON.stringify(value))
 
+const defaultBranding = () => ({
+    mode: 'split',
+    header: { left: null, right: null },
+    footer: null,
+    single: null
+})
+
+const mergeBranding = (override) => {
+    if (!override || typeof override !== 'object') {
+        return defaultBranding()
+    }
+    const base = defaultBranding()
+    const mergedHeader = { ...base.header, ...(override.header || {}) }
+    return {
+        ...base,
+        ...override,
+        header: mergedHeader
+    }
+}
+
+const defaultSettings = (overrides = {}) => {
+    const base = {
+        customTitle: '',
+        footerText: '',
+        branding: defaultBranding()
+    }
+    const merged = { ...base, ...overrides }
+    merged.branding = mergeBranding(overrides && overrides.branding ? overrides.branding : null)
+    return merged
+}
+
 const BASE_SCHEMA = {
     module: '',
     sections: {},
     optionSets: {},
-    baseFields: {}
+    baseFields: {},
+    settings: defaultSettings()
 }
 
 function buildOptionSet(list = []) {
@@ -31,6 +63,10 @@ export function getDefaultSchema(moduleKey) {
                 optionSets: {
                     motivoSalida: buildOptionSet(motivoSalidaOptions)
                 },
+                settings: defaultSettings({
+                    customTitle: 'CONTROL DE SALIDA DE EQUIPO MÉDICO Y MOBILIARIO',
+                    footerText: 'Documento generado por HRAEI - Inventario'
+                }),
                 baseFields: {
                     solicitante: [
                         { key: 'nombreSolicitante', label: 'Nombre del solicitante', placeholder: 'Ej. Juan Pérez', type: 'text' },
@@ -68,6 +104,10 @@ export function getDefaultSchema(moduleKey) {
                 optionSets: {
                     motivoResguardo: buildOptionSet(motivoResguardoOptions)
                 },
+                settings: defaultSettings({
+                    customTitle: 'CONTROL DE RESGUARDO DE EQUIPO MÉDICO Y MOBILIARIO',
+                    footerText: 'Documento generado por HRAEI - Inventario'
+                }),
                 baseFields: {
                     solicitante: [
                         { key: 'nombreSolicitante', label: 'Nombre del resguardante', placeholder: 'Ej. Juan Pérez', type: 'text' },
@@ -105,6 +145,10 @@ export function getDefaultSchema(moduleKey) {
                 optionSets: {
                     motivoEntrada: buildOptionSet(motivoEntradaOptions)
                 },
+                settings: defaultSettings({
+                    customTitle: 'ORDEN DE SERVICIO DE EQUIPO MÉDICO Y MOBILIARIO',
+                    footerText: 'Documento generado por HRAEI - Inventario'
+                }),
                 baseFields: {
                     solicitante: [
                         { key: 'nombreSolicitante', label: 'Nombre del solicitante', placeholder: 'Ej. Juan Pérez', type: 'text' },
@@ -143,6 +187,10 @@ export function getDefaultSchema(moduleKey) {
                 optionSets: {
                     motivoEntrada: buildOptionSet(motivoEntradaOptions)
                 },
+                settings: defaultSettings({
+                    customTitle: 'CONTROL DE ENTRADA DE EQUIPO MÉDICO Y MOBILIARIO',
+                    footerText: 'Documento generado por HRAEI - Inventario'
+                }),
                 baseFields: {
                     solicitante: [
                         { key: 'nombreSolicitante', label: 'Nombre del solicitante', placeholder: 'Ej. Juan Pérez', type: 'text' },

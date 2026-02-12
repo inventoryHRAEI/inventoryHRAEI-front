@@ -114,9 +114,13 @@ function go(name) {
 }
 
 function handleCardClick(name) {
-  // For Resguardo, route the main card click to the order-management screen
+  // For Resguardo and Servicio, route the main card click to the order-management screen
   if (name === 'op-resguardo') {
     try { navigateAndRefresh(router, { name: 'order-management-resguardo' }) } catch {}
+    return
+  }
+  if (name === 'op-servicio') {
+    try { navigateAndRefresh(router, { name: 'order-management-servicio' }) } catch {}
     return
   }
   try { navigateAndRefresh(router, { name }) } catch {}

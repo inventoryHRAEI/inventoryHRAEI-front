@@ -37,7 +37,7 @@
             <div class="card-title">{{ op.label }}</div>
             <div class="card-sub small">{{ op.desc }}</div>
             <div class="card-actions">
-              <button class="btn ghost btn-ripple" @click.stop.prevent="go(op.name === 'op-resguardo' ? 'order-management-resguardo' : op.name)">
+              <button class="btn ghost btn-ripple" @click.stop.prevent="go(op.name === 'op-resguardo' ? 'order-management-resguardo' : op.name === 'op-servicio' ? 'order-management-servicio' : op.name)">
                 <ArrowRightIcon class="btn-icon" />
                 Ir
               </button>
@@ -102,6 +102,10 @@ function handleCardClick(name) {
     try { navigateAndRefresh(router, { name: 'order-management-resguardo' }) } catch {}
     return
   }
+  if (name === 'op-servicio') {
+    try { navigateAndRefresh(router, { name: 'order-management-servicio' }) } catch {}
+    return
+  }
   try { navigateAndRefresh(router, { name }) } catch {}
 }
 
@@ -124,6 +128,7 @@ const modalRequests = ref([])
 const modalEmail = ref('')
 const showUsers = ref(false)
 const users = ref([])
+const onRecreateRef = ref(null)
 
 onMounted(async () => {
   loadingTimeout = setTimeout(() => {
@@ -144,12 +149,13 @@ onMounted(async () => {
   try { window.dispatchEvent(new CustomEvent('route:mounted', { detail: { name: route.name, path: route.fullPath } })); console.debug('[AdminDashboard] dispatched route:mounted', { name: route.name, path: route.fullPath }) } catch (e) {}
 
   // Refresh permission requests when global recreate event triggers
-  const onRecreate = () => { try { loadPermissionRequests().catch(() => {}) } catch {} }
-  window.addEventListener('app:force-recreate', onRecreate)
-  onBeforeUnmount(() => { 
-    if (loadingTimeout) clearTimeout(loadingTimeout)
-    window.removeEventListener('app:force-recreate', onRecreate) 
-  })
+  onRecreateRef.value = () => { try { loadPermissionRequests().catch(() => {}) } catch {} }
+  window.addEventListener('app:force-recreate', onRecreateRef.value)
+})
+
+onBeforeUnmount(() => { 
+  if (loadingTimeout) clearTimeout(loadingTimeout)
+  if (onRecreateRef.value) window.removeEventListener('app:force-recreate', onRecreateRef.value) 
 })
 
 async function loadPermissionRequests() {

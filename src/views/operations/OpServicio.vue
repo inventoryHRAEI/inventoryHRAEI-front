@@ -221,6 +221,10 @@
                                                 </div>
                                             </div>
                                         </transition>
+                                        <!-- Botón Item N/A -->
+                                        <button type="button" class="btn-item-na" @click="addBlankItem" title="Agregar item sin especificar tipo">
+                                            Item N/A
+                                        </button>
                                     </div>
 
                                     <!-- Campos para Equipo Médico o Mobiliario -->
@@ -937,6 +941,9 @@ import TrashButton from '@/components/TrashButton.vue'
 import FolioInput from '@/components/FolioInput.vue'
 import DynamicFieldsSection from '@/components/DynamicFieldsSection.vue'
 import FormSchemaAdminPanel from '@/components/FormSchemaAdminPanel.vue'
+// Componentes modernos de operaciones
+import { useFormAnimations } from '@/composables/useFormAnimations.js'
+import { OpIcon, SkeletonFormSection, OpEmptyState } from '@/components/operations'
 // Nota: cargamos ExcelJS dinámicamente dentro de generarExcelEntrada para evitar
 // que la librería (que tiene partes orientadas a node) sea importada al cargar
 // el componente; esto previene fallos en el dev server y reduce el bundle inicial.
@@ -951,24 +958,47 @@ import { useInventorySuggestions } from '@/composables/useInventorySuggestions.j
 const LOCAL_KEY = 'op-servicio'
 const ORDERS_LIST_KEY = 'orders_list'
 
+// Use form animations composable
+const {
+    animateSectionsIn,
+    animateItemAdded,
+    animateItemRemoved,
+    animateFieldError,
+    animateFieldSuccess
+} = useFormAnimations({ autoInit: false })
+
+// Form loading state
+const formLoading = ref(true)
+
 onMounted(async () => {
-    // Animation for sections
+    // Show skeleton while loading
+    formLoading.value = true
+    
     await nextTick()
-    gsap.from('.section-card', {
-        duration: 0.8,
-        y: 60,
+    
+    // Simulate minimum load time for smooth transition
+    await new Promise(r => setTimeout(r, 300))
+    formLoading.value = false
+    
+    await nextTick()
+    
+    // Enhanced animation for sections using composable
+    animateSectionsIn('.section-card')
+    
+    // Animate title elements with enhanced effect
+    gsap.from('.servicio-title-row', {
+        duration: 0.6,
+        x: -20,
         opacity: 0,
-        stagger: 0.15,
         ease: 'power3.out',
-        clearProps: 'all'
+        delay: 0.1
     })
     
-    // Animate title elements
-    gsap.from('.servicio-title-row', {
-        duration: 0.8,
-        x: -30,
+    // Add subtle entrance animation for form elements
+    gsap.from('.form-grid', {
+        duration: 0.4,
         opacity: 0,
-        ease: 'back.out(1.7)',
+        ease: 'power2.out',
         delay: 0.2
     })
 })
@@ -1796,9 +1826,31 @@ const agregarItem = () => {
 
     notifier.success('Item(s) agregado(s) correctamente')
     resetNewItem()
-}
+    }
 
-const eliminarItem = (targetItem) => {
+    // Agregar item en blanco con todos los campos como N/A
+    const addBlankItem = () => {
+      const blankItem = {
+          tipo: 'n/a',
+          cantidad: 1,
+          descripcion: 'N/A',
+          marca: 'N/A',
+          modelo: 'N/A',
+          serie: 'N/A',
+          lote: 'N/A',
+          referencia: 'N/A',
+          ubicacion: 'N/A',
+          claveHRAEI: 'N/A',
+          equipoAsociado: 'N/A',
+          unidades: []
+      }
+      
+      form.equiposEntrada.push(blankItem)
+      notifier.success('Item N/A agregado')
+      resetNewItem()
+    }
+
+    const eliminarItem = (targetItem) => {
     const targetIndex = form.equiposEntrada.findIndex((entry) => entry === targetItem)
     if (targetIndex === -1) {
         return
@@ -8182,5 +8234,41 @@ html {
     0% { opacity: 1; }
     50% { opacity: 0.8; }
     100% { opacity: 1; }
+}
+
+/* Botón Item N/A */
+.btn-item-na {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.1);
+  color: rgba(239, 68, 68, 0.9);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-item-na:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.btn-item-na:active {
+  transform: translateY(0);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.btn-item-na:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 </style>

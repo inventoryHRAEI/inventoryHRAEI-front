@@ -182,6 +182,21 @@
         <div v-else class="tab-pane-content">
             <InventorySubdireccion />
         </div>
+
+        <!-- FAB Button - Crear nuevo equipo -->
+        <button 
+          v-if="activeTab === 'inventory'"
+          class="fab-button-new" 
+          @click="openCreateEquipmentModal"
+          title="Crear nuevo equipo"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span class="fab-label">Nuevo</span>
+        </button>
+
         <BarcodeModal v-model="barcodeModalOpen" :code="barcodeCode" :item="barcodeItem" @request-start-maintenance="onRequestStartMaintenance" />
         <UpdateItemPanel 
           v-model="updateItemModalOpen" 
@@ -609,6 +624,114 @@ function onItemUpdated(result) {
         // TODO: actualizar el item en allData y mostrar notificación
     } catch (e) {
         console.warn('[onItemUpdated] Error handling update', e)
+    }
+}
+
+function openCreateEquipmentModal() {
+    // Usar SweetAlert2 si está disponible
+    try {
+        const Swal = window.Swal || require('sweetalert2').default
+        
+        Swal.fire({
+            title: '➕ Crear Nuevo Equipo Médico',
+            html: `
+                <div style="text-align: left;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Nombre del Equipo *</label>
+                        <input id="eq-name" type="text" class="swal2-input" placeholder="Ej. Ventilador, Monitor" style="width: 100%;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Marca</label>
+                        <input id="eq-marca" type="text" class="swal2-input" placeholder="Ej. Philips" style="width: 100%;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Modelo</label>
+                        <input id="eq-modelo" type="text" class="swal2-input" placeholder="Ej. MX40" style="width: 100%;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Área / Unidad Médica *</label>
+                        <input id="eq-area" type="text" class="swal2-input" placeholder="Ej. UCIA, Cardiología" style="width: 100%;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Número de Serie</label>
+                        <input id="eq-serial" type="text" class="swal2-input" placeholder="Serial" style="width: 100%;">
+                    </div>
+                </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: '✓ Crear Equipo',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#2edd5a',
+            cancelButtonColor: '#6b7280',
+            didOpen: () => {
+                document.getElementById('eq-name').focus()
+            },
+            preConfirm: () => {
+                const name = document.getElementById('eq-name').value.trim()
+                const area = document.getElementById('eq-area').value.trim()
+                
+                if (!name || !area) {
+                    Swal.showValidationMessage('Por favor completa los campos requeridos')
+                    return false
+                }
+                
+                return {
+                    name,
+                    marca: document.getElementById('eq-marca').value.trim() || '',
+                    modelo: document.getElementById('eq-modelo').value.trim() || '',
+                    area,
+                    serial: document.getElementById('eq-serial').value.trim() || ''
+                }
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const { name, marca, modelo, area, serial } = result.value
+                
+                const newEquipo = {
+                    'EQUIPO MEDICO': name,
+                    'MARCA': marca,
+                    'MODELO': modelo,
+                    'UNIDAD MEDICA': area,
+                    'No DE INVENTARIO': `EQ-${Date.now()}`,
+                    'NUMERO DE SERIE': serial,
+                    'ESTATUS': 'DISPONIBLE',
+                    'TIPO': 'equipo'
+                }
+                
+                allData.value.push(newEquipo)
+                runSearch()
+                
+                Swal.fire('¡Éxito!', `Equipo "${name}" creado exitosamente`, 'success')
+                console.log('✅ Equipo creado:', newEquipo)
+            }
+        })
+    } catch (error) {
+        console.log('SweetAlert no disponible, usando prompts')
+        // Fallback a prompts
+        const equipoMedico = prompt('🏥 Nombre del Equipo Médico:')
+        if (!equipoMedico) return
+
+        const marca = prompt('Marca (opcional):')
+        const modelo = prompt('Modelo (opcional):')
+        const area = prompt('Área / Unidad Médica:')
+        if (!area) return
+
+        const serial = prompt('Número de Serie (opcional):')
+
+        const newEquipo = {
+            'EQUIPO MEDICO': equipoMedico,
+            'MARCA': marca || '',
+            'MODELO': modelo || '',
+            'UNIDAD MEDICA': area,
+            'No DE INVENTARIO': `EQ-${Date.now()}`,
+            'NUMERO DE SERIE': serial || '',
+            'ESTATUS': 'DISPONIBLE',
+            'TIPO': 'equipo'
+        }
+
+        allData.value.push(newEquipo)
+        runSearch()
+        console.log('✅ Equipo creado:', newEquipo)
     }
 }
 
@@ -4567,6 +4690,72 @@ watch(filteredData, (newVal) => {
     color: #fff;
     background: var(--primary-color, #06b6d4);
     box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+}
+
+/* FAB Button - Floating Action Button */
+.fab-button-new {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    width: auto;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #2edd5a, #2bc54c);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(46, 221, 90, 0.3);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 99;
+    animation: slideUpFAB 0.4s ease-out;
+}
+
+.fab-button-new:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(46, 221, 90, 0.4);
+    background: linear-gradient(135deg, #2bc54c, #25a942);
+}
+
+.fab-button-new:active {
+    transform: translateY(-1px);
+}
+
+.fab-button-new svg {
+    width: 24px;
+    height: 24px;
+    stroke-width: 2;
+}
+
+@keyframes slideUpFAB {
+    from {
+        opacity: 0;
+        transform: translateY(60px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* FAB Button Responsive */
+@media (max-width: 768px) {
+    .fab-button-new {
+        width: 56px;
+        height: 56px;
+        padding: 0;
+        bottom: 24px;
+        right: 24px;
+        justify-content: center;
+    }
+
+    .fab-label {
+        display: none;
+    }
 }
 
 .tab-pane-content {
