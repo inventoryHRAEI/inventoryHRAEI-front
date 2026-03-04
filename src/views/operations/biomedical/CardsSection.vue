@@ -30,7 +30,7 @@
         <div v-else class="cards-grid">
             <Suspense v-for="(item, index) in visibleItems" :key="props.getItemKey(item, index)">
                 <template #default>
-                    <CardItem :item="item" :index="index" :get-item-key="props.getItemKey"
+                    <component :is="CardItem" :item="item" :index="index" :get-item-key="props.getItemKey"
                         :is-expanded="props.isExpanded" :is-sparse="props.isSparse"
                         :get-status-accent-class="props.getStatusAccentClass"
                         :get-status-glow-class="props.getStatusGlowClass"
@@ -45,7 +45,8 @@
                         :active-dynamic-filter-ids="props.activeDynamicFilterIds" :on-toggle-select="props.toggleSelect"
                         :on-show-barcode="props.onShowBarcode"
                         :on-show-update-panel="props.onShowUpdatePanel"
-                        :on-show-history-panel="props.onShowHistoryPanel" />
+                        :on-show-history-panel="props.onShowHistoryPanel"
+                        @request-maintenance="handleRequestMaintenance" />
                 </template>
                 <template #fallback>
                     <div
@@ -68,7 +69,8 @@
 import { onMounted, ref, computed, defineAsyncComponent } from 'vue';
 import PaginationBar from './PaginationBar.vue';
 
-const CardItem = defineAsyncComponent(() => import('./CardItem.vue'));
+// Cargar CardItemTabbed como componente principal
+const CardItem = defineAsyncComponent(() => import('./CardItemTabbed.vue'));
 
 const props = defineProps({
     loading: Boolean,
@@ -223,8 +225,34 @@ onMounted(() => {
 });
 
 const visibleItems = computed(() => {
-    return props.displayedCards || [];
+    const src = props.displayedCards || []
+    // Produce shallow copies with fallback uppercase keys for common fields
+    return src.map(orig => {
+        try {
+            const copy = Object.assign({}, orig)
+            const lc = {}
+            for (const k of Object.keys(orig || {})) lc[String(k).toLowerCase().trim()] = orig[k]
+            // Common target keys used by CardItemTabbed
+            if (!copy['EQUIPO MEDICO'] && (lc['equipo medico'] || lc['equipo' ] || lc['equipomedico'])) copy['EQUIPO MEDICO'] = lc['equipo medico'] || lc['equipo'] || lc['equipomedico']
+            if (!copy['MARCA'] && (lc['marca'] || lc['brand'])) copy['MARCA'] = lc['marca'] || lc['brand']
+            if (!copy['MODELO'] && (lc['modelo'] || lc['model'])) copy['MODELO'] = lc['modelo'] || lc['model']
+            if (!copy['No DE INVENTARIO'] && (lc['no de inventario'] || lc['codigo'] || lc['no_de_inventario'])) copy['No DE INVENTARIO'] = lc['no de inventario'] || lc['codigo'] || lc['no_de_inventario']
+            if (!copy['UNIDAD MEDICA'] && (lc['unidad medica'] || lc['unidad'] || lc['ubicacion'])) copy['UNIDAD MEDICA'] = lc['unidad medica'] || lc['unidad'] || lc['ubicacion']
+            if (!copy['SERIE'] && (lc['serie'] || lc['numero de serie'] || lc['numero_de_serie'])) copy['SERIE'] = lc['serie'] || lc['numero de serie'] || lc['numero_de_serie']
+            if (!copy['ESTATUS'] && (lc['estatus'] || lc['estado'])) copy['ESTATUS'] = lc['estatus'] || lc['estado']
+            return copy
+        } catch (e) { return orig }
+    })
 });
+
+
+
+const emit = defineEmits(['request-maintenance'])
+
+function handleRequestMaintenance(payload) {
+    console.log('[CardsSection] handleRequestMaintenance received:', payload?.item?.['No DE INVENTARIO'] || payload?.code || 'unknown')
+    emit('request-maintenance', payload)
+}
 </script>
 
 <style scoped>

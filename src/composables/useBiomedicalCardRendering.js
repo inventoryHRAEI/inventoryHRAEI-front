@@ -3,7 +3,8 @@ import { computed, ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 export function useBiomedicalCardRendering() {
   const selectedItem = ref(null)
   const currentPage = ref(1)
-  const pageSize = ref(6)
+  // Mostrar más items por página por defecto (evita ver solo 6 registros en vistas de lista)
+  const pageSize = ref(24)
   const windowWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1024)
   const windowHeight = ref(typeof window !== 'undefined' ? window.innerHeight : 768)
 
@@ -12,9 +13,9 @@ export function useBiomedicalCardRendering() {
     return windowWidth.value < 480 || windowHeight.value < 600
   })
 
-  // Responsive pageSize
+  // Responsive pageSize: compact on mobile, larger on desktop
   const responsivePageSize = computed(() => {
-    return isMobileDevice.value ? 3 : 6
+    return isMobileDevice.value ? 6 : 24
   })
 
   // Update pageSize when screen size changes

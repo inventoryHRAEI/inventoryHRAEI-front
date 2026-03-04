@@ -223,7 +223,7 @@
 
                     <div class="filter-card filter-card-fixed">
                         <label for="filter-no-registro">
-                            <span class="field-label">No</span>
+                            <span class="field-label">No. Registro</span>
                             <span class="field-badge field-badge-fixed">Fijo</span>
                         </label>
                         <div class="input-wrapper">

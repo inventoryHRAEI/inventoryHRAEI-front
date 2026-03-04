@@ -1,6 +1,6 @@
 <template>
     <Teleport to="body">
-        <transition name="scan-fade">
+        <transition name="scan-fade" mode="out-in">
             <div v-if="visible" class="scan-overlay" @click.self="close">
                 <div class="scan-modal">
                 <button class="scan-close" @click="close" aria-label="Cerrar">
@@ -13,51 +13,52 @@
                 </header>
 
                 <div class="scan-body">
-                    <section class="scan-panel">
-                        <div class="scan-actions">
-                            <button class="scan-btn" @click="startScan('select')" :disabled="scanning">
-                                <CameraIcon class="icon" />
-                                Activar Cámara
-                            </button>
-                            <label class="scan-upload">
-                                <input type="file" accept="image/*" @change="handleUpload" />
-                                <DocumentArrowUpIcon class="icon" />
-                                Subir Imagen
-                            </label>
-                        </div>
-
-                        <div class="scan-manual">
-                            <input v-model="manualCode" placeholder="Escribe el No. de Inventario" />
-                            <button @click="applyManualCode" :disabled="!manualCode" title="Buscar">
-                                <MagnifyingGlassIcon class="icon" />
-                            </button>
-                        </div>
-
-                        <div class="scan-preview">
-                            <div v-if="scanning" class="scan-skeleton"></div>
-                            <video v-show="scannerActive" ref="videoEl" class="scan-video" autoplay muted
-                                playsinline></video>
-                            <div v-if="scanError" class="scan-error">
-                                <ExclamationCircleIcon class="icon" />
-                                {{ scanError }}
+                    <transition name="panel-fade" mode="out-in">
+                        <section v-if="!selectedCode" key="scanner" class="scan-panel">
+                            <div class="scan-actions">
+                                <button class="scan-btn" @click="startScan('select')" :disabled="scanning">
+                                    <CameraIcon class="icon" />
+                                    Activar Cámara
+                                </button>
+                                <label class="scan-upload">
+                                    <input type="file" accept="image/*" @change="handleUpload" />
+                                    <DocumentArrowUpIcon class="icon" />
+                                    Subir Imagen
+                                </label>
                             </div>
-                            <div v-if="!scannerActive && !scanning" class="scan-hint">
-                                <CameraIcon class="icon-lg" />
-                                <span>Apunta la cámara al código</span>
+
+                            <div class="scan-manual">
+                                <input v-model="manualCode" placeholder="Escribe No. de inventario o número de serie (o escanéalo)" />
+                                <button @click="applyManualCode" :disabled="!manualCode" title="Buscar">
+                                    <MagnifyingGlassIcon class="icon" />
+                                </button>
                             </div>
-                        </div>
-                    </section>
 
-                    <section class="scan-panel scan-info">
-                        <div class="scan-info-title">Resultado del Escaneo</div>
+                            <div class="scan-preview">
+                                <div v-if="scanning" class="scan-skeleton"></div>
+                                <video v-show="scannerActive" ref="videoEl" class="scan-video" autoplay muted
+                                    playsinline></video>
+                                <div v-if="scanError" class="scan-error">
+                                    <ExclamationCircleIcon class="icon" />
+                                    {{ scanError }}
+                                </div>
+                                <div v-if="!scannerActive && !scanning" class="scan-hint">
+                                    <CameraIcon class="icon-lg" />
+                                    <span>Apunta la cámara al código</span>
+                                </div>
+                            </div>
+                        </section>
 
-                        <div v-if="!selectedCode" class="scan-empty">
-                            <QrCodeIcon class="icon-lg" />
-                            <p>Aún no se ha escaneado ningún código</p>
-                        </div>
+                        <section v-else key="result" class="scan-panel scan-info">
+                            <div class="scan-info-title">Resultado del Escaneo</div>
 
-                        <div v-else>
-                            <div class="scan-chip">{{ selectedCode }}</div>
+                            <div v-if="!selectedCode" class="scan-empty">
+                                <QrCodeIcon class="icon-lg" />
+                                <p>Aún no se ha escaneado ningún código</p>
+                            </div>
+
+                            <div v-else>
+                                <div :class="['scan-chip', { 'chip-highlight': highlightChip }]">{{ selectedCode }}</div>
 
                             <div v-if="selectedItem" class="scan-item">
                                 <div><strong>Equipo:</strong> <span>{{ selectedItem?.['EQUIPO MEDICO'] || 'N/A'
@@ -77,35 +78,41 @@
                             </div>
 
                             <div class="scan-maintenance">
-                                <div v-if="!isInMaintenance" class="scan-form">
-                                    <h4>Iniciar Mantenimiento</h4>
-                                    <input v-model="startForm.responsable" placeholder="Responsable" />
-                                    <input v-model="startForm.empresa" placeholder="Empresa de Mantenimiento" />
-                                    <input v-model="startForm.tipo" placeholder="Tipo (preventivo/correctivo)" />
-                                    <textarea v-model="startForm.observaciones" placeholder="Observaciones"></textarea>
-                                    <button class="scan-primary" @click="startMaintenance" :disabled="!canStart">
-                                        Iniciar Mantenimiento
-                                    </button>
-                                </div>
-
-                                <div v-else class="scan-form">
-                                    <h4>Finalizar Mantenimiento</h4>
-                                    <div class="scan-verify">
-                                        <input v-model="verificationCode" placeholder="Confirma el código" />
-                                        <button @click="startScan('verify')" :disabled="scanning" title="Escanear">
-                                            <MagnifyingGlassIcon class="icon" />
+                                <transition name="form-fade" mode="out-in">
+                                    <div v-if="!isInMaintenance" key="start" class="scan-form">
+                                        <h4>Iniciar Mantenimiento</h4>
+                                        <input v-model="startForm.responsable" placeholder="Responsable" />
+                                        <input v-model="startForm.empresa" placeholder="Empresa de Mantenimiento" />
+                                        <input v-model="startForm.tipo" placeholder="Tipo (preventivo/correctivo)" />
+                                        <textarea v-model="startForm.observaciones" placeholder="Observaciones"></textarea>
+                                        <button class="scan-primary" @click="startMaintenance" :disabled="!canStart">
+                                            Iniciar Mantenimiento
                                         </button>
                                     </div>
-                                    <textarea v-model="finishForm.trabajoRealizado"
-                                        placeholder="Trabajo realizado"></textarea>
-                                    <textarea v-model="finishForm.observaciones" placeholder="Observaciones"></textarea>
-                                    <button class="scan-primary" @click="finishMaintenance" :disabled="!canFinish">
-                                        Finalizar Mantenimiento
-                                    </button>
-                                </div>
+                                    <div v-else key="finish" class="scan-form">
+                                        <h4>Finalizar Mantenimiento</h4>
+                                        <div class="scan-verify">
+                                            <input v-model="verificationCode" placeholder="Confirma el código" />
+                                            <button @click="startScan('verify')" :disabled="scanning" title="Escanear">
+                                                <MagnifyingGlassIcon class="icon" />
+                                            </button>
+                                        </div>
+                                        <textarea v-model="finishForm.trabajoRealizado"
+                                            placeholder="Trabajo realizado"></textarea>
+                                        <textarea v-model="finishForm.observaciones" placeholder="Observaciones"></textarea>
+                                        <button class="scan-primary" @click="finishMaintenance" :disabled="!canFinish">
+                                            Finalizar Mantenimiento
+                                        </button>
+                                    </div>
+                                </transition>
+                            </div>
+                            <!-- processing spinner overlay -->
+                            <div v-if="processing" class="scan-processing-overlay">
+                                <div class="scan-spinner"></div>
                             </div>
                         </div>
                     </section>
+                </transition>
                 </div>
             </div>
         </div>
@@ -140,7 +147,15 @@ watch(() => props.initialCode, (val) => {
     }
 })
 
-const emit = defineEmits(['update:modelValue', 'start-maintenance', 'finish-maintenance'])
+const emit = defineEmits(['update:modelValue', 'start-maintenance', 'finish-maintenance', 'scan-result'])
+
+// UI/state helpers for operation progress and feedback
+const operationState = ref('idle') // idle | starting | finishing | success | error
+const operationMsg = ref('')
+const processing = computed(() => operationState.value === 'starting' || operationState.value === 'finishing')
+
+// highlight chip animation when code changes
+const highlightChip = ref(false)
 
 const visible = ref(props.modelValue)
 const scanning = ref(false)
@@ -151,6 +166,14 @@ const manualCode = ref('')
 const verificationCode = ref('')
 const scanTarget = ref('select')
 const videoEl = ref(null)
+
+// watch selectedCode after it's declared
+watch(selectedCode, (val, old) => {
+    if (val && val !== old) {
+        highlightChip.value = true
+        setTimeout(() => (highlightChip.value = false), 400)
+    }
+})
 let stream = null
 let zxingReader = null
 
@@ -332,6 +355,9 @@ function setCode(code) {
         verificationCode.value = code
     } else {
         selectedCode.value = code
+        // emit result immediately so parent can react (e.g. open history modal)
+        const item = props.items.find(i => String(i?.['No DE INVENTARIO'] || '').trim() === String(code).trim()) || null
+        emit('scan-result', { code, item })
     }
 }
 
@@ -351,28 +377,126 @@ function stopScan() {
     }
 }
 
-function startMaintenance() {
-    const reason = startForm.value.tipo || startForm.value.observaciones || startForm.value.responsable || 'Mantenimiento'
-    const provider = startForm.value.empresa || startForm.value.responsable || 'Proveedor'
-    emit('start-maintenance', {
-        code: selectedCode.value,
-        item: selectedItem.value,
-        data: {
-            ...startForm.value,
-            motivo: reason,
-            reason,
-            provider,
-            empresa: startForm.value.empresa
-        }
-    })
+// generate a print/PDF view for a maintenance event
+function generateMaintenancePdf(type, info) {
+    const item = info.item || {}
+    const code = info.code || ''
+    const now = new Date().toLocaleString('es-ES')
+    // build simple HTML
+    const lines = []
+    lines.push(`<h1>Mantenimiento ${type === 'start' ? 'Iniciado' : 'Finalizado'}</h1>`)
+    lines.push(`<p><strong>Equipo:</strong> ${item['EQUIPO MEDICO'] || 'N/A'}</p>`)
+    lines.push(`<p><strong>Código:</strong> ${code}</p>`)
+    if (type === 'start') {
+        lines.push(`<p><strong>Modo:</strong> ${info.mode === 'scheduled' ? 'Programado' : 'Inmediato'}</p>`)
+        if (info.planned_date) lines.push(`<p><strong>Fecha prevista:</strong> ${info.planned_date}</p>`)
+        if (info.provider_type === 'external') lines.push(`<p><strong>Proveedor:</strong> ${info.provider_name || ''}</p>`)
+        lines.push(`<p><strong>Responsable:</strong> ${info.responsable || ''}</p>`)
+        lines.push(`<p><strong>Empresa:</strong> ${info.empresa || ''}</p>`)
+        lines.push(`<p><strong>Tipo:</strong> ${info.tipo || ''}</p>`)
+        lines.push(`<p><strong>Observaciones:</strong> ${info.observaciones || ''}</p>`)
+    } else {
+        if (info.provider_name) lines.push(`<p><strong>Proveedor:</strong> ${info.provider_name}</p>`)
+        if (info.return_location) lines.push(`<p><strong>Ubicación de retorno:</strong> ${info.return_location}</p>`)
+        if (info.final_area) lines.push(`<p><strong>Área final:</strong> ${info.final_area}</p>`)
+        lines.push(`<p><strong>Trabajo realizado:</strong> ${info.trabajoRealizado || ''}</p>`)
+        lines.push(`<p><strong>Observaciones:</strong> ${info.observaciones || ''}</p>`)
+    }
+    lines.push(`<p><em>Fecha y hora: ${now}</em></p>`)
+
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Mantenimiento ${code}</title>` +
+        `<style>body{font-family:Arial,sans-serif;padding:20px;}h1{font-size:1.5em}</style>` +
+        `</head><body>${lines.join('')}</body></html>`
+    const w = window.open('', '_blank')
+    if (w) {
+        w.document.write(html)
+        w.document.close()
+        w.focus()
+        // give some time for rendering before print call
+        setTimeout(() => { try { w.print() } catch (_) {} }, 300)
+    }
 }
 
-function finishMaintenance() {
-    emit('finish-maintenance', {
-        code: selectedCode.value,
-        item: selectedItem.value,
-        data: { ...finishForm.value }
-    })
+
+async function startMaintenance() {
+    operationState.value = 'starting'
+    scanError.value = ''
+    const reason = startForm.value.tipo || startForm.value.observaciones || startForm.value.responsable || 'Mantenimiento'
+    const provider = startForm.value.empresa || startForm.value.responsable || 'Proveedor'
+    try {
+        await new Promise((resolve, reject) => {
+            emit('start-maintenance', {
+                code: selectedCode.value,
+                item: selectedItem.value,
+                data: {
+                    ...startForm.value,
+                    motivo: reason,
+                    reason,
+                    provider,
+                    empresa: startForm.value.empresa
+                },
+                done: (err, data) => {
+                    if (err) reject(err)
+                    else resolve(data)
+                }
+            })
+        })
+        operationState.value = 'success'
+        // generate a simple PDF/print window for the start operation
+        generateMaintenancePdf('start', {
+            code: selectedCode.value,
+            item: selectedItem.value,
+            ...startForm.value,
+            motivo: reason,
+            provider
+        })
+        Swal.fire({
+            icon: 'success',
+            title: 'Mantenimiento iniciado',
+            showConfirmButton: false,
+            timer: 1200
+        })
+    } catch (err) {
+        operationState.value = 'error'
+        scanError.value = err?.message || 'Error iniciando mantenimiento'
+    } finally {
+        setTimeout(() => (operationState.value = 'idle'), 1400)
+    }
+}
+
+async function finishMaintenance() {
+    operationState.value = 'finishing'
+    scanError.value = ''
+    try {
+        await new Promise((resolve, reject) => {
+            emit('finish-maintenance', {
+                code: selectedCode.value,
+                item: selectedItem.value,
+                data: { ...finishForm.value },
+                done: (err, data) => {
+                    if (err) reject(err)
+                    else resolve(data)
+                }
+            })
+        })
+        operationState.value = 'success'
+        generateMaintenancePdf('finish', {
+            code: selectedCode.value,
+            item: selectedItem.value,
+            ...finishForm.value
+        })
+        Swal.fire({
+            icon: 'success',
+            title: 'Mantenimiento finalizado',
+            showConfirmButton: false,
+            timer: 1200
+        })
+    } catch (err) {
+        operationState.value = 'error'
+        scanError.value = err?.message || 'Error finalizando mantenimiento'
+    } finally {
+        setTimeout(() => (operationState.value = 'idle'), 1400)
+    }
 }
 
 onBeforeUnmount(() => {
@@ -395,12 +519,68 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(6px) saturate(1.05);
-    -webkit-backdrop-filter: blur(6px) saturate(1.05);
-    padding: 16px;
-    overflow: hidden;
-    contain: layout style paint;
 }
 
+/* spinner overlay during network ops */
+.scan-processing-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+.scan-spinner {
+    border: 4px solid rgba(255,255,255,0.2);
+    border-top-color: #fff;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* chip highlight pulse */
+.chip-highlight {
+    animation: chipPulse 0.4s ease-in-out;
+}
+@keyframes chipPulse {
+    0% { transform: scale(1); background-color: rgba(255,255,255,0.1); }
+    50% { transform: scale(1.1); background-color: rgba(255,255,255,0.2); }
+    100% { transform: scale(1); background-color: transparent; }
+}
+
+/* form fade transition */
+.form-fade-enter-active, .form-fade-leave-active {
+    transition: opacity 0.3s;
+}
+.form-fade-enter-from, .form-fade-leave-to {
+    opacity: 0;
+}
+
+/* overlay fade for modal */
+.scan-fade-enter-active, .scan-fade-leave-active {
+    transition: opacity 0.3s;
+}
+.scan-fade-enter-from, .scan-fade-leave-to {
+    opacity: 0;
+}
+
+/* panel swap fade */
+.panel-fade-enter-active, .panel-fade-leave-active {
+    transition: opacity 0.3s, transform 0.3s;
+}
+.panel-fade-enter-from {
+    opacity: 0;
+    transform: translateX(20px);
+}
+.panel-fade-leave-to {
+    opacity: 0;
+    transform: translateX(-20px);
+}
 /* ==================== MODAL CONTAINER ==================== */
 .scan-modal {
     width: 100%;

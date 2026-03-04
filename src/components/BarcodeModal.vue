@@ -14,11 +14,10 @@
                         <div class="info-row"><span>Modelo:</span> {{ item?.['MODELO'] || 'N/A' }}</div>
                         <div class="info-row"><span>No. Serie:</span> {{ item?.['NUMERO DE SERIE'] || 'N/A' }}</div>
                     </div>
+                    <!-- preview-panel: barcode only -->
                     <div class="preview-panel">
                         <div class="preview-toggle">
-                            <button :class="{ active: previewMode === 'barcode' }"
-                                @click="previewMode = 'barcode'">Barcode</button>
-                            <button :class="{ active: previewMode === 'qr' }" @click="previewMode = 'qr'">QR</button>
+                            <button class="active">Barcode</button>
                         </div>
                     </div>
 
@@ -28,14 +27,9 @@
                         </div>
 
                         <!-- Barcode canvas/SVG preview -->
-                        <svg v-show="!loading && !bwipActive && previewMode === 'barcode'" ref="barcodeSvg"
-                            class="barcode-svg"></svg>
-                        <canvas v-show="!loading && bwipActive && previewMode === 'barcode'" ref="barcodeCanvas"
-                            class="barcode-canvas"></canvas>
+                        <svg v-show="!loading && !bwipActive" ref="barcodeSvg" class="barcode-svg"></svg>
+                        <canvas v-show="!loading && bwipActive" ref="barcodeCanvas" class="barcode-canvas"></canvas>
 
-                        <!-- QR preview -->
-                        <img v-if="!loading && previewMode === 'qr' && qrDataUrl && !previewError" :src="qrDataUrl"
-                            class="qr-preview" />
 
                         <div v-if="!displayCode" class="barcode-empty">Sin código disponible</div>
                     </div>
@@ -52,16 +46,13 @@
                             </svg>
                             Descargar Barcode
                         </button>
-                        <button class="barcode-modal-download" @click="downloadQrCode" :disabled="!displayCode"
-                            aria-label="Descargar QR como PNG">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Descargar QR
+
+                        <!-- Nuevo: marcar como functional manualmente -->
+                        <button v-if="displayCode && isAuthed" class="barcode-modal-mark-functional" @click="markFunctional" title="Marcar equipo como funcional">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>
+                          Marcar funcional
                         </button>
+
                         <button class="barcode-modal-close" @click="close">Cerrar</button>
                     </div>
                 </div>
@@ -73,8 +64,9 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue';
 import JsBarcode from 'jsbarcode';
-import QRCode from 'qrcode';
+// QR generation removed
 import Swal from 'sweetalert2';
+import { markStatusManual } from '@/services/equipmentStatusService.js';
 
 const props = defineProps({
     modelValue: Boolean,
@@ -92,12 +84,11 @@ const emit = defineEmits(['update:modelValue', 'requestStartMaintenance']);
 const visible = ref(props.modelValue);
 const barcodeSvg = ref(null);
 const loading = ref(false);
+const previewError = ref(false); // indicates failure rendering barcode preview
 const lineWidth = ref(4); // default to 'Grueso'
 const bwipActive = ref(false);
 const barcodeCanvas = ref(null);
-const previewMode = ref('barcode'); // 'barcode' | 'qr'
-const qrDataUrl = ref('');
-const previewError = ref(false);
+// QR-related state removed (qrDataUrl no longer used)
 const exportScale = 3; // high-res export scale for crisp printing
 
 const displayCode = computed(() => String(props.code || '').trim());
@@ -159,18 +150,18 @@ watch(() => props.modelValue, (val) => {
 watch(() => props.code, (val) => {
     if (visible.value) {
         // Re-render current preview when code changes
-        if (previewMode.value === 'barcode') renderBarcode();
-        else generateQrPreview();
+        renderBarcode();
     }
 });
 
 watch(visible, (val) => {
     emit('update:modelValue', val);
     if (val) {
-        if (previewMode.value === 'barcode') renderBarcode();
-        else generateQrPreview();
+        renderBarcode();
     }
 });
+
+const isAuthed = computed(() => !!(typeof window !== 'undefined' && localStorage.getItem('token')))
 
 async function close() {
     const result = await Swal.fire({
@@ -195,8 +186,37 @@ async function close() {
     }
 }
 
+async function markFunctional() {
+    if (!displayCode.value) return
+    const inventory = displayCode.value
+    const { value: notes } = await Swal.fire({
+        title: 'Marcar equipo como functional',
+        input: 'textarea',
+        inputLabel: 'Observaciones (obligatorio)',
+        inputPlaceholder: 'Describe la verificación realizada...',
+        inputAttributes: { 'aria-label': 'Observaciones' },
+        showCancelButton: true,
+        confirmButtonText: 'Confirmar',
+        cancelButtonText: 'Cancelar',
+        preConfirm: (v) => { if (!v || !String(v).trim()) { Swal.showValidationMessage('La observación es obligatoria') } else return v }
+    })
+
+    if (!notes) return
+
+    try {
+        Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, allowEscapeKey: false })
+        await markStatusManual(inventory, { status: 'functional', maintenance_type: 'manual_update', notes: String(notes).trim() })
+        Swal.close()
+        await Swal.fire({ icon: 'success', title: 'Equipo marcado como functional', text: 'Se registró el cambio en el historial.' })
+        // Notificar al resto de la app para refrescar vistas relacionadas
+        try { window.dispatchEvent(new CustomEvent('equipment:status-updated', { detail: { inventoryNo: inventory } })) } catch (e) {}
+    } catch (e) {
+        console.error('markFunctional error:', e)
+        Swal.fire({ icon: 'error', title: 'Error', text: e && e.message ? e.message : 'No se pudo guardar el estado' })
+    }
+}
+
 function renderBarcode() {
-    if (previewMode.value !== 'barcode') return;
     const code = displayCode.value;
     previewError.value = false;
     if (barcodeSvg.value && code) {
@@ -528,265 +548,6 @@ function openPrintWindow(pngUrl) {
     setTimeout(() => { try { win.focus(); win.print(); } catch (_) { } }, 100);
 }
 
-async function generateQrPreview() {
-    previewError.value = false;
-    loading.value = true;
-    qrDataUrl.value = '';
-    try {
-        const code = displayCode.value;
-        if (!code) throw new Error('No code');
-        // PRIORITY 1: Use local network addresses FIRST (not Cloudflare)
-        let publicBase = null
-
-        // Try local network addresses first
-        try {
-            let hosts = null
-
-            // Try to refresh network addresses from server first
-            try {
-                const refreshResp = await fetch('/refresh-hosts', { method: 'GET', cache: 'no-store' })
-                if (refreshResp && refreshResp.ok) {
-                    const refreshData = await refreshResp.json()
-                    if (refreshData && refreshData.hosts) {
-                        hosts = refreshData.hosts
-                        console.log('[QR Modal] ✅ Refreshed NETWORK addresses (priority):', hosts)
-                    }
-                }
-            } catch (refreshError) {
-                // Fallback to file with cache-busting
-                const devResp = await fetch('/dev-hosts.json?t=' + Date.now(), { cache: 'no-store' })
-                if (devResp && devResp.ok) {
-                    const devJson = await devResp.json()
-                    hosts = devJson && devJson.hosts ? devJson.hosts : null
-                    console.log('[QR Modal] 📄 Fallback network addresses:', hosts)
-                }
-            }
-
-            if (Array.isArray(hosts) && hosts.length > 0) {
-                const currentHost = window.location.hostname
-                const currentProtocol = window.location.protocol
-                const currentPort = window.location.port
-
-                let targetHost = currentHost
-
-                // If accessing from localhost, prefer CURRENT network address (dynamic)
-                if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-                    const networkHosts = hosts.filter(host =>
-                        host !== 'localhost' &&
-                        host !== '127.0.0.1' &&
-                        !host.includes('172.') && // Skip Docker/VM networks
-                        !host.includes('192.168.56.') && // Skip VirtualBox networks
-                        !host.includes('10.0.') // Skip some VPN networks
-                    )
-                    if (networkHosts.length > 0) {
-                        // Always use the LAST network address (most current)
-                        targetHost = networkHosts[networkHosts.length - 1]
-                        publicBase = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
-                        console.log('[QR Modal] 🏠→📱 NETWORK address priority:', targetHost)
-                    }
-                } else {
-                    // If already on network, verify current host is still valid
-                    const isCurrentHostValid = hosts.includes(currentHost)
-                    if (isCurrentHostValid) {
-                        targetHost = currentHost
-                        publicBase = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
-                        console.log('[QR Modal] 📱→📱 Same network address:', targetHost)
-                    } else {
-                        // Network changed, use best available
-                        const networkHosts = hosts.filter(host =>
-                            host !== 'localhost' &&
-                            host !== '127.0.0.1' &&
-                            !host.includes('172.') &&
-                            !host.includes('192.168.56.') &&
-                            !host.includes('10.0.')
-                        )
-                        if (networkHosts.length > 0) {
-                            targetHost = networkHosts[networkHosts.length - 1]
-                            publicBase = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
-                            console.log('[QR Modal] 🔄 Network changed → DYNAMIC address:', targetHost)
-                        }
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('[QR Modal] Network address detection failed:', e.message)
-        }
-
-        // PRIORITY 2: Fallback to Cloudflare only if no network found
-        if (!publicBase) {
-            console.log('[QR Modal] No network found, trying Cloudflare fallback...')
-            try {
-                const cfResp = await fetch('/cloudflare-url.json', { cache: 'no-store' })
-                if (cfResp && cfResp.ok) {
-                    const cfJson = await cfResp.json()
-                    if (cfJson && cfJson.url && String(cfJson.url).startsWith('https://')) {
-                        publicBase = String(cfJson.url).replace(/\/$/, '')
-                        console.log('[QR Modal] Using Cloudflare fallback:', publicBase)
-                    }
-                }
-            } catch (e) { /* ignore */ }
-        }
-
-        if (!publicBase) {
-            alert('Necesitas una conexión HTTPS accesible. Ejecuta "npm run dev" para HTTPS local o "npm run dev:cloudflare" para túnel público.')
-            loading.value = false
-            return
-        }
-
-        const fullUrl = `${publicBase}/op/inventario-biomedica?scan=${encodeURIComponent(code)}`
-        const dataUrl = await QRCode.toDataURL(fullUrl, {
-            width: 360,
-            margin: 1,
-            errorCorrectionLevel: 'M',
-            color: { dark: '#111111', light: '#ffffff' }
-        });
-        qrDataUrl.value = dataUrl;
-        setTimeout(() => { loading.value = false; }, 120);
-    } catch (e) {
-        previewError.value = true;
-        loading.value = false;
-    }
-}
-
-async function downloadBarcodeWithUrl() {
-    const code = displayCode.value
-    if (!code) return
-    // If QR preview already generated, prefer that PNG
-    if (previewMode.value === 'qr' && qrDataUrl.value) {
-        const link = document.createElement('a')
-        link.href = qrDataUrl.value
-        link.download = `qr-url-${code}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        return
-    }
-    const envBase = (import.meta.env && import.meta.env.VITE_PUBLIC_BASE_URL) ? String(import.meta.env.VITE_PUBLIC_BASE_URL).trim() : ''
-    const baseUrl = envBase || location.origin
-    const fullUrl = `${baseUrl}/op/inventario-biomedica?scan=${encodeURIComponent(code)}`
-    const fallbackShortUrl = `${baseUrl}/s/${encodeURIComponent(code)}`
-
-    // Ask backend to create a short link; fall back to short path if it fails
-    let shortUrl = null
-    try {
-        const resp = await fetch('/api/ops/short-links', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ target: fullUrl })
-        })
-        if (resp && resp.ok) {
-            const json = await resp.json()
-            shortUrl = json && json.shortUrl ? json.shortUrl : null
-        }
-    } catch (e) {
-        // ignore and fallback
-        console.warn('Could not create short link', e && e.message)
-    }
-
-    // Try to prefer a public HTTPS base (Cloudflare quick tunnel -> dev-hosts), to ensure mobile cameras open HTTPS links
-    let publicBase = null
-    try {
-        const cfResp = await fetch('/cloudflare-url.json', { cache: 'no-store' })
-        if (cfResp && cfResp.ok) {
-            const cfJson = await cfResp.json()
-            if (cfJson && cfJson.url && String(cfJson.url).startsWith('https://')) {
-                publicBase = String(cfJson.url).replace(/\/$/, '')
-            }
-        }
-    } catch (e) { /* ignore */ }
-
-    if (!publicBase) {
-        try {
-            const devResp = await fetch('/dev-hosts.json', { cache: 'no-store' })
-            if (devResp && devResp.ok) {
-                const devJson = await devResp.json()
-                const hosts = devJson && (devJson.hosts || devJson.host) ? (devJson.hosts || devJson.host) : null
-                if (Array.isArray(hosts)) {
-                    const httpsHost = hosts.find(h => String(h).startsWith('https://'))
-                    if (httpsHost) publicBase = String(httpsHost).replace(/\/$/, '')
-                } else if (typeof hosts === 'string' && String(hosts).startsWith('https://')) {
-                    publicBase = String(hosts).replace(/\/$/, '')
-                }
-            }
-        } catch (e) { /* ignore */ }
-    }
-
-    // Build the final URL using publicBase if available; otherwise force https on the chosen URL
-    let url = shortUrl || fallbackShortUrl
-    try {
-        if (publicBase) {
-            const tmp = new URL(url, baseUrl)
-            const path = tmp.pathname + tmp.search + tmp.hash
-            url = new URL(path, publicBase).toString()
-        } else {
-            if (url.startsWith('http://')) url = url.replace(/^http:\/\//i, 'https://')
-        }
-    } catch (e) {
-        try { if (url.startsWith('http://')) url = url.replace(/^http:\/\//i, 'https://') } catch (e2) { }
-    }
-
-    // Only generate QR if we have a public HTTPS base (tunnel)
-    if (!publicBase) {
-        alert('Necesitas iniciar el túnel Cloudflare para generar códigos QR con URL pública. Ejecuta "npm run dev:cloudflare" primero.')
-        return
-    }
-
-    // Generate QR code PNG directly (encodes an HTTPS URL when possible)
-    try {
-        const pngUrl = await QRCode.toDataURL(url, {
-            width: 512,
-            margin: 1,
-            errorCorrectionLevel: 'M',
-            color: { dark: '#111111', light: '#ffffff' }
-        })
-        const link = document.createElement('a')
-        link.href = pngUrl
-        link.download = `qr-url-${code}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-    } catch (e) {
-        console.warn('Could not generate QR', e && e.message)
-    }
-}
-
-function downloadQrCode() {
-    const code = displayCode.value
-    if (!code) return
-
-    // If QR preview already generated, download that
-    if (qrDataUrl.value) {
-        const link = document.createElement('a')
-        link.href = qrDataUrl.value
-        link.download = `qr-${code}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        return
-    }
-
-    // Generate QR code from the inventory code directly
-    try {
-        QRCode.toDataURL(code, {
-            width: 512,
-            margin: 1,
-            errorCorrectionLevel: 'M',
-            color: { dark: '#111111', light: '#ffffff' }
-        }).then((pngUrl) => {
-            const link = document.createElement('a')
-            link.href = pngUrl
-            link.download = `qr-${code}.png`
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
-        }).catch((e) => {
-            console.warn('Could not generate QR', e && e.message)
-        })
-    } catch (e) {
-        console.warn('Could not generate QR', e && e.message)
-    }
-}
-
 function requestStartMaintenance() {
     emit('request-start-maintenance', { code: displayCode.value, item: props.item })
 }
@@ -819,12 +580,6 @@ watch(visible, (val) => {
     } catch (_) { }
 });
 
-// react to preview mode changes
-watch(previewMode, (m) => {
-    if (!visible.value) return;
-    if (m === 'barcode') renderBarcode();
-    else generateQrPreview();
-});
 </script>
 
 <style scoped>
@@ -1007,6 +762,24 @@ watch(previewMode, (m) => {
     transition: all 0.2s ease;
     white-space: nowrap;
 }
+
+.barcode-modal-mark-functional {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #e6fff0;
+    border: 1px solid rgba(4, 120, 87, 0.6);
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: all 0.18s ease;
+}
+
+.barcode-modal-mark-functional:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(6, 182, 140, 0.18); }
 
 .barcode-modal-download:hover:not(:disabled) {
     background: rgba(34, 197, 94, 0.25);

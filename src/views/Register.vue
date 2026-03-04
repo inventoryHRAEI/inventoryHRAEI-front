@@ -75,26 +75,6 @@
               </button>
             </div>
           </div>
-          <div class="form-group">
-            <label class="field-label">Foto de Perfil <span class="optional">(opcional)</span></label>
-            <div class="file-input-wrapper" @click="$refs.photoInput?.click()">
-              <component :is="PhotoIcon" class="upload-icon" />
-              <input ref="photoInput" type="file" @change="onFileChange" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/svg+xml" class="file-input" />
-              <span class="file-label">Selecciona una imagen</span>
-            </div>
-            <div v-if="previewUrl || nombre" class="mt-10">
-              <div class="small-info" style="opacity:.8; margin-bottom:6px">Vista previa</div>
-              <div class="user-btn user-btn--preview">
-                <span class="avatar">
-                  <img v-if="previewUrl" :src="previewUrl" alt="preview" class="top-avatar" />
-                  <span v-else>👤</span>
-                </span>
-                <span class="welcome-text">{{ nombre || 'Tu nombre' }}</span>
-              </div>
-            </div>
-            <div v-if="photoMsg" class="msg">{{ photoMsg }}</div>
-            <div v-if="photoErr" class="error">{{ photoErr }}</div>
-          </div>
           <button class="btn secondary btn-lg" type="submit">Crear Cuenta</button>
         </form>
 
@@ -116,7 +96,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import notifier from '@/utils/notifier'
-import { EyeIcon, EyeSlashIcon, UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, UserIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, PhotoIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { showAlert } from '@/utils/sweetAlertConfig'
+import { EyeIcon, EyeSlashIcon, UserPlusIcon, CheckCircleIcon, ShieldCheckIcon, UserIcon, EnvelopeIcon, KeyIcon, LockClosedIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 import StepBubbles from '@/components/StepBubbles.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
@@ -131,7 +112,6 @@ const breadcrumbItems = [
   { label: 'Inicio', to: '/login' },
   { label: 'Registro', to: '/register' }
 ]
-
 
 const isLoading = ref(true)
 const skeletonType = ref('register')
@@ -161,16 +141,12 @@ const token = ref('')
 const password = ref('')
 const confirmPassword = ref('')
 const error = ref('')
-const step = ref(1) // 1=request token, 2=verify token, 3=complete registration
+const step = ref(1)
 const resendCount = ref(0)
 const maxResends = 4
 const router = useRouter()
 const showPassword = ref(false)
 const showConfirm = ref(false)
-const photoFile = ref(null)
-const previewUrl = ref('')
-const photoErr = ref('')
-const photoMsg = ref('')
 
 const remainingResends = computed(() => Math.max(0, maxResends - resendCount.value))
 
@@ -187,7 +163,7 @@ async function parseJsonSafe(res){
 const sendToken = async () => {
   error.value = ''
   if (!nombre.value || !email.value) {
-  notifier.error('Nombre y email son obligatorios')
+    notifier.error('Nombre y email son obligatorios')
     return
   }
   try {
@@ -197,19 +173,19 @@ const sendToken = async () => {
       body: JSON.stringify({ nombre: nombre.value, email: email.value })
     })
     const data = await parseJsonSafe(res)
-    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (request-token)')
-  notifier.success('Token enviado. Revisa tu correo.')
+    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar')
+    notifier.success('Token enviado. Revisa tu correo.')
     step.value = 2
   } catch (e) {
     error.value = e.message
-  notifier.error(e.message)
+    notifier.error(e.message)
   }
 }
 
 const verifyToken = async () => {
   error.value = ''
   if (!token.value) {
-  notifier.error('Ingresa el token')
+    notifier.error('Ingresa el token')
     return
   }
   try {
@@ -219,12 +195,12 @@ const verifyToken = async () => {
       body: JSON.stringify({ email: email.value, token: token.value })
     })
     const data = await parseJsonSafe(res)
-    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (verify-token)')
-  notifier.success('Email verificado. Completa tu cuenta.')
+    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar')
+    notifier.success('Email verificado. Completa tu cuenta.')
     step.value = 3
   } catch (e) {
     error.value = e.message
-  notifier.error(e.message)
+    notifier.error(e.message)
   }
 }
 
@@ -237,112 +213,66 @@ const resendToken = async () => {
       body: JSON.stringify({ email: email.value })
     })
     const data = await parseJsonSafe(res)
-    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (resend-token)')
+    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar')
     resendCount.value += 1
-  notifier.success(data.msg || 'Token reenviado')
+    notifier.success(data.msg || 'Token reenviado')
   } catch (e) {
     error.value = e.message
-  notifier.error(e.message)
+    notifier.error(e.message)
   }
 }
 
-const onFileChange = async (e) => {
-  photoErr.value = ''
-  photoMsg.value = ''
-  const f = e.target.files && e.target.files[0]
-  if (!f) { photoFile.value = null; previewUrl.value = ''; return }
-  const okType = /^(image\/(png|jpeg|jpg|webp|gif|bmp|svg\+xml))$/i.test(f.type)
-  if (!okType) { photoErr.value = 'Formato no soportado. Usa PNG, JPG/JPEG, WEBP, GIF, BMP o SVG.'; photoFile.value = null; previewUrl.value = ''; return }
-  try {
-    const { dataUrl, info } = await compressImageFile(f, 512, 512, 0.82)
-    previewUrl.value = dataUrl
-    photoFile.value = f
-    photoMsg.value = `Imagen preparada (${info.width}x${info.height}, ${(info.bytes/1024).toFixed(1)} KB)`
-  } catch (err) {
-    photoErr.value = 'No se pudo procesar la imagen';
-    photoFile.value = null; previewUrl.value = ''
-  }
-}
+
 
 const completeRegistration = async () => {
-  error.value = ''
-  if (!password.value || !confirmPassword.value) {
-  notifier.error('Completa las contraseñas')
-    return
-  }
-  if (password.value !== confirmPassword.value) {
-  notifier.error('Las contraseñas no coinciden')
-    return
-  }
-  // Validación de contraseña en frontend
-  const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
-  if (!strong.test(password.value)) {
-  notifier.error('Contraseña débil. Debe tener al menos 8 caracteres, mayúscula, minúscula, número y símbolo.')
-    return
-  }
+   error.value = ''
+   if (!password.value || !confirmPassword.value) {
+     notifier.error('Completa las contraseñas')
+     return
+   }
+   if (password.value !== confirmPassword.value) {
+     notifier.error('Las contraseñas no coinciden')
+     return
+   }
+   const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
+   if (!strong.test(password.value)) {
+     notifier.error('Contraseña débil.')
+     return
+   }
 
-  try {
-    // Si hay foto, la convertimos a data URL comprimida para no exceder tamaños
-    let fotoUrl = null
-    if (photoFile.value) {
-      const { dataUrl } = await compressImageFile(photoFile.value, 512, 512, 0.82)
-      fotoUrl = dataUrl
+   try {
+     const res = await fetch('/api/auth/complete-registration', {
+       method: 'POST',
+       headers: { 'Content-Type': 'application/json' },
+       body: JSON.stringify({ 
+         email: email.value, 
+         nombre: nombre.value, 
+         password: password.value
+       })
+     })
+     const data = await parseJsonSafe(res)
+     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar')
+
+    // Si backend indica que la cuenta queda en pending, mostrar swal informativo
+    if (data && data.pending) {
+      await showAlert({ icon: 'info', title: 'Cuenta pendiente', text: 'Tu cuenta está pendiente de validación por un administrador. Te avisaremos por correo cuando sea aprobada.', confirmButtonText: 'Aceptar' })
+    } else {
+      notifier.success(data.msg || 'Registro completado')
     }
 
-    const res = await fetch('/api/auth/complete-registration', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value, nombre: nombre.value, password: password.value, foto: fotoUrl })
-    })
-    const data = await parseJsonSafe(res)
-    if (!res.ok) throw new Error(data.msg || 'No se pudo conectar con el servidor (complete-registration)')
-  notifier.success('Registro completado. Ya puedes iniciar sesión.')
-    await navigateAndRefresh(router, { name: 'login' })
-  } catch (e) {
-    error.value = e.message
-  notifier.error(e.message)
-  }
-}
-
-async function compressImageFile(file, maxW = 512, maxH = 512, quality = 0.82) {
-  const dataUrl = await new Promise((resolve, reject) => {
-    const fr = new FileReader()
-    fr.onload = () => resolve(fr.result)
-    fr.onerror = reject
-    fr.readAsDataURL(file)
-  })
-  const img = await new Promise((resolve, reject) => {
-    const im = new Image()
-    im.onload = () => resolve(im)
-    im.onerror = reject
-    im.src = dataUrl
-  })
-  let { width, height } = img
-  const ratio = Math.min(maxW / width, maxH / height, 1)
-  const w = Math.round(width * ratio)
-  const h = Math.round(height * ratio)
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(img, 0, 0, w, h)
-  // Preferimos WEBP si soporta, si no caemos a JPEG
-  let out = canvas.toDataURL('image/webp', quality)
-  if (!out || out.indexOf('data:image') !== 0) {
-    out = canvas.toDataURL('image/jpeg', quality)
-  }
-  // bytes estimados
-  const bytes = Math.ceil((out.length * 3) / 4)
-  return { dataUrl: out, info: { width: w, height: h, bytes } }
-}
+     await navigateAndRefresh(router, { name: 'login' })
+   } catch (e) {
+     error.value = e.message
+     notifier.error(e.message)
+   }
+ }
 </script>
 
 <style scoped>
-.form-wrap{ display:flex; align-items:center; justify-content:center; min-height:60vh }
-.form-col{ width:100%; max-width:1000px }
+.form-wrap { display: flex; align-items: center; justify-content: center; min-height: 60vh }
+.form-col { width: 100%; max-width: 1000px }
 
 @media (min-width: 1024px) {
   .form-col { width: 90%; max-width: none; }
 }
 </style>
-

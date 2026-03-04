@@ -9,7 +9,7 @@
                         <polyline points="12 19 5 12 12 5"></polyline>
                     </svg>
                 </button>
-                <span class="testing-environment-title">Inventario Biomédica</span>
+                <span class="testing-environment-title">Inventario Biomédico</span>
                 <button class="btn-back-to-dashboard" style="visibility: hidden; pointer-events: none;"></button>
             </div>
         </template>
@@ -39,67 +39,23 @@
             <BiomedicalSkeletonLoader v-if="!contentReady" />
 
             <div v-else class="testing-content" :style="{ animation: 'fadeIn 0.4s ease-in' }">
-                <ScanOverlay
-                    :open="scanOverlayOpen"
-                    :item="scanOverlayItem"
-                    :code="scanOverlayCode"
-                    @login="goLoginWithRedirect"
-                    @close="closeScanOverlay"
-                    @logged="onScanOverlayLogged"
-                />
-                <FiltersSection
-                    ref="filtersSectionRef"
-                    v-model:filters="filters"
-                    v-model:dynamicFilterValues="dynamicFilterValues"
-                    v-model:dropdownSearch="dropdownSearch"
-                    v-model:drawerSearch="drawerSearch"
-                    :filtered-count="filteredData.length"
-                    :total-count="serverTotal || allData.length"
-                    :mobile-limit-applied="mobileLimitApplied"
-                    :active-dynamic-filter-ids="activeDynamicFilterIds"
-                    :is-filter-dropdown-open="isFilterDropdownOpen"
-                    :meta-loading="metaLoading"
-                    :filtered-dropdown-catalog="filteredDropdownCatalog"
-                    :toggle-filter-dropdown="toggleFilterDropdown"
-                    :open-add-filter-drawer="openAddFilterDrawer"
-                    :clear-dynamic-filters="clearDynamicFilters"
-                    :handle-filter-checkbox-change="handleFilterCheckboxChange"
-                    :get-dynamic-field-label="getDynamicFieldLabel"
-                    :remove-dynamic-filter="removeDynamicFilter"
-                    :get-dynamic-field-kind="getDynamicFieldKind"
-                    :get-dynamic-value="getDynamicValue"
-                    :set-dynamic-value="setDynamicValue"
-                    :is-dynamic-selectable="isDynamicSelectable"
-                    :get-dynamic-select-options="getDynamicSelectOptions"
-                    :get-dynamic-datalist-id="getDynamicDatalistId"
-                    :get-dynamic-suggestions="getDynamicSuggestions"
-                    :sin-estado-value="SIN_ESTADO_VALUE"
-                    :estatus-options="estatusOptions"
-                    :equipo-medico-datalist-id="equipoMedicoDatalistId"
-                    :equipo-medico-suggestions="equipoMedicoSuggestions"
-                    :marca-datalist-id="marcaDatalistId"
-                    :marca-suggestions="marcaSuggestions"
-                    :unidad-medica-datalist-id="unidadMedicaDatalistId"
-                    :unidad-medica-suggestions="unidadMedicaSuggestions"
-                    :is-add-filter-drawer-open="isAddFilterDrawerOpen"
-                    :close-add-filter-drawer="closeAddFilterDrawer"
-                    :drawer-animating="drawerAnimating"
-                    :filtered-dynamic-catalog="filteredDynamicCatalog"
-                    :meta-error="metaError"
-                    :dynamic-catalog="dynamicCatalog"
-                    :get-field-type-label="getFieldTypeLabel"
-                    :fetch-meta="fetchMeta"
-                    :add-dynamic-filter="addDynamicFilter"
-                    :is-fixed-field="isFixedField"
-                />
-                <CardsSkeletonLoader v-if="!cardsReady" />
-                <div v-if="largeDatasetMode" class="large-dataset-banner">
-                    <strong>Dataset grande:</strong> Se han detectado {{ serverTotal || 0 }} registros. Para evitar ralentizaciones, la vista usa paginación por servidor.
-                    <button class="btn small" :disabled="showAllLoading" @click.prevent="doStartShowAll">
-    <span v-if="!showAllLoading">Mostrar todo (virtualizado)</span>
-    <span v-else>Obteniendo datos...</span>
-    </button>
-                    <span style="margin-left:8px; opacity:0.9">o usa consola: <code>window.__BIOMED_TEST__.fetchAll()</code></span>
+
+                <!-- Tabla de inventario siempre visible -->
+                <div class="biomedical-table-wrapper" style="overflow-x: auto;">
+                    <!-- force dynamic discovery, ignore preset list -->
+                    <BiomedicalEquipmentTable
+                        :data="filteredData"
+                        :columns="[]"
+                        :loading="loading"
+                        :pageSize="25"
+                        :showAllColumns="true"
+                        @refresh="handleTableRefresh"
+                        @view-item="onViewItem"
+                        @edit-item="onEditItem"
+                        @show-barcode="onShowBarcode"
+                        @request-maintenance="onRequestStartMaintenance"
+                        @open-scan-modal="openScanModal"
+                        @scan-code="onScanCode" />
                 </div>
                 <template v-if="showAllVirtual">
                 <div class="large-dataset-banner" style="display:flex;align-items:center;gap:12px;">
@@ -130,72 +86,17 @@
                     :on-show-history-panel="handleShowHistoryPanel"
                 />
                 </template>
-                <template v-else>
-                <CardsSection
-                    :loading="loading"
-                    :filtered-count="filteredData.length"
-                    :displayed-cards="displayedCards"
-                    :visible-count="useServerPagination ? (serverTotal || visibleCount) : visibleCount"
-                    :page-size="pageSize"
-                    :current-page="currentPage"
-                    :total-pages="totalPages"
-                    :visible-page-numbers="visiblePageNumbers"
-                    :displayed-start="displayedStart"
-                    :displayed-end="displayedEnd"
-                    :active-dynamic-filter-ids="activeDynamicFilterIds"
-                    :on-show-barcode="handleShowBarcode"
-                    :on-show-update-panel="handleShowUpdatePanel"
-                    :on-show-history-panel="handleShowHistoryPanel"
-                    :get-item-key="getItemKey"
-                    :toggle-select="toggleSelect"
-                    :is-expanded="isExpanded"
-                    :is-sparse="isSparse"
-                    :get-status-accent-class="getStatusAccentClass"
-                    :get-status-glow-class="getStatusGlowClass"
-                    :is-field-visible="isFieldVisible"
-                    :display-value="displayValue"
-                    :has-real-value="hasRealValue"
-                    :is-in-maintenance="isInMaintenanceBase"
-                    :get-maintenance-entry="getMaintenanceEntry"
-                    :get-status-text-class="getStatusTextClass"
-                    :get-status-pill-class="getStatusPillClass"
-                    :is-dynamic-field-duplicate="isDynamicFieldDuplicate"
-                    :get-dynamic-field-label="getDynamicFieldLabel"
-                    :get-item-field-value="getItemFieldValue"
-                    :first-page="firstPage"
-                    :previous-page="previousPage"
-                    :next-page="nextPage"
-                    :last-page="lastPage"
-                    :go-to-page="goToPage"
-                    :change-page-size="changePageSize"
-                    :open-scan-modal="openScanModal"
-                    :rendered-count="renderedCount"
-                    @load-more="handleLoadMore"
-                />
-                </template>
+                <!-- cards view removed; only table is shown -->
                 <div v-if="filteredData.length === 0 && !loading && hasFilters" class="no-results">
                     <p>No se encontraron registros que coincidan con los filtros aplicados.</p>
                 </div>
+                </div>
             </div>
-        </div>
 
         <div v-else class="tab-pane-content">
             <InventorySubdireccion />
         </div>
 
-        <!-- FAB Button - Crear nuevo equipo -->
-        <button 
-          v-if="activeTab === 'inventory'"
-          class="fab-button-new" 
-          @click="openCreateEquipmentModal"
-          title="Crear nuevo equipo"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-          <span class="fab-label">Nuevo</span>
-        </button>
 
         <BarcodeModal v-model="barcodeModalOpen" :code="barcodeCode" :item="barcodeItem" @request-start-maintenance="onRequestStartMaintenance" />
         <UpdateItemPanel 
@@ -211,20 +112,22 @@
             :items="allData"
             :maintenance-map="maintenanceMap"
             :initial-code="externalInitialCode"
-            @start-maintenance="onStartMaintenance"
-            @finish-maintenance="onFinishMaintenance"
+            @start-maintenance="handleStartMaintenance"
+            @finish-maintenance="handleFinishMaintenance"
+            @scan-result="onScannerScan"
         />
         <EquipmentHistoryPanel
           v-model:visible="isHistoryPanelVisible"
           :item="historyItem"
           @close="isHistoryPanelVisible = false"
+          @edit-item="onEditItem"
         />
     </ActionPanel>
 </template>
 
 <script setup>
 import { useRouter, useRoute } from 'vue-router'
-import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, defineAsyncComponent } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick, defineAsyncComponent, onErrorCaptured } from 'vue'
 import IIcon from '@/components/IIcon.vue'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
@@ -232,7 +135,8 @@ import BarcodeModal from '@/components/BarcodeModal.vue'
 import UpdateItemPanel from '@/components/UpdateItemPanel_v2.vue'
 import MaintenanceScannerModal from '@/components/MaintenanceScannerModal.vue'
 import EquipmentHistoryPanel from '@/components/EquipmentHistoryPanel.vue'
-import ScanOverlay from '@/views/operations/biomedical/ScanOverlay.vue'
+import BiomedicalEquipmentTable from '@/components/BiomedicalEquipmentTable.vue'
+import { lookupEquipmentByCode } from '@/services/equipmentStatusService.js'
 import BiomedicalSkeletonLoader from '@/components/BiomedicalSkeletonLoader.vue'
 import CardsSkeletonLoader from '@/components/CardsSkeletonLoader.vue'
 import InventorySubdireccion from '@/views/operations/biomedical/InventorySubdireccion.vue'
@@ -256,7 +160,6 @@ function measureAsync(importer, name) {
 }
 
 // Lazy load heavy components (measured)
-const FiltersSection = measureAsync(() => import('@/views/operations/biomedical/FiltersSection.vue'), 'FiltersSection')
 const CardsSection = measureAsync(() => import('@/views/operations/biomedical/CardsSection.vue'), 'CardsSection')
 const CardsVirtual = measureAsync(() => import('@/views/operations/biomedical/CardsVirtual.vue'), 'CardsVirtual')
 
@@ -269,11 +172,31 @@ const getQRCode = async () => {
 
 const router = useRouter()
 const route = useRoute()
-const activeTab = ref('inventory') // Pestaña activa: 'inventory' o 'subdireccion'
+const initialTab = (route && route.query && String(route.query.tab || '').toLowerCase() === 'subdireccion') ? 'subdireccion' : 'inventory'
+const activeTab = ref(initialTab) // Pestaña activa: 'inventory' o 'subdireccion' (inicializada desde query.tab si existe)
+// viewMode and card-based UI have been removed; inventory now always shows as table
 const showAllVirtual = ref(false)
 const allFetchedItems = ref([])
 const showAllLoading = ref(false)
 const largeDatasetMode = ref(false)
+
+
+// viewMode watcher removed – table mode only now
+
+// Lazy-load equipment data when user switches back to the inventory tab
+watch(activeTab, async (val) => {
+  if (val === 'inventory') {
+    try {
+      const haveLocal = Array.isArray(allData.value) && allData.value.length > 0
+      if (!haveLocal) {
+        console.log('[activeTab] inventory selected — loading equipment data')
+        await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, useServerPagination.value ? { serverSide: true, page: currentPage.value, pageSize: pageSize.value } : { limitReactive: isMobileOrNetworkNow() })
+      }
+    } catch (e) {
+      console.error('[activeTab watcher] failed to lazy-load inventory data', e)
+    }
+  }
+})
 
 function closeShowAll() {
   showAllVirtual.value = false
@@ -288,7 +211,7 @@ async function startShowAll(pageSize = 1000) {
   try {
     showAllLoading.value = true
     showAllVirtual.value = true
-    await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, full: true, pageSize })
+    await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, full: true, maxFullAssign: 2000, pageSize })
     // Pull items from global helper set by composable
     try { allFetchedItems.value = (window.__BIOMED_TEST__ && window.__BIOMED_TEST__.lastFetchedItems) ? window.__BIOMED_TEST__.lastFetchedItems : [] } catch (e) { allFetchedItems.value = [] }
   } catch (e) {
@@ -354,6 +277,13 @@ const isDynamicSelectable = (id) => {
     return metaIsDynamicSelectable(originalId)
 }
 
+// global capture for child component errors
+onErrorCaptured((err, instance, info) => {
+    console.warn('[BiomedicalTestingEnvironment] captured error', err, info);
+    // return false to stop propagation
+    return false;
+});
+
 const normalizeSuggestionList = (items, limit) => {
     return Array.from(new Set((items || []).map(opt => String(opt ?? '').trim()).filter(Boolean)))
         .sort((a, b) => a.localeCompare(b))
@@ -380,26 +310,203 @@ const updateItemData = ref(null)
 const isHistoryPanelVisible = ref(false)
 const historyItem = ref(null)
 const scanModalOpen = ref(false)
-const scanOverlayOpen = ref(false)
-const scanOverlayItem = ref(null)
-const scanOverlayCode = ref('')
 const externalInitialCode = ref('')
+
+// wrappers so modal gets feedback about async operations
+async function handleStartMaintenance(payload) {
+    try {
+        const result = await onStartMaintenance(payload)
+        // parent composable already updates map; also refresh status for this code
+        refreshStatusForCodes([payload.code])
+        if (payload && typeof payload.done === 'function') payload.done(null, result)
+        return result
+    } catch (e) {
+        if (payload && typeof payload.done === 'function') payload.done(e)
+        // rethrow in case caller awaits
+        throw e
+    }
+}
+
+async function handleFinishMaintenance(payload) {
+    try {
+        const result = await onFinishMaintenance(payload)
+        refreshStatusForCodes([payload.code])
+        if (payload && typeof payload.done === 'function') payload.done(null, result)
+        return result
+    } catch (e) {
+        if (payload && typeof payload.done === 'function') payload.done(e)
+        throw e
+    }
+}
 
 // Dev HTTPS state
 const devHosts = ref([])
 const devHostsLoading = ref(false)
 const httpsUrl = ref('')
-const httpsQrData = ref('')
-const httpsQrOpen = ref(false)
 const cfInfo = ref(null)
 const cfUnstable = computed(() => cfInfo.value && (cfInfo.value.hmrDisabled === true))
 
 // Content readiness
 const contentReady = ref(false)
-const cardsReady = ref(false)
+// cardsReady not needed after removing card view
 
 // Progressive rendering state - not needed for traditional pagination
 const renderedCount = ref(0) // DISABLED for pagination (CardsSection shows all displayedCards)
+
+function handleTableRefresh() {
+    // Vuelve a ejecutar la búsqueda base respetando filtros actuales
+    try {
+        runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, page: currentPage.value, pageSize: pageSize.value })
+    } catch (e) {
+        console.warn('[BiomedicalTestingEnvironment] Error al refrescar tabla biomédica:', e && e.message)
+    }
+}
+
+// Table column definitions for BiomedicalEquipmentTable
+const tableColumns = computed(() => [
+    { field: 'No DE INVENTARIO', header: 'No. Inventario', visible: true },
+    { field: 'EQUIPO MEDICO', header: 'Equipo Médico', visible: true },
+    { field: 'MARCA', header: 'Marca', visible: true },
+    { field: 'MODELO', header: 'Modelo', visible: true },
+    { field: 'SERIE', header: 'Serie', visible: true },
+    { field: 'UNIDAD MEDICA', header: 'Ubicación', visible: true },
+    { field: 'ESTATUS', header: 'Estado', visible: true }
+])
+
+// Handlers for BiomedicalEquipmentTable actions
+function onViewItem(item) {
+    try {
+        console.log('[onViewItem] Viewing item:', item)
+        handleShowHistoryPanel(item)
+    } catch (e) {
+        console.warn('[onViewItem] Error:', e)
+    }
+}
+
+async function onScanCode(code) {
+    try {
+        console.log('[onScanCode] scanning code', code)
+        
+        if (!code) {
+            console.warn('[onScanCode] empty code received')
+            return
+        }
+
+        // Clean the code - remove whitespace and convert to uppercase for comparison
+        const cleanCode = String(code).trim().toUpperCase()
+        
+        // FIRST: Try to find in local data (allData) - this is the most reliable method
+        console.log('[onScanCode] Searching in local data...')
+        const localItem = (allData.value || []).find(item => {
+            const itemCode = String(item['No DE INVENTARIO'] || item['No DE INVENTARIO?'] || '').trim().toUpperCase()
+            const itemSerie = String(item['NUMERO DE SERIE'] || item['Serie'] || item['SERIE'] || '').trim().toUpperCase()
+            const itemName = String(item['EQUIPO MEDICO'] || item['EQUIPO'] || '').trim().toUpperCase()
+            const itemBrand = String(item['MARCA'] || '').trim().toUpperCase()
+            
+            // Match by inventory number, serie, name or brand
+            return itemCode === cleanCode || itemCode.includes(cleanCode) ||
+                   itemSerie === cleanCode || itemSerie.includes(cleanCode) ||
+                   itemName.includes(cleanCode) || itemBrand.includes(cleanCode)
+        })
+        
+        if (localItem) {
+            console.log('[onScanCode] Found in local data:', localItem['No DE INVENTARIO'])
+            handleShowHistoryPanel(localItem)
+            return
+        }
+        
+        // SECOND: If not found locally, try backend lookup as fallback
+        console.log('[onScanCode] Not found locally, trying backend lookup...')
+        try {
+            const item = await lookupEquipmentByCode(code)
+            if (item) {
+                console.log('[onScanCode] lookup returned', item['No DE INVENTARIO'])
+                handleShowHistoryPanel(item)
+                return
+            }
+        } catch (lookupErr) {
+            console.warn('[onScanCode] Backend lookup failed:', lookupErr)
+        }
+        
+        // If still not found, try a more flexible search in local data
+        console.log('[onScanCode] Trying flexible search...')
+        const flexibleItem = (allData.value || []).find(item => {
+            const itemCode = String(item['No DE INVENTARIO'] || item['No DE INVENTARIO?'] || '').trim()
+            const itemSerie = String(item['NUMERO DE SERIE'] || item['Serie'] || item['SERIE'] || '').trim()
+            const itemName = String(item['EQUIPO MEDICO'] || item['EQUIPO'] || '').trim()
+            const itemBrand = String(item['MARCA'] || '').trim()
+            const searchCode = String(code).trim()
+            
+            // Partial match across fields
+            return itemCode.includes(searchCode) || itemSerie.includes(searchCode) ||
+                   itemName.toUpperCase().includes(searchCode.toUpperCase()) ||
+                   itemBrand.toUpperCase().includes(searchCode.toUpperCase()) ||
+                   itemCode.toUpperCase().includes(searchCode.toUpperCase()) ||
+                   itemSerie.toUpperCase().includes(searchCode.toUpperCase())
+        })
+        
+        if (flexibleItem) {
+            console.log('[onScanCode] Found with flexible search:', flexibleItem['No DE INVENTARIO'])
+            handleShowHistoryPanel(flexibleItem)
+            return
+        }
+        
+        // Only show error if absolutely nothing worked
+        console.warn('[onScanCode] Equipment not found with code:', code)
+        const Swal = window.Swal || require('sweetalert2').default
+        Swal.fire({
+            title: 'Equipo no encontrado',
+            text: `No se encontró ningún equipo con código "${code}"`,
+            icon: 'warning',
+            ...darkThemeConfig
+        })
+    } catch (e) {
+        console.error('[onScanCode] error looking up code', code, e)
+        // Even on error, try one more time with local data
+        const emergencyItem = (allData.value || []).find(item => {
+            const itemCode = String(item['No DE INVENTARIO'] || '').trim().toUpperCase()
+            return itemCode === String(code).trim().toUpperCase()
+        })
+        if (emergencyItem) {
+            handleShowHistoryPanel(emergencyItem)
+        }
+    }
+}
+
+// newly added handler
+async function onScannerScan({ code, item }) {
+    console.log('[onScannerScan] event received', code, item)
+    // close scanning panel immediately
+    scanModalOpen.value = false
+    if (item) {
+        handleShowHistoryPanel(item)
+        return
+    }
+    if (code) {
+        // reuse existing logic to hunt for code
+        await onScanCode(code)
+    }
+}
+
+function onEditItem(item) {
+    try {
+        console.log('[onEditItem] Editing item:', item)
+        // close the history panel since we're switching to the update form
+        isHistoryPanelVisible.value = false
+        handleShowUpdatePanel(item)
+    } catch (e) {
+        console.warn('[onEditItem] Error:', e)
+    }
+}
+
+function onShowBarcode(item) {
+    try {
+        console.log('[onShowBarcode] Showing barcode for:', item)
+        handleShowBarcode(item)
+    } catch (e) {
+        console.warn('[onShowBarcode] Error:', e)
+    }
+}
 
 // UI state for filters drawer/dropdown
 const isAddFilterDrawerOpen = ref(false)
@@ -407,7 +514,6 @@ const drawerAnimating = ref(false)
 const drawerSearch = ref('')
 const isFilterDropdownOpen = ref(false)
 const dropdownSearch = ref('')
-const filtersSectionRef = ref(null)
 
 // Computed properties for drawer/dropdown filtering
 const filteredDynamicCatalog = computed(() => {
@@ -561,6 +667,8 @@ const searchStatusMessage = computed(() => {
     return loading.value ? 'Actualizando resultados y sincronizando con inventario...' : 'Listo para explorar con precisión'
 })
 
+
+
 const equipoMedicoDatalistId = 'fixed-equipoMedico-datalist'
 const marcaDatalistId = 'fixed-marca-datalist'
 const unidadMedicaDatalistId = 'fixed-unidadMedica-datalist'
@@ -583,6 +691,31 @@ const unidadMedicaSuggestions = computed(() => {
 function goToDashboard() {
     navigateAndRefresh(router, { name: 'dashboard' })
 }
+
+// ====================================
+// SmartFilterBar Handlers (Cards View)
+// ====================================
+
+
+// Computed para SmartFilterBar counts
+const maintenanceCount = computed(() => {
+  const arr = Array.isArray(filteredData.value) ? filteredData.value : []
+  return arr.filter(item => isInMaintenanceBase(item)).length
+})
+
+const functionalCount = computed(() => {
+  const arr = Array.isArray(filteredData.value) ? filteredData.value : []
+  return arr.filter(item => 
+    displayValue(item, 'funcional') === 'Si'
+  ).length
+})
+
+const nonFunctionalCount = computed(() => {
+  const arr = Array.isArray(filteredData.value) ? filteredData.value : []
+  return arr.filter(item => 
+    displayValue(item, 'funcional') === 'No'
+  ).length
+})
 
 function handleShowBarcode(item) {
     try {
@@ -614,7 +747,14 @@ function handleShowUpdatePanel(item) {
 
 function handleShowHistoryPanel(item) {
   historyItem.value = item
-  isHistoryPanelVisible.value = true
+  // defer visibility change to avoid simultaneous patch issues
+  nextTick(() => {
+    try {
+      isHistoryPanelVisible.value = true
+    } catch (e) {
+      console.warn('[handleShowHistoryPanel] failed to open panel', e)
+    }
+  })
 }
 
 function onItemUpdated(result) {
@@ -627,113 +767,7 @@ function onItemUpdated(result) {
     }
 }
 
-function openCreateEquipmentModal() {
-    // Usar SweetAlert2 si está disponible
-    try {
-        const Swal = window.Swal || require('sweetalert2').default
-        
-        Swal.fire({
-            title: '➕ Crear Nuevo Equipo Médico',
-            html: `
-                <div style="text-align: left;">
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Nombre del Equipo *</label>
-                        <input id="eq-name" type="text" class="swal2-input" placeholder="Ej. Ventilador, Monitor" style="width: 100%;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Marca</label>
-                        <input id="eq-marca" type="text" class="swal2-input" placeholder="Ej. Philips" style="width: 100%;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Modelo</label>
-                        <input id="eq-modelo" type="text" class="swal2-input" placeholder="Ej. MX40" style="width: 100%;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Área / Unidad Médica *</label>
-                        <input id="eq-area" type="text" class="swal2-input" placeholder="Ej. UCIA, Cardiología" style="width: 100%;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">Número de Serie</label>
-                        <input id="eq-serial" type="text" class="swal2-input" placeholder="Serial" style="width: 100%;">
-                    </div>
-                </div>
-            `,
-            showCancelButton: true,
-            confirmButtonText: '✓ Crear Equipo',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#2edd5a',
-            cancelButtonColor: '#6b7280',
-            didOpen: () => {
-                document.getElementById('eq-name').focus()
-            },
-            preConfirm: () => {
-                const name = document.getElementById('eq-name').value.trim()
-                const area = document.getElementById('eq-area').value.trim()
-                
-                if (!name || !area) {
-                    Swal.showValidationMessage('Por favor completa los campos requeridos')
-                    return false
-                }
-                
-                return {
-                    name,
-                    marca: document.getElementById('eq-marca').value.trim() || '',
-                    modelo: document.getElementById('eq-modelo').value.trim() || '',
-                    area,
-                    serial: document.getElementById('eq-serial').value.trim() || ''
-                }
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const { name, marca, modelo, area, serial } = result.value
-                
-                const newEquipo = {
-                    'EQUIPO MEDICO': name,
-                    'MARCA': marca,
-                    'MODELO': modelo,
-                    'UNIDAD MEDICA': area,
-                    'No DE INVENTARIO': `EQ-${Date.now()}`,
-                    'NUMERO DE SERIE': serial,
-                    'ESTATUS': 'DISPONIBLE',
-                    'TIPO': 'equipo'
-                }
-                
-                allData.value.push(newEquipo)
-                runSearch()
-                
-                Swal.fire('¡Éxito!', `Equipo "${name}" creado exitosamente`, 'success')
-                console.log('✅ Equipo creado:', newEquipo)
-            }
-        })
-    } catch (error) {
-        console.log('SweetAlert no disponible, usando prompts')
-        // Fallback a prompts
-        const equipoMedico = prompt('🏥 Nombre del Equipo Médico:')
-        if (!equipoMedico) return
-
-        const marca = prompt('Marca (opcional):')
-        const modelo = prompt('Modelo (opcional):')
-        const area = prompt('Área / Unidad Médica:')
-        if (!area) return
-
-        const serial = prompt('Número de Serie (opcional):')
-
-        const newEquipo = {
-            'EQUIPO MEDICO': equipoMedico,
-            'MARCA': marca || '',
-            'MODELO': modelo || '',
-            'UNIDAD MEDICA': area,
-            'No DE INVENTARIO': `EQ-${Date.now()}`,
-            'NUMERO DE SERIE': serial || '',
-            'ESTATUS': 'DISPONIBLE',
-            'TIPO': 'equipo'
-        }
-
-        allData.value.push(newEquipo)
-        runSearch()
-        console.log('✅ Equipo creado:', newEquipo)
-    }
-}
+// create equipment helper removed (FAB deleted)
 
 function handleLoadMore() {
     // PAGINATION: Not needed with traditional pagination
@@ -759,9 +793,6 @@ function handleExternalScan(code) {
 
     const token = getStoredToken()
     if (!token) {
-        scanOverlayItem.value = found
-        scanOverlayCode.value = String(code)
-        scanOverlayOpen.value = true
         return
     }
 
@@ -769,16 +800,11 @@ function handleExternalScan(code) {
         try {
             const res = await validateSession()
             if (!res || !res.authenticated) {
-                scanOverlayItem.value = found
-                scanOverlayCode.value = String(code)
-                scanOverlayOpen.value = true
             } else {
-                scanOverlayOpen.value = false
+                // nothing
             }
         } catch (e) {
-            scanOverlayItem.value = found
-            scanOverlayCode.value = String(code)
-            scanOverlayOpen.value = true
+            // ignore
         }
     })()
 }
@@ -872,27 +898,7 @@ function openScanModal() {
     scanModalOpen.value = true
 }
 
-function closeScanOverlay() {
-    scanOverlayOpen.value = false
-    const token = getStoredToken()
-    if (!token) {
-        router.push({ name: 'login', query: { next: router.currentRoute.value.fullPath || '/' } })
-    }
-}
 
-function onScanOverlayLogged() {
-    scanOverlayOpen.value = false
-    ;(async () => {
-        try {
-            const res = await validateSession()
-            if (!res || !res.authenticated) {
-                router.push({ name: 'login', query: { next: router.currentRoute.value.fullPath || '/' } })
-            }
-        } catch (e) {
-            router.push({ name: 'login', query: { next: router.currentRoute.value.fullPath || '/' } })
-        }
-    })()
-}
 
 function goLoginWithRedirect() {
     const current = router.currentRoute.value
@@ -947,108 +953,6 @@ async function copyHttpsUrl() {
     }
 }
 
-async function showHttpsQr() {
-    // RESET: Clear any previous URL to force fresh generation
-    httpsUrl.value = ''
-    
-    // PRIORITY: Use local network addresses FIRST, Cloudflare as fallback only
-    const currentHost = window.location.hostname
-    const currentProtocol = window.location.protocol
-    const currentPort = window.location.port
-    
-    console.log('[QR] Current access:', { host: currentHost, protocol: currentProtocol, port: currentPort })
-    
-    // Try to refresh network addresses from server first
-    try {
-        const refreshResp = await fetch('/refresh-hosts', { method: 'GET', cache: 'no-store' })
-        if (refreshResp && refreshResp.ok) {
-            const freshData = await refreshResp.json()
-            if (freshData && freshData.hosts) {
-                devHosts.value = freshData.hosts
-                console.log('[QR] ✅ Refreshed DYNAMIC network addresses:', freshData.hosts)
-            }
-        }
-    } catch (e) {
-        // Fallback: try to get existing file with cache busting
-        try {
-            const freshHostsResp = await fetch('/dev-hosts.json?t=' + Date.now(), { cache: 'no-store' })
-            if (freshHostsResp && freshHostsResp.ok) {
-                const freshData = await freshHostsResp.json()
-                if (freshData && freshData.hosts) {
-                    devHosts.value = freshData.hosts
-                    console.log('[QR] 📄 Fallback network addresses:', freshData.hosts)
-                }
-            }
-        } catch (e2) {
-            console.warn('[QR] Could not refresh network addresses:', e2.message)
-        }
-    }
-    
-    // PRIORITY 1: Use local network addresses (ALWAYS preferred)
-    if (devHosts.value && devHosts.value.length > 0) {
-        let targetHost = currentHost
-        
-        // If accessing from localhost, prefer CURRENT network address (dynamic)
-        if (currentHost === 'localhost' || currentHost === '127.0.0.1') {
-            const networkHosts = devHosts.value.filter(host => 
-                host !== 'localhost' && 
-                host !== '127.0.0.1' && 
-                !host.includes('172.') && // Skip Docker/VM networks
-                !host.includes('192.168.56.') && // Skip VirtualBox networks
-                !host.includes('10.0.') // Skip some VPN networks
-            )
-            if (networkHosts.length > 0) {
-                // Always use the LAST network address (most likely current WiFi)
-                targetHost = networkHosts[networkHosts.length - 1]
-                httpsUrl.value = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
-                console.log('[QR] 🏠→📱 From localhost → NETWORK address:', targetHost)
-            }
-        } else {
-            // If already on network, use the same network address (but verify it's still valid)
-            const isCurrentHostValid = devHosts.value.includes(currentHost)
-            if (isCurrentHostValid) {
-                targetHost = currentHost
-                httpsUrl.value = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
-                console.log('[QR] 📱→📱 From network → Same network address:', targetHost)
-            } else {
-                // Current host not in list, fall back to best available network
-                const networkHosts = devHosts.value.filter(host => 
-                    host !== 'localhost' && 
-                    host !== '127.0.0.1' && 
-                    !host.includes('172.') &&
-                    !host.includes('192.168.56.') &&
-                    !host.includes('10.0.')
-                )
-                if (networkHosts.length > 0) {
-                    targetHost = networkHosts[networkHosts.length - 1]
-                    httpsUrl.value = `${currentProtocol}//${targetHost}:${currentPort || '5173'}`
-                    console.log('[QR] 🔄 Network changed → DYNAMIC address:', targetHost)
-                }
-            }
-        }
-    }
-    
-    // PRIORITY 2: Fallback to Cloudflare only if no local network found
-    if (!httpsUrl.value) {
-        console.log('[QR] No local network found, trying Cloudflare fallback...')
-        await fetchCloudflareUrl()
-    }
-    
-    if (!httpsUrl.value) {
-        console.warn('[QR] Could not determine target URL (no network or tunnel)')
-        alert('No se pudo generar QR: no hay direcciones de red disponibles')
-        return
-    }
-    
-    try {
-        const { toDataURL } = await import('qrcode')
-        httpsQrData.value = await toDataURL(httpsUrl.value, { width: 512 })
-        httpsQrOpen.value = true
-        console.log('[QR] 🚀 Generated QR for NETWORK address:', httpsUrl.value)
-    } catch (e) {
-        console.warn('Could not generate QR', e)
-    }
-}
 
 // UI Filter Drawer/Dropdown Management
 function getDrawerEl() {
@@ -1229,7 +1133,12 @@ function queueInitialLoad() {
             console.error('Error determining preferServer:', e);
         }
 
-        await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, preferServer ? { serverSide: true, page: currentPage.value, pageSize: pageSize.value, limitReactive: true } : { limitReactive: isMobileOrNetworkNow() });
+        // Only run equipment search if inventory tab is active (avoid expensive fetch for subdireccion)
+if (activeTab.value === 'inventory') {
+  await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, preferServer ? { serverSide: true, page: currentPage.value, pageSize: pageSize.value, limitReactive: true } : { limitReactive: isMobileOrNetworkNow() });
+} else {
+  console.log('[queueInitialLoad] Skipping equipment runSearch because activeTab=%s', activeTab.value)
+}
 
         try {
             console.timeEnd('[VIEW] runSearch');
@@ -1311,7 +1220,7 @@ onMounted(async () => {
         window.__BIOMED_TEST__.fetchAll = async (opts = {}) => {
           try {
             console.log('[__BIOMED_TEST__] Starting full fetch...')
-            await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, full: true, pageSize: opts.pageSize || 1000 })
+            await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, full: true, maxFullAssign: 2000, pageSize: opts.pageSize || 1000 })
             console.log('[__BIOMED_TEST__] Full fetch done. items:', (window.__BIOMED_TEST__.lastFetchedItems || []).length)
             return true
           } catch (e) {
@@ -1360,6 +1269,32 @@ watch([currentPage, pageSize], ([p, ps], [op, ops]) => {
         console.warn('[pagination watch] Error al forzar refetch:', e && e.message)
     }
 })
+
+// Auto-adjust page size: si el servidor reporta pocos items, mostrar todos automáticamente
+const AUTO_SHOW_ALL_THRESHOLD = 2000 // si total <= este valor, intentamos mostrar todo en una sola vista
+const autoExpandedApplied = ref(false)
+watch(serverTotal, async (nv) => {
+    try {
+        const total = Number(nv || 0)
+        if (!total || autoExpandedApplied.value) return
+
+        // Si el servidor tiene un total moderado, pedir full-fetch y ajustar pageSize para mostrar todo
+        if (total > 0 && total <= AUTO_SHOW_ALL_THRESHOLD) {
+            console.log('[AUTO] serverTotal <=', AUTO_SHOW_ALL_THRESHOLD, '- attempting full fetch and showing all items')
+            try {
+                // Ajustar page size para renderizar todo
+                try { pageSize.value = total } catch (e) {}
+                // Ejecutar búsqueda en modo servidor con full=true para obtener todos los items
+                await runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, { serverSide: true, full: true, pageSize: Math.max(1000, total) })
+            } catch (err) {
+                console.warn('[AUTO] full fetch failed, falling back to paginated view', err && err.message)
+            }
+            autoExpandedApplied.value = true
+        }
+    } catch (e) {
+        console.warn('[AUTO] error evaluating serverTotal watcher', e && e.message)
+    }
+}, { immediate: true })
 
 // Si el servidor reporta un total muy grande, forzar refetch en server-side y volver a la página 1
 watch(serverTotal, (nv, ov) => {
@@ -1423,13 +1358,7 @@ watch(pageSize, (n) => {
     if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
 })
 
-watch(allData, (data) => {
-    if (data && data.length > 0 && !cardsReady.value) {
-        setTimeout(() => {
-            cardsReady.value = true
-        }, 150)
-    }
-}, { immediate: false })
+// removed cardsReady updating watcher since card UI is gone
 
 // Update large dataset UI flag when server reports a large total
 watch(serverTotal, (nv) => {
@@ -1439,12 +1368,23 @@ watch(serverTotal, (nv) => {
 })
 
 onMounted(() => {
-  console.log('[DEBUG] allData:', allData.value);
-  console.log('[DEBUG] filteredData:', filteredData.value);
+  console.log('[DEBUG] allData (snapshot):', Array.isArray(allData.value) ? allData.value.slice(0,6) : allData.value);
+  console.log('[DEBUG] filteredData (snapshot):', Array.isArray(filteredData.value) ? filteredData.value.slice(0,6) : filteredData.value);
 });
 
 watch(filteredData, (newVal) => {
-  console.log('[DEBUG] filteredData updated:', newVal);
+  try {
+    const len = Array.isArray(newVal) ? newVal.length : 0
+    const sample = Array.isArray(newVal) ? newVal.slice(0,6).map(it => ({ 'No DE INVENTARIO': it?.['No DE INVENTARIO'], 'EQUIPO MEDICO': it?.['EQUIPO MEDICO'] })) : newVal
+    console.log('[DEBUG] filteredData updated — length:', len, 'sample:', sample)
+
+    // Heurística de seguridad: si el servidor reporta items pero filteredData está vacío, avisar
+    if (typeof serverTotal !== 'undefined' && serverTotal && serverTotal.value > 0 && len === 0) {
+      console.warn('[DEBUG] filteredData is empty while serverTotal > 0 — possible sanitization or filter mismatch')
+    }
+  } catch (e) {
+    console.log('[DEBUG] filteredData updated (could not serialize):', e)
+  }
 });
 </script>
 
@@ -1455,6 +1395,9 @@ watch(filteredData, (newVal) => {
     flex-direction: column;
     gap: 28px;
 }
+
+/* View mode toggle */
+/* view mode toggle styles removed; table-only UI now */
 
 /* Tiny viewport support: scale UI to 90% for very small mobile devices */
 @media (max-width: 350px) and (max-height: 600px) {

@@ -39,8 +39,8 @@ defineProps({
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
+    gap: 8px;
+    padding: 8px 14px;
     border-top: 1px solid #4b5563;
     background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
     position: relative;
@@ -50,7 +50,7 @@ defineProps({
 .footer-left {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
 }
 
@@ -58,11 +58,11 @@ defineProps({
 .maintenance-badge {
     display: inline-flex;
     align-items: center;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     text-transform: uppercase;
-    padding: 6px 12px;
-    border-radius: 8px;
+    padding: 4px 10px;
+    border-radius: 6px;
     letter-spacing: 0.3px;
     border: 1px solid transparent;
     position: relative;
@@ -102,12 +102,12 @@ defineProps({
 .functional-indicator {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 0.8rem;
+    gap: 5px;
+    font-size: 0.75rem;
     font-weight: 600;
     color: #475569;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: 5px;
     background: rgba(71, 85, 105, 0.1);
     border: 1px solid rgba(71, 85, 105, 0.2);
 }

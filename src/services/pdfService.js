@@ -1,35 +1,78 @@
 /**
  * Servicio para generar PDFs de equipos biomédicos
+ * @param {string|object} inventoryNo - Número de inventario o objeto con inventoryNo
+ * @returns {Promise<{pdfUrl: string}|null>} - URL del PDF para preview o null si falla
  */
 
-export async function generateEquipmentPDF(equipment) {
+export async function generateEquipmentPDF(inventoryNo) {
     try {
+        // Normalizar el parámetro - puede ser string o objeto
+        const invNo = typeof inventoryNo === 'string' ? inventoryNo : (inventoryNo?.inventoryNo || inventoryNo?.['No DE INVENTARIO']);
+        
+        if (!invNo) {
+            console.error('No inventory number provided');
+            return null;
+        }
+
         // Hacer una petición al backend para generar el PDF
         const response = await fetch('/api/pdf/equipment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(equipment)
+            body: JSON.stringify({ inventoryNo: invNo })
         })
 
         if (!response.ok) throw new Error('Error generating PDF')
 
         const blob = await response.blob()
-        downloadBlob(blob, `equipo-${equipment.inventoryNo}.pdf`)
+        
+        // Crear URL para el blob (para preview)
+        const pdfUrl = window.URL.createObjectURL(blob)
+        
+        // Devolver objeto con pdfUrl para que pueda usarse en preview
+        return { pdfUrl, blob }
     } catch (error) {
         console.error('PDF generation error:', error)
-        // Fallback: generar PDF simple en cliente
-        generateSimplePDF(equipment)
+        return null
     }
 }
 
 /**
- * Genera un PDF simple usando canvas + html2canvas simulado
+ * Descarga el PDF directamente (para el botón descargar)
+ */
+export async function downloadEquipmentPDF(inventoryNo) {
+    try {
+        const invNo = typeof inventoryNo === 'string' ? inventoryNo : (inventoryNo?.inventoryNo || inventoryNo?.['No DE INVENTARIO']);
+        
+        if (!invNo) {
+            console.error('No inventory number provided');
+            return;
+        }
+
+        const response = await fetch('/api/pdf/equipment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inventoryNo: invNo })
+        })
+
+        if (!response.ok) throw new Error('Error generating PDF')
+
+        const blob = await response.blob()
+        downloadBlob(blob, `equipo-${invNo}.pdf`)
+    } catch (error) {
+        console.error('PDF download error:', error)
+        // Fallback
+        generateSimplePDF(inventoryNo)
+    }
+}
+
+/**
+ * Genera un PDF simple usando los estilos corporativos del nuevo diseño
+ * Este es el fallback cuando el endpoint /api/pdf/equipment no está disponible
  */
 export function generateSimplePDF(equipment) {
     const htmlContent = buildEquipmentHTML(equipment)
-    const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent)
-
-    // Abrir nueva ventana y escribir el contenido (más fiable que iframe para evitar restricciones cross-origin)
+    
+    // Abrir nueva ventana y escribir el contenido
     const w = window.open('', '_blank')
     if (!w) {
         alert('No se pudo abrir la ventana de impresión. Revisa tu bloqueador de pop-ups.')
@@ -40,10 +83,9 @@ export function generateSimplePDF(equipment) {
         w.document.close()
         setTimeout(() => {
             try { w.print() } catch (err) { alert('No se pudo iniciar la impresión automáticamente. Usa el diálogo del navegador para imprimir o guardar como PDF.') }
-            // Not closing window on purpose so user can save the PDF; caller may close it if desired
         }, 250)
     } catch (e) {
-        console.error('Error using print window fallback', e)
+        console.error('Error usando print window fallback', e)
         alert('Error preparando impresión: ' + (e && e.message ? e.message : e))
     }
 }

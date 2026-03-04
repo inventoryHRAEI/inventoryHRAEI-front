@@ -383,15 +383,18 @@ function downloadPDF() {
 }
 
 .status-badge.is-green {
-    background: #10b981;
+    background: var(--status-available-bg, #10b981);
+    color: var(--status-available-fg, #065f46);
 }
 
 .status-badge.is-yellow {
-    background: #f59e0b;
+    background: var(--status-maintenance-bg, #f59e0b);
+    color: var(--status-maintenance-fg, #92400e);
 }
 
 .status-badge.is-blue {
-    background: #3b82f6;
+    background: var(--status-unknown-bg, #3b82f6);
+    color: var(--status-unknown-fg, #1e3a8a);
 }
 
 .status-mini {
@@ -403,18 +406,18 @@ function downloadPDF() {
 }
 
 .status-mini.is-active {
-    background: #d1fae5;
-    color: #065f46;
+    background: var(--status-operativo-bg, #d1fae5);
+    color: var(--status-operativo-fg, #065f46);
 }
 
 .status-mini.is-inactive {
-    background: #fee2e2;
-    color: #7f1d1d;
+    background: var(--status-fuera-bg, #fee2e2);
+    color: var(--status-fuera-fg, #7f1d1d);
 }
 
 .status-mini.is-pending {
-    background: #fef3c7;
-    color: #78350f;
+    background: var(--status-mantenimiento-bg, #fef3c7);
+    color: var(--status-mantenimiento-fg, #78350f);
 }
 
 .action-buttons {

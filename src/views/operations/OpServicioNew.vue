@@ -84,6 +84,9 @@
                                 <FolioInput v-model="form.folio" prefix="O-" />
                             </div>
 
+                            <ModernInput v-model="form.folioAsociado" label="Folio Asociado"
+                                placeholder="Folio de referencia relacionado" class="span-full" />
+
                             <div class="field-wrapper span-1">
                                 <label class="field-label">
                                     Fecha
@@ -207,7 +210,74 @@
                             </svg>
                         </template>
 
-                        <div class="equipment-type-grid">
+                        <!-- Hospital Selection (antes de los equipos) -->
+                        <div class="hospital-selection">
+                            <div class="selection-cards">
+                                <button type="button" class="hospital-card"
+                                    :class="{ 'is-selected': belongsToHospital === true }"
+                                    @click="belongsToHospital = true">
+                                    <div class="card-icon sí">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    </div>
+                                    <div class="card-content">
+                                        <h4>Sí, pertenece al hospital</h4>
+                                        <p class="card-subtitle">El equipo es propiedad del HRAEI</p>
+                                    </div>
+                                </button>
+
+                                <button type="button" class="hospital-card"
+                                    :class="{ 'is-selected': belongsToHospital === false }"
+                                    @click="belongsToHospital = false">
+                                    <div class="card-icon no">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                        </svg>
+                                    </div>
+                                    <div class="card-content">
+                                        <h4>No, es externo</h4>
+                                        <p class="card-subtitle">Es comodato, donación u otro (especificar en Clave
+                                            HRAEI)</p>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Feedback después de seleccionar -->
+                        <Transition name="slide-down">
+                            <div v-if="belongsToHospital !== null" class="hospital-feedback">
+                                <div v-if="belongsToHospital" class="feedback-box success">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    <div class="feedback-text">
+                                        <p><strong>Equipo del Hospital:</strong> Se asume propiedad del HRAEI.</p>
+                                    </div>
+                                </div>
+                                <div v-else class="feedback-box info">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M12 16v-4" />
+                                        <path d="M12 8h.01" />
+                                    </svg>
+                                    <div class="feedback-text">
+                                        <p><strong>Equipo Externo:</strong> Recuerda indicar el tipo en "Clave HRAEI"
+                                            (Comodato, Donación, etc.)
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Transition>
+
+                        <!-- Equipment Type Selector (aparece solo si ya respondió) -->
+                        <div v-if="belongsToHospital !== null" class="equipment-type-grid"
+                            style="margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
                             <button v-for="tipo in tipoEntradaOptions" :key="tipo.value" type="button" class="type-card"
                                 :class="{ 'is-selected': newItem.tipo === tipo.value }"
                                 @click="selectEquipmentType(tipo.value)">
@@ -364,6 +434,25 @@
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'ubicacion')" />
                                                 </div>
 
+                                                <!-- Equipos Asociados (Solo para accesorios y refacciones) -->
+                                                <div v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'"
+                                                    class="searchable-field">
+                                                    <label class="mini-label">Equipo Asociado</label>
+                                                    <SearchableInput v-model="unidad.equipoAsociado"
+                                                        :suggestions="equipoMedicoList" tipo="equipo-medico"
+                                                        field-name="nombre" placeholder="Buscar equipo asociado..."
+                                                        @select="(s) => unidad.equipoAsociado = (s.nombre || s.label || '')" />
+                                                </div>
+
+                                                <!-- Número de Serie del Equipo Asociado (Solo si hay equipo asociado) -->
+                                                <div v-if="(newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion') && unidad.equipoAsociado"
+                                                    class="searchable-field">
+                                                    <label class="mini-label">Número de Serie del Equipo
+                                                        Asociado</label>
+                                                    <input v-model="unidad.serieEquipoAsociado" type="text"
+                                                        class="form-input" placeholder="Ej. SN-EQUIPO-001" />
+                                                </div>
+
                                                 <div class="searchable-field">
                                                     <label class="mini-label">Clave HRAEI</label>
                                                     <SearchableInput v-model="unidad.claveHRAEI"
@@ -400,15 +489,27 @@
                                     </TransitionGroup>
                                 </div>
 
-                                <button type="button" class="btn-add-equipment" @click="agregarItem"
-                                    :disabled="!canAddItem">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2.5">
-                                        <line x1="12" y1="5" x2="12" y2="19" />
-                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                    </svg>
-                                    Agregar {{ getSelectedTypeLabel() }}
-                                </button>
+                                <div class="equipment-buttons-group">
+                                    <button type="button" class="btn-add-equipment" @click="agregarItem"
+                                        :disabled="!canAddItem">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2.5">
+                                            <line x1="12" y1="5" x2="12" y2="19" />
+                                            <line x1="5" y1="12" x2="19" y2="12" />
+                                        </svg>
+                                        Agregar {{ getSelectedTypeLabel() }}
+                                    </button>
+                                    <button type="button" class="btn-clear-equipment" @click="resetNewItem"
+                                        v-if="newItem.tipo" title="Limpiar formulario y empezar de nuevo">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2.5">
+                                            <polyline points="3 6 5 4 21 4 19 6"></polyline>
+                                            <line x1="19" y1="6" x2="5" y2="6"></line>
+                                            <path d="M6 9l.967 12.158A2 2 0 0 0 9.001 23h6.018a2 2 0 0 0 1.964-1.856L18 9M9 5V3h6v2M9 13v6M15 13v6"></path>
+                                        </svg>
+                                        Limpiar
+                                    </button>
+                                </div>
                             </div>
                         </Transition>
                     </WizardStepCard>
@@ -443,13 +544,13 @@
                                         <p class="item-quantity-text">{{ item.unidades?.length || 1 }}
                                             unidad{{
                                                 (item.unidades?.length || 1) !== 1 ? 'es' : '' }} de {{
-                                            getTipoLabel(item.tipo).toLowerCase() }}</p>
+                                                getTipoLabel(item.tipo).toLowerCase() }}</p>
                                         <div class="item-details">
                                             <span v-if="item.marca"><strong>Marca:</strong> {{ item.marca }}</span>
                                             <span v-if="item.modelo"><strong>Modelo:</strong> {{ item.modelo }}</span>
                                             <span v-if="item.serie"><strong>Serie:</strong> {{ item.serie }}</span>
                                             <span v-if="item.ubicacion"><strong>Ubicación:</strong> {{ item.ubicacion
-                                                }}</span>
+                                            }}</span>
                                         </div>
                                     </div>
 
@@ -486,6 +587,13 @@
                         </template>
 
                         <div class="fields-grid">
+                            <ModernInput v-model="form.descripcionReporte" label="Descripción del Reporte"
+                                placeholder="Describe el reporte recibido" multiline :rows="3" class="span-full" />
+
+                            <ModernInput v-model="form.accionesRealizadas"
+                                label="Acciones realizadas para atender el reporte"
+                                placeholder="Detalla las acciones realizadas" multiline :rows="3" class="span-full" />
+
                             <div class="observations-with-image span-full">
                                 <ModernInput v-model="form.observaciones" label="Observaciones"
                                     placeholder="Escribe cualquier observación relevante..." multiline :rows="4"
@@ -545,6 +653,8 @@
 
                                 <div v-if="sig.fixed" class="sig-body">
                                     <div class="sig-name-display">{{ sig.name }}</div>
+                                    <ModernInput v-if="isAdmin" v-model="sig.name" placeholder="Editar nombre fijo"
+                                        size="small" class="sig-name-input" />
                                 </div>
 
                                 <div v-else class="sig-body">
@@ -559,11 +669,28 @@
                                     </div>
 
                                     <Transition name="slide-fade">
-                                        <ModernInput v-if="sig.nameKnown" v-model="sig.name"
-                                            placeholder="Nombre completo" size="small" class="sig-name-input" />
+                                        <div v-if="sig.nameKnown" class="sig-name-input-wrap">
+                                            <select v-if="sig.key === 'ingeniero'" v-model="sig.name"
+                                                class="engineer-select">
+                                                <option value="">Selecciona un ingeniero...</option>
+                                                <option v-for="name in ingenieroFirmanteOptions" :key="name"
+                                                    :value="name">{{ name }}</option>
+                                            </select>
+                                            <ModernInput v-else v-model="sig.name" placeholder="Nombre completo"
+                                                size="small" class="sig-name-input" />
+                                        </div>
                                     </Transition>
                                 </div>
                             </div>
+                        </div>
+
+                        <div v-if="isAdmin" class="engineer-admin-panel">
+                            <h5>Administración rápida de firmantes</h5>
+                            <ModernInput v-model="newEngineerName" label="Agregar ingeniero biomédico"
+                                placeholder="Nombre completo" />
+                            <button type="button" class="btn-add-engineer" @click="addIngenieroFirmante">
+                                Agregar a lista
+                            </button>
                         </div>
 
                         <DynamicFieldsSection :schema="formSchema" :model="form.extraFields" sectionId="firmas"
@@ -734,6 +861,7 @@ const currentStep = ref(0)
 const loading = ref(false)
 const isMobileView = ref(false)
 const errors = ref({})
+const belongsToHospital = ref(null) // Para la pregunta: ¿Pertenece al Hospital?
 
 // PDF Preview modal
 const showPdfPreview = ref(false)
@@ -749,14 +877,48 @@ const motivoSearchQuery = ref('')
 
 // Modal para item en blanco
 const showBlankItemModal = ref(false)
+const DEFAULT_INGENIEROS_FIRMANTES = [
+    'Ing. Ana Karen Soto Avilés',
+    'Ing. Nayeth Palma Espinoza',
+    'Lic. Carlos Alberto Rosales Millán',
+    'Ing. Francisco Javier Cotera Ortega'
+]
+const newEngineerName = ref('')
+
+const ingenieroFirmanteOptions = computed(() => {
+    const configured = formSchema.value?.optionSets?.ingenierosFirmantes
+    if (Array.isArray(configured) && configured.length) {
+        return configured.map(v => String(v || '').trim()).filter(Boolean)
+    }
+    return DEFAULT_INGENIEROS_FIRMANTES
+})
+
+async function addIngenieroFirmante() {
+    const name = String(newEngineerName.value || '').trim()
+    if (!name) return
+    const current = Array.isArray(formSchema.value?.optionSets?.ingenierosFirmantes)
+        ? formSchema.value.optionSets.ingenierosFirmantes.map(v => String(v || '').trim()).filter(Boolean)
+        : [...DEFAULT_INGENIEROS_FIRMANTES]
+    if (!current.includes(name)) {
+        current.push(name)
+    }
+    const nextSchema = {
+        ...formSchema.value,
+        optionSets: {
+            ...(formSchema.value?.optionSets || {}),
+            ingenierosFirmantes: current
+        }
+    }
+    await handleSaveSchema(nextSchema)
+    newEngineerName.value = ''
+    notifier.success('Ingeniero agregado a la lista')
+}
 
 // Default signatures
 const DEFAULT_SIGNATURES = [
     { key: 'subdireccion', role: 'SUBDIRECCIÓN DE INGENIERÍA BIOMÉDICA', nameKnown: true, name: 'ARQ. KARLA ALEJANDRA TORRES SÁNCHEZ', fixed: true },
     { key: 'ingeniero', role: 'INGENIERO BIOMÉDICO', nameKnown: false, name: '', fixed: false },
-    { key: 'recibe', role: 'RECEPTOR', nameKnown: false, name: '', fixed: false },
-    { key: 'entrega', role: 'ENTREGA', nameKnown: false, name: '', fixed: false },
-    { key: 'vigilancia', role: 'COORDINACIÓN DE VIGILANCIA', nameKnown: false, name: '', fixed: false }
+    { key: 'recibe', role: 'QUIEN RECIBE', nameKnown: false, name: '', fixed: false }
 ]
 
 // Form state
@@ -769,9 +931,12 @@ const form = reactive({
     fechaISO: '',
     horaInicio: '',
     horaTermino: '',
+    folioAsociado: '',
     motivoEntrada: '', // Backend expects 'motivoEntrada' mostly
     otroMotivo: '',
     descripcion: '',
+    descripcionReporte: '',
+    accionesRealizadas: '',
     observaciones: '',
     observacionesImg: null,
     nombreIngeniero: '',
@@ -865,6 +1030,10 @@ const liveTimeDisplay = ref('')
 const displayEndTime = computed(() => liveTimeDisplay.value || form.horaTermino || '--:--:--')
 
 const currentSuggestions = computed(() => {
+    // Si es externo al hospital, no mostrar sugerencias de inventario
+    if (belongsToHospital.value === false) {
+        return []
+    }
     if (!newItem.tipo) return []
     if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
         return equipoMedicoList.value
@@ -954,7 +1123,7 @@ function agregarItem() {
         notifier.error('Completa al menos el nombre del item')
         return
     }
-    
+
     // Use the first unit as the main description
     const firstUnit = newItem.unidades[0]
     if (firstUnit?.nombre?.trim()) {
@@ -969,6 +1138,7 @@ function agregarItem() {
             referencia: firstUnit.referencia,
             ubicacion: firstUnit.ubicacion,
             equipoAsociado: firstUnit.equipoAsociado || '',
+            serieEquipoAsociado: firstUnit.serieEquipoAsociado || '',
             claveHRAEI: firstUnit.claveHRAEI,
             unidades: newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 }))
         })
@@ -1253,7 +1423,9 @@ async function onSubmit() {
                     lote: item.lote || '',
                     referencia: item.referencia || '',
                     ubicacion: item.ubicacion || '',
-                    tipo: item.tipo || 'equipo'
+                    tipo: item.tipo || 'equipo',
+                    equipoAsociado: item.equipoAsociado || '',
+                    serieEquipoAsociado: item.serieEquipoAsociado || ''
                 })
             }
         }
@@ -1291,20 +1463,22 @@ async function onSubmit() {
             // Generar y descargar PDF
             try {
                 const pdfRes = await authedFetch(`/api/ops/servicio/${encodeURIComponent(folioGuardado)}/pdfs/generated/download`)
-                if (pdfRes.ok) {
-                    const blob = await pdfRes.blob()
-                    const url = window.URL.createObjectURL(blob)
-                    const link = document.createElement('a')
-                    link.href = url
-                    link.setAttribute('download', `servicio_${folioGuardado}.pdf`)
-                    document.body.appendChild(link)
-                    link.click()
-                    link.remove()
-                    window.URL.revokeObjectURL(url)
-                    notifier.success('PDF descargado exitosamente')
+                if (!pdfRes.ok) {
+                    throw new Error('No se pudo descargar el PDF generado')
                 }
+                const blob = await pdfRes.blob()
+                const url = window.URL.createObjectURL(blob)
+                const link = document.createElement('a')
+                link.href = url
+                link.setAttribute('download', `servicio_${folioGuardado}.pdf`)
+                document.body.appendChild(link)
+                link.click()
+                link.remove()
+                window.URL.revokeObjectURL(url)
+                notifier.success('PDF descargado exitosamente')
             } catch (pdfErr) {
                 console.warn('Error descargando PDF:', pdfErr)
+                notifier.error('La orden se guardó, pero falló la descarga del PDF')
             }
 
             // Redirigir al order management
@@ -1500,6 +1674,40 @@ onBeforeUnmount(() => {
     color: #60a5fa;
 }
 
+.engineer-select {
+    width: 100%;
+    min-height: 38px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(15, 23, 42, 0.6);
+    color: #e2e8f0;
+    padding: 8px 10px;
+}
+
+.engineer-admin-panel {
+    margin-top: 16px;
+    padding: 14px;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.4);
+}
+
+.engineer-admin-panel h5 {
+    margin: 0 0 10px;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+}
+
+.btn-add-engineer {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    border-radius: 10px;
+    background: rgba(59, 130, 246, 0.14);
+    color: #bfdbfe;
+    cursor: pointer;
+}
+
 .equipment-type-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -1592,8 +1800,20 @@ onBeforeUnmount(() => {
 
 .unit-fields {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 12px;
+}
+
+@media (max-width: 1024px) {
+    .unit-fields {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 500px) {
+    .unit-fields {
+        grid-template-columns: 1fr;
+    }
 }
 
 .quantity-field {
@@ -1677,6 +1897,43 @@ onBeforeUnmount(() => {
 }
 
 .btn-add-equipment-group .btn-add-equipment {
+    flex: 1;
+    min-width: 180px;
+    margin-top: 0;
+}
+
+/* Clear Equipment Button */
+.btn-clear-equipment {
+    padding: 14px 20px;
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    min-width: 140px;
+    white-space: nowrap;
+}
+
+.btn-clear-equipment:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+}
+
+.equipment-buttons-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+}
+
+.equipment-buttons-group .btn-add-equipment {
     flex: 1;
     min-width: 180px;
     margin-top: 0;
@@ -2236,5 +2493,26 @@ onBeforeUnmount(() => {
 .slide-up-leave-to {
     opacity: 0;
     transform: translateY(20px);
+}
+
+/* Form Input */
+.form-input {
+    padding: 8px 12px;
+    font-size: 0.875rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff;
+    transition: all 0.2s;
+}
+
+.form-input:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(59, 130, 246, 0.5);
+    outline: none;
+}
+
+.form-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
 }
 </style>

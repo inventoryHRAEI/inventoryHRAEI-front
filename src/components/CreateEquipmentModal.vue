@@ -32,6 +32,20 @@
 
           <!-- Form -->
           <form @submit.prevent="submitForm" class="modal-form">
+            <!-- Número de Inventario (generado) -->
+            <div class="form-group required">
+              <label for="new-noInventario" class="form-label">
+                Número de Inventario
+                <span class="required-indicator">*</span>
+              </label>
+              <input
+                id="new-noInventario"
+                v-model="formData.noInventario"
+                type="text"
+                class="form-input"
+                readonly
+              />
+            </div>
             <!-- Equipo Médico - Campo crítico -->
             <div class="form-group required">
               <label for="new-equipo" class="form-label">
@@ -63,8 +77,12 @@
                   type="text"
                   class="form-input"
                   placeholder="Ej. Philips, Siemens, GE"
+                  list="marca-suggestions"
                   @input="updateProgress"
                 />
+                <datalist id="marca-suggestions">
+                  <option v-for="m in marcaSuggestions" :key="m" :value="m"></option>
+                </datalist>
               </div>
 
               <div class="form-group">
@@ -78,8 +96,12 @@
                   type="text"
                   class="form-input"
                   placeholder="Ej. MX40, IntelliVue"
+                  list="modelo-suggestions"
                   @input="updateProgress"
                 />
+                <datalist id="modelo-suggestions">
+                  <option v-for="m in modeloSuggestions" :key="m" :value="m"></option>
+                </datalist>
               </div>
             </div>
 
@@ -100,7 +122,7 @@
                 @input="updateProgress"
               />
               <datalist id="area-suggestions">
-                <option v-for="area in areaSuggestions" :key="area" :value="area"></option>
+                <option v-for="area in ubicacionSuggestions" :key="area" :value="area"></option>
               </datalist>
               <p v-if="!formData.area" class="field-hint">Este campo es requerido</p>
             </div>
@@ -176,7 +198,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useInventorySuggestions } from '@/composables/useInventorySuggestions.js'
 
 const props = defineProps({
   modelValue: {
@@ -202,6 +225,7 @@ const emit = defineEmits(['update:modelValue', 'equipment-created'])
 
 const isSubmitting = ref(false)
 const formData = ref({
+  noInventario: '',
   equipoMedico: '',
   marca: '',
   modelo: '',
@@ -209,6 +233,45 @@ const formData = ref({
   serial: '',
   estado: 'DISPONIBLE'
 })
+
+// --- inventory-based suggestions ---
+const { equipoMedicoList, fetchEquipoMedicoSuggestions, loading: sugLoading } = useInventorySuggestions()
+
+const marcaSuggestions = computed(() => {
+    const set = new Set()
+    equipoMedicoList.value.forEach(i => { if (i.marca) set.add(i.marca) })
+    return Array.from(set).sort()
+})
+const modeloSuggestions = computed(() => {
+    const set = new Set()
+    equipoMedicoList.value.forEach(i => { if (i.modelo) set.add(i.modelo) })
+    return Array.from(set).sort()
+})
+const ubicacionSuggestions = computed(() => {
+    const set = new Set()
+    equipoMedicoList.value.forEach(i => { if (i.ubicacion) set.add(i.ubicacion) })
+    return Array.from(set).sort()
+})
+
+onMounted(() => {
+    // preload suggestions for auto-complete
+    fetchEquipoMedicoSuggestions().catch(() => {})
+    loadNextInventoryNumber()
+})
+
+async function loadNextInventoryNumber() {
+    try {
+        const resp = await fetch('/api/ops/equipos/next-inventory-number')
+        if (resp.ok) {
+            const j = await resp.json().catch(() => null)
+            if (j && j.ok && j.nextInventoryNumber) {
+                formData.value.noInventario = j.nextInventoryNumber
+            }
+        }
+    } catch (e) {
+        console.warn('[CreateEquipmentModal] could not fetch next inventory number', e && e.message)
+    }
+}
 
 const completionPercent = computed(() => {
   let completed = 0
@@ -227,10 +290,20 @@ function updateProgress() {
 async function submitForm() {
   isSubmitting.value = true
   try {
+    const payload = {
+      'No DE INVENTARIO': formData.value.noInventario,
+      'EQUIPO MEDICO': formData.value.equipoMedico,
+      'MARCA': formData.value.marca,
+      'MODELO': formData.value.modelo,
+      'UNIDAD MEDICA': formData.value.area,
+      'NUMERO DE SERIE': formData.value.serial,
+      'ESTATUS': formData.value.estado
+      // additional fields could be added here as needed
+    }
     const response = await fetch('/api/ops/equipos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData.value)
+      body: JSON.stringify(payload)
     })
 
     if (!response.ok) {

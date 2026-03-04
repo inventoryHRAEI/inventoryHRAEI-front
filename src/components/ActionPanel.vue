@@ -110,5 +110,4 @@ const panelRootClass = computed(() => ({
     border-radius: inherit;
   }
 }
-
 </style>

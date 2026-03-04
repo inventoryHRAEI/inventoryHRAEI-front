@@ -5735,5 +5735,6 @@ onMounted(() => {
         opacity: 0.8;
     }
 }
+
 </style>
 

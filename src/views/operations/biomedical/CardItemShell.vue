@@ -116,19 +116,19 @@ const shellClass = computed(() => {
 }
 
 .accent-active {
-  background: linear-gradient(90deg, #22c55e, #16a34a);
+  background: linear-gradient(90deg, var(--accent-active-start, #22c55e), var(--accent-active-end, #16a34a));
 }
 
 .accent-maintenance {
-  background: linear-gradient(90deg, #f59e0b, #d97706);
+  background: linear-gradient(90deg, var(--accent-maintenance-start, #f59e0b), var(--accent-maintenance-end, #d97706));
 }
 
 .accent-inactive {
-  background: linear-gradient(90deg, #9ca3af, #6b7280);
+  background: linear-gradient(90deg, var(--accent-inactive-start, #9ca3af), var(--accent-inactive-end, #6b7280));
 }
 
 .accent-unknown {
-  background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+  background: linear-gradient(90deg, var(--accent-unknown-start, #8b5cf6), var(--accent-unknown-end, #7c3aed));
 }
 
 /* Header section */
@@ -169,27 +169,27 @@ const shellClass = computed(() => {
 }
 
 .status-active {
-  background: rgba(34, 197, 94, 0.15);
-  color: #15803d;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  background: var(--status-available-bg, rgba(34,197,94,0.15));
+  color: var(--status-available-fg, #15803d);
+  border: 1px solid rgba(0,0,0,0.06);
 }
 
 .status-maintenance {
-  background: rgba(245, 158, 11, 0.15);
-  color: #92400e;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: var(--status-maintenance-bg, rgba(245,158,11,0.15));
+  color: var(--status-maintenance-fg, #92400e);
+  border: 1px solid rgba(0,0,0,0.06);
 }
 
 .status-inactive {
-  background: rgba(107, 114, 128, 0.15);
-  color: #374151;
-  border: 1px solid rgba(107, 114, 128, 0.3);
+  background: var(--status-retired-bg, rgba(107,114,128,0.15));
+  color: var(--status-retired-fg, #374151);
+  border: 1px solid rgba(0,0,0,0.06);
 }
 
 .status-unknown {
-  background: rgba(139, 92, 246, 0.15);
-  color: #5b21b6;
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  background: var(--status-unknown-bg, rgba(139,92,246,0.15));
+  color: var(--status-unknown-fg, #5b21b6);
+  border: 1px solid rgba(0,0,0,0.06);
 }
 
 /* Body section */

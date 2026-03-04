@@ -112,7 +112,8 @@
                     :item="item" 
                     @show-barcode="handleShowBarcodeLocal"
                     @show-update-panel="handleShowUpdatePanelLocal"
-                    @show-history-panel="handleShowHistoryPanelLocal" />
+                    @show-history-panel="handleShowHistoryPanelLocal"
+                    @request-maintenance="handleRequestMaintenanceLocal" />
             </template>
         </Suspense>
 
@@ -339,7 +340,17 @@ function handleShowHistoryPanelLocal(payload) {
     }
 }
 
-const emit = defineEmits(['show-barcode', 'show-update-panel', 'show-history-panel'])
+function handleRequestMaintenanceLocal(payload) {
+    try {
+        console.log('[CardItem] handleRequestMaintenanceLocal received for', payload?.item?.['No DE INVENTARIO'] || payload?.code || 'unknown')
+        // Emit the event to parent (CardsSection -> BiomedicalTestingEnvironment)
+        emit('request-maintenance', payload)
+    } catch (e) {
+        console.error('[CardItem] Error emitting request-maintenance', e)
+    }
+}
+
+const emit = defineEmits(['show-barcode', 'show-update-panel', 'show-history-panel', 'request-maintenance'])
 </script>
 
 <style scoped>

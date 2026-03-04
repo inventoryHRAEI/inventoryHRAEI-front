@@ -10,8 +10,8 @@ const FIXED_COLUMN_MAP = {
   tipoMantenimiento: 'TIPO DE MANTENIMIENTO',
   estatus: 'ESTATUS',
   funcional: 'FUNCIONAL SI NO',
-  no: 'No',
-  noRegistro: 'No DE INVENTARIO'
+  no: 'No DE INVENTARIO',
+  noRegistro: 'No'
 }
 
 const initialFilters = {

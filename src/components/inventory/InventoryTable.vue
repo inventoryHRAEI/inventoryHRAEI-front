@@ -101,9 +101,9 @@ table { width:100%; border-collapse: collapse }
 thead th { text-align:left; padding:8px 6px; font-weight:700; color:#234 }
 tbody td { padding:8px 6px; border-top:1px solid #f2f2f2 }
 .badge { padding:4px 8px; border-radius:999px; color:#fff; font-weight:700; font-size:0.85rem }
-.badge.is-green { background:#10b981 }
-.badge.is-yellow { background:#f59e0b }
-.badge.is-blue { background:#3b82f6 }
+.badge.is-green { background: var(--status-available-bg, #10b981); color: var(--status-available-fg, #065f46) }
+.badge.is-yellow { background: var(--status-maintenance-bg, #f59e0b); color: var(--status-maintenance-fg, #92400e) }
+.badge.is-blue { background: var(--status-operativo-bg, #3b82f6); color: var(--status-operativo-fg, #1e3a8a) }
 .btn.small { padding:6px 10px; border-radius:8px; background:#f3f4f6; border:none }
 .empty { text-align:center; padding:20px; color:#666 }
 

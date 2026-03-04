@@ -2,11 +2,27 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
 import VueIconsPlugin from '@kalimahapps/vue-icons/vite';
+
+// wrapper to skip problematic file
+function VueIconsWrapper() {
+  const base = VueIconsPlugin();
+  return {
+    name: 'vite-plugin-vue-icons-wrapper',
+    enforce: base.enforce,
+    transform(code, id) {
+      if (id && id.endsWith('EquipmentHistoryPanel.vue')) {
+        // skip processing this file to avoid parsing bug
+        return null;
+      }
+      return base.transform(code, id);
+    }
+  };
+}
 import fs from 'fs'
 import os from 'os'
 
 export default defineConfig({
-  plugins: [vue(), VueIconsPlugin()],
+  plugins: [vue(), VueIconsWrapper()],
   // Keep Vite cache off OneDrive to avoid slow FS sync overhead on Windows.
   cacheDir: path.join(os.tmpdir(), 'inventoryHRAEI-front-vite-cache'),
   resolve: {

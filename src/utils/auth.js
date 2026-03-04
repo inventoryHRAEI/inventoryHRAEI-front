@@ -158,6 +158,26 @@ export async function validateSession() {
   }
 }
 
+// Refresh de token (used by inactivity keep-alive)
+export async function refreshToken() {
+  try {
+    const token = getStoredToken()
+    if (!token) return { ok: false }
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+    })
+    if (!res.ok) return { ok: false }
+    const data = await res.json()
+    if (data.token) saveToken(data.token)
+    return { ok: true, token: data.token }
+  } catch (e) {
+    console.error('[refreshToken] Error refreshing token:', e)
+    return { ok: false, error: e.message }
+  }
+}
+
 // Logout: llama al backend y notifica a otras pestañas
 export async function logout() {
   try {
@@ -171,6 +191,18 @@ export async function logout() {
     })
   } catch (error) {
     console.error('Error en logout:', error)
+  }
+  
+  // Destruir el manejador de inactividad al cerrar sesión
+  try {
+    const { default: inactivityHandler } = await import('./inactivityHandler')
+    // Desactivar y limpiar INMEDIATAMENTE
+    inactivityHandler.isEnabled = false
+    inactivityHandler._clearAllTimers()
+    inactivityHandler.destroy()
+    console.log('[auth] ✅ Inactivity handler destruido')
+  } catch (e) {
+    console.warn('[auth] Error destruyendo inactivityHandler:', e)
   }
   
   // Notificar a otras pestañas

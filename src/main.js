@@ -1,10 +1,20 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+
+// PrimeVue - UI components library
+import PrimeVue from 'primevue/config'
+// PrimeIcons from CDN
+const link = document.createElement('link')
+link.rel = 'stylesheet'
+link.href = 'https://unpkg.com/primeicons/primeicons.css'
+document.head.appendChild(link)
+
 // Tailwind base + Flowbite processed CSS
 import './styles/tailwind.css'
 // Legacy global styles
 import './styles.css'
+import './animations.css'
 import './styles/operations-global.css'
 import './styles/operations.css'
 import './styles/enhancements.css'
@@ -47,7 +57,14 @@ if (typeof window !== 'undefined') {
 import { createNotivue } from 'notivue'
 import 'notivue/notification.css'
 
-const app = createApp(App)
+// AG Grid — register community modules globally to ensure filters/modules are available
+import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
+ModuleRegistry.registerModules([AllCommunityModule])
+
+// 🧪 Test utilities para timing (solo en desarrollo)
+if (import.meta.env.DEV) {
+  import('@/scripts/test-timing.js').catch(e => console.warn('[test-timing] Could not load:', e))
+}const app = createApp(App)
 
 // Configuración de Notivue: posición, límite y animaciones fade ultra rápidas
 const notivue = createNotivue({
@@ -69,6 +86,7 @@ const notivue = createNotivue({
 
 app.use(router)
 app.use(notivue)
+app.use(PrimeVue)
 
 import { VueQueryPlugin, QueryClient } from '@tanstack/vue-query';
 import { vPermission } from './utils/permissionDirective.js'
@@ -106,7 +124,14 @@ function initTopbarObservers(){
         obs.observe(document.body, { attributes: true, childList: true, subtree: true })
 }
 
+// Initialize navigation validator BEFORE mounting app
+import { initNavigationValidator } from './utils/navigationValidator'
+
 router.isReady().then(() => {
-        app.mount('#app')
-        initTopbarObservers()
+	app.mount('#app')
+	initTopbarObservers()
+	
+	// Initialize navigation validator to detect render issues
+	initNavigationValidator()
+	console.log('[Main] ✅ App mounted and navigation validator initialized')
 })

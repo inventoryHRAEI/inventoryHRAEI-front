@@ -161,6 +161,8 @@ export function useBiomedicalSearch() {
       loading.value = true
       metaError.value = ''
       const queryParams = buildQueryParams()
+      // persistent cache key (declare early so it's available in all branches)
+      const persistKey = getCacheKey(queryParams)
 
       // expose a small test API for manual phases (2/3/4) in browser console
       try {
@@ -221,7 +223,6 @@ export function useBiomedicalSearch() {
       }
 
       // Cache persistente (IndexedDB): pinta inmediato y revalida
-      const persistKey = getCacheKey(queryParams)
       const _cacheStart = perfNow()
       const persisted = await cacheGet(persistKey, { ttlMs: PERSIST_TTL })
       const _cacheDur = Math.round(perfNow() - _cacheStart)
@@ -285,11 +286,12 @@ export function useBiomedicalSearch() {
           console.timeEnd('[FETCH_START:TUNNEL]')
           console.time('[FETCH_END:TUNNEL]')
           const items = Array.isArray(data) ? data : (Array.isArray(data && data.data) ? data.data : [])
-          const enriched = transformItems(items)
+          const enrichedRaw = transformItems(items)
+          const enriched = (Array.isArray(enrichedRaw) ? enrichedRaw.filter(it => !isLikelyMock(it)) : [])
           try { lastFetchedItems = enriched; if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.lastFetchedItems = enriched } catch (e) {}
-          console.log('[FETCH] items length', enriched.length)
+          console.log('[FETCH] items length', enriched.length, '(sanitized from', (enrichedRaw && enrichedRaw.length) || 0, ')')
           console.timeEnd('[FETCH_END:TUNNEL]')
-          console.log(`[pagination] ✓ Loaded ${enriched.length} total items`)
+          console.log(`[pagination] ✓ Loaded ${enriched.length} total items (sanitized)`)
 
           assignFirstBatch(queryParams, enriched, filterStateCheck)
 
@@ -313,8 +315,10 @@ export function useBiomedicalSearch() {
       // Server-side pagination (useful for mobile devices on network)
       if (serverSide) {
         try {
-          // ensure lite for minimal columns
-          try { queryParams.set('lite', '1') } catch (e) {}
+          // the "lite" flag used to request a small subset of columns.  removed
+          // to allow the table to render all available fields regardless of
+          // pagination or network conditions.
+          // try { queryParams.set('lite', '1') } catch (e) {}
 
           // Support asking for a FULL server-backed download in batches
           if (options.full) {
@@ -325,12 +329,16 @@ export function useBiomedicalSearch() {
             const allItems = []
             const startFull = perfNow()
 
+            // allow caller to override threshold when they explicitly request a full fetch
+            const callerThreshold = (options && Number(options.maxFullAssign)) || SERVER_SIDE_FORCE_THRESHOLD
+            const forceFull = Boolean(options && options.forceFull)
+
             while (allItems.length < totalCount) {
               queryParams.set('limit', String(pageSize))
               queryParams.set('skip', String((page - 1) * pageSize))
               const url = `/api/ops/historial-mantenimientos?${queryParams.toString()}`
               const controller = new AbortController()
-              const timeoutMs = 15000
+              const timeoutMs = 30000 // increased timeout for full fetch pages
               const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
               try {
@@ -357,9 +365,10 @@ export function useBiomedicalSearch() {
                 }
 
                 const enrichedPage = transformItems(items)
-                allItems.push(...enrichedPage)
+                const sanitizedPage = Array.isArray(enrichedPage) ? enrichedPage.filter(it => !isLikelyMock(it)) : []
+                allItems.push(...sanitizedPage)
 
-                console.log('[full-fetch] got', items.length, 'items; accumulated', allItems.length, 'of', totalCount)
+                console.log('[full-fetch] got', items.length, 'items; accumulated', allItems.length, 'of', totalCount, '(sanitized page size', sanitizedPage.length, ')')
 
                 // Safety: if server returns fewer than pageSize and totalCount not provided, break to avoid infinite loop
                 if ((!Array.isArray(data) && (!data || !('total' in data))) && items.length < pageSize) {
@@ -382,7 +391,7 @@ export function useBiomedicalSearch() {
             lastFetchedItems = enriched
 
             // If dataset is large, avoid assigning the whole array to reactive state to prevent UI slowdown
-            if (typeof totalCount === 'number' && totalCount > SERVER_SIDE_FORCE_THRESHOLD) {
+            if (!forceFull && typeof totalCount === 'number' && totalCount > callerThreshold) {
               // Keep full results in lastFetchedItems, expose summary, and set reactive state to first page only
               serverTotal.value = totalCount
               const samplePageSize = Number(options.pageSize || 24)
@@ -399,7 +408,7 @@ export function useBiomedicalSearch() {
               return
             }
 
-            // Small datasets: safe to assign fully
+            // Small datasets or forced full: safe to assign fully
             lastFetchedItems = enriched
             allData.value = enriched
             filteredData.value = enriched
@@ -423,7 +432,7 @@ export function useBiomedicalSearch() {
 
           const url = `/api/ops/historial-mantenimientos?${queryParams.toString()}`
           const controller = new AbortController()
-          const timeoutMs = 10000
+          const timeoutMs = 20000
           const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
           fetchCalls++
           try { if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.fetchCalls = fetchCalls } catch (e) {}
@@ -453,14 +462,15 @@ export function useBiomedicalSearch() {
             totalCount = typeof data.total === 'number' ? data.total : items.length
           }
           
-          const enriched = transformItems(items)
+          const enrichedRaw = transformItems(items)
+          const enriched = Array.isArray(enrichedRaw) ? enrichedRaw.filter(it => !isLikelyMock(it)) : []
           try {
             lastFetchedItems = enriched;
             if (typeof window !== 'undefined' && window.__BIOMED_TEST__) {
               window.__BIOMED_TEST__.lastFetchedItems = enriched;
             }
           } catch (e) {}
-          console.log('[FETCH] items length', enriched.length, 'total:', totalCount)
+          console.log('[FETCH] items length', enriched.length, '(sanitized) total:', totalCount)
           allData.value = enriched
           filteredData.value = enriched
           serverTotal.value = totalCount
@@ -479,7 +489,7 @@ export function useBiomedicalSearch() {
 
       const url = `/api/ops/historial-mantenimientos${queryParams.toString() ? '?' + queryParams.toString() : ''}`
       const controller = new AbortController()
-      const timeoutMs = isTunnel ? 2000 : 1000 // Maximum speed - instant for local
+      const timeoutMs = isTunnel ? 30000 : 20000 // generous timeouts for large local fetches
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
       fetchCalls++
@@ -495,9 +505,10 @@ export function useBiomedicalSearch() {
       const data = await response.json().catch(() => null)
       endTimer('[FETCH:LOCAL]')
       const rawItems = Array.isArray(data) ? data : (Array.isArray(data && data.data) ? data.data : [])
-      const items = transformItems(Array.isArray(rawItems) ? rawItems : [])
+      const itemsRaw = transformItems(Array.isArray(rawItems) ? rawItems : [])
+      const items = Array.isArray(itemsRaw) ? itemsRaw.filter(it => !isLikelyMock(it)) : []
       try { lastFetchedItems = items; if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.lastFetchedItems = items } catch (e) {}
-      console.log('[FETCH] items length', items.length)
+      console.log('[FETCH] items length', items.length, '(sanitized)')
       const shouldLimitReactive = (options && options.limitReactive) || isMobileOrNetwork()
       if (shouldLimitReactive) {
         assignFirstBatch(queryParams, items, filterStateCheck)

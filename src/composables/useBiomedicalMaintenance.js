@@ -31,12 +31,24 @@ export function useBiomedicalMaintenance() {
     const list = Array.from(new Set((codes || []).map(normalizeCode).filter(Boolean))).slice(0, 50)
     if (!list.length) return
     const qs = encodeURIComponent(list.join(','))
-    const data = await fetchJson(`${API_BASE}/status?codes=${qs}`, { method: 'GET' })
-    if (data && data.map) {
-      for (const [code, val] of Object.entries(data.map)) {
+    try {
+      // Usar el nuevo endpoint bulk que retorna un objeto map con estado para cada código
+      const data = await fetchJson(`${API_BASE}/status-bulk?codes=${qs}`, { method: 'GET' })
+      if (data && data.map) {
+        for (const [code, val] of Object.entries(data.map)) {
+          setEntry(code, {
+            status: val?.status === 'en_mantenimiento' || val?.maintenance?.status === 'in_progress' ? 'en_mantenimiento' : 'en_biomedica',
+            maintenance: val?.maintenance || null
+          })
+        }
+      }
+    } catch (error) {
+      console.warn('[useBiomedicalMaintenance] Error fetching maintenance status:', error.message)
+      // Si falla, usar valores por defecto (no en mantenimiento)
+      for (const code of list) {
         setEntry(code, {
-          status: val?.status === 'en_mantenimiento' || val?.maintenance?.status === 'in_progress' ? 'en_mantenimiento' : 'en_biomedica',
-          maintenance: val?.maintenance || null
+          status: 'en_biomedica',
+          maintenance: null
         })
       }
     }

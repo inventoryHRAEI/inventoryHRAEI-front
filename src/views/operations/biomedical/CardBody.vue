@@ -19,6 +19,26 @@
                 {{ displayValue(item['MODELO']) }}
             </span>
         </div>
+
+        <div v-if="hasRealValue(item['NUMERO DE SERIE'])" class="card-info-row">
+            <span class="card-label">
+                <IIcon name="ic:baseline-fingerprint" size="14" />
+                S/N:
+            </span>
+            <span class="card-value" :class="{ 'value-na': !hasRealValue(item['NUMERO DE SERIE']) }">
+                {{ displayValue(item['NUMERO DE SERIE']) }}
+            </span>
+        </div>
+
+        <div v-if="hasRealValue(item['UBICACION ESPECIFICA'])" class="card-info-row">
+            <span class="card-label">
+                <IIcon name="ic:baseline-location-on" size="14" />
+                Ubicación:
+            </span>
+            <span class="card-value card-value-wrap" :class="{ 'value-na': !hasRealValue(item['UBICACION ESPECIFICA']) }">
+                {{ displayValue(item['UBICACION ESPECIFICA']) }}
+            </span>
+        </div>
         
         <div class="card-info-row">
             <span class="card-label">
@@ -87,8 +107,8 @@ defineProps({
 .card-body {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 14px 16px;
+    gap: 8px;
+    padding: 10px 14px;
     flex: 1;
     position: relative;
     z-index: 2;
@@ -98,8 +118,8 @@ defineProps({
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
     align-items: start;
-    gap: 10px;
-    padding: 10px 0;
+    gap: 8px;
+    padding: 6px 0;
     border-bottom: 1px solid #3f475a;
     transition: all 0.2s ease;
 }

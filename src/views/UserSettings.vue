@@ -7,11 +7,18 @@
 
     <!-- Main Content -->
     <div v-else class="settings-main">
-      <Breadcrumbs :items="breadcrumbItems" />
-
       <!-- Glass Card Container -->
       <div class="settings-card">
-        <!-- Header Section -->
+        <!-- Breadcrumb Inside Card -->
+        <div class="breadcrumb-section">
+          <button class="back-button" @click="goBack">
+            <component :is="ArrowLeftIcon" class="back-icon" />
+            <span>Volver</span>
+          </button>
+          <Breadcrumbs :items="breadcrumbItems" />
+        </div>
+
+        <!-- Header Section with Tabs -->
         <div class="settings-header-section">
           <div class="header-badge">
             <div class="badge-glow"></div>
@@ -23,305 +30,384 @@
           </div>
         </div>
 
-        <!-- Content Tabs/Sections -->
-        <div class="settings-content">
-          <!-- Info Section -->
-          <section class="settings-section info-section">
-            <h3 class="section-title">
-              <component :is="UserIcon" class="section-icon" />
-              Información Personal
-            </h3>
-
-            <!-- Nombre -->
-            <div class="form-group">
-              <label class="form-label">Nombre Completo</label>
-              <div class="input-box">
-                <component :is="UserIcon" class="input-prefix-icon" />
-                <input 
-                  v-model="formData.nombre" 
-                  type="text"
-                  placeholder="Tu nombre completo"
-                  class="form-input"
-                  @focus="focusedField = 'nombre'"
-                  @blur="focusedField = null"
-                />
-              </div>
-            </div>
-
-            <!-- Email (read-only) -->
-            <div class="form-group">
-              <label class="form-label">Correo Electrónico</label>
-              <div class="input-box read-only">
-                <component :is="EnvelopeIcon" class="input-prefix-icon" />
-                <input 
-                  v-model="formData.email" 
-                  type="email"
-                  disabled
-                  class="form-input"
-                />
-                <span class="lock-badge">🔒</span>
-              </div>
-              <p class="field-help-text">Tu correo es inmutable por seguridad</p>
-            </div>
-
-            <!-- Rol (read-only) -->
-            <div class="form-group">
-              <label class="form-label">Tu Rol</label>
-              <div class="input-box read-only">
-                <component :is="ShieldCheckIcon" class="input-prefix-icon" />
-                <input 
-                  v-model="rolLabel" 
-                  disabled
-                  class="form-input"
-                />
-                <span class="lock-badge">👤</span>
-              </div>
-              <p class="field-help-text">Contacta a un administrador para cambiar permisos</p>
-            </div>
-
-            <!-- Photo Upload -->
-            <div class="form-group photo-group">
-              <label class="form-label">Foto de Perfil</label>
-              
-              <!-- Photo Preview -->
-              <div v-if="previewUrl || currentPhotoUrl || formData.nombre" class="photo-preview-box">
-                <div class="photo-frame">
-                  <img 
-                    v-if="previewUrl" 
-                    :src="previewUrl" 
-                    alt="Nueva foto"
-                    class="photo-image"
-                  />
-                  <img 
-                    v-else-if="currentPhotoUrl" 
-                    :src="currentPhotoUrl" 
-                    alt="Foto actual"
-                    class="photo-image"
-                  />
-                  <span v-else class="photo-placeholder">👤</span>
-                </div>
-                <div class="photo-info">
-                  <p class="photo-name">{{ formData.nombre || 'Usuario' }}</p>
-                  <p v-if="photoMsg" class="photo-details">{{ photoMsg }}</p>
-                </div>
-              </div>
-
-              <!-- Upload Area -->
-              <div 
-                class="upload-zone"
-                @click="$refs.photoInput?.click()"
-                @drop.prevent="onPhotoDrop"
-                @dragover.prevent="isDragging = true"
-                @dragleave.prevent="isDragging = false"
-                :class="{ 'dragging': isDragging }"
-              >
-                <input 
-                  ref="photoInput" 
-                  type="file" 
-                  @change="onFileChange" 
-                  accept="image/*"
-                  class="hidden-input"
-                />
-                <div class="upload-content">
-                  <component :is="PhotoIcon" class="upload-main-icon" />
-                  <p class="upload-main-text">Haz clic para seleccionar</p>
-                  <p class="upload-help-text">o arrastra una imagen aquí</p>
-                </div>
-              </div>
-
-              <!-- Error/Success Messages -->
-              <transition name="fade">
-                <div v-if="photoErr" class="message error-message">
-                  <span class="message-icon">⚠️</span>
-                  <span>{{ photoErr }}</span>
-                </div>
-              </transition>
-            </div>
-          </section>
-
-          <!-- Divider -->
-          <div class="section-divider"></div>
-
-          <!-- Security Section -->
-          <section class="settings-section security-section">
-            <h3 class="section-title">
-              <component :is="LockClosedIcon" class="section-icon" />
-              Seguridad
-            </h3>
-            <p class="section-help">Cambia tu contraseña regularmente para mantener tu cuenta segura</p>
-
-            <!-- Current Password -->
-            <div class="form-group">
-              <label class="form-label">Contraseña Actual</label>
-              <div class="input-box">
-                <component :is="LockClosedIcon" class="input-prefix-icon" />
-                <input 
-                  v-model="formData.currentPassword" 
-                  :type="showCurrentPwd ? 'text' : 'password'"
-                  placeholder="Ingresa tu contraseña actual"
-                  class="form-input"
-                  @focus="focusedField = 'currentPassword'"
-                  @blur="focusedField = null"
-                />
-                <button 
-                  type="button"
-                  class="input-suffix-btn"
-                  @click="showCurrentPwd = !showCurrentPwd"
-                  tabindex="-1"
-                >
-                  <component :is="showCurrentPwd ? EyeSlashIcon : EyeIcon" class="eye-icon" />
-                </button>
-              </div>
-            </div>
-
-            <!-- New Password -->
-            <div class="form-group">
-              <label class="form-label">
-                Nueva Contraseña
-                <span class="optional-badge">(opcional)</span>
-              </label>
-              <div class="input-box">
-                <component :is="LockClosedIcon" class="input-prefix-icon" />
-                <input 
-                  v-model="formData.newPassword" 
-                  :type="showNewPwd ? 'text' : 'password'"
-                  placeholder="Deja en blanco para mantener la actual"
-                  class="form-input"
-                  @focus="focusedField = 'newPassword'"
-                  @blur="focusedField = null"
-                />
-                <button 
-                  v-if="formData.newPassword"
-                  type="button"
-                  class="input-suffix-btn"
-                  @click="showNewPwd = !showNewPwd"
-                  tabindex="-1"
-                >
-                  <component :is="showNewPwd ? EyeSlashIcon : EyeIcon" class="eye-icon" />
-                </button>
-              </div>
-              
-              <!-- Password Strength Indicator -->
-              <div v-if="formData.newPassword" class="password-strength">
-                <div class="strength-bar">
-                  <div class="strength-fill" :class="`strength-${passwordStrength}`"></div>
-                </div>
-                <p class="strength-text" :class="`text-${passwordStrength}`">
-                  {{ passwordStrengthText }}
-                </p>
-              </div>
-
-              <p class="field-help-text">
-                Mínimo 8 caracteres: mayúscula (A-Z), minúscula (a-z), número (0-9) y símbolo (!@#$...)
-              </p>
-            </div>
-
-            <!-- Confirm Password -->
-            <div v-if="formData.newPassword" class="form-group">
-              <label class="form-label">Confirmar Contraseña</label>
-              <div class="input-box">
-                <component :is="LockClosedIcon" class="input-prefix-icon" />
-                <input 
-                  v-model="formData.confirmNewPassword" 
-                  :type="showConfirmPwd ? 'text' : 'password'"
-                  placeholder="Confirma tu nueva contraseña"
-                  class="form-input"
-                  @focus="focusedField = 'confirmNewPassword'"
-                  @blur="focusedField = null"
-                />
-                <button 
-                  type="button"
-                  class="input-suffix-btn"
-                  @click="showConfirmPwd = !showConfirmPwd"
-                  tabindex="-1"
-                >
-                  <component :is="showConfirmPwd ? EyeSlashIcon : EyeIcon" class="eye-icon" />
-                </button>
-              </div>
-              
-              <!-- Match Indicator -->
-              <div v-if="formData.confirmNewPassword" class="match-indicator" :class="{ 'match': formData.newPassword === formData.confirmNewPassword }">
-                <span class="match-icon">{{ formData.newPassword === formData.confirmNewPassword ? '✓' : '✗' }}</span>
-                <span class="match-text">{{ formData.newPassword === formData.confirmNewPassword ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden' }}</span>
-              </div>
-            </div>
-          </section>
+        <!-- Tab Navigation -->
+        <div class="tabs-navigation">
+          <button
+            v-for="tab in tabs"
+            :key="tab.id"
+            :class="['tab-button', { 'active': activeTab === tab.id }]"
+            @click="activeTab = tab.id"
+          >
+            <component :is="tab.icon" class="tab-icon" />
+            <span>{{ tab.label }}</span>
+            <span v-if="tab.id === 'security' && hasChanges('security')" class="tab-badge">●</span>
+          </button>
         </div>
 
-        <!-- Error Message -->
-        <transition name="fade">
-          <div v-if="error" class="global-error" role="alert">
-            <span class="error-icon">⚠️</span>
-            <div class="error-content">
-              <p class="error-title">Error al cargar</p>
-              <p class="error-message">{{ error }}</p>
-              <button 
-                type="button"
-                class="error-retry-btn"
-                @click="loadUserData"
-              >
-                Reintentar
-              </button>
-            </div>
-            <button type="button" class="error-close" @click="error = ''">✕</button>
-          </div>
-        </transition>
+        <!-- Tab Content -->
+        <div class="settings-content">
+          <!-- Profile Tab -->
+          <transition name="fade-tab" mode="out-in">
+            <section v-show="activeTab === 'profile'" key="profile" class="settings-section profile-section">
+              <!-- User Info Card -->
+              <div class="info-card">
+                <div class="card-header">
+                  <h3 class="card-title">Información Personal</h3>
+                  <p class="card-subtitle">Actualiza tu información de perfil</p>
+                </div>
 
-        <!-- Action Buttons -->
-        <div class="settings-footer">
-          <button 
-            type="button"
-            class="btn btn-secondary"
-            @click="goBack"
-          >
-            Cancelar
+                <!-- Form Grid -->
+                <div class="form-grid">
+                  <!-- Nombre -->
+                  <div class="form-group">
+                    <label class="form-label">Nombre Completo</label>
+                    <div class="input-box" :class="{ 'focused': focusedField === 'nombre', 'filled': formData.nombre }">
+                      <component :is="UserIcon" class="input-prefix-icon" />
+                      <input
+                        v-model="formData.nombre"
+                        type="text"
+                        placeholder="Tu nombre completo"
+                        class="form-input"
+                        @focus="focusedField = 'nombre'"
+                        @blur="focusedField = null"
+                      />
+                      <span v-if="formData.nombre" class="input-suffix-check">✓</span>
+                    </div>
+                  </div>
+
+                  <!-- Email (read-only) -->
+                  <div class="form-group">
+                    <label class="form-label">Correo Electrónico</label>
+                    <div class="input-box read-only">
+                      <component :is="EnvelopeIcon" class="input-prefix-icon" />
+                      <input
+                        v-model="formData.email"
+                        type="email"
+                        disabled
+                        class="form-input"
+                      />
+                      <component :is="LockClosedIcon" class="input-suffix-icon" />
+                    </div>
+                    <p class="field-help-text">Tu correo es protegido por seguridad</p>
+                  </div>
+
+                  <!-- Rol (read-only) -->
+                  <div class="form-group">
+                    <label class="form-label">Tu Rol</label>
+                    <div class="input-box read-only role-display">
+                      <component :is="ShieldCheckIcon" class="input-prefix-icon" />
+                      <span class="role-label">{{ rolLabel }}</span>
+                      <span :class="['role-badge', roleClass]">{{ rolBadge }}</span>
+                    </div>
+                    <p class="field-help-text">Contacta administrador para cambios de rol</p>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Photo Upload Card -->
+              <div class="info-card photo-card">
+                <div class="card-header">
+                  <h3 class="card-title">Foto de Perfil</h3>
+                  <p class="card-subtitle">Sube una imagen de perfil profesional</p>
+                </div>
+
+                <!-- Photo Preview + Upload Grid -->
+                <div class="photo-content-grid">
+                  <!-- Preview Section -->
+                  <div v-if="previewUrl || currentPhotoUrl" class="photo-preview-section">
+                    <div class="photo-frame-container">
+                      <div class="photo-frame">
+                        <img
+                          v-if="previewUrl"
+                          :src="previewUrl"
+                          alt="Nueva foto"
+                          class="photo-image"
+                        />
+                        <img
+                          v-else-if="currentPhotoUrl"
+                          :src="currentPhotoUrl"
+                          alt="Foto actual"
+                          class="photo-image"
+                        />
+                      </div>
+                      <div class="photo-details">
+                        <p class="photo-name">{{ formData.nombre || 'Usuario' }}</p>
+                        <p v-if="photoMsg" class="photo-msg">{{ photoMsg }}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Upload Zone -->
+                  <div
+                    class="upload-zone-container"
+                    @click="$refs.photoInput?.click()"
+                    @drop.prevent="onPhotoDrop"
+                    @dragover.prevent="isDragging = true"
+                    @dragleave.prevent="isDragging = false"
+                    :class="{ 'dragging': isDragging }"
+                  >
+                    <input
+                      ref="photoInput"
+                      type="file"
+                      @change="onFileChange"
+                      accept="image/*"
+                      class="hidden-input"
+                    />
+                    <div class="upload-content">
+                      <component :is="PhotoIcon" class="upload-main-icon" />
+                      <p class="upload-main-text">Selecciona una imagen</p>
+                      <p class="upload-help-text">JPG, PNG o WebP • Max 5MB</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Error/Success Messages -->
+                <transition name="fade">
+                  <div v-if="photoErr" class="alert alert-error">
+                    <component :is="AlertCircleIcon" class="alert-icon" />
+                    <span>{{ photoErr }}</span>
+                  </div>
+                </transition>
+              </div>
+            </section>
+          </transition>
+
+          <!-- Security Tab -->
+          <transition name="fade-tab" mode="out-in">
+            <section v-show="activeTab === 'security'" key="security" class="settings-section security-section">
+              <!-- Change Password Card -->
+              <div class="info-card security-card">
+                <div class="card-header">
+                  <h3 class="card-title">Cambiar Contraseña</h3>
+                  <p class="card-subtitle">Mantén tu cuenta segura con una contraseña fuerte</p>
+                </div>
+
+                <!-- Security Info Box -->
+                <div class="security-info-box">
+                  <component :is="ShieldAlertIcon" class="security-info-icon" />
+                  <div class="security-info-content">
+                    <p class="security-info-title">Recomendaciones de Seguridad</p>
+                    <ul class="security-tips">
+                      <li>Usa al menos 8 caracteres</li>
+                      <li>Incluye mayúsculas y minúsculas</li>
+                      <li>Agrega números y símbolos</li>
+                      <li>No reutilices contraseñas antiguas</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- Form Grid -->
+                <div class="form-grid">
+                  <!-- Current Password -->
+                  <div class="form-group">
+                    <label class="form-label">Contraseña Actual</label>
+                    <div class="input-box" :class="{ 'focused': focusedField === 'currentPassword' }">
+                      <component :is="LockClosedIcon" class="input-prefix-icon" />
+                      <input
+                        v-model="formData.currentPassword"
+                        :type="showCurrentPwd ? 'text' : 'password'"
+                        placeholder="Tu contraseña actual"
+                        class="form-input"
+                        @focus="focusedField = 'currentPassword'"
+                        @blur="focusedField = null"
+                      />
+                      <button
+                        type="button"
+                        class="input-suffix-btn"
+                        @click="showCurrentPwd = !showCurrentPwd"
+                        tabindex="-1"
+                      >
+                        <component :is="showCurrentPwd ? EyeSlashIcon : EyeIcon" class="eye-icon" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- New Password -->
+                  <div class="form-group">
+                    <label class="form-label">
+                      Nueva Contraseña
+                      <span class="optional-badge">(opcional)</span>
+                    </label>
+                    <div class="input-box" :class="{ 'focused': focusedField === 'newPassword' }">
+                      <component :is="LockClosedIcon" class="input-prefix-icon" />
+                      <input
+                        v-model="formData.newPassword"
+                        :type="showNewPwd ? 'text' : 'password'"
+                        placeholder="Deja en blanco para mantener la actual"
+                        class="form-input"
+                        @focus="focusedField = 'newPassword'"
+                        @blur="focusedField = null"
+                      />
+                      <button
+                        v-if="formData.newPassword"
+                        type="button"
+                        class="input-suffix-btn"
+                        @click="showNewPwd = !showNewPwd"
+                        tabindex="-1"
+                      >
+                        <component :is="showNewPwd ? EyeSlashIcon : EyeIcon" class="eye-icon" />
+                      </button>
+                    </div>
+
+                    <!-- Password Strength Indicator -->
+                    <div v-if="formData.newPassword" class="password-strength-container">
+                      <div class="strength-bar">
+                        <div class="strength-fill" :class="`strength-${passwordStrength}`"></div>
+                      </div>
+                      <div class="strength-info">
+                        <p class="strength-text" :class="`text-${passwordStrength}`">
+                          {{ passwordStrengthText }}
+                        </p>
+                        <div class="strength-requirements">
+                          <div class="requirement" :class="{ 'met': /[A-Z]/.test(formData.newPassword) }">
+                            <span class="requirement-check">✓</span>
+                            <span>Mayúscula (A-Z)</span>
+                          </div>
+                          <div class="requirement" :class="{ 'met': /[a-z]/.test(formData.newPassword) }">
+                            <span class="requirement-check">✓</span>
+                            <span>Minúscula (a-z)</span>
+                          </div>
+                          <div class="requirement" :class="{ 'met': /[0-9]/.test(formData.newPassword) }">
+                            <span class="requirement-check">✓</span>
+                            <span>Número (0-9)</span>
+                          </div>
+                          <div class="requirement" :class="{ 'met': /[!@#$%^&*]/.test(formData.newPassword) }">
+                            <span class="requirement-check">✓</span>
+                            <span>Símbolo (!@#$%^&*)</span>
+                          </div>
+                          <div class="requirement" :class="{ 'met': formData.newPassword.length >= 8 }">
+                            <span class="requirement-check">✓</span>
+                            <span>Mínimo 8 caracteres</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Confirm Password -->
+                  <div v-if="formData.newPassword" class="form-group">
+                    <label class="form-label">Confirmar Contraseña</label>
+                    <div class="input-box" :class="{ 'focused': focusedField === 'confirmNewPassword', 'success': formData.newPassword === formData.confirmNewPassword && formData.confirmNewPassword }">
+                      <component :is="LockClosedIcon" class="input-prefix-icon" />
+                      <input
+                        v-model="formData.confirmNewPassword"
+                        :type="showConfirmPwd ? 'text' : 'password'"
+                        placeholder="Confirma tu nueva contraseña"
+                        class="form-input"
+                        @focus="focusedField = 'confirmNewPassword'"
+                        @blur="focusedField = null"
+                      />
+                      <button
+                        type="button"
+                        class="input-suffix-btn"
+                        @click="showConfirmPwd = !showConfirmPwd"
+                        tabindex="-1"
+                      >
+                        <component :is="showConfirmPwd ? EyeSlashIcon : EyeIcon" class="eye-icon" />
+                      </button>
+                    </div>
+
+                    <!-- Match Indicator -->
+                    <div v-if="formData.confirmNewPassword" class="match-indicator" :class="{ 'match': formData.newPassword === formData.confirmNewPassword }">
+                      <component :is="formData.newPassword === formData.confirmNewPassword ? CheckCircleIcon : AlertCircleIcon" class="match-icon" />
+                      <span class="match-text">{{ formData.newPassword === formData.confirmNewPassword ? 'Las contraseñas coinciden' : 'Las contraseñas no coinciden' }}</span>
+                    </div>
+                  </div>
+                </div>
+                </div>
+                </section>
+                </transition>
+
+                <!-- Session Tab -->
+                <transition name="fade-tab" mode="out-in">
+                <section v-show="activeTab === 'session'" key="session" class="settings-section session-section">
+                <InactivitySettingsWizard />
+                </section>
+                </transition>
+                </div>
+
+        <!-- Footer with Actions (solo para profile y security) -->
+        <div v-if="activeTab !== 'session'" class="settings-footer">
+          <button class="btn btn-secondary" @click="handleReset" :disabled="!hasAnyChanges">
+            <component :is="RotateCcwIcon" class="btn-icon" />
+            <span>Descartar</span>
           </button>
-          <button 
-            type="submit"
-            class="btn btn-primary"
-            @click="updateProfile"
-            :disabled="isSaving"
-          >
-            <span v-if="isSaving" class="saving-text">
+          <button class="btn btn-primary" @click="handleSave" :disabled="isSaving || !hasAnyChanges">
+            <component v-if="!isSaving" :is="SaveIcon" class="btn-icon" />
+            <span v-if="!isSaving">Guardar Cambios</span>
+            <span v-else class="saving-text">
               <span class="spinner"></span>
               Guardando...
-            </span>
-            <span v-else>
-              Guardar Cambios
             </span>
           </button>
         </div>
       </div>
+
+      <!-- Global Error Alert -->
+      <transition name="fade">
+        <div v-if="globalError" class="global-error">
+          <component :is="AlertTriangleIcon" class="error-icon" />
+          <div class="error-content">
+            <p class="error-title">Error</p>
+            <p class="error-message">{{ globalError }}</p>
+          </div>
+          <button class="error-close" @click="globalError = null">
+            <component :is="XIcon" class="close-icon" />
+          </button>
+        </div>
+      </transition>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { navigateAndRefresh } from '@/utils/routerHelpers.js'
-import notifier from '@/utils/notifier'
-import { 
-  CogIcon, UserIcon, EnvelopeIcon, ShieldCheckIcon, PhotoIcon, LockClosedIcon, 
-  EyeIcon, EyeSlashIcon 
-} from '@heroicons/vue/24/outline'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import InactivitySettingsWizard from '@/components/InactivitySettingsWizard.vue'
+import {
+  User as UserIcon,
+  Mail as EnvelopeIcon,
+  Shield as ShieldCheckIcon,
+  Lock as LockClosedIcon,
+  Eye as EyeIcon,
+  EyeOff as EyeSlashIcon,
+  Camera as PhotoIcon,
+  Settings as CogIcon,
+  AlertCircle as AlertCircleIcon,
+  Save as SaveIcon,
+  RotateCcw as RotateCcwIcon,
+  Check as CheckCircleIcon,
+  Shield as ShieldAlertIcon,
+  AlertTriangle as AlertTriangleIcon,
+  X as XIcon,
+  ArrowLeft as ArrowLeftIcon,
+  Clock as ClockIcon
+} from 'lucide-vue-next'
+import gsap from 'gsap'
 
 const router = useRouter()
-
-const breadcrumbItems = [
-  { label: 'Inicio', to: '/dashboard' },
-  { label: 'Configuración', to: '/user-settings' }
-]
+const route = useRoute()
 
 // State
 const isLoading = ref(true)
 const isSaving = ref(false)
-const isDragging = ref(false)
+const activeTab = ref('profile')
 const focusedField = ref(null)
-const error = ref('')
+const isDragging = ref(false)
+const globalError = ref(null)
+const photoErr = ref(null)
+const photoMsg = ref(null)
+const previewUrl = ref(null)
+const currentPhotoUrl = ref(null)
 
+// Password visibility
+const showCurrentPwd = ref(false)
+const showNewPwd = ref(false)
+const showConfirmPwd = ref(false)
+
+// Form data
 const formData = ref({
   nombre: '',
   email: '',
@@ -331,417 +417,418 @@ const formData = ref({
   confirmNewPassword: ''
 })
 
-const photoFile = ref(null)
-const previewUrl = ref('')
-const currentPhotoUrl = ref('')
-const photoErr = ref('')
-const photoMsg = ref('')
+// Original data for reset
+const originalData = ref({
+  nombre: '',
+  email: '',
+  role: '',
+  currentPassword: '',
+  newPassword: '',
+  confirmNewPassword: ''
+})
 
-const showCurrentPwd = ref(false)
-const showNewPwd = ref(false)
-const showConfirmPwd = ref(false)
+// Tabs configuration
+const tabs = [
+  { id: 'profile', label: 'Perfil', icon: UserIcon },
+  { id: 'security', label: 'Seguridad', icon: LockClosedIcon },
+  { id: 'session', label: 'Sesión', icon: ClockIcon }
+]
 
-// Computed
+// Breadcrumbs
+const breadcrumbItems = [
+  { label: 'Dashboard', route: { name: 'dashboard' } },
+  { label: 'Configuración', active: true }
+]
+
+// Computed properties
 const rolLabel = computed(() => {
-  const roles = { admin: 'Administrador', user: 'Usuario', privileged: 'Privilegiado' }
-  return roles[formData.value.role] || 'Desconocido'
+  const role = formData.value.role || 'user'
+  return role === 'admin' ? 'Administrador' : 'Usuario Regular'
+})
+
+const rolBadge = computed(() => {
+  const role = formData.value.role || 'user'
+  return role === 'admin' ? 'ADMIN' : 'USER'
+})
+
+const roleClass = computed(() => {
+  const role = formData.value.role || 'user'
+  return role === 'admin' ? 'badge-admin' : 'badge-user'
 })
 
 const passwordStrength = computed(() => {
   const pwd = formData.value.newPassword
-  if (!pwd) return 'none'
-  
-  const hasLower = /[a-z]/.test(pwd)
-  const hasUpper = /[A-Z]/.test(pwd)
-  const hasNumber = /\d/.test(pwd)
-  const hasSymbol = /[^A-Za-z0-9]/.test(pwd)
-  const isLongEnough = pwd.length >= 8
-  
-  const strength = [hasLower, hasUpper, hasNumber, hasSymbol, isLongEnough].filter(Boolean).length
-  
-  if (strength === 5) return 'strong'
-  if (strength >= 4) return 'good'
-  if (strength >= 3) return 'fair'
-  return 'weak'
+  if (!pwd) return 'weak'
+
+  let strength = 0
+  if (pwd.length >= 8) strength++
+  if (pwd.length >= 12) strength++
+  if (/[a-z]/.test(pwd) && /[A-Z]/.test(pwd)) strength++
+  if (/[0-9]/.test(pwd)) strength++
+  if (/[!@#$%^&*]/.test(pwd)) strength++
+
+  if (strength <= 1) return 'weak'
+  if (strength <= 3) return 'medium'
+  return 'strong'
 })
 
 const passwordStrengthText = computed(() => {
-  const texts = {
-    weak: '🔴 Débil',
-    fair: '🟡 Aceptable',
-    good: '🟢 Buena',
-    strong: '🟢 Muy fuerte'
+  const levels = {
+    weak: 'Contraseña débil',
+    medium: 'Contraseña moderada',
+    strong: 'Contraseña fuerte'
   }
-  return texts[passwordStrength.value] || ''
+  return levels[passwordStrength.value]
+})
+
+const hasAnyChanges = computed(() => {
+  return formData.value.nombre !== originalData.value.nombre ||
+         formData.value.newPassword !== originalData.value.newPassword ||
+         formData.value.confirmNewPassword !== originalData.value.confirmNewPassword ||
+         previewUrl.value !== null ||
+         formData.value.currentPassword !== originalData.value.currentPassword
 })
 
 // Methods
-onMounted(loadUserData)
+const hasChanges = (section) => {
+  if (section === 'security') {
+    return formData.value.currentPassword !== originalData.value.currentPassword ||
+           formData.value.newPassword !== originalData.value.newPassword
+  }
+  return false
+}
 
-async function loadUserData() {
+const loadUserData = async () => {
   try {
-    const token = localStorage.getItem('token')
-    if (!token) {
-      error.value = 'Tu sesión ha expirado. Por favor, inicia sesión nuevamente.'
-      throw new Error(error.value)
-    }
-
-    console.debug('[UserSettings] Loading user data with token:', token.slice(0, 20) + '...')
-
-    const res = await fetch('/api/auth/me', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
-
-    console.debug('[UserSettings] Response status:', res.status)
-
-    if (!res.ok) {
-      let errorMsg = 'No se pudo cargar los datos de tu perfil'
-      try {
-        const data = await res.json()
-        errorMsg = data.msg || errorMsg
-        console.error('[UserSettings] Server error:', data)
-      } catch (parseErr) {
-        console.error('[UserSettings] Could not parse error response:', parseErr)
-      }
-      
-      if (res.status === 401) {
-        errorMsg = 'Tu sesión ha expirado o es inválida. Por favor, inicia sesión nuevamente.'
-      } else if (res.status === 404) {
-        errorMsg = 'Usuario no encontrado. Intenta iniciar sesión de nuevo.'
-      }
-      
-      error.value = errorMsg
-      throw new Error(errorMsg)
-    }
+    isLoading.value = true
     
-    const userData = await res.json()
-    console.debug('[UserSettings] User data loaded:', userData)
+    // Obtener el email del usuario autenticado desde localStorage
+    let currentUserEmail = null
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      currentUserEmail = user.email
+    } catch (e) {
+      console.warn('Could not parse user from localStorage', e)
+    }
+
+    const res = await fetch('/api/auth/users')
+    if (!res.ok) throw new Error('Failed to load user data')
+
+    const users = await res.json()
     
-    formData.value = {
-      nombre: userData.nombre || '',
-      email: userData.email || '',
-      role: userData.role || 'user',
-      currentPassword: '',
-      newPassword: '',
-      confirmNewPassword: ''
+    // Buscar el usuario autenticado por email
+    let user = null
+    if (Array.isArray(users)) {
+      user = currentUserEmail 
+        ? users.find(u => u.email === currentUserEmail)
+        : users[0]
+    } else {
+      user = users
     }
 
-    if (userData.foto) {
-      currentPhotoUrl.value = normalizePhotoUrl(userData.foto)
-    }
+    if (user) {
+      formData.value.nombre = user.nombre || ''
+      formData.value.email = user.email || ''
+      formData.value.role = user.role || 'user'
 
-    // Success - clear any previous errors
-    error.value = ''
-  } catch (e) {
-    console.error('[UserSettings] Error loading user data:', e)
-    error.value = error.value || e.message || 'Error desconocido al cargar los datos'
-    notifier.error(error.value)
+      originalData.value.nombre = user.nombre || ''
+      originalData.value.email = user.email || ''
+      originalData.value.role = user.role || 'user'
+
+      if (user.foto) {
+        currentPhotoUrl.value = processPhotoUrl(user.foto)
+        photoMsg.value = 'Foto actual guardada'
+      }
+    }
+  } catch (error) {
+    console.error('Error loading user data:', error)
+    globalError.value = 'No se pudo cargar tus datos'
   } finally {
-    setTimeout(() => {
-      isLoading.value = false
-    }, 600)
+    isLoading.value = false
   }
 }
 
-function normalizePhotoUrl(foto) {
+const processPhotoUrl = (foto) => {
   try {
-    if (!foto) return ''
-    
-    if (typeof foto === 'object' && foto?.type === 'Buffer' && Array.isArray(foto.data)) {
+    if (!foto) return null
+
+    if (typeof foto === 'string') {
+      if (foto.startsWith('data:')) return foto
+      if (foto.startsWith('http')) return foto
+      if (foto.startsWith('/')) return foto
+      if (foto.toLowerCase().startsWith('base64,')) return `data:image/jpeg;base64,${foto.slice(7)}`
+
+      return `/api/uploads/${foto}`
+    }
+
+    if (typeof foto === 'object' && foto.type === 'Buffer' && Array.isArray(foto.data)) {
       const b64 = btoa(String.fromCharCode(...foto.data))
       return `data:image/jpeg;base64,${b64}`
     }
 
-    const f = String(foto).trim()
-    if (!f) return ''
-
-    if (f.startsWith('{')) {
-      try {
-        const parsed = JSON.parse(f)
-        if (parsed?.data) {
-          const mime = parsed.mime || 'image/jpeg'
-          return parsed.data.startsWith('data:') ? parsed.data : `data:${mime};base64,${parsed.data}`
-        }
-      } catch { /* ignore */ }
-    }
-
-    if (f.startsWith('data:')) return f
-    if (f.toLowerCase().startsWith('base64,')) return `data:image/jpeg;base64,${f.slice(7)}`
-    if (/^https?:\/\//i.test(f) || f.startsWith('blob:') || f.startsWith('/')) return f
-    
-    if ((/[\/\\]/.test(f) || /\.[a-zA-Z]{2,5}$/.test(f)) && /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(f)) {
-      const fNorm = f.replace(/\\/g, '/')
-      const idx = fNorm.toLowerCase().indexOf('/uploads/')
-      if (idx >= 0) return `/api${fNorm.slice(idx)}`
-      if (/^uploads\//i.test(fNorm)) return `/api/${fNorm}`
-      return fNorm
-    }
-
-    const head = f.slice(0, 20)
-    let mime = 'image/jpeg'
-    if (head.startsWith('/9j')) mime = 'image/jpeg'
-    else if (head.startsWith('iVBOR')) mime = 'image/png'
-    else if (head.startsWith('R0lGOD')) mime = 'image/gif'
-    
-    return `data:${mime};base64,${f}`
+    return null
   } catch {
-    return ''
+    return null
   }
 }
 
-async function onFileChange(e) {
-  const f = e.target.files?.[0]
-  if (!f) return
+const onFileChange = (event) => {
+  const file = event.target.files?.[0]
+  if (!file) return
 
-  photoErr.value = ''
-  photoMsg.value = ''
+  validateAndPreviewPhoto(file)
+}
 
-  if (!f.type.startsWith('image/')) {
-    photoErr.value = 'Por favor selecciona un archivo de imagen'
+const onPhotoDrop = (event) => {
+  isDragging.value = false
+  const file = event.dataTransfer?.files?.[0]
+  if (!file) return
+
+  validateAndPreviewPhoto(file)
+}
+
+const validateAndPreviewPhoto = (file) => {
+  photoErr.value = null
+
+  if (!file.type.startsWith('image/')) {
+    photoErr.value = 'Por favor selecciona una imagen válida'
     return
   }
 
-  try {
-    const { dataUrl, info } = await compressImageFile(f, 512, 512, 0.82)
-    previewUrl.value = dataUrl
-    photoFile.value = f
-    photoMsg.value = `${info.width}×${info.height}px • ${(info.bytes / 1024).toFixed(1)} KB`
-  } catch (err) {
-    photoErr.value = 'No se pudo procesar la imagen'
+  if (file.size > 5 * 1024 * 1024) {
+    photoErr.value = 'La imagen no debe superar 5MB'
+    return
   }
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    previewUrl.value = e.target?.result
+    photoMsg.value = 'Nueva imagen seleccionada'
+  }
+  reader.onerror = () => {
+    photoErr.value = 'Error al cargar la imagen'
+  }
+  reader.readAsDataURL(file)
 }
 
-function onPhotoDrop(e) {
-  isDragging.value = false
-  const files = e.dataTransfer.files
-  if (files.length > 0) {
-    const file = files[0]
-    if (file.type.startsWith('image/')) {
-      photoFile.value = file
-      const event = new Event('change', { bubbles: true })
-      Object.defineProperty(event, 'target', { 
-        writable: false, 
-        value: { files: files } 
-      })
-      onFileChange({ target: { files } })
-    } else {
-      photoErr.value = 'Solo se permiten archivos de imagen'
-    }
-  }
+const goBack = () => {
+  router.push({ name: 'dashboard' })
 }
 
-async function compressImageFile(file, maxW = 512, maxH = 512, quality = 0.82) {
-  const dataUrl = await new Promise((resolve, reject) => {
-    const fr = new FileReader()
-    fr.onload = () => resolve(fr.result)
-    fr.onerror = reject
-    fr.readAsDataURL(file)
-  })
-  
-  const img = await new Promise((resolve, reject) => {
-    const im = new Image()
-    im.onload = () => resolve(im)
-    im.onerror = reject
-    im.src = dataUrl
-  })
-  
-  let { width, height } = img
-  const ratio = Math.min(maxW / width, maxH / height, 1)
-  const w = Math.round(width * ratio)
-  const h = Math.round(height * ratio)
-  
-  const canvas = document.createElement('canvas')
-  canvas.width = w
-  canvas.height = h
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(img, 0, 0, w, h)
-  
-  let out = canvas.toDataURL('image/webp', quality)
-  if (!out || out.indexOf('data:image') !== 0) {
-    out = canvas.toDataURL('image/jpeg', quality)
-  }
-  
-  const bytes = Math.ceil((out.length * 3) / 4)
-  return { dataUrl: out, info: { width: w, height: h, bytes } }
+const handleReset = () => {
+  formData.value.nombre = originalData.value.nombre
+  formData.value.currentPassword = ''
+  formData.value.newPassword = ''
+  formData.value.confirmNewPassword = ''
+  previewUrl.value = null
+  photoErr.value = null
+  focusedField.value = null
 }
 
-async function updateProfile() {
-  error.value = ''
+const handleSave = async () => {
+  globalError.value = null
 
+  // Validations
   if (!formData.value.nombre.trim()) {
-    notifier.error('El nombre es obligatorio')
+    globalError.value = 'El nombre es obligatorio'
     return
   }
 
   if (formData.value.newPassword) {
-    if (!formData.value.currentPassword) {
-      notifier.error('Ingresa tu contraseña actual para cambiarla')
-      return
-    }
-
     if (formData.value.newPassword !== formData.value.confirmNewPassword) {
-      notifier.error('Las contraseñas no coinciden')
+      globalError.value = 'Las contraseñas no coinciden'
       return
     }
 
-    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/
-    if (!strong.test(formData.value.newPassword)) {
-      notifier.error('Contraseña no cumple los requisitos de seguridad')
+    if (!formData.value.currentPassword) {
+      globalError.value = 'Debes ingresar tu contraseña actual para cambiarla'
+      return
+    }
+
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{8,}$/.test(formData.value.newPassword)) {
+      globalError.value = 'La contraseña no cumple los requisitos de seguridad'
       return
     }
   }
 
-  isSaving.value = true
-
   try {
-    const token = localStorage.getItem('token')
-    if (!token) throw new Error('Tu sesión ha expirado')
+    isSaving.value = true
 
-    let fotoUrl = null
-    if (photoFile.value) {
-      const { dataUrl } = await compressImageFile(photoFile.value, 512, 512, 0.82)
-      fotoUrl = dataUrl
+    const updateData = {
+      nombre: formData.value.nombre,
+      currentPassword: formData.value.currentPassword || undefined,
+      newPassword: formData.value.newPassword || undefined
     }
 
-    const payload = {
-      nombre: formData.value.nombre.trim(),
-      ...(formData.value.newPassword && { 
-        currentPassword: formData.value.currentPassword,
-        newPassword: formData.value.newPassword 
-      }),
-      ...(fotoUrl && { foto: fotoUrl })
+    if (previewUrl.value) {
+      updateData.foto = previewUrl.value
     }
 
     const res = await fetch('/api/auth/update-profile', {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(payload)
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData)
     })
 
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.msg || 'No se pudo actualizar el perfil')
-
-    // Update localStorage
-    const userStr = localStorage.getItem('user')
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr)
-        user.nombre = formData.value.nombre
-        if (fotoUrl) user.foto = fotoUrl
-        localStorage.setItem('user', JSON.stringify(user))
-        window.dispatchEvent(new Event('session:updated'))
-      } catch { /* ignore */ }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.message || 'Error al guardar cambios')
     }
 
-    notifier.success('¡Perfil actualizado correctamente!')
-    
+    // Success
+    originalData.value = { ...formData.value }
+    previewUrl.value = null
     formData.value.currentPassword = ''
     formData.value.newPassword = ''
     formData.value.confirmNewPassword = ''
-    previewUrl.value = ''
-    photoFile.value = null
 
-    setTimeout(() => {
-      navigateAndRefresh(router, { name: 'dashboard' })
-    }, 1200)
-  } catch (e) {
-    error.value = e.message
-    notifier.error(e.message)
+    // Show success notification
+    const event = new CustomEvent('notification', {
+      detail: { type: 'success', message: 'Cambios guardados correctamente' }
+    })
+    window.dispatchEvent(event)
+
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    await router.push({ name: 'dashboard' })
+  } catch (error) {
+    console.error('Error saving profile:', error)
+    globalError.value = error.message || 'Error al guardar cambios'
   } finally {
     isSaving.value = false
   }
 }
 
-function goBack() {
-  router.back()
-}
+// Lifecycle
+onMounted(() => {
+  loadUserData()
+
+  // Animate elements on mount
+  gsap.from('.settings-card', {
+    opacity: 0,
+    y: 20,
+    duration: 0.6,
+    ease: 'back.out'
+  })
+})
 </script>
 
 <style scoped>
-* {
-  box-sizing: border-box;
+.settings-wrapper {
+  padding: 24px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.settings-wrapper {
-  min-height: 100vh;
-  padding: 20px;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.4), rgba(30, 41, 59, 0.3));
+.settings-main {
+  flex: 1;
 }
 
 .loading-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 60vh;
+  min-height: 400px;
 }
 
-.settings-main {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-/* Glass Card */
+/* Card */
 .settings-card {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(148, 163, 184, 0.12);
-  border-radius: 20px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  padding: 0;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 16px;
   overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 20px 50px rgba(2, 6, 23, 0.3);
 }
 
-/* Header */
-.settings-header-section {
-  background: linear-gradient(135deg, rgba(51, 65, 85, 0.4), rgba(30, 41, 59, 0.3));
-  padding: 40px;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+/* Breadcrumb Section */
+.breadcrumb-section {
   display: flex;
-  gap: 20px;
   align-items: center;
+  gap: 16px;
+  padding: 16px 40px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.back-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(45, 221, 90, 0.1);
+  border: 1px solid rgba(45, 221, 90, 0.2);
+  border-radius: 6px;
+  color: rgba(45, 221, 90, 0.8);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 0.9, 0.2, 1);
+  white-space: nowrap;
+}
+
+.back-button:hover {
+  background: rgba(45, 221, 90, 0.2);
+  border-color: rgba(45, 221, 90, 0.4);
+  color: #2ddd5a;
+  transform: translateX(-4px);
+  box-shadow: 0 0 12px rgba(45, 221, 90, 0.15);
+}
+
+.back-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Header Section */
+.settings-header-section {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 32px 40px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(20, 40, 70, 0.4));
 }
 
 .header-badge {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(45, 221, 90, 0.2), rgba(45, 221, 90, 0.05));
+  border: 1px solid rgba(45, 221, 90, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
 .badge-glow {
   position: absolute;
-  inset: -4px;
-  background: linear-gradient(135deg, rgba(45, 221, 90, 0.3), rgba(45, 221, 90, 0.1));
-  border-radius: 50%;
-  filter: blur(8px);
-  animation: pulse-glow 3s ease-in-out infinite;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  background: radial-gradient(circle, rgba(45, 221, 90, 0.2), transparent);
+  animation: badge-pulse 3s ease-in-out infinite;
 }
 
-@keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+@keyframes badge-pulse {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
 }
 
 .badge-icon {
+  width: 32px;
+  height: 32px;
+  color: #2ddd5a;
   position: relative;
   z-index: 1;
-  width: 100%;
-  height: 100%;
-  padding: 16px;
-  color: #2ddd5a;
-  background: rgba(45, 221, 90, 0.1);
-  border: 1px solid rgba(45, 221, 90, 0.3);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .header-content {
@@ -750,292 +837,336 @@ function goBack() {
 
 .header-title {
   margin: 0;
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.5px;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .header-subtitle {
-  margin: 8px 0 0;
-  font-size: 14px;
+  margin: 6px 0 0;
+  font-size: 13px;
   color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
+/* Tabs Navigation */
+.tabs-navigation {
+  display: flex;
+  gap: 0;
+  padding: 0 40px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.tab-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border-bottom: 2px solid transparent;
+  position: relative;
+}
+
+.tab-button:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.tab-button.active {
+  color: #2ddd5a;
+  border-bottom-color: #2ddd5a;
+}
+
+.tab-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.tab-badge {
+  width: 8px;
+  height: 8px;
+  background: #ff6b6b;
+  border-radius: 50%;
+  display: inline-flex;
+  margin-left: 4px;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Content */
 .settings-content {
-  padding: 40px;
+  padding: 32px 40px;
+  min-height: 400px;
 }
 
 .settings-section {
-  margin-bottom: 40px;
-}
-
-.settings-section:last-child {
-  margin-bottom: 0;
-}
-
-.section-title {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0 0 24px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #fff;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.section-icon {
-  width: 20px;
-  height: 20px;
-  color: #2ddd5a;
+/* Info Card */
+.info-card {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  padding: 24px;
+  transition: all 0.3s ease;
 }
 
-.section-help {
-  margin: -20px 0 20px;
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
+.info-card:hover {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(148, 163, 184, 0.15);
 }
 
-.section-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.2), transparent);
-  margin: 40px 0;
-}
-
-/* Form Groups */
-.form-group {
+.card-header {
   margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.form-group:last-child {
-  margin-bottom: 0;
+.card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.card-subtitle {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Form Grid */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .form-label {
-  display: block;
-  margin-bottom: 10px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
+  color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .optional-badge {
+  font-size: 11px;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.4);
-  font-size: 0.85em;
   text-transform: lowercase;
-  margin-left: 4px;
+  letter-spacing: normal;
 }
 
 /* Input Box */
 .input-box {
-  position: relative;
   display: flex;
   align-items: center;
-  background: rgba(15, 23, 42, 0.4);
-  border: 1.5px solid rgba(148, 163, 184, 0.15);
-  border-radius: 12px;
-  padding: 0 16px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 8px;
+  transition: all 0.25s ease;
 }
 
-.input-box:hover:not(.read-only) {
-  background: rgba(15, 23, 42, 0.6);
-  border-color: rgba(148, 163, 184, 0.25);
-}
-
-.input-box:has(.form-input:focus):not(.read-only) {
-  background: rgba(15, 23, 42, 0.8);
+.input-box.focused {
+  background: rgba(45, 221, 90, 0.08);
   border-color: rgba(45, 221, 90, 0.4);
-  box-shadow: 0 0 20px rgba(45, 221, 90, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 12px rgba(45, 221, 90, 0.15);
+}
+
+.input-box.filled {
+  border-color: rgba(45, 221, 90, 0.3);
 }
 
 .input-box.read-only {
-  background: rgba(15, 23, 42, 0.2);
+  background: rgba(255, 255, 255, 0.02);
   cursor: not-allowed;
+  border-color: rgba(148, 163, 184, 0.1);
 }
 
-.input-prefix-icon {
+.input-box.success {
+  border-color: rgba(45, 221, 90, 0.5);
+  background: rgba(45, 221, 90, 0.08);
+}
+
+.input-prefix-icon,
+.input-suffix-icon {
   width: 18px;
   height: 18px;
-  color: rgba(45, 221, 90, 0.5);
-  margin-right: 12px;
+  color: rgba(255, 255, 255, 0.3);
   flex-shrink: 0;
-  stroke-width: 2;
+}
+
+.input-box.focused .input-prefix-icon {
+  color: rgba(45, 221, 90, 0.6);
+}
+
+.input-suffix-check {
+  width: 18px;
+  height: 18px;
+  color: #2ddd5a;
+  flex-shrink: 0;
+  animation: check-appear 0.3s ease;
+}
+
+@keyframes check-appear {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .form-input {
   flex: 1;
-  background: transparent;
+  background: none;
   border: none;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
   outline: none;
-  color: #fff;
-  font-size: 14px;
-  padding: 12px 0;
-  font-family: inherit;
 }
 
 .form-input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.2);
 }
 
 .form-input:disabled {
-  color: rgba(255, 255, 255, 0.4);
-  cursor: not-allowed;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .input-suffix-btn {
   background: none;
   border: none;
-  padding: 8px;
+  color: rgba(255, 255, 255, 0.3);
   cursor: pointer;
-  color: rgba(45, 221, 90, 0.5);
-  transition: color 0.2s;
+  padding: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-left: 8px;
-  flex-shrink: 0;
+  transition: all 0.2s ease;
 }
 
 .input-suffix-btn:hover {
-  color: rgba(45, 221, 90, 0.8);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .eye-icon {
   width: 18px;
   height: 18px;
-  stroke-width: 2;
-}
-
-.lock-badge {
-  margin-left: 12px;
-  font-size: 16px;
 }
 
 .field-help-text {
-  margin: 8px 0 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
-  line-height: 1.5;
+  margin: 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
+  font-weight: 400;
 }
 
-/* Password Strength */
-.password-strength {
-  margin: 12px 0 8px;
-}
-
-.strength-bar {
-  height: 4px;
-  background: rgba(15, 23, 42, 0.4);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 8px;
-}
-
-.strength-fill {
-  height: 100%;
-  border-radius: 2px;
-  transition: all 0.3s;
-}
-
-.strength-fill.strength-weak {
-  width: 25%;
-  background: #ef4444;
-}
-
-.strength-fill.strength-fair {
-  width: 50%;
-  background: #f59e0b;
-}
-
-.strength-fill.strength-good {
-  width: 75%;
-  background: #10b981;
-}
-
-.strength-fill.strength-strong {
-  width: 100%;
-  background: #2ddd5a;
-}
-
-.strength-text {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.strength-text.text-weak { color: #ef4444; }
-.strength-text.text-fair { color: #f59e0b; }
-.strength-text.text-good { color: #10b981; }
-.strength-text.text-strong { color: #2ddd5a; }
-
-/* Match Indicator */
-.match-indicator {
+/* Role Display */
+.role-display {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 8px 0 0;
-  padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 8px;
-  font-size: 12px;
+  gap: 12px;
+  padding: 12px 14px;
 }
 
-.match-indicator.match {
-  background: rgba(45, 221, 90, 0.1);
-  border-color: rgba(45, 221, 90, 0.2);
-}
-
-.match-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
+.role-label {
+  flex: 1;
   font-weight: 600;
-  color: #ef4444;
-  border-radius: 50%;
+  color: rgba(255, 255, 255, 0.8);
 }
 
-.match-indicator.match .match-icon {
+.role-badge {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.role-badge.badge-admin {
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.3), rgba(50, 150, 255, 0.2));
+  border: 1px solid rgba(100, 200, 255, 0.3);
+  color: #64c8ff;
+}
+
+.role-badge.badge-user {
+  background: linear-gradient(135deg, rgba(45, 221, 90, 0.2), rgba(45, 221, 90, 0.1));
+  border: 1px solid rgba(45, 221, 90, 0.3);
   color: #2ddd5a;
 }
 
-.match-text {
-  color: rgba(255, 255, 255, 0.6);
+/* Photo Section */
+.photo-card {
+  grid-column: 1 / -1;
 }
 
-/* Photo Upload */
-.photo-group {
-  margin-bottom: 32px;
+.photo-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
 }
 
-.photo-preview-box {
+.photo-preview-section {
   display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 16px;
-  padding: 16px;
-  background: rgba(45, 221, 90, 0.05);
-  border: 1px solid rgba(45, 221, 90, 0.2);
-  border-radius: 12px;
-  margin-bottom: 16px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.photo-frame-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
 .photo-frame {
-  width: 80px;
-  height: 80px;
-  flex-shrink: 0;
-  border-radius: 12px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(45, 221, 90, 0.2), rgba(45, 221, 90, 0.1));
-  border: 1px solid rgba(45, 221, 90, 0.3);
+  border: 3px solid rgba(45, 221, 90, 0.3);
+  background: rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
 }
 
 .photo-image {
@@ -1044,51 +1175,44 @@ function goBack() {
   object-fit: cover;
 }
 
-.photo-placeholder {
-  font-size: 32px;
-}
-
-.photo-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+.photo-details {
+  text-align: center;
 }
 
 .photo-name {
   margin: 0;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
-  color: #fff;
+  color: rgba(255, 255, 255, 0.8);
 }
 
-.photo-details {
+.photo-msg {
   margin: 4px 0 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  color: rgba(45, 221, 90, 0.6);
 }
 
-/* Upload Zone */
-.upload-zone {
-  position: relative;
-  padding: 32px;
-  border: 2px dashed rgba(45, 221, 90, 0.3);
-  border-radius: 12px;
-  background: rgba(45, 221, 90, 0.05);
+.upload-zone-container {
+  padding: 32px 20px;
+  background: linear-gradient(135deg, rgba(45, 221, 90, 0.05), rgba(45, 221, 90, 0.02));
+  border: 2px dashed rgba(45, 221, 90, 0.2);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s;
-  text-align: center;
-  user-select: none;
+  transition: all 0.25s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
-.upload-zone:hover {
-  background: rgba(45, 221, 90, 0.08);
-  border-color: rgba(45, 221, 90, 0.5);
+.upload-zone-container:hover {
+  border-color: rgba(45, 221, 90, 0.4);
+  background: linear-gradient(135deg, rgba(45, 221, 90, 0.08), rgba(45, 221, 90, 0.04));
 }
 
-.upload-zone.dragging {
-  background: rgba(45, 221, 90, 0.15);
-  border-color: rgba(45, 221, 90, 0.7);
+.upload-zone-container.dragging {
+  border-color: rgba(45, 221, 90, 0.6);
+  background: rgba(45, 221, 90, 0.1);
   box-shadow: inset 0 0 20px rgba(45, 221, 90, 0.1);
 }
 
@@ -1097,6 +1221,10 @@ function goBack() {
 }
 
 .upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   pointer-events: none;
 }
 
@@ -1104,119 +1232,228 @@ function goBack() {
   width: 40px;
   height: 40px;
   color: #2ddd5a;
-  margin-bottom: 12px;
-  stroke-width: 1.5;
+  margin-bottom: 4px;
 }
 
 .upload-main-text {
-  margin: 0 0 4px;
-  font-size: 14px;
+  margin: 0;
+  font-size: 13px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.8);
 }
 
 .upload-help-text {
   margin: 0;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.3);
 }
 
-/* Messages */
-.message {
+/* Password Strength */
+.password-strength-container {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.strength-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.strength-fill {
+  height: 100%;
+  transition: all 0.3s ease;
+  border-radius: 2px;
+}
+
+.strength-fill.strength-weak {
+  width: 33%;
+  background: #ff6b6b;
+}
+
+.strength-fill.strength-medium {
+  width: 66%;
+  background: #ffd92f;
+}
+
+.strength-fill.strength-strong {
+  width: 100%;
+  background: #2ddd5a;
+}
+
+.strength-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.strength-text {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.text-weak {
+  color: #ff6b6b;
+}
+
+.text-medium {
+  color: #ffd92f;
+}
+
+.text-strong {
+  color: #2ddd5a;
+}
+
+.strength-requirements {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.requirement {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  margin-top: 8px;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  transition: all 0.2s ease;
 }
 
-.error-message {
+.requirement.met {
+  color: #2ddd5a;
+}
+
+.requirement-check {
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  opacity: 0;
+  transition: all 0.2s ease;
+}
+
+.requirement.met .requirement-check {
+  opacity: 1;
+}
+
+/* Match Indicator */
+.match-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  font-size: 12px;
   color: #fca5a5;
 }
 
-.message-icon {
+.match-indicator.match {
+  background: rgba(45, 221, 90, 0.1);
+  border-color: rgba(45, 221, 90, 0.2);
+  color: #86efac;
+}
+
+.match-icon {
+  width: 16px;
+  height: 16px;
   flex-shrink: 0;
 }
 
-/* Global Error */
-.global-error {
+/* Security Info */
+.security-info-box {
   display: flex;
-  align-items: center;
   gap: 16px;
   padding: 16px;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(185, 28, 28, 0.05));
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 12px;
-  margin: 40px 40px 0;
-  color: #fca5a5;
+  background: rgba(45, 221, 90, 0.08);
+  border: 1px solid rgba(45, 221, 90, 0.2);
+  border-radius: 8px;
+  margin-bottom: 20px;
 }
 
-.error-icon {
+.security-info-icon {
+  width: 24px;
+  height: 24px;
+  color: #2ddd5a;
   flex-shrink: 0;
-  font-size: 20px;
+  margin-top: 2px;
 }
 
-.error-content {
+.security-info-content {
   flex: 1;
 }
 
-.error-title {
+.security-info-title {
   margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  color: #fecaca;
-}
-
-.error-message {
-  margin: 4px 0 12px;
-  font-size: 13px;
-  color: #fca5a5;
-}
-
-.error-retry-btn {
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  color: #fca5a5;
-  padding: 6px 12px;
-  border-radius: 6px;
   font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.error-retry-btn:hover {
-  background: rgba(239, 68, 68, 0.3);
-  border-color: rgba(239, 68, 68, 0.6);
-  color: #fecaca;
+.security-tips {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.error-close {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.4);
-  cursor: pointer;
-  padding: 4px;
-  font-size: 18px;
+.security-tips li {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  gap: 6px;
+}
+
+.security-tips li::before {
+  content: '→';
+  color: rgba(45, 221, 90, 0.5);
   flex-shrink: 0;
-  transition: color 0.2s;
 }
 
-.error-close:hover {
-  color: rgba(255, 255, 255, 0.7);
+/* Alerts */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.alert-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
 }
 
 /* Footer */
 .settings-footer {
   display: flex;
   gap: 12px;
-  padding: 24px 40px;
+  padding: 20px 40px;
   border-top: 1px solid rgba(148, 163, 184, 0.1);
-  background: rgba(15, 23, 42, 0.2);
+  background: rgba(15, 23, 42, 0.4);
 }
 
 .btn {
@@ -1227,41 +1464,46 @@ function goBack() {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 }
 
+.btn-icon {
+  width: 16px;
+  height: 16px;
+}
+
 .btn-secondary {
   background: rgba(148, 163, 184, 0.1);
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
   border: 1px solid rgba(148, 163, 184, 0.2);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background: rgba(148, 163, 184, 0.15);
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(255, 255, 255, 0.8);
   border-color: rgba(148, 163, 184, 0.3);
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, rgba(45, 221, 90, 0.3), rgba(45, 221, 90, 0.2));
+  background: linear-gradient(135deg, rgba(45, 221, 90, 0.25), rgba(45, 221, 90, 0.15));
   color: #2ddd5a;
   border: 1px solid rgba(45, 221, 90, 0.4);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, rgba(45, 221, 90, 0.4), rgba(45, 221, 90, 0.3));
+  background: linear-gradient(135deg, rgba(45, 221, 90, 0.35), rgba(45, 221, 90, 0.25));
   border-color: rgba(45, 221, 90, 0.6);
   box-shadow: 0 0 20px rgba(45, 221, 90, 0.2);
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -1272,9 +1514,8 @@ function goBack() {
 }
 
 .spinner {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border: 2px solid rgba(45, 221, 90, 0.3);
   border-top-color: #2ddd5a;
   border-radius: 50%;
@@ -1282,18 +1523,97 @@ function goBack() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Global Error */
+.global-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(185, 28, 28, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  margin-top: 20px;
+  color: #fca5a5;
+}
+
+.error-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fecaca;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.error-message {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
+.error-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.error-close:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.close-icon {
+  width: 16px;
+  height: 16px;
 }
 
 /* Transitions */
+.fade-tab-enter-active,
+.fade-tab-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-tab-enter-from,
+.fade-tab-leave-to {
+  opacity: 0;
+}
+
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* Session Section */
+.session-section {
+  padding: 0;
 }
 
 /* Responsive */
@@ -1302,18 +1622,42 @@ function goBack() {
     padding: 12px;
   }
 
+  .breadcrumb-section {
+    padding: 12px 24px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .back-button {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
   .settings-header-section {
+    padding: 20px 24px;
+    gap: 16px;
     flex-direction: column;
-    text-align: center;
-    padding: 24px;
   }
 
   .header-title {
-    font-size: 24px;
+    font-size: 22px;
+  }
+
+  .tabs-navigation {
+    padding: 0 24px;
+    overflow-x: auto;
   }
 
   .settings-content {
-    padding: 24px;
+    padding: 20px 24px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .photo-content-grid {
+    grid-template-columns: 1fr;
   }
 
   .settings-footer {
@@ -1326,14 +1670,8 @@ function goBack() {
     padding: 10px 16px;
   }
 
-  .photo-preview-box {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  .upload-zone {
-    padding: 24px 16px;
+  .strength-requirements {
+    grid-template-columns: 1fr;
   }
 }
 </style>

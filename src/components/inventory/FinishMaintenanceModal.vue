@@ -266,15 +266,18 @@ function submitForm() {
 }
 
 .status-badge.is-green {
-  background: #10b981;
+  background: var(--status-available-bg, #10b981);
+  color: var(--status-available-fg, #065f46);
 }
 
 .status-badge.is-yellow {
-  background: #f59e0b;
+  background: var(--status-maintenance-bg, #f59e0b);
+  color: var(--status-maintenance-fg, #92400e);
 }
 
 .status-badge.is-blue {
-  background: #3b82f6;
+  background: var(--status-unknown-bg, #3b82f6);
+  color: var(--status-unknown-fg, #1e3a8a);
 }
 
 .form-container {

@@ -37,6 +37,11 @@ export async function getItemDetails(itemId) {
     })
 
     if (!response.ok) {
+      // treat not found as non-fatal; panel will show empty form
+      if (response.status === 404) {
+        console.warn('[updateItemService.getItemDetails] item not found (404)', itemId)
+        return {}
+      }
       throw new Error(`Failed to fetch item: ${response.status} ${response.statusText}`)
     }
 

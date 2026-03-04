@@ -22,7 +22,7 @@
             <span class="action-label">Historial</span>
         </button>
 
-        <!-- Botón Código de Barras -->
+        <!-- Botón Código de Barras / Etiqueta -->
         <button
             type="button"
             class="action-btn action-barcode"
@@ -31,6 +31,17 @@
             aria-label="Mostrar código de barras">
             <VueIcon name="ic:baseline-qr-code-2" size="18" class="action-icon" />
             <span class="action-label">Etiqueta</span>
+        </button>
+
+        <!-- Botón Solicitar Mantenimiento -->
+        <button
+            type="button"
+            class="action-btn action-maintenance"
+            @click.stop.prevent="emitRequestMaintenance"
+            title="Solicitar mantenimiento para este equipo"
+            aria-label="Solicitar mantenimiento">
+            <VueIcon name="ic:baseline-build" size="18" class="action-icon" />
+            <span class="action-label">Mantto.</span>
         </button>
     </div>
 </template>
@@ -49,7 +60,7 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['show-barcode', 'show-update-panel', 'show-history-panel'])
+const emit = defineEmits(['show-barcode', 'show-update-panel', 'show-history-panel', 'request-maintenance'])
 let lastEmitAt = 0
 
 function emitShowBarcode() {
@@ -71,6 +82,14 @@ function emitShowHistoryPanel() {
     if (now - lastEmitAt < 350) return
     lastEmitAt = now
     emit('show-history-panel', props.item)
+}
+
+function emitRequestMaintenance() {
+    const now = Date.now()
+    if (now - lastEmitAt < 350) return
+    lastEmitAt = now
+    const code = props.item?.['No DE INVENTARIO'] || props.item?.['No DE INVENTARIO?'] || ''
+    emit('request-maintenance', { item: props.item, code })
 }
 </script>
 
@@ -133,6 +152,16 @@ function emitShowHistoryPanel() {
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     border-color: #047857;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.action-maintenance {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    border-color: #b45309;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.action-maintenance:hover {
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);
 }
 
 .action-icon {
