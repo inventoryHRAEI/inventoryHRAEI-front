@@ -29,17 +29,17 @@
         </div>
 
         <div class="header-toolbar">
-            <div class="action-buttons-container">
+            <div class="action-buttons-container" v-if="canManageBiomedical">
                 <button class="btn-warehouse-transfer" @click="openMovement" title="Mover stock entre bodegas">
-                    <IIcon name="ic:baseline-swap-horiz" size="20" />
+                    <IIcon name="ic:baseline-swap-horiz" size="20" color="#22c55e" />
                     <span class="btn-text">Mover Stock</span>
                 </button>
                 <button class="btn-consumable-intake" @click="openIntake" title="Resurtir o crear nuevos consumibles">
-                    <IIcon name="ic:baseline-add-circle-outline" size="20" />
+                    <IIcon name="ic:baseline-add-circle-outline" size="20" color="#a855f7" />
                     <span class="btn-text">Ingresar Bienes</span>
                 </button>
                 <button class="btn-decommission" @click="openDecommission" title="Dar de baja artículos del inventario">
-                    <IIcon name="ic:baseline-delete-forever" size="20" />
+                    <IIcon name="ic:baseline-delete-forever" size="20" color="#ef4444" />
                     <span class="btn-text">Dar de Baja</span>
                 </button>
             </div>
@@ -50,13 +50,22 @@
                     <input ref="searchInput" v-model="searchQuery" type="text"
                         placeholder="Buscar por nombre, clave o fabricante..." class="search-input"
                         @keydown="handleSearchKeydown" />
-                    <button class="scan-btn" :class="{ active: scanModeActive }" @click="toggleScanMode"
-                        title="Activar modo escaneo">
-                        <IIcon name="ic:baseline-qr-code-2" size="18" />
+                </div>
+                <div class="view-toggle-group">
+                    <button class="btn-view-toggle" :class="{ active: viewMode === 'cards' }"
+                        @click="viewMode = 'cards'" title="Vista de tarjetas">
+                        <IIcon name="ic:baseline-view-comfy" size="18"
+                            :color="viewMode === 'cards' ? '#60a5fa' : '#94a3b8'" />
+                    </button>
+                    <button class="btn-view-toggle" :class="{ active: viewMode === 'table' }"
+                        @click="viewMode = 'table'" title="Vista de tabla">
+                        <IIcon name="ic:baseline-view-list" size="18"
+                            :color="viewMode === 'table' ? '#60a5fa' : '#94a3b8'" />
                     </button>
                 </div>
                 <button class="btn-refresh" @click="fetchArticulos" :disabled="loading" title="Actualizar lista">
-                    <IIcon name="ic:baseline-refresh" :class="{ 'anim-spin': loading }" />
+                    <IIcon name="ic:baseline-refresh" size="20" :color="loading ? '#fbbf24' : '#60a5fa'"
+                        :class="{ 'anim-spin': loading }" />
                 </button>
             </div>
         </div>
@@ -65,6 +74,8 @@
         <MovementWizard :open="movementOpen" @close="movementOpen = false" @success="handleWizardSuccess" />
         <IntakeWizard :open="intakeOpen" @close="intakeOpen = false" @success="handleWizardSuccess" />
         <DecommissionWizard :open="decommissionOpen" @close="decommissionOpen = false" @success="handleWizardSuccess" />
+        <KardexPreviewModal :isOpen="kardexModalOpen" :itemData="kardexModalData" title="Vista Previa del Kardex"
+            @close="kardexModalOpen = false" />
 
         <div class="quick-filters">
             <button class="chip" :class="{ active: filterType === 'all' }" @click="filterType = 'all'">
@@ -94,44 +105,58 @@
         </div>
 
 
-        <!-- Vista de Cuadrícula -->
+        <!-- Vista de Cuadrícula o Tabla -->
         <div v-if="loading" class="loading-grid">
             <div v-for="i in 8" :key="i" class="skeleton-card"></div>
         </div>
 
         <div v-else-if="filteredArticulos.length > 0">
-            <div class="stock-grid" ref="gridRef">
-                <InventoryItemCard v-for="(item, idx) in paginatedArticulos"
-                    :key="item['Clave  HRAEI'] || ('item-' + idx)" :item="item"
-                    :is-new="newItemIds.has(item['Clave  HRAEI'])" @edit="handleEditItem" />
-            </div>
+            <!-- Vista de Tarjetas -->
+            <template v-if="viewMode === 'cards'">
+                <div class="stock-grid" ref="gridRef">
+                    <InventoryItemCard v-for="(item, idx) in paginatedArticulos"
+                        :key="getItemKey(item) || ('item-' + idx)" :item="item"
+                        :is-new="newItemIds.has(getItemKey(item))" @edit="handleEditItem" />
+                </div>
 
-            <!-- Update consumable/refacción panel -->
-            <UpdateConsumablePanel v-model="updateItemModalOpen" :item="updateItemData" @item-updated="onItemUpdated" />
+                <!-- Update consumable/refacción panel -->
+                <UpdateConsumablePanel v-model="updateItemModalOpen" :item="updateItemData"
+                    @item-updated="onItemUpdated" />
 
-            <!-- Controles de Paginación -->
-            <div class="pagination-container" v-if="totalPages > 1">
-                <button class="btn-nav" :disabled="currentPage === 1" @click="currentPage--">
-                    <IIcon name="ic:baseline-chevron-left" /> Anterior
-                </button>
+                <!-- Controles de Paginación para Tarjetas -->
+                <div class="pagination-container" v-if="totalPages > 1">
+                    <button class="btn-nav" :disabled="currentPage === 1" @click="currentPage--">
+                        <IIcon name="ic:baseline-chevron-left" /> Anterior
+                    </button>
 
-                <div class="page-numbers">
-                    <button v-for="p in totalPages" :key="p" class="page-btn" :class="{ active: p === currentPage }"
-                        @click="currentPage = p" v-show="Math.abs(p - currentPage) < 3 || p === 1 || p === totalPages">
-                        {{ p }}
+                    <div class="page-numbers">
+                        <button v-for="p in totalPages" :key="p" class="page-btn" :class="{ active: p === currentPage }"
+                            @click="currentPage = p"
+                            v-show="Math.abs(p - currentPage) < 3 || p === 1 || p === totalPages">
+                            {{ p }}
+                        </button>
+                    </div>
+
+                    <button class="btn-nav" :disabled="currentPage === totalPages" @click="currentPage++">
+                        Siguiente
+                        <IIcon name="ic:baseline-chevron-right" />
                     </button>
                 </div>
 
-                <button class="btn-nav" :disabled="currentPage === totalPages" @click="currentPage++">
-                    Siguiente
-                    <IIcon name="ic:baseline-chevron-right" />
-                </button>
-            </div>
+                <div class="pagination-info">
+                    <IIcon name="ic:baseline-info" size="14" class="info-icon" />
+                    Mostrando {{ paginatedArticulos.length }} de {{ filteredArticulos.length }} artículos encontrados
+                </div>
+            </template>
 
-            <div class="pagination-info">
-                <IIcon name="ic:baseline-info" size="14" class="info-icon" />
-                Mostrando {{ paginatedArticulos.length }} de {{ filteredArticulos.length }} artículos encontrados
-            </div>
+            <!-- Vista de Tabla -->
+            <template v-else-if="viewMode === 'table'">
+                <ConsumablesTable :items="filteredArticulos" :itemsPerPage="15" @edit="handleEditItem"
+                    @move-stock="openMovement" @add-intake="openIntake" @decommission="openDecommission"
+                    @view-kardex="handleViewKardex" />
+                <UpdateConsumablePanel v-model="updateItemModalOpen" :item="updateItemData"
+                    @item-updated="onItemUpdated" />
+            </template>
         </div>
 
         <div v-else-if="fetchError" class="empty-results error-state">
@@ -162,11 +187,17 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
 import UpdateConsumablePanel from '@/components/UpdateConsumablePanel.vue'
+import KardexPreviewModal from '@/components/KardexPreviewModal.vue';
 import IIcon from '@/components/IIcon.vue';
 import InventoryItemCard from '@/components/inventario-biomedica/InventoryItemCard.vue';
+import ConsumablesTable from '@/components/ConsumablesTable.vue';
 import MovementWizard from '@/components/inventario-biomedica/MovementWizard.vue';
 import IntakeWizard from '@/components/inventario-biomedica/IntakeWizard.vue';
 import DecommissionWizard from '@/components/inventario-biomedica/DecommissionWizard.vue';
+import { usePermissions } from '@/composables/usePermissions.js'
+import notificationStore from '@/stores/notificationStore.js'
+
+const { canManageBiomedical, isAdmin } = usePermissions()
 
 // Inicializa notificaciones push
 const initNotifications = async () => {
@@ -198,24 +229,76 @@ const sendPushNotification = (title, options = {}) => {
     }
 };
 
+const pickItemValue = (item, aliases = [], fallback = '') => {
+    if (!item || typeof item !== 'object') return fallback
+
+    const normalizeKey = (key) => String(key || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toLowerCase()
+
+    const normalizedLookup = new Map()
+    Object.keys(item).forEach((k) => {
+        const normalized = normalizeKey(k)
+        if (normalized && !normalizedLookup.has(normalized)) normalizedLookup.set(normalized, k)
+    })
+
+    for (const alias of aliases) {
+        if (Object.prototype.hasOwnProperty.call(item, alias) && item[alias] !== null && item[alias] !== undefined && item[alias] !== '') {
+            return item[alias]
+        }
+        const foundKey = normalizedLookup.get(normalizeKey(alias))
+        if (foundKey && item[foundKey] !== null && item[foundKey] !== undefined && item[foundKey] !== '') {
+            return item[foundKey]
+        }
+    }
+
+    return fallback
+}
+
+const getItemStock = (item) => {
+    const raw = pickItemValue(item, ['TOTAL EXISTENCIAS', 'Total Excistencias', 'total_existencias', 'totalExistencias', 'Cantidad_Stock', 'CANTIDAD', 'Cantidad', 'cantidad'], 0)
+    const parsed = parseInt(raw, 10)
+    if (Number.isFinite(parsed)) return parsed
+    const num = Number(raw)
+    return Number.isFinite(num) ? num : 0
+}
+
+const getItemKey = (item) => {
+    const clave = String(pickItemValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], '') || '').trim()
+    const n = String(pickItemValue(item, ['N', 'n'], '') || '').trim()
+    const lote = String(pickItemValue(item, ['LOTE', 'Lote', 'lote'], '') || '').trim()
+    const ref = String(pickItemValue(item, ['REFERENCIA', 'Referencia', 'referencia'], '') || '').trim()
+    const marca = String(pickItemValue(item, ['MARCA', 'Marca', 'marca'], '') || '').trim()
+    const modelo = String(pickItemValue(item, ['MODELO', 'Modelo', 'modelo'], '') || '').trim()
+    const desc = String(pickItemValue(item, ['Descripción del bien', 'Descripcion del bien', 'DESCRIPCIÓN ARTÍCULO', 'descripcion', 'NOMBRE'], '') || '').trim()
+    const fallbackId = String(pickItemValue(item, ['id'], '') || '').trim()
+    return [clave, n, lote, ref, marca, modelo, desc, fallbackId].join('|')
+}
+
+const getItemDescripcion = (item) => pickItemValue(item, ['Descripción del bien', 'Descripcion del bien', 'DESCRIPCIÓN ARTÍCULO', 'descripcion', 'NOMBRE'], '')
+
+const getItemMarca = (item) => pickItemValue(item, ['MARCA', 'Marca', 'marca'], '')
+
 const loading = ref(true);
 const fetchError = ref(false);
 const articulos = ref([]);
 const searchQuery = ref('');
 const filterType = ref('all');
+const viewMode = ref('cards'); // 'cards' o 'table'
 const movementOpen = ref(false);
 const intakeOpen = ref(false);
 const decommissionOpen = ref(false);
+const kardexModalOpen = ref(false);
+const kardexModalData = ref(null);
 const newItemIds = ref(new Map()); // Ahora es Map con item ID -> timestamp
 const notificationMessage = ref('');
 const showNotification = ref(false);
 const notificationType = ref('success'); // 'success', 'warning', 'info'
 const actionType = ref(null); // 'consumable', 'transfer'
 
-// Escaneo
-const scanModeActive = ref(false);
 const searchInput = ref(null);
-let scanTimeout = null;
 
 // Paginación
 const currentPage = ref(1);
@@ -247,15 +330,15 @@ let _ro = null;
 onMounted(async () => {
     // Inicializar notificaciones
     await initNotifications();
-    
+
     // Cargar artículos
     fetchArticulos();
-    
+
     // Actualiza cada 30 minutos y verifica stock
     setInterval(() => {
         fetchArticulos();
     }, 30 * 60 * 1000);
-    
+
     // Inicializar tamaño
     updateItemsPerPage();
     if (typeof ResizeObserver !== 'undefined' && gridRef.value) {
@@ -274,6 +357,11 @@ const openMovement = () => { movementOpen.value = true; };
 const openIntake = () => { intakeOpen.value = true; };
 const openDecommission = () => { decommissionOpen.value = true; };
 
+// Reset page cuando cambia el modo de vista
+watch(viewMode, () => {
+    currentPage.value = 1;
+});
+
 // Update Item panel state
 const updateItemModalOpen = ref(false);
 const updateItemData = ref(null);
@@ -283,23 +371,52 @@ function handleEditItem(item) {
     updateItemModalOpen.value = true;
 }
 
+function handleViewKardex(item) {
+    kardexModalData.value = item;
+    kardexModalOpen.value = true;
+}
+
 function onItemUpdated(updated) {
-    // Replace item in articulos with updated data (matching by Clave  HRAEI)
-    const clave = updated['Clave  HRAEI'];
-    const idx = articulos.value.findIndex(a => a['Clave  HRAEI'] === clave);
-    if (idx >= 0) {
-        articulos.value.splice(idx, 1, updated);
+    const updatedKey = getItemKey(updated);
+    let idx = articulos.value.findIndex(a => getItemKey(a) === updatedKey);
+    if (idx < 0) {
+        const clave = updated['Clave  HRAEI'];
+        idx = articulos.value.findIndex(a => a['Clave  HRAEI'] === clave);
     }
-    showNotificationToast('Información de equipo actualizada', 'success', 'update');
+    if (idx >= 0) {
+        articulos.value[idx] = { ...articulos.value[idx], ...updated };
+    }
+    showNotificationToast('Información de equipo actualizada correctamente', 'success', 'update');
+    
+    // Notificación push
+    const itemName = updated['Descripción del bien'] || updated['NOMBRE'] || 'Artículo';
+    sendPushNotification('✅ Artículo actualizado', {
+        body: `${itemName} ha sido actualizado correctamente`,
+        tag: 'item-updated'
+    });
+    
     updateItemModalOpen.value = false;
+    
+    // Also refresh from server to ensure we have the latest data
+    fetchArticulos();
 }
 
 const handleWizardSuccess = (detail) => {
     // Mostrar notificación si el wizard envía un mensaje
     if (detail && typeof detail === 'string') {
         showNotificationToast(detail, 'success');
+        // Notificación push para acción exitosa
+        sendPushNotification('✅ Operación exitosa', {
+            body: detail,
+            tag: 'operation-success'
+        });
     } else if (detail && detail.message) {
         showNotificationToast(detail.message, detail.type || 'success', detail.action || null);
+        // Notificación push
+        sendPushNotification(detail.type === 'error' ? '❌ Error' : '✅ Éxito', {
+            body: detail.message,
+            tag: detail.action || 'operation'
+        });
     }
     fetchArticulos();
 };
@@ -384,9 +501,9 @@ const fetchArticulos = async () => {
 
         // Detecta items nuevos y cambios de stock
         items.forEach(item => {
-            const itemId = item['Clave  HRAEI'];
+            const itemId = getItemKey(item);
             const previousData = currentSnapshot[itemId];
-            const currentStock = parseInt(item['TOTAL EXISTENCIAS']) || 0;
+            const currentStock = getItemStock(item);
 
             // Item nuevo (no existía antes en el snapshot)
             if (!previousData) {
@@ -403,8 +520,8 @@ const fetchArticulos = async () => {
 
         // Reordena: nuevos primero, luego todo lo demás
         const sortedItems = [...items].sort((a, b) => {
-            const aId = a['Clave  HRAEI'];
-            const bId = b['Clave  HRAEI'];
+            const aId = getItemKey(a);
+            const bId = getItemKey(b);
             const aIsNew = newItems.has(aId);
             const bIsNew = newItems.has(bId);
 
@@ -427,8 +544,8 @@ const fetchArticulos = async () => {
         const criticalStockItems = [];
 
         items.forEach(item => {
-            const stock = parseInt(item['TOTAL EXISTENCIAS']) || 0;
-            newSnapshot[item['Clave  HRAEI']] = {
+            const stock = getItemStock(item);
+            newSnapshot[getItemKey(item)] = {
                 stock,
                 timestamp: now
             };
@@ -437,7 +554,7 @@ const fetchArticulos = async () => {
             if (stock > 0 && stock <= 5) {
                 lowStockItems.push({
                     name: item['Descripción del bien'],
-                    code: item['Clave  HRAEI'],
+                    code: getItemKey(item),
                     stock
                 });
             }
@@ -446,7 +563,7 @@ const fetchArticulos = async () => {
             if (stock === 0) {
                 criticalStockItems.push({
                     name: item['Descripción del bien'],
-                    code: item['Clave  HRAEI']
+                    code: getItemKey(item)
                 });
             }
         });
@@ -468,6 +585,111 @@ const fetchArticulos = async () => {
             });
         }
 
+        // Verificar caducidad y notificar solo a administradores
+        if (isAdmin.value) {
+            const expiredItems = [];
+            const criticalExpirationItems = [];
+            const warningExpirationItems = [];
+            const noCaducidadItems = [];
+
+            items.forEach(item => {
+                const caducidad = item['CADUCIDAD'];
+                
+                // Contar items sin fecha de caducidad
+                if (!caducidad || caducidad === '' || caducidad === '—') {
+                    noCaducidadItems.push({
+                        name: item['Descripción del bien'],
+                        code: item['Clave  HRAEI']
+                    });
+                    return;
+                }
+
+                try {
+                    let fechaCaducidad = new Date(caducidad);
+                    if (isNaN(fechaCaducidad.getTime())) {
+                        // Intentar formato DD/MM/YYYY
+                        const parts = caducidad.split('/');
+                        if (parts.length === 3) {
+                            fechaCaducidad = new Date(parts[2], parts[1] - 1, parts[0]);
+                        }
+                    }
+
+                    if (isNaN(fechaCaducidad.getTime())) return;
+
+                    const hoy = new Date();
+                    const diferenciaDias = Math.ceil((fechaCaducidad - hoy) / (1000 * 60 * 60 * 24));
+
+                    const itemInfo = {
+                        name: item['Descripción del bien'],
+                        code: item['Clave  HRAEI'],
+                        caducidad: caducidad,
+                        diasRestantes: diferenciaDias
+                    };
+
+                    if (diferenciaDias < 0) {
+                        expiredItems.push(itemInfo);
+                    } else if (diferenciaDias <= 30) {
+                        criticalExpirationItems.push(itemInfo);
+                    } else if (diferenciaDias <= 90) {
+                        warningExpirationItems.push(itemInfo);
+                    }
+                } catch (e) {
+                    console.warn('Error parsing caducidad:', e);
+                }
+            });
+
+            // Notificar items sin fecha de caducidad (solo una vez por sesión)
+            const lastCaducidadWarning = localStorage.getItem('last_caducidad_warning');
+            const oneDay = 24 * 60 * 60 * 1000;
+            if (noCaducidadItems.length > 0 && (!lastCaducidadWarning || (Date.now() - parseInt(lastCaducidadWarning)) > oneDay)) {
+                const itemsList = noCaducidadItems.slice(0, 5).map(i => `• ${i.name} (${i.code})`).join('\n');
+                notificationStore.addNotification(
+                    '⚠️ Faltan fechas de caducidad',
+                    `${noCaducidadItems.length} artículo(s) SIN fecha de caducidad:\n${itemsList}${noCaducidadItems.length > 5 ? '\n+ ' + (noCaducidadItems.length - 5) + ' más...' : ''}`,
+                    'warning',
+                    { eventType: 'no_caducidad', items: noCaducidadItems.slice(0, 5) }
+                );
+                localStorage.setItem('last_caducidad_warning', Date.now().toString());
+            }
+
+            // Notificar items expirados o próximos a expirar
+            if (expiredItems.length > 0) {
+                const itemsList = expiredItems.slice(0, 5).map(i => `• ${i.name}\n  Caducó: ${i.caducidad} (hace ${Math.abs(i.diasRestantes)} días)`).join('\n');
+                notificationStore.addNotification(
+                    '🔴 ARTÍCULOS EXPIRADOS',
+                    `${expiredItems.length} artículo(s) YA EXPIRARON y no deben usarse:\n${itemsList}${expiredItems.length > 5 ? '\n+ ' + (expiredItems.length - 5) + ' más...' : ''}`,
+                    'critical',
+                    { eventType: 'expired', items: expiredItems }
+                );
+                // Notificación push para items expirados
+                sendPushNotification('🔴 ARTÍCULOS EXPIRADOS', {
+                    body: `${expiredItems.length} artículo(s) ya expiraron. Revisar inmediatamente.`,
+                    tag: 'expired-items'
+                });
+            } else if (criticalExpirationItems.length > 0) {
+                const itemsList = criticalExpirationItems.slice(0, 5).map(i => `• ${i.name}\n  Caduca: ${i.caducidad} (en ${i.diasRestantes} días)`).join('\n');
+                notificationStore.addNotification(
+                    '🟠 CADUCAN PRONTO',
+                    `${criticalExpirationItems.length} artículo(s) CADUCARAN en menos de 30 días:\n${itemsList}${criticalExpirationItems.length > 5 ? '\n+ ' + (criticalExpirationItems.length - 5) + ' más...' : ''}`,
+                    'warning',
+                    { eventType: 'critical', items: criticalExpirationItems }
+                );
+                // Notificación push
+                sendPushNotification('🟠 CADUCAN PRONTO', {
+                    body: `${criticalExpirationItems.length} artículo(s) caducan en menos de 30 días`,
+                    tag: 'expiring-soon'
+                });
+            } else if (warningExpirationItems.length > 0) {
+                const itemsList = warningExpirationItems.slice(0, 5).map(i => `• ${i.name}\n  Caduca: ${i.caducidad} (en ${i.diasRestantes} días)`).join('\n');
+                notificationStore.addNotification(
+                    '🟡 Atención por Caducidad',
+                    `${warningExpirationItems.length} artículo(s) CADUCARAN en 30-90 días:\n${itemsList}${warningExpirationItems.length > 5 ? '\n+ ' + (warningExpirationItems.length - 5) + ' más...' : ''}`,
+                    'info',
+                    { eventType: 'warning', items: warningExpirationItems }
+                );
+            }
+        }
+
         // Limpia animaciones después de 3 horas (10800000 ms) - solo para items NUEVOS
         if (newItems.size > 0) {
             const ANIMATION_DURATION = 3 * 60 * 60 * 1000; // 3 horas
@@ -487,18 +709,18 @@ const fetchArticulos = async () => {
 };
 
 const healthyCount = computed(() =>
-    articulos.value.filter(i => (parseInt(i['TOTAL EXISTENCIAS']) || 0) > 5).length
+    articulos.value.filter(i => getItemStock(i) > 5).length
 );
 
 const lowStockCount = computed(() =>
     articulos.value.filter(i => {
-        const s = parseInt(i['TOTAL EXISTENCIAS']) || 0;
+        const s = getItemStock(i);
         return s > 0 && s <= 5;
     }).length
 );
 
 const outOfStockCount = computed(() =>
-    articulos.value.filter(i => (parseInt(i['TOTAL EXISTENCIAS']) || 0) === 0).length
+    articulos.value.filter(i => getItemStock(i) === 0).length
 );
 
 const filteredArticulos = computed(() => {
@@ -507,21 +729,21 @@ const filteredArticulos = computed(() => {
     if (searchQuery.value.trim()) {
         const q = searchQuery.value.toLowerCase();
         result = result.filter(i =>
-            (i['Descripción del bien'] || '').toLowerCase().includes(q) ||
-            (i['Clave  HRAEI'] || '').toLowerCase().includes(q) ||
-            (i['MARCA'] || '').toLowerCase().includes(q)
+            getItemDescripcion(i).toLowerCase().includes(q) ||
+            getItemKey(i).toLowerCase().includes(q) ||
+            getItemMarca(i).toLowerCase().includes(q)
         );
     }
 
     if (filterType.value === 'healthy') {
-        result = result.filter(i => (parseInt(i['TOTAL EXISTENCIAS']) || 0) > 5);
+        result = result.filter(i => getItemStock(i) > 5);
     } else if (filterType.value === 'low') {
         result = result.filter(i => {
-            const s = parseInt(i['TOTAL EXISTENCIAS']) || 0;
+            const s = getItemStock(i);
             return s > 0 && s <= 5;
         });
     } else if (filterType.value === 'out') {
-        result = result.filter(i => (parseInt(i['TOTAL EXISTENCIAS']) || 0) === 0);
+        result = result.filter(i => getItemStock(i) === 0);
     }
 
     return result;
@@ -547,62 +769,11 @@ watch([searchQuery, filterType], () => {
     currentPage.value = 1;
 });
 
-// Funciones de escaneo
-const toggleScanMode = () => {
-    scanModeActive.value = !scanModeActive.value;
-    if (scanModeActive.value) {
-        // Enfoca el input cuando se activa modo escaneo
-        nextTick(() => {
-            searchInput.value?.focus();
-        });
-        showNotificationToast('Modo escaneo activado - Escanea código de barras', 'success');
-    } else {
-        showNotificationToast('Modo escaneo desactivado', 'info');
-    }
-};
-
 const handleSearchKeydown = (event) => {
-    if (!scanModeActive.value) return;
-
-    // Limpiar timeout anterior si existe
-    if (scanTimeout) clearTimeout(scanTimeout);
-
-    // Si es Enter, buscar inmediatamente
+    // Buscar por Enter key
     if (event.key === 'Enter') {
         event.preventDefault();
-        performScanSearch();
-        return;
-    }
-
-    // Si hay texto, esperar a que deje de escribir para buscar automáticamente
-    if (searchQuery.value.trim()) {
-        scanTimeout = setTimeout(() => {
-            performScanSearch();
-        }, 1500);
-    }
-};
-
-const performScanSearch = () => {
-    const query = searchQuery.value.trim().toLowerCase();
-
-    if (!query) return;
-
-    // Buscar por clave (código de barras) o descripción
-    const found = articulos.value.find(item =>
-        (item['Clave  HRAEI'] || '').toLowerCase() === query ||
-        (item['Clave  HRAEI'] || '').toLowerCase().includes(query)
-    );
-
-    if (found) {
-        showNotificationToast(`Artículo encontrado: ${found['Descripción del bien']}`, 'success');
-        handleEditItem(found);
-        searchQuery.value = '';
-        scanModeActive.value = true;
-        nextTick(() => {
-            searchInput.value?.focus();
-        });
-    } else {
-        showNotificationToast('Artículo no encontrado', 'warning');
+        // Aquí puede ir lógica de búsqueda si se necesita
     }
 };
 
@@ -697,10 +868,10 @@ const performScanSearch = () => {
 .btn-decommission {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 11px 20px;
+    gap: 10px;
+    padding: 12px 22px;
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     color: #e2e8f0;
     font-weight: 700;
     font-size: 0.9rem;
@@ -710,6 +881,8 @@ const performScanSearch = () => {
     z-index: 1;
     border-radius: 12px;
     overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .btn-warehouse-transfer {
@@ -855,21 +1028,26 @@ const performScanSearch = () => {
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    background: rgba(30, 41, 59, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
     cursor: pointer;
     transition: all 0.25s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    padding: 0;
+    flex-shrink: 0;
 }
 
-.btn-refresh:hover {
-    background: rgba(30, 41, 59, 0.7);
+.btn-refresh:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.5);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 4px 12px rgba(59, 130, 250, 0.2);
 }
 
 .btn-refresh:disabled {
-    opacity: 0.5;
+    opacity: 0.6;
     cursor: not-allowed;
     transform: none;
 }
@@ -971,50 +1149,44 @@ const performScanSearch = () => {
     outline: none;
 }
 
-.scan-btn {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
+.view-toggle-group {
+    display: flex;
+    gap: 6px;
+    background: rgba(15, 23, 42, 0.5);
+    padding: 4px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-view-toggle {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 8px;
     color: #94a3b8;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     padding: 0;
+    flex-shrink: 0;
 }
 
-.scan-btn:hover {
-    background: rgba(59, 130, 246, 0.1);
+.btn-view-toggle:hover {
+    background: rgba(59, 130, 246, 0.12);
     border-color: rgba(59, 130, 246, 0.3);
     color: #60a5fa;
 }
 
-.scan-btn.active {
-    background: rgba(6, 182, 212, 0.15);
-    border-color: #06b6d4;
-    color: #06b6d4;
-    animation: pulse-scan 1.5s ease-in-out infinite;
-}
-
-@keyframes pulse-scan {
-
-    0%,
-    100% {
-        opacity: 1;
-        box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.4);
-    }
-
-    50% {
-        opacity: 0.8;
-        box-shadow: 0 0 0 6px rgba(6, 182, 212, 0.1);
-    }
+.btn-view-toggle.active {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.5);
+    color: #60a5fa;
+    box-shadow: 0 0 8px rgba(96, 165, 250, 0.2);
 }
 
 .status-summary {

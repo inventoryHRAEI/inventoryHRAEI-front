@@ -11,7 +11,7 @@
                         </svg>
                     </button>
                     <span>Gestión de Órdenes de Entrada</span>
-                    <button class="btn-create-order" @click="goToCreateOrder">
+                    <button v-if="canCreateOrder" class="btn-create-order" @click="goToCreateOrder">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -261,7 +261,37 @@
                 :empty-state-message="searchTerm || filterDate || filterService ? 'No se encontraron órdenes con los filtros seleccionados.' : 'Comienza creando una nueva orden.'"
                 @edit="openEditModal" @delete="deleteOrder" @deleteMultiple="handleDeleteMultipleWithModal"
                 @create="goToCreateOrder" @openHistory="openDocumentModal" @upload="openUploadModal" />
+            
+            <!-- Load more button for pagination -->
+            <div v-if="ordersPageHasMore" style="padding: 20px; text-align: center;">
+                <button @click="loadMoreOrders" :disabled="loading" class="btn-load-more">
+                    <span v-if="!loading">Cargar más órdenes antiguas</span>
+                    <span v-else class="loading-text">Cargando...</span>
+                </button>
+                <p v-if="ordersPageTotal" style="font-size: 12px; color: #888; margin-top: 8px;">
+                    Mostrando {{ allOrders.length }} de {{ ordersPageTotal }} órdenes
+                </p>
+            </div>
         </ActionPanel>
+
+        <!-- Modal: Wizard de creación de orden de entrada -->
+        <Teleport to="body">
+            <Transition name="modal-fade">
+                <div v-if="showWizardModal" class="wizard-modal-overlay" @click.self="requestCloseWizard">
+                    <div class="wizard-modal-container">
+                        <button class="wizard-modal-close" @click="requestCloseWizard" aria-label="Cerrar">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                        <div class="wizard-modal-content">
+                            <OpEntrada v-if="showWizardModal" @created="onWizardCreated" @cancel="closeWizardImmediately" />
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
 
         <!-- Modal: edición única (no permite múltiples) + tabs de versiones (ramas) -->
         <ModalBase :open="showEditModal" @close="handleModalClose" @close-request="handleModalClose" :maxWidth="1100"
@@ -694,6 +724,8 @@ import { ref, computed, onMounted, onBeforeUnmount, watch, defineAsyncComponent 
 import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
 import { useRouter, useRoute } from 'vue-router'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
+import { usePermissions } from '@/composables/usePermissions.js'
+import { authedFetch } from '@/utils/api.js'
 import ActionPanel from '@/components/ActionPanel.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
 import DatePicker from '@/components/DatePicker.vue'
@@ -704,11 +736,15 @@ import PdfViewer from '@/components/PdfViewer.vue'
 import BlobPdfViewer from '@/components/BlobPdfViewer.vue'
 import { confirmDelete, showSuccess } from '@/utils/sweetAlertConfig'
 import Swal from 'sweetalert2'
+import { useCloseConfirmation } from '@/composables/useCloseConfirmation.js'
 import { darkThemeConfig } from '@/utils/sweetAlertConfig'
 const OpEntrada = defineAsyncComponent(() => import('@/views/operations/OpEntradaNew.vue'))
 
 // Mock helper para versiones de PDF (se puede reemplazar por API real)
 import { mockFetchVersions } from '@/utils/mockPDFData'
+
+// Permisos del usuario
+const { canCreateOrder, canEditOrder, canDeleteOrder, canDownloadOrderHistory } = usePermissions()
 
 const router = useRouter()
 
@@ -768,6 +804,9 @@ const allOrders = ref([])
 const editExternalOffsetTop = ref(0)
 const editExternalOffsetRight = ref(0)
 
+// Estado para el modal del wizard de creación de órdenes
+const showWizardModal = ref(false)
+
 // Estado y helpers para modal de documento (versiones / preview)
 const showDocModal = ref(false)
 const docVersions = ref([])
@@ -798,6 +837,20 @@ const docPreviewHtml = ref('')
 const isUploading = ref(false)
 const dragOverActive = ref(false)
 const uploadSuccessData = ref(null)
+
+// agrega token como parámetro query si existe (para iframes/imgs)
+function withAuthQuery(url) {
+    try {
+        const token = localStorage.getItem('token')
+        if (token) {
+            const sep = url.includes('?') ? '&' : '?'
+            return `${url}${sep}token=${encodeURIComponent(token)}`
+        }
+    } catch (e) {
+        // ignore
+    }
+    return url
+}
 
 function resetUploadState() {
     uploadFile.value = null
@@ -1306,15 +1359,16 @@ function selectDocVersion(v) {
         return
     }
     // Prefer item's explicit previewUrl (covers snapshot versions), otherwise use default preview endpoint
-    // For mobile viewers, route via backend proxy to avoid CORS/session issues
+    // Always append token query param so iframe/img requests succeed
     if (isMobileView.value) {
         if (v.version) {
-            currentPreviewUrl.value = `/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&version=${encodeURIComponent(v.version)}`
+            currentPreviewUrl.value = withAuthQuery(`/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&version=${encodeURIComponent(v.version)}`)
         } else {
-            currentPreviewUrl.value = `/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&id=${encodeURIComponent(v.id)}`
+            currentPreviewUrl.value = withAuthQuery(`/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&id=${encodeURIComponent(v.id)}`)
         }
     } else {
-        currentPreviewUrl.value = v.previewUrl || `/api/ops/entrada/${encodeURIComponent(folio)}/pdfs/${v.id}/preview`
+        const base = v.previewUrl || `/api/ops/entrada/${encodeURIComponent(folio)}/pdfs/${v.id}/preview`
+        currentPreviewUrl.value = withAuthQuery(base)
     }
     selectedPdfId.value = v.id
 }
@@ -1328,14 +1382,14 @@ function selectSignedDocument(d) {
     currentPreviewType.value = d.contentType || ''
 
     // Build preview URL (backend already provides absolute/relative previewUrl)
-    const url = d.previewUrl || d.downloadUrl || (d.filePath ? `/api${d.filePath}` : null)
+    let url = d.previewUrl || d.downloadUrl || (d.filePath ? `/api${d.filePath}` : null)
     if (!url) {
         currentPreviewUrl.value = ''
         return
     }
 
-    // For mobile, route through proxy only for generated PDFs/versions; uploaded files are served under /api/uploads
-    currentPreviewUrl.value = url
+    // append token so embedded requests are authenticated
+    currentPreviewUrl.value = withAuthQuery(url)
 }
 
 function playDownloadAnimation(id) {
@@ -1613,8 +1667,8 @@ const activeFiltersList = computed(() => {
     if (filterModeloActive.value) list.push({ key: 'modelo', label: 'Modelo', type: 'input', bindings: { modelValue: filterModelo, 'onUpdate:modelValue': val => filterModelo.value = val, class: 'control filter-input', placeholder: 'Ej. MX40...' } })
     if (filterUbicacionActive.value) list.push({ key: 'ubicacion', label: 'Ubicación', type: 'input', bindings: { modelValue: filterUbicacion, 'onUpdate:modelValue': val => filterUbicacion.value = val, class: 'control filter-input', placeholder: 'Ej. UCIA...' } })
     if (filterClaveHRAEIActive.value) list.push({ key: 'claveHRAEI', label: 'Clave HRAEI', type: 'input', bindings: { modelValue: filterClaveHRAEI, 'onUpdate:modelValue': val => filterClaveHRAEI.value = val, class: 'control filter-input', placeholder: 'Ej. COMODATO...' } })
-    if (filterCantidadMinActive.value) list.push({ key: 'cantidadMin', label: 'Cantidad mínima', type: 'input', bindings: { modelValue: filterCantidadMin, 'onUpdate:modelValue': val => filterCantidadMin.value = val, class: 'control filter-input', placeholder: 'Mínimo...', type: 'number' } })
-    if (filterCantidadMaxActive.value) list.push({ key: 'cantidadMax', label: 'Cantidad máxima', type: 'input', bindings: { modelValue: filterCantidadMax, 'onUpdate:modelValue': val => filterCantidadMax.value = val, class: 'control filter-input', placeholder: 'Máximo...', type: 'number' } })
+    if (filterCantidadMinActive.value) list.push({ key: 'cantidadMin', label: 'Cantidad mínima', type: 'input-number', bindings: { modelValue: filterCantidadMin, 'onUpdate:modelValue': val => filterCantidadMin.value = val, class: 'control filter-input', placeholder: 'Mínimo...', inputType: 'number' } })
+     if (filterCantidadMaxActive.value) list.push({ key: 'cantidadMax', label: 'Cantidad máxima', type: 'input-number', bindings: { modelValue: filterCantidadMax, 'onUpdate:modelValue': val => filterCantidadMax.value = val, class: 'control filter-input', placeholder: 'Máximo...', inputType: 'number' } })
     return list
 })
 
@@ -1745,8 +1799,34 @@ function formatDate(dateStr) {
 }
 
 function goToCreateOrder() {
-    console.debug('[OrderManagement] navigating to op-entrada')
-    navigateAndRefresh(router, { name: 'op-entrada', query: { from: 'order-management', t: Date.now() } })
+    console.debug('[OrderManagement] opening create order modal')
+    showWizardModal.value = true
+}
+
+// Manejar cuando se crea una orden exitosamente desde el wizard
+async function onWizardCreated() {
+    console.debug('[OrderManagement] order created, closing modal and refreshing')
+    showWizardModal.value = false
+    // Recargar la lista de órdenes
+    await reloadOrdersFromServer()
+}
+
+const { confirmAndClose } = useCloseConfirmation({
+    title: '¿Cerrar este wizard?',
+    message: 'Se perderán los cambios no guardados. ¿Deseas cerrar de todas formas?',
+    confirmText: 'Sí, cerrar',
+    cancelText: 'Seguir editando',
+    icon: 'warning'
+})
+
+function requestCloseWizard() {
+    confirmAndClose(() => {
+        showWizardModal.value = false
+    })
+}
+
+function closeWizardImmediately() {
+    showWizardModal.value = false
 }
 
 function goToDashboard() {
@@ -1764,6 +1844,17 @@ function closeFiltersDropdown() {
  * y posiciona en la versión más reciente
  */
 async function openEditModal(order) {
+    // Verificar permisos antes de permitir edición
+    if (!canEditOrder.value) {
+        Swal.fire({
+            title: 'Acceso denegado',
+            text: 'No tienes permisos para editar órdenes. Contacta al administrador.',
+            icon: 'warning',
+            confirmButtonText: 'Aceptar'
+        })
+        return
+    }
+    
     editingOrder.value = JSON.parse(JSON.stringify(order))
 
     // Ajustar offsets específicos para edición desde la fila de acciones
@@ -2246,16 +2337,30 @@ function toggleLegend() {
     showLegend.value = !showLegend.value
 }
 
+// Pagination state
+const ordersPageOffset = ref(0)
+const ordersPageLimit = ref(100)
+const ordersPageTotal = ref(0)
+const ordersPageHasMore = computed(() => (ordersPageOffset.value + ordersPageLimit.value) < ordersPageTotal.value)
+
 async function reloadOrdersFromServer() {
     loading.value = true
+    ordersPageOffset.value = 0
     try {
-        const res = await fetch('/api/ops/entrada/list', { cache: 'no-store' })
+        const query = new URLSearchParams({
+            offset: ordersPageOffset.value,
+            limit: ordersPageLimit.value
+        })
+        const res = await fetch(`/api/ops/entrada/list?${query}`, { cache: 'no-store' })
         if (!res.ok) {
             allOrders.value = []
+            ordersPageTotal.value = 0
             return
         }
         const body = await res.json()
         const items = Array.isArray(body.items) ? body.items : []
+        ordersPageTotal.value = body.total || 0
+        
         allOrders.value = items.map((wrapper) => {
             const orden = wrapper.orden || {}
             const orderItems = Array.isArray(wrapper.items) ? wrapper.items : []
@@ -2298,6 +2403,84 @@ async function reloadOrdersFromServer() {
     } catch (e) {
         console.warn('Error recargando órdenes:', e)
         allOrders.value = []
+        ordersPageTotal.value = 0
+    } finally {
+        loading.value = false
+    }
+}
+
+async function loadMoreOrders() {
+    if (!ordersPageHasMore.value) return
+    loading.value = true
+    try {
+        const newOffset = ordersPageOffset.value + ordersPageLimit.value
+        const query = new URLSearchParams({
+            offset: newOffset,
+            limit: ordersPageLimit.value
+        })
+        const res = await fetch(`/api/ops/entrada/list?${query}`, { cache: 'no-store' })
+        if (!res.ok) return
+        
+        const body = await res.json()
+        const items = Array.isArray(body.items) ? body.items : []
+        
+        const newOrders = items.map((wrapper) => {
+            const orden = wrapper.orden || {}
+            const orderItems = Array.isArray(wrapper.items) ? wrapper.items : []
+            const equiposEntrada = orderItems.map(item => ({
+                id: `${item.orden_folio}-${item.line}`,
+                line: item.line,
+                tipo: item.tipo || 'N/A',
+                cantidad: item.cantidad || 1,
+                descripcion: item.descripcion || 'N/A',
+                marca: item.marca || 'N/A',
+                modelo: item.modelo || 'N/A',
+                serie: item.serie || 'N/A',
+                lote: item.lote || 'N/A',
+                referencia: item.referencia || 'N/A',
+                ubicacion: item.ubicacion || 'N/A',
+                claveHRAEI: item.clave_hraei || 'N/A'
+            }))
+            return {
+                id: orden.folio || orden.id,
+                folio: orden.folio || 'N/A',
+                nombreSolicitante: orden.nombre_solicitante || 'N/A',
+                servicio: orden.servicio || 'N/A',
+                especialidad: orden.especialidad || 'N/A',
+                fecha: orden.fecha || 'N/A',
+                horaInicio: orden.hora_inicio || 'N/A',
+                horaTermino: orden.hora_termino || 'N/A',
+                motivoEntrada: orden.motivo_entrada || 'N/A',
+                descripcion: orden.descripcion || 'N/A',
+                observaciones: orden.observaciones || 'N/A',
+                observacionesImg: orden.observaciones_img_path || null,
+                nombreIngeniero: orden.nombre_ingeniero || 'N/A',
+                equiposEntrada,
+                estado: 'completado',
+                documentCount: 0
+            }
+        })
+        
+        allOrders.value.push(...newOrders)
+        ordersPageOffset.value = newOffset
+        ordersPageTotal.value = body.total || 0
+        
+        // Cargar conteos de documentos para las nuevas órdenes
+        await Promise.all(newOrders.map(async (order) => {
+            try {
+                const res = await fetch(`/api/ops/entrada/${encodeURIComponent(order.folio)}/signed-documents`)
+                if (res.ok) {
+                    const json = await res.json()
+                    const count = (json && json.documents && Array.isArray(json.documents)) ? json.documents.length : 0
+                    order.documentCount = count
+                }
+            } catch (e) {
+                console.warn(`Error loading documents for ${order.folio}:`, e)
+                order.documentCount = 0
+            }
+        }))
+    } catch (e) {
+        console.warn('Error loading more orders:', e)
     } finally {
         loading.value = false
     }
@@ -2350,6 +2533,17 @@ function downloadExcelWithData(order) {
 }
 
 async function deleteOrder(orderId) {
+    // Verificar permisos antes de permitir eliminación
+    if (!canDeleteOrder.value) {
+        Swal.fire({
+            title: 'Acceso denegado',
+            text: 'No tienes permisos para eliminar órdenes. Contacta al administrador.',
+            icon: 'warning',
+            confirmButtonText: 'Aceptar'
+        })
+        return
+    }
+    
     const result = await confirmDelete('¿Estás seguro de que deseas eliminar esta orden? Esta acción no se puede deshacer.')
 
     if (result.isConfirmed) {
@@ -5612,5 +5806,146 @@ onMounted(() => {
         transform: scale(1.02);
         box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
     }
+}
+
+/* Wizard Modal Styles */
+.wizard-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 20px;
+}
+
+.wizard-modal-container {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    max-height: 92vh;
+    background: #0a0f1a;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: wizardModalIn 0.3s ease-out;
+}
+
+@keyframes wizardModalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.wizard-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.15);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wizard-modal-close:hover {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+.wizard-modal-close svg {
+    stroke: rgba(239, 68, 68, 0.9);
+}
+
+.wizard-modal-content {
+    height: 92vh;
+    max-height: 92vh;
+    overflow-y: auto;
+}
+
+.wizard-modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.wizard-modal-content::-webkit-scrollbar-track {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.wizard-modal-content::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 4px;
+}
+
+.wizard-modal-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+/* Modal fade transition */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+
+@media (max-width: 768px) {
+    .wizard-modal-overlay {
+        padding: 10px;
+    }
+    
+    .wizard-modal-container {
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+    
+    .wizard-modal-content {
+        max-height: 95vh;
+    }
+}
+
+/* Load more button styles */
+.btn-load-more {
+    padding: 12px 28px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(99, 102, 241, 0.15));
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    color: rgba(59, 130, 246, 0.9);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-load-more:hover:not(:disabled) {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(99, 102, 241, 0.25));
+    border-color: rgba(59, 130, 246, 0.5);
+    color: rgba(59, 130, 246, 1);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-load-more:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-load-more .loading-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 </style>

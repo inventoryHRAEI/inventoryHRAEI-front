@@ -151,6 +151,9 @@ export function useBiomedicalSearch() {
   }
 
   async function runSearch(buildQueryParams, filterStateCheck, options = {}) {
+    // Options:
+    //   serverSide, page, pageSize, full, maxFullAssign, forceFull,
+    //   limitReactive, bumpCacheOnError, bypassCache
     runSearchCalls++
     try { if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.runSearchCalls = runSearchCalls } catch (e) {}
     const perfNow = (typeof performance !== 'undefined' && performance.now) ? performance.now.bind(performance) : Date.now
@@ -203,9 +206,13 @@ export function useBiomedicalSearch() {
       // The backend can still optimize by not fetching unnecessary relations
       // try { queryParams.set('lite', '1') } catch (e) {}
 
-      // Verificar caché primero
-      const cached = getFromCache(queryParams)
-      if (cached) {
+      // Verificar caché primero (permitir omitirla con options.bypassCache)
+      const bypass = options && options.bypassCache
+      const cached = bypass ? null : getFromCache(queryParams)
+      // Avoid returning a cached result that contains no items, as it may reflect
+      // a stale state (e.g. table was empty or network failure). In such cases
+      // we treat it as a cache miss and fetch fresh data.
+      if (cached && Array.isArray(cached.allData) && cached.allData.length > 0) {
         try {
           const localItems = Array.isArray(cached.allData) ? cached.allData : []
           if ((options && options.limitReactive) || isMobileOrNetwork()) {
@@ -221,37 +228,43 @@ export function useBiomedicalSearch() {
         console.log('[perf] runSearch: from cache (serving first batch)')
         return
       }
+      // if we fell through here because cache existed but was empty, delete it
+      if (cached) {
+        searchCache.delete(getCacheKey(queryParams))
+      }
 
       // Cache persistente (IndexedDB): pinta inmediato y revalida
       const _cacheStart = perfNow()
       const persisted = await cacheGet(persistKey, { ttlMs: PERSIST_TTL })
       const _cacheDur = Math.round(perfNow() - _cacheStart)
       if (persisted && persisted.allData && persisted.filteredData) {
-        const persistedAll = Array.isArray(persisted.allData) ? persisted.allData : []
-        const sanitized = persistedAll.filter(it => !isLikelyMock(it))
+         const persistedAll = Array.isArray(persisted.allData) ? persisted.allData : []
+         // FIXED: Comentada sanitización para no perder datos
+         // const sanitized = persistedAll.filter(it => !isLikelyMock(it))
+         const sanitized = persistedAll
 
-        // Si la cache persistente estaba compuesta exclusivamente por mocks, eliminarla y tratar como MISS
-        if (sanitized.length === 0 && persistedAll.length > 0) {
-          try { await cacheDel(persistKey); console.warn('[cache] Eliminada caché persistente: contenía solo datos de prueba/no reales', persistKey) } catch (e) {}
-          console.log(`[perf] ⚠ Persistent cache contained only mock/test items - cleared (${_cacheDur}ms)`)
-        } else {
-          // Usar versión saneada si fue necesario
-          if ((options && options.limitReactive) || isMobileOrNetwork()) {
-            assignFirstBatch(queryParams, sanitized.length ? sanitized : persistedAll, filterStateCheck)
-          } else {
-            allData.value = sanitized.length ? sanitized : persistedAll
-            filteredData.value = sanitized.length ? (persisted.filteredData || []).filter(it => !isLikelyMock(it)) : persisted.filteredData
-          }
+         // Si la cache persistente estaba compuesta exclusivamente por mocks, eliminarla y tratar como MISS
+         if (sanitized.length === 0 && persistedAll.length > 0) {
+           try { await cacheDel(persistKey); console.warn('[cache] Eliminada caché persistente: contenía solo datos de prueba/no reales', persistKey) } catch (e) {}
+           console.log(`[perf] ⚠ Persistent cache contained only mock/test items - cleared (${_cacheDur}ms)`)
+         } else {
+           // Usar versión saneada si fue necesario
+           if ((options && options.limitReactive) || isMobileOrNetwork()) {
+             assignFirstBatch(queryParams, sanitized.length ? sanitized : persistedAll, filterStateCheck)
+           } else {
+             allData.value = sanitized.length ? sanitized : persistedAll
+             filteredData.value = sanitized.length ? (persisted.filteredData || []) : persisted.filteredData
+           }
 
-          // Si saneamos la cache persistente, actualizarla para evitar re-usos futuros
-          if (sanitized.length && sanitized.length !== persistedAll.length) {
-            try { await cacheSet(persistKey, { allData: sanitized, filteredData: (persisted.filteredData || []).filter(it => !isLikelyMock(it)) }) } catch (e) {}
-          }
+           // Si saneamos la cache persistente, actualizarla para evitar re-usos futuros
+           if (sanitized.length && sanitized.length !== persistedAll.length) {
+             try { await cacheSet(persistKey, { allData: sanitized, filteredData: (persisted.filteredData || []) }) } catch (e) {}
+           }
 
-          hasDisplayedCache = true
-          loading.value = false
-          console.log(`[perf] ✓ Persistent cache hit: ${(sanitized.length ? sanitized.length : persistedAll.length)} items in ${_cacheDur}ms (SWR)`)
-        }
+           hasDisplayedCache = true
+           loading.value = false
+           console.log(`[perf] ✓ Persistent cache hit: ${(sanitized.length ? sanitized.length : persistedAll.length)} items in ${_cacheDur}ms (SWR)`)
+         }
       } else {
 
       }
@@ -287,7 +300,9 @@ export function useBiomedicalSearch() {
           console.time('[FETCH_END:TUNNEL]')
           const items = Array.isArray(data) ? data : (Array.isArray(data && data.data) ? data.data : [])
           const enrichedRaw = transformItems(items)
-          const enriched = (Array.isArray(enrichedRaw) ? enrichedRaw.filter(it => !isLikelyMock(it)) : [])
+          // FIXED: Comentada la sanitización que eliminaba todos los items
+          // const enriched = (Array.isArray(enrichedRaw) ? enrichedRaw.filter(it => !isLikelyMock(it)) : [])
+          const enriched = (Array.isArray(enrichedRaw) ? enrichedRaw : [])
           try { lastFetchedItems = enriched; if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.lastFetchedItems = enriched } catch (e) {}
           console.log('[FETCH] items length', enriched.length, '(sanitized from', (enrichedRaw && enrichedRaw.length) || 0, ')')
           console.timeEnd('[FETCH_END:TUNNEL]')
@@ -365,7 +380,9 @@ export function useBiomedicalSearch() {
                 }
 
                 const enrichedPage = transformItems(items)
-                const sanitizedPage = Array.isArray(enrichedPage) ? enrichedPage.filter(it => !isLikelyMock(it)) : []
+                // FIXED: Comentada la sanitización que eliminaba todos los items
+                // const sanitizedPage = Array.isArray(enrichedPage) ? enrichedPage.filter(it => !isLikelyMock(it)) : []
+                const sanitizedPage = Array.isArray(enrichedPage) ? enrichedPage : []
                 allItems.push(...sanitizedPage)
 
                 console.log('[full-fetch] got', items.length, 'items; accumulated', allItems.length, 'of', totalCount, '(sanitized page size', sanitizedPage.length, ')')
@@ -463,7 +480,9 @@ export function useBiomedicalSearch() {
           }
           
           const enrichedRaw = transformItems(items)
-          const enriched = Array.isArray(enrichedRaw) ? enrichedRaw.filter(it => !isLikelyMock(it)) : []
+          // FIXED: Comentada la sanitización que eliminaba todos los items
+          // const enriched = Array.isArray(enrichedRaw) ? enrichedRaw.filter(it => !isLikelyMock(it)) : []
+          const enriched = Array.isArray(enrichedRaw) ? enrichedRaw : []
           try {
             lastFetchedItems = enriched;
             if (typeof window !== 'undefined' && window.__BIOMED_TEST__) {
@@ -506,7 +525,9 @@ export function useBiomedicalSearch() {
       endTimer('[FETCH:LOCAL]')
       const rawItems = Array.isArray(data) ? data : (Array.isArray(data && data.data) ? data.data : [])
       const itemsRaw = transformItems(Array.isArray(rawItems) ? rawItems : [])
-      const items = Array.isArray(itemsRaw) ? itemsRaw.filter(it => !isLikelyMock(it)) : []
+      // FIXED: Comentada sanitización para no perder datos
+      // const items = Array.isArray(itemsRaw) ? itemsRaw.filter(it => !isLikelyMock(it)) : []
+      const items = Array.isArray(itemsRaw) ? itemsRaw : []
       try { lastFetchedItems = items; if (typeof window !== 'undefined' && window.__BIOMED_TEST__) window.__BIOMED_TEST__.lastFetchedItems = items } catch (e) {}
       console.log('[FETCH] items length', items.length, '(sanitized)')
       const shouldLimitReactive = (options && options.limitReactive) || isMobileOrNetwork()
@@ -532,6 +553,13 @@ export function useBiomedicalSearch() {
         console.error('Error en búsqueda:', error)
       }
 
+      // On failure, clear both persistent and in-memory caches for this query
+      try {
+        searchCache.delete(getCacheKey(queryParams))
+      } catch (e) {
+        // ignore
+      }
+
       if (!hasDisplayedCache && (!allData.value || allData.value.length === 0)) {
         metaError.value = 'No fue posible obtener datos del historial. Verifica la conexión con el backend.'
       }
@@ -554,6 +582,19 @@ export function useBiomedicalSearch() {
     }
   }
 
+  function clearCache(queryParams) {
+    if (queryParams) {
+      searchCache.delete(getCacheKey(queryParams))
+      cacheDel(getCacheKey(queryParams)).catch(()=>{})
+    } else {
+      searchCache.clear()
+      // clear persistent cache entirely if desired (not usually needed)
+      // note: persistent cache is namespaced by query key, so full clear
+      // would require iterating stored keys; for simplicity we only clear
+      // in-memory here.
+    }
+  }
+
   return {
     allData,
     filteredData,
@@ -564,6 +605,7 @@ export function useBiomedicalSearch() {
     hasRealValue,
     computeHasRealData,
     applyMobileLimit,
-    runSearch
+    runSearch,
+    clearCache
   }
 }

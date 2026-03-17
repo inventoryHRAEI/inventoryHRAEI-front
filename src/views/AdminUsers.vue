@@ -44,8 +44,12 @@
                     <span class="stat-number admin">{{ adminCount }}</span>
                 </div>
                 <div class="stat-card">
-                    <span class="stat-label">Usuarios Activos</span>
-                    <span class="stat-number">{{ users.length - adminCount }}</span>
+                    <span class="stat-label">Privilegiados</span>
+                    <span class="stat-number privileged">{{ privilegedCount }}</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Usuarios Regulares</span>
+                    <span class="stat-number">{{ userCount }}</span>
                 </div>
             </div>
 
@@ -401,6 +405,8 @@ const permissionLevels = [
 
 // Computadas
 const adminCount = computed(() => users.value.filter(u => u.role === 'admin').length)
+const privilegedCount = computed(() => users.value.filter(u => u.role === 'privileged').length)
+const userCount = computed(() => users.value.filter(u => u.role === 'user').length)
 
 // Métodos
 function goBack() {
@@ -582,13 +588,14 @@ async function savePermissions() {
         })
 
         const token = localStorage.getItem('token')
+        const { sanitizeObject } = await import('@/utils/sanitizer.js')
         const res = await fetch('/api/auth/user-permission-levels', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(perms)
+            body: JSON.stringify(sanitizeObject(perms))
         })
 
         if (!res.ok) {
@@ -608,43 +615,76 @@ async function savePermissions() {
     }
 }
 
+// Roles disponibles en el sistema
+const ROLES = {
+    admin: { label: 'Administrador', description: 'Acceso completo a todas las funciones del sistema', color: '#f59e0b' },
+    privileged: { label: 'Usuario Privilegiado', description: 'Puede editar registros pero no eliminar ni gestionar usuarios', color: '#8b5cf6' },
+    user: { label: 'Usuario Regular', description: 'Solo puede crear y consultar información', color: '#3b82f6' }
+}
+
 async function changeRole(user) {
     try {
-        const newRole = user.role === 'admin' ? 'user' : 'admin'
-        const action = newRole === 'admin' ? 'promover' : 'degradar'
-
+        // Mostrar opciones de roles usando un select/custom
+        const { value: newRole } = await Swal.fire({
+            title: 'Cambiar Rol de Usuario',
+            html: `
+                <div style="text-align: left; margin-bottom: 20px;">
+                    <p style="margin-bottom: 15px;"><strong>Usuario:</strong> ${user.nombre}</p>
+                    <p style="margin-bottom: 20px;"><strong>Rol actual:</strong> <span class="role-badge-${user.role}">${ROLES[user.role]?.label || user.role}</span></p>
+                </div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Seleccionar nuevo rol:</label>
+                <select id="role-select" class="swal2-select" style="padding: 10px; font-size: 14px;">
+                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuario Regular - Solo consulta y creación</option>
+                    <option value="privileged" ${user.role === 'privileged' ? 'selected' : ''}>Usuario Privilegiado - Puede editar</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador - Acceso completo</option>
+                </select>
+                <div id="role-description" style="margin-top: 15px; padding: 12px; background: #f3f4f6; border-radius: 8px; font-size: 13px; color: #6b7280;">
+                    ${ROLES[user.role === 'admin' ? 'user' : user.role === 'privileged' ? 'admin' : 'privileged'].description}
+                </div>
+            `,
+            preConfirm: () => {
+                return document.getElementById('role-select').value
+            },
+            didOpen: () => {
+                const select = document.getElementById('role-select')
+                const desc = document.getElementById('role-description')
+                select.addEventListener('change', (e) => {
+                    desc.textContent = ROLES[e.target.value].description
+                    desc.style.borderLeft = `4px solid ${ROLES[e.target.value].color}`
+                })
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Cambiar Rol',
+            cancelButtonText: 'Cancelar',
+            width: '500px'
+        })
+        
+        if (!newRole || newRole === user.role) return
+        
         // Validar límite de administradores
-        if (newRole === 'admin' && adminCount.value >= 3) {
+        if (newRole === 'admin' && adminCount.value >= 3 && user.role !== 'admin') {
             showError('Límite alcanzado', 'No se pueden tener más de 3 administradores en el sistema. Revoca acceso a un administrador existente primero.')
             return
         }
-
-        const confirm = await confirmDelete(
-            'Cambiar Rol',
-            `¿Deseas ${action} a ${user.nombre} a ${newRole === 'admin' ? 'Administrador' : 'Usuario'}?`,
-            1,
-            'Sí, cambiar',
-            'Cancelar'
-        )
-
-        if (!confirm.isConfirmed) return
-
+        
+        const action = 'cambiar'
         showLoading()
         const token = localStorage.getItem('token')
+        const { sanitizeObject } = await import('@/utils/sanitizer.js')
         const res = await fetch(`/api/auth/users/${user.id}/role`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ role: newRole })
+            body: JSON.stringify(sanitizeObject({ role: newRole }))
         })
 
         closeSwalModal()
 
         if (!res.ok) throw new Error('Error actualizando rol')
 
-        showSuccess('Éxito', `Usuario ${action}do a ${newRole === 'admin' ? 'Administrador' : 'Usuario'}`)
+        showSuccess('Éxito', `Rol actualizado a ${ROLES[newRole].label}`)
         await loadUsers()
     } catch (e) {
         showError('Error', e.message || 'No se pudo actualizar el rol')
@@ -1003,6 +1043,12 @@ onMounted(() => {
     background: rgba(249, 115, 22, 0.15);
     color: #fbbf24;
     border-color: rgba(249, 115, 22, 0.3);
+}
+
+.role-badge.privileged {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+    border-color: rgba(139, 92, 246, 0.3);
 }
 
 /* Card Body */

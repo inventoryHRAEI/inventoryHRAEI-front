@@ -1,4 +1,4 @@
-import { push } from 'notivue'
+// Notyf se importa en main.js - acceso via window.__notyf
 import Swal from 'sweetalert2'
 import 'sweetalert2/dist/sweetalert2.min.css'
 
@@ -27,27 +27,94 @@ async function mobileSwal(payload, type = 'info') {
   try { await Toast.fire({ icon: type, title: text }) } catch (e) { /* ignore */ }
 }
 
-// Opciones por defecto para Notivue (web)
-const baseWebOpts = {
-  duration: 1160
+// Detectar si estamos en contexto de wizard para z-index alto
+function isInWizardContext() {
+  return document.querySelector('.wizard-card, .op-wizard, .operations-wizard')
+}
+
+// Obtener instancia de Notyf
+function getNotyf() {
+  return window.__notyf
 }
 
 export const notifier = {
   success(msg, opts = {}) {
-    if (isMobile()) mobileSwal(msg, 'success')
-    else push.success(typeof msg === 'string' ? msg : (msg.text || msg.message || ''), { ...baseWebOpts, ...opts })
+    if (isMobile()) {
+      mobileSwal(msg, 'success')
+    } else {
+      const notyf = getNotyf()
+      if (notyf) {
+        const notification = notyf.success(typeof msg === 'string' ? msg : (msg.text || msg.message || ''))
+        
+        // Si estamos en wizard, añadir z-index alto
+        if (isInWizardContext() && notification) {
+          setTimeout(() => {
+            const notifEl = document.querySelector('.notyf__toast:last-child')
+            if (notifEl) notifEl.style.zIndex = '2147483650'
+          }, 10)
+        }
+      }
+    }
   },
   error(msg, opts = {}) {
-    if (isMobile()) mobileSwal(msg, 'error')
-    else push.error(typeof msg === 'string' ? msg : (msg.text || msg.message || ''), { ...baseWebOpts, ...opts })
+    if (isMobile()) {
+      mobileSwal(msg, 'error')
+    } else {
+      const notyf = getNotyf()
+      if (notyf) {
+        const notification = notyf.error(typeof msg === 'string' ? msg : (msg.text || msg.message || ''))
+        
+        // Si estamos en wizard, añadir z-index alto
+        if (isInWizardContext() && notification) {
+          setTimeout(() => {
+            const notifEl = document.querySelector('.notyf__toast:last-child')
+            if (notifEl) notifEl.style.zIndex = '2147483650'
+          }, 10)
+        }
+      }
+    }
   },
   info(msg, opts = {}) {
-    if (isMobile()) mobileSwal(msg, 'info')
-    else push.info(typeof msg === 'string' ? msg : (msg.text || msg.message || ''), { ...baseWebOpts, ...opts })
+    if (isMobile()) {
+      mobileSwal(msg, 'info')
+    } else {
+      const notyf = getNotyf()
+      if (notyf) {
+        const notification = notyf.open({
+          type: 'info',
+          message: typeof msg === 'string' ? msg : (msg.text || msg.message || '')
+        })
+        
+        // Si estamos en wizard, añadir z-index alto
+        if (isInWizardContext() && notification) {
+          setTimeout(() => {
+            const notifEl = document.querySelector('.notyf__toast:last-child')
+            if (notifEl) notifEl.style.zIndex = '2147483650'
+          }, 10)
+        }
+      }
+    }
   },
   warn(msg, opts = {}) {
-    if (isMobile()) mobileSwal(msg, 'warning')
-    else push.warning(typeof msg === 'string' ? msg : (msg.text || msg.message || ''), { ...baseWebOpts, ...opts })
+    if (isMobile()) {
+      mobileSwal(msg, 'warning')
+    } else {
+      const notyf = getNotyf()
+      if (notyf) {
+        const notification = notyf.open({
+          type: 'warning',
+          message: typeof msg === 'string' ? msg : (msg.text || msg.message || '')
+        })
+        
+        // Si estamos en wizard, añadir z-index alto
+        if (isInWizardContext() && notification) {
+          setTimeout(() => {
+            const notifEl = document.querySelector('.notyf__toast:last-child')
+            if (notifEl) notifEl.style.zIndex = '2147483650'
+          }, 10)
+        }
+      }
+    }
   }
 }
 

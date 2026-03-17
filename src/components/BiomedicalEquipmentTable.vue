@@ -127,10 +127,10 @@
           <span>{{ selectedRows.length }} elemento{{ selectedRows.length > 1 ? 's' : '' }} seleccionado{{ selectedRows.length > 1 ? 's' : '' }}</span>
         </div>
         <div class="bulk-buttons">
-          <button @click="exportSelectedToCSV" class="bulk-btn export">
+          <button v-if="canManageBiomedical" @click="exportSelectedToCSV" class="bulk-btn export">
             <i class="pi pi-download"></i> Exportar Selección
           </button>
-          <button @click="bulkRequestMaintenance" class="bulk-btn maintenance">
+          <button v-if="canManageBiomedical" @click="bulkRequestMaintenance" class="bulk-btn maintenance">
             <i class="pi pi-wrench"></i> Mantenimiento Masivo
           </button>
           <button @click="printSelectedLabels" class="bulk-btn print">
@@ -229,13 +229,13 @@
             </div>
             
             <div class="modal-footer">
-              <button @click="handleEditItem(selectedEquipment)" class="modal-action-btn edit-btn">
+              <button v-if="canEditBiomedicalEquipment" @click="handleEditItem(selectedEquipment)" class="modal-action-btn edit-btn">
                 <i class="pi pi-pencil"></i> Editar
               </button>
               <button @click="handleShowBarcode(selectedEquipment)" class="modal-action-btn barcode-btn">
                 <i class="pi pi-qrcode"></i> Código
               </button>
-              <button @click="handleRequestMaintenance(selectedEquipment)" class="modal-action-btn maint-btn">
+              <button v-if="canManageBiomedical" @click="handleRequestMaintenance(selectedEquipment)" class="modal-action-btn maint-btn">
                 <i class="pi pi-wrench"></i> Mantenimiento
               </button>
               <button @click="closeDetailModal" class="modal-action-btn close-btn">
@@ -252,8 +252,9 @@
          ═══════════════════════════════════════════════════════════════ -->
     <div class="table-toolbar">
       <div class="toolbar-left">
-         <!-- Botón Agregar Nuevo Equipo -->
+         <!-- Botón Agregar Nuevo Equipo (solo admin) -->
          <button 
+           v-if="canCreateBiomedicalEquipment"
            @click="showAddEquipmentWizard = true"
            class="toolbar-btn btn-add-equipment"
            title="Registrar nuevo equipo médico"
@@ -362,13 +363,46 @@
           </button>
           <Transition name="dropdown-slide">
             <div v-if="showExportMenu" class="export-dropdown glass-panel">
+              <!-- Opciones de exportación con control de cantidad -->
+              <div class="export-section-title">Exportar Excel</div>
+              
+              <!-- Opción: Si hay elementos seleccionados, mostrar opción de exportar seleccionados -->
+              <div v-if="selectedRows.length > 0" class="export-option-group">
+                <button @click="exportSelectedToExcel(); showExportMenu = false" class="export-option highlight-option">
+                  <i class="pi pi-file-excel"></i>
+                  <span>Excel ({{ selectedRows.length }} seleccionados)</span>
+                </button>
+                <div class="export-divider"></div>
+              </div>
+              
+              <div class="export-option-group">
+                <label class="export-checkbox-option">
+                  <input type="checkbox" v-model="useExportLimit" />
+                  <span>Descargar cantidad específica</span>
+                </label>
+                <div v-if="useExportLimit" class="export-limit-input">
+                  <input 
+                    type="number" 
+                    v-model.number="exportLimit" 
+                    class="limit-number-input"
+                    min="1" 
+                    :max="filteredData.length"
+                    placeholder="Cantidad"
+                  />
+                  <span>equipos</span>
+                </div>
+                <div v-else class="export-all-info">
+                  <span>Se descargarán todos los {{ filteredData.length }} equipos</span>
+                </div>
+              </div>
+              <button @click="exportToExcel(); showExportMenu = false" class="export-option">
+                <i class="pi pi-file-excel"></i>
+                <span>Descargar Excel</span>
+              </button>
+              <div class="export-divider"></div>
               <button @click="exportToCSV(); showExportMenu = false" class="export-option">
                 <i class="pi pi-file"></i>
                 <span>Exportar CSV</span>
-              </button>
-              <button @click="exportToExcel(); showExportMenu = false" class="export-option">
-                <i class="pi pi-file-excel"></i>
-                <span>Exportar Excel</span>
               </button>
               <button @click="exportToPDF(); showExportMenu = false" class="export-option">
                 <i class="pi pi-file-pdf"></i>
@@ -560,25 +594,41 @@
                     </div>
                     
                     <div class="filter-actions">
-                      <button @click="selectAllFilterValues(col.field); applyAndCloseFilter(col.field)" class="filter-action-btn">
+                      <button type="button" @click.stop.prevent="selectAllFilterValues(col.field)" class="filter-action-btn">
                         <i class="pi pi-check-square"></i> Todos
                       </button>
-                      <button @click="clearColumnFilter(col.field); applyAndCloseFilter(col.field)" class="filter-action-btn">
+                      <button type="button" @click.stop.prevent="clearColumnFilter(col.field)" class="filter-action-btn">
                         <i class="pi pi-times"></i> Ninguno
                       </button>
                     </div>
                     
                     <div class="filter-options">
-                      <label 
+                      <!-- Checkbox maestro: Todos / Vacío -->
+                      <label class="filter-option filter-toggle-all" @click.stop @mousedown.stop>
+                        <input
+                          type="checkbox"
+                          :checked="allFilterValuesSelected(col.field)"
+                          @change.stop="toggleAllFilterValues(col.field)"
+                          @click.stop
+                        />
+                        <span class="filter-checkbox"></span>
+                        <span class="filter-value toggle-all-label">
+                          {{ allFilterValuesSelected(col.field) ? 'Vacío' : 'Todos' }}
+                        </span>
+                      </label>
+                      <div class="filter-options-divider"></div>
+
+                      <label
                         v-for="value in getFilteredUniqueValues(col.field)"
                         :key="value"
                         class="filter-option"
                         :class="{ selected: isFilterValueSelected(col.field, value) }"
                       >
-                        <input 
+                        <input
                           type="checkbox"
                           :checked="isFilterValueSelected(col.field, value)"
-                          @change="toggleFilterValue(col.field, value)"
+                          @change.stop="toggleFilterValue(col.field, value)"
+                          @click.stop
                         />
                         <span class="filter-checkbox"></span>
                         <span class="filter-value">{{ value || '(Vacío)' }}</span>
@@ -651,7 +701,11 @@
                 <div class="cell-content">
                   <!-- Status Badge -->
                   <template v-if="col.field === 'ESTATUS'">
-                    <span class="status-badge" :class="getStatusColorClass(item[col.field])">
+                    <span 
+                      class="status-badge" 
+                      :class="getStatusColorClass(item[col.field])"
+                      :style="getDualColorStyle(item)"
+                    >
                       <i :class="getStatusIcon(item[col.field])"></i>
                       {{ item[col.field] || '-' }}
                     </span>
@@ -698,7 +752,7 @@
                 <span class="icon-history">📋</span>
                 <span>Historial del equipo</span>
               </button>
-              <button @click="handleEditItem(contextMenuItem)" class="context-item">
+              <button v-if="canEditBiomedicalEquipment" @click="handleEditItem(contextMenuItem)" class="context-item">
                 <span class="icon-edit">✏️</span>
                 <span>Editar equipo</span>
               </button>
@@ -706,8 +760,8 @@
                 <span class="icon-qr">📲</span>
                 <span>Código QR / Barras</span>
               </button>
-              <div class="context-divider"></div>
-              <button @click="handleRequestMaintenance(contextMenuItem)" class="context-item maintenance">
+              <div v-if="canManageBiomedical" class="context-divider"></div>
+              <button v-if="canManageBiomedical" @click="handleRequestMaintenance(contextMenuItem)" class="context-item maintenance">
                 <span class="icon-maintenance">🔧</span>
                 <span>Solicitar mantenimiento</span>
               </button>
@@ -826,7 +880,11 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import AddEquipmentWizard from './AddEquipmentWizard.vue'
-import { useEquipmentStatus } from '@/composables/useEquipmentStatus.js'
+import { useSemaforoRuleEngine } from '@/composables/useSemaforoRuleEngine.js'
+import { usePermissions } from '@/composables/usePermissions.js'
+
+// Permisos del usuario actual
+const { canCreateBiomedicalEquipment, canEditBiomedicalEquipment, canManageBiomedical } = usePermissions()
 
 // ═══════════════════════════════════════════════════════════════
 // PROPS Y EMITS
@@ -836,27 +894,38 @@ const props = defineProps({
   columns: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   pageSize: { type: Number, default: 25 },
-  showAllColumns: { type: Boolean, default: true }
+  showAllColumns: { type: Boolean, default: true },
+  maintenanceMap: { type: Object, default: () => ({}) }
 })
 
 const emit = defineEmits(['view-item', 'edit-item', 'show-barcode', 'refresh', 'request-maintenance', 'open-scan-modal', 'scan-code'])
 
-// Composable de status
-const { loadStatuses, getStatus } = useEquipmentStatus();
+// Composable de semaforización (reglas en backend)
+const { getEquipmentColors, getColorSync, clearCache } = useSemaforoRuleEngine();
+
+// helper to refresh colors on an array
+function refreshItemsSemaforo(items) {
+  const invs = items
+    .map(i => i.N_DE_INVENTARIO || i['No DE INVENTARIO'])
+    .filter(Boolean);
+  if (!invs.length) return;
+  getEquipmentColors(invs).then(map => {
+    items.forEach(item => {
+      const inv = item.N_DE_INVENTARIO || item['No DE INVENTARIO'];
+      if (map[inv]) {
+        item.semaforizacion = map[inv];
+      }
+    });
+  });
+}
 
 // DEBUG: log field names when data array changes (helps diagnose missing columns)
 watch(() => props.data, (val) => {
   try {
     if (Array.isArray(val) && val.length > 0) {
       console.log('[BiomedicalEquipmentTable] incoming data fields:', Object.keys(val[0]));
-      
-      // CARGAR STATUS EN BATCH (ultra-rápido)
-      const inventoryNumbers = val
-        .map(item => item.N_DE_INVENTARIO || item['No DE INVENTARIO'])
-        .filter(Boolean);
-      if (inventoryNumbers.length) {
-        loadStatuses(inventoryNumbers);
-      }
+      // request semaforización desde backend
+      refreshItemsSemaforo(val);
     }
   } catch (e) {}
 });
@@ -891,6 +960,18 @@ const compactMode = ref(false)
 const quickStatusFilter = ref(null)
 const lastUpdated = ref(null)
 const gotoPage = ref(1)
+
+// Control de exportación parcial
+const useExportLimit = ref(false)
+const exportLimit = ref(100)
+const exportLimitOptions = [50, 100, 200, 500, 1000]
+
+// Computed para obtener el límite efectivo de exportación
+const effectiveExportLimit = computed(() => {
+  if (!useExportLimit.value) return filteredData.value.length
+  const limit = parseInt(exportLimit.value) || 100
+  return Math.min(limit, filteredData.value.length)
+})
 
 // Escaneo
 const scanModeActive = ref(false)
@@ -1188,22 +1269,45 @@ function getFilterCount(field) {
 
 function isFilterValueSelected(field, value) {
   const filter = columnFilters.value[field]
-  if (!filter || filter.length === 0) return true
+  // null/undefined = sin filtro iniciado = todos marcados
+  if (filter === null || filter === undefined) return true
+  // [] = "Ninguno" fue pulsado = ninguno marcado
+  if (filter.length === 0) return false
   return filter.includes(value)
 }
 
 function toggleFilterValue(field, value) {
-  if (!columnFilters.value[field]) {
+  if (!Array.isArray(columnFilters.value[field])) {
+    // Primera interacción: inicializar con todos los valores excepto el pulsado
     columnFilters.value[field] = getUniqueValues(field).filter(v => v !== value)
   } else {
-    const idx = columnFilters.value[field].indexOf(value)
-    if (idx >= 0) {
-      columnFilters.value[field].splice(idx, 1)
+    const current = columnFilters.value[field]
+    if (current.includes(value)) {
+      // Desmarcar: crear nuevo array sin este valor
+      columnFilters.value[field] = current.filter(v => v !== value)
     } else {
-      columnFilters.value[field].push(value)
+      // Marcar: crear nuevo array con este valor agregado
+      columnFilters.value[field] = [...current, value]
     }
   }
   currentPage.value = 1
+}
+
+// Determina si todos los valores del filtro están seleccionados
+function allFilterValuesSelected(field) {
+  const filter = columnFilters.value[field]
+  if (filter === null || filter === undefined) return true
+  if (filter.length === 0) return false
+  return filter.length >= getUniqueValues(field).length
+}
+
+// Toggle maestro: si todos están seleccionados → deseleccionar todos, y viceversa
+function toggleAllFilterValues(field) {
+  if (allFilterValuesSelected(field)) {
+    clearColumnFilter(field)
+  } else {
+    selectAllFilterValues(field)
+  }
 }
 
 function selectAllFilterValues(field) {
@@ -1325,8 +1429,20 @@ async function exportToExcel() {
     const workbook = new Workbook()
     const worksheet = workbook.addWorksheet('Equipos')
 
+    // Determinar qué datos exportar según la configuración
+    const dataToExport = filteredData.value.slice(0, effectiveExportLimit.value)
+    
+    // Agregar columnas de mantenimiento si hay datos de mantenimiento
+    const hasMaintenanceData = Object.keys(props.maintenanceMap || {}).length > 0
+    const maintenanceHeaders = hasMaintenanceData ? [
+      'Estado Mantenimiento',
+      'Tipo Mantenimiento',
+      'Fecha Inicio Mantenimiento',
+      'Descripción Mantenimiento'
+    ] : []
+
     // headers
-    const headers = visibleColumns.value.map(c => c.header)
+    const headers = [...visibleColumns.value.map(c => c.header), ...maintenanceHeaders]
     const headerRow = worksheet.addRow(headers)
     headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } }
     headerRow.fill = {
@@ -1336,8 +1452,23 @@ async function exportToExcel() {
     }
 
     // add data rows
-    filteredData.value.forEach(item => {
+    dataToExport.forEach(item => {
+      const inventoryNum = item.N_DE_INVENTARIO || item['No DE INVENTARIO'] || ''
+      const maintenanceEntry = props.maintenanceMap?.[inventoryNum]
+      
+      // Build row data with original columns
       const values = visibleColumns.value.map(c => item[c.field] != null ? item[c.field] : '')
+      
+      // Add maintenance data if available
+      if (hasMaintenanceData) {
+        values.push(
+          maintenanceEntry?.status === 'en_mantenimiento' ? 'En Mantenimiento' : 'Disponible',
+          maintenanceEntry?.maintenance?.maintenance_type || 'N/A',
+          maintenanceEntry?.maintenance?.created_at || 'N/A',
+          maintenanceEntry?.maintenance?.description || 'N/A'
+        )
+      }
+      
       worksheet.addRow(values)
     })
 
@@ -1364,13 +1495,34 @@ async function exportToExcel() {
   } catch (error) {
     console.error('Error exporting Excel:', error)
     // fallback to old method if exceljs fails
-    const headers = visibleColumns.value.map(c => c.header)
-    const dataToExport = filteredData.value.map(item => 
-      visibleColumns.value.map(c => item[c.field] || '')
-    )
+    const dataToExport = filteredData.value.slice(0, effectiveExportLimit.value)
+    const hasMaintenanceData = Object.keys(props.maintenanceMap || {}).length > 0
+    const headers = [...visibleColumns.value.map(c => c.header)]
+    const maintenanceHeaders = hasMaintenanceData ? [
+      'Estado Mantenimiento',
+      'Tipo Mantenimiento',
+      'Fecha Inicio Mantenimiento',
+      'Descripción Mantenimiento'
+    ] : []
+    headers.push(...maintenanceHeaders)
+    
+    const rows = dataToExport.map(item => {
+      const inventoryNum = item.N_DE_INVENTARIO || item['No DE INVENTARIO'] || ''
+      const maintenanceEntry = props.maintenanceMap?.[inventoryNum]
+      const values = visibleColumns.value.map(c => item[c.field] || '')
+      if (hasMaintenanceData) {
+        values.push(
+          maintenanceEntry?.status === 'en_mantenimiento' ? 'En Mantenimiento' : 'Disponible',
+          maintenanceEntry?.maintenance?.maintenance_type || 'N/A',
+          maintenanceEntry?.maintenance?.created_at || 'N/A',
+          maintenanceEntry?.maintenance?.description || 'N/A'
+        )
+      }
+      return values
+    })
     let content = '\ufeff'
     content += headers.join('\t') + '\n'
-    dataToExport.forEach(row => {
+    rows.forEach(row => {
       content += row.join('\t') + '\n'
     })
     const blob = new Blob([content], { type: 'application/vnd.ms-excel;charset=utf-8;' })
@@ -1482,6 +1634,80 @@ function exportSelectedToCSV() {
   const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
   const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
   downloadBlob(blob, `equipos_seleccionados_${getDateString()}.csv`)
+}
+
+async function exportSelectedToExcel() {
+  const selectedData = selectedRows.value.map(idx => filteredData.value[idx - startIndex.value]).filter(Boolean)
+  if (selectedData.length === 0) return
+  
+  try {
+    const { Workbook } = await import('exceljs')
+    const workbook = new Workbook()
+    const worksheet = workbook.addWorksheet('Equipos Seleccionados')
+
+    // Agregar columnas de mantenimiento si hay datos de mantenimiento
+    const hasMaintenanceData = Object.keys(props.maintenanceMap || {}).length > 0
+    const maintenanceHeaders = hasMaintenanceData ? [
+      'Estado Mantenimiento',
+      'Tipo Mantenimiento',
+      'Fecha Inicio Mantenimiento',
+      'Descripción Mantenimiento'
+    ] : []
+
+    // headers
+    const headers = [...visibleColumns.value.map(c => c.header), ...maintenanceHeaders]
+    const headerRow = worksheet.addRow(headers)
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } }
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF1E3A8A' } // blue background
+    }
+
+    // add data rows
+    selectedData.forEach(item => {
+      const inventoryNum = item.N_DE_INVENTARIO || item['No DE INVENTARIO'] || ''
+      const maintenanceEntry = props.maintenanceMap?.[inventoryNum]
+      
+      // Build row data with original columns
+      const values = visibleColumns.value.map(c => item[c.field] != null ? item[c.field] : '')
+      
+      // Add maintenance data if available
+      if (hasMaintenanceData) {
+        values.push(
+          maintenanceEntry?.status === 'en_mantenimiento' ? 'En Mantenimiento' : 'Disponible',
+          maintenanceEntry?.maintenance?.maintenance_type || 'N/A',
+          maintenanceEntry?.maintenance?.created_at || 'N/A',
+          maintenanceEntry?.maintenance?.description || 'N/A'
+        )
+      }
+      
+      worksheet.addRow(values)
+    })
+
+    // auto column width
+    worksheet.columns.forEach(column => {
+      let maxLength = 0
+      column.eachCell?.({ includeEmpty: true }, cell => {
+        const v = cell.value == null ? '' : String(cell.value)
+        maxLength = Math.max(maxLength, v.length)
+      })
+      column.width = Math.min(maxLength + 2, 50)
+    })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    link.setAttribute('download', `equipos_seleccionados_${getDateString()}.xlsx`)
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch (error) {
+    console.error('Error exporting selected to Excel:', error)
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1651,23 +1877,181 @@ function getStatusIcon(status) {
   return icons[normalized] || icons.unknown
 }
 
-function getRowStatusClass(item) {
-  const status = normalizeStatus(item.ESTATUS)
+// 🔥 FUNCIÓN PARA SEMAFORIZACIÓN DUAL-COLOR
+function getDualColorStyle(item) {
+  if (!item) return {}
   
-  // Agregar clase basada en el estado del semáforo
+  // Si es CONDICIONAL o "Condiciones Regulares", aplicar gradient
+  if (item['ESTATUS'] === 'CONDICIONAL' || item['ESTATUS'] === 'Condiciones Regulares' || item._dualColor === true) {
+    return {
+      background: 'linear-gradient(90deg, #22c55e 50%, #f59e0b 50%) !important',
+      backgroundClip: 'padding-box',
+      color: 'white !important',
+      fontWeight: '600',
+      border: 'none !important'
+    }
+  }
+  return {}
+}
+
+function getRowStatusClass(item) {
+  // Usar el estado real del semáforo, no el del campo ESTATUS
   const equipmentStatus = getEquipmentStatus(item);
-  const statusClass = `status-${equipmentStatus.badge}`;
+  let badgeType = equipmentStatus.badge; // 'available', 'maintenance', 'unavailable', 'regular', 'unknown'
+  
+  // ⚠️ HARDCODED FIX: Si el equipo tiene FUNCIONAL="NO", forzar a unavailable
+  // ESTO ES UN WORKAROUND TEMPORAL - debería ser arreglado en el backend
+  const funcional = String(item['FUNCIONAL SI NO'] || '').toLowerCase().trim();
+  if (funcional === 'no') {
+    badgeType = 'unavailable';
+  }
+  
+  // Map badge types to row classes
+  const rowStatusMap = {
+    'available': 'row-available',
+    'operational': 'row-available',
+    'regular': 'row-maintenance',
+    'partial': 'row-maintenance',
+    'maintenance': 'row-maintenance',
+    'unavailable': 'row-unavailable',
+    'unknown': 'row-unavailable',
+    'critical': 'row-unavailable'
+  };
+  
+  const rowClass = rowStatusMap[badgeType] || `row-${normalizeStatus(item.ESTATUS)}`;
   
   return { 
-    [`row-${status}`]: true,
-    [statusClass]: true
+    [rowClass]: true,
+    [`status-${badgeType}`]: true
   }
+}
+
+function getMaintenanceEntryByInv(invNo) {
+  const raw = String(invNo || '').trim()
+  if (!raw) return null
+  const normalized = raw.toUpperCase()
+  const compact = normalized.replace(/[^A-Z0-9]/g, '')
+  return props.maintenanceMap?.[raw]
+    || props.maintenanceMap?.[normalized]
+    || props.maintenanceMap?.[compact]
+    || null
 }
 
 // Obtiene status visual del equipo desde composable (SEMAFOR IZACIÓN)
 function getEquipmentStatus(item) {
   const invNo = item.N_DE_INVENTARIO || item['No DE INVENTARIO'];
-  return getStatus(invNo);
+  const maintenanceEntry = getMaintenanceEntryByInv(invNo)
+
+  const iconByBadge = {
+    maintenance: 'pi-wrench',
+    critical: 'pi-times-circle',
+    partial: 'pi-exclamation-triangle',
+    warning: 'pi-exclamation-triangle',
+    operational: 'pi-check-circle'
+  }
+
+  const labelByBadge = {
+    maintenance: 'En mantenimiento',
+    critical: 'No funcional o requiere atención',
+    partial: 'Parcialmente funcional / Condiciones regulares',
+    warning: 'Parcialmente funcional / Condiciones regulares',
+    operational: 'Funcional'
+  }
+
+  const normalizeBadge = (badge, status) => {
+    const byBadge = String(badge || '').trim().toLowerCase()
+    if (byBadge && byBadge !== 'unknown' && byBadge !== 'loading' && byBadge !== 'error') {
+      return byBadge
+    }
+    const byStatus = mapStatusToBadge(status)
+    if (byStatus) return byStatus
+    return 'partial'
+  }
+
+  const normalizeIcon = (icon, badge) => {
+    const raw = String(icon || '').trim()
+    if (raw.startsWith('pi-') || raw.startsWith('pi ')) return raw.replace(/^pi\s+/, 'pi-')
+    return iconByBadge[badge] || 'pi-exclamation-triangle'
+  }
+
+  const mapStatusToBadge = (status) => {
+    const raw = String(status || '').trim().toLowerCase()
+    if (!raw) return ''
+    if (raw.includes('maintenance') || raw.includes('mantenimiento') || raw === 'maintenance_active') return 'maintenance'
+    if (raw.includes('non_functional') || raw.includes('critical') || raw.includes('attention')) return 'critical'
+    if (raw.includes('partial') || raw.includes('regular') || raw.includes('fair')) return 'partial'
+    if (raw.includes('functional_optimal') || raw.includes('operational') || raw.includes('functional')) return 'operational'
+    return ''
+  }
+
+  // PRIORIDAD 1: mantenimiento activo desde mapa reactivo (actualización instantánea)
+  if (
+    maintenanceEntry?.status === 'en_mantenimiento' ||
+    maintenanceEntry?.maintenance?.status === 'in_progress' ||
+    maintenanceEntry?.badge === 'maintenance' ||
+    maintenanceEntry?.status === 'MAINTENANCE_ACTIVE'
+  ) {
+    return {
+      status: 'maintenance',
+      color: '#8b5cf6',
+      badge: 'maintenance',
+      icon: 'pi-wrench',
+      label: 'En Mantenimiento',
+      animate: true,
+      priority: 1000
+    }
+  }
+
+  // PRIORIDAD 2: cualquier estado reactivo calculado en maintenanceMap (finish instantáneo)
+  if (maintenanceEntry && (maintenanceEntry.badge || maintenanceEntry.status || maintenanceEntry.color)) {
+    const derivedBadge = normalizeBadge(maintenanceEntry.badge, maintenanceEntry.status)
+    return {
+      status: maintenanceEntry.status || derivedBadge,
+      color: maintenanceEntry.color || (derivedBadge === 'critical' ? '#ff2400' : derivedBadge === 'operational' ? '#22c55e' : '#ec4899'),
+      badge: derivedBadge,
+      icon: normalizeIcon(maintenanceEntry.icon, derivedBadge),
+      label: maintenanceEntry.label || labelByBadge[derivedBadge] || 'Parcialmente funcional / Condiciones regulares',
+      animate: !!maintenanceEntry.animate,
+      priority: maintenanceEntry.priority || 0
+    }
+  }
+
+  // Prefer semaforización calculada por backend si está presente en el item
+  try {
+    if (item && item.semaforizacion) {
+      const s = item.semaforizacion || {};
+      const derivedBadge = normalizeBadge(s.badge, s.status)
+      return {
+        status: s.status || derivedBadge,
+        color: s.color || (derivedBadge === 'critical' ? '#ff2400' : derivedBadge === 'operational' ? '#22c55e' : '#ec4899'),
+        badge: derivedBadge,
+        icon: normalizeIcon(s.icon, derivedBadge),
+        label: s.label || labelByBadge[derivedBadge] || 'Parcialmente funcional / Condiciones regulares',
+        animate: !!s.animate,
+        priority: s.priority || 0
+      }
+    }
+  } catch (err) {
+    // defensivo: si por alguna razón item.semaforizacion falla, seguir con fallback
+    console.warn('[getEquipmentStatus] error reading semaforizacion', err)
+  }
+
+  // Fallback: consultamos caché del rule engine si está disponible
+  try {
+    const sync = getColorSync(invNo);
+    if (sync && sync.badge) return sync;
+  } catch (err) {
+    // ignore
+  }
+  return {
+    status: 'partial',
+    color: '#ec4899',
+    badge: 'partial',
+    icon: 'pi-exclamation-triangle',
+    label: 'Parcialmente funcional / Condiciones regulares',
+    animate: false,
+    priority: 0
+  };
 }
 
 function getCellClass(field, value) {
@@ -2695,6 +3079,152 @@ watch(currentPage, (val) => {
   margin: 6px 0;
 }
 
+/* Estilos para opciones de exportación */
+.export-section-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 12px 4px;
+  margin-bottom: 4px;
+}
+
+.export-option-group {
+  padding: 4px 8px;
+  margin-bottom: 4px;
+}
+
+.export-radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.export-radio-option:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.export-radio-option input[type="radio"] {
+  accent-color: var(--accent-blue);
+  width: 14px;
+  height: 14px;
+}
+
+.export-checkbox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.export-checkbox-option:hover {
+  background: rgba(59, 130, 246, 0.08);
+}
+
+.export-checkbox-option input[type="checkbox"] {
+  accent-color: var(--accent-blue);
+  width: 14px;
+  height: 14px;
+}
+
+.export-all-info {
+  padding: 8px 12px;
+  background: rgba(34, 197, 94, 0.1);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: #4ade80;
+  margin-top: 8px;
+}
+
+.export-limit-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 22px;
+  margin-top: 4px;
+}
+
+.limit-dropdown {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+}
+
+.limit-dropdown:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.export-limit-select span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.export-limit-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 22px;
+  margin-top: 4px;
+}
+
+.limit-number-input {
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  width: 80px;
+  cursor: pointer;
+  outline: none;
+}
+
+.limit-number-input:hover {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.limit-number-input:focus {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.export-limit-input span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.highlight-option {
+  background: rgba(34, 197, 94, 0.15) !important;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.highlight-option:hover {
+  background: rgba(34, 197, 94, 0.25) !important;
+}
+
+.highlight-option i {
+  color: #22c55e !important;
+}
+
 /* Botón de densidad */
 .btn-density {
   position: relative;
@@ -3049,8 +3579,7 @@ watch(currentPage, (val) => {
   display: flex;
   flex-direction: column;
   position: relative;
-  /* allow scrolling when many columns are present */
-  overflow: auto;
+  overflow: hidden;
   background: var(--panel-bg);
   border: 1px solid var(--glass-border);
   border-radius: 10px;
@@ -3173,13 +3702,19 @@ watch(currentPage, (val) => {
 /* Header Row */
 .header-row {
   background: linear-gradient(90deg, rgba(30, 58, 138, 0.4) 0%, rgba(30, 41, 59, 0.3) 100%);
+}
+
+/* Sticky: aplicado en th para máxima compatibilidad */
+.header-row th {
   position: sticky;
   top: 0;
   z-index: 20;
+  background: rgba(18, 32, 60, 0.97);
+  backdrop-filter: blur(8px);
 }
 
 .table-header {
-  padding: 12px 14px;
+  padding: 12px 16px;
   text-align: left;
   color: #93c5fd;
   font-weight: 600;
@@ -3191,6 +3726,8 @@ watch(currentPage, (val) => {
   min-width: 130px;
   position: relative;
   white-space: nowrap;
+  /* z-index local para que el dropdown de filtros quede encima */
+  z-index: 21;
 }
 
 .table-header.sorted {
@@ -3443,6 +3980,31 @@ watch(currentPage, (val) => {
   text-overflow: ellipsis;
 }
 
+/* Separador entre checkbox maestro y la lista */
+.filter-options-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 2px 8px;
+}
+
+/* Estilos especiales para el checkbox maestro Todos/Vacío */
+.filter-toggle-all {
+  border-bottom: none;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 4px;
+  margin: 2px 4px;
+}
+
+.filter-toggle-all:hover {
+  background: rgba(59, 130, 246, 0.12) !important;
+}
+
+.toggle-all-label {
+  font-weight: 700;
+  color: #93c5fd;
+  font-size: 0.82rem;
+}
+
 .filter-count-badge {
   background: rgba(59, 130, 246, 0.2);
   color: var(--text-muted);
@@ -3601,12 +4163,12 @@ watch(currentPage, (val) => {
 
 /* 🔴 Estado: Mantenimiento Correctivo CRÍTICO */
 .semaphore-critical {
-  background: radial-gradient(circle at 30% 30%, #ef4444, #dc2626, #b91c1c);
-  border-color: #ef4444;
-  color: #ef4444;
+  background: radial-gradient(circle at 30% 30%, #ff2400, #e11d48, #be123c);
+  border-color: #ff2400;
+  color: #ff2400;
   box-shadow: 
-    0 0 35px rgba(239, 68, 68, 0.8),
-    0 4px 15px rgba(239, 68, 68, 0.6),
+    0 0 38px rgba(255, 36, 0, 0.85),
+    0 4px 18px rgba(255, 36, 0, 0.65),
     inset 0 2px 4px rgba(255, 255, 255, 0.25);
 }
 
@@ -3643,6 +4205,30 @@ watch(currentPage, (val) => {
     inset 0 2px 4px rgba(255, 255, 255, 0.25);
 }
 
+/* 🩷🟡 Estado: Parcialmente funcional / Condiciones regulares */
+.semaphore-partial {
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.22), transparent 38%),
+    linear-gradient(135deg, #ec4899 0%, #f472b6 45%, #f59e0b 100%);
+  border-color: #f472b6;
+  color: #f472b6;
+  box-shadow:
+    0 0 30px rgba(236, 72, 153, 0.65),
+    0 0 18px rgba(245, 158, 11, 0.45),
+    inset 0 2px 4px rgba(255, 255, 255, 0.22);
+}
+
+/* 🟣 Estado: En Mantenimiento (activo) */
+.semaphore-maintenance {
+  background: radial-gradient(circle at 30% 30%, #8b5cf6, #7c3aed, #6d28d9);
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  box-shadow:
+    0 0 35px rgba(139, 92, 246, 0.85),
+    0 4px 18px rgba(139, 92, 246, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+}
+
 /* ⚫ Estado: Fuera de Servicio */
 .semaphore-offline {
   background: radial-gradient(circle at 30% 30%, #64748b, #475569, #334155);
@@ -3654,16 +4240,95 @@ watch(currentPage, (val) => {
     inset 0 2px 4px rgba(255, 255, 255, 0.15);
 }
 
+/* 🔴 Estado: No Funcional (Crítico) */
+.semaphore-non-functional {
+  background: radial-gradient(circle at 30% 30%, #dc2626, #b91c1c, #991b1b);
+  border-color: #dc2626;
+  color: #dc2626;
+  box-shadow: 
+    0 0 40px rgba(220, 38, 38, 0.9),
+    0 4px 20px rgba(220, 38, 38, 0.7),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+}
+
+/* 🟠 Estado: Condiciones Deficientes */
+.semaphore-poor-condition {
+  background: radial-gradient(circle at 30% 30%, #f97316, #ea580c, #c2410c);
+  border-color: #f97316;
+  color: #f97316;
+  box-shadow: 
+    0 0 35px rgba(249, 115, 22, 0.8),
+    0 4px 18px rgba(249, 115, 22, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+}
+
+/* 🟡 Estado: Calibración Vencida */
+.semaphore-calibration-expired {
+  background: radial-gradient(circle at 30% 30%, #f59e0b, #d97706, #b45309);
+  border-color: #f59e0b;
+  color: #f59e0b;
+  box-shadow: 
+    0 0 32px rgba(245, 158, 11, 0.8),
+    0 4px 16px rgba(245, 158, 11, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+  animation: pulse-attention 2s ease-in-out infinite;
+}
+
+/* 🟡 Estado: Condiciones Regulares */
+.semaphore-fair-condition {
+  background: radial-gradient(circle at 30% 30%, #eab308, #ca8a04, #a16207);
+  border-color: #eab308;
+  color: #eab308;
+  box-shadow: 
+    0 0 28px rgba(234, 179, 8, 0.7),
+    0 4px 15px rgba(234, 179, 8, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+}
+
 /* ⚪ Estado: Desconocido */
 .semaphore-unknown {
-  background: radial-gradient(circle at 30% 30%, #64748b, #475569);
-  border-color: rgba(100, 116, 139, 0.4);
-  color: #64748b;
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.22), transparent 38%),
+    linear-gradient(135deg, #ec4899 0%, #f472b6 45%, #f59e0b 100%);
+  border-color: #f472b6;
+  color: #f472b6;
   box-shadow: 
-    0 0 15px rgba(100, 116, 139, 0.4),
-    0 4px 12px rgba(100, 116, 139, 0.2),
-    inset 0 2px 4px rgba(255, 255, 255, 0.12);
-  opacity: 0.7;
+    0 0 26px rgba(236, 72, 153, 0.55),
+    0 0 16px rgba(245, 158, 11, 0.4),
+    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+}
+
+/* 🟣 Estado: Mantenimiento Correctivo - MORADO */
+.semaphore-corrective {
+  background: radial-gradient(circle at 30% 30%, #8b5cf6, #7c3aed, #6d28d9);
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  box-shadow: 
+    0 0 35px rgba(139, 92, 246, 0.8),
+    0 4px 18px rgba(139, 92, 246, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+}
+
+/* 🟪 Estado: Mantenimiento Preventivo - LILA */
+.semaphore-preventive {
+  background: radial-gradient(circle at 30% 30%, #a78bfa, #9333ea, #7e22ce);
+  border-color: #a78bfa;
+  color: #a78bfa;
+  box-shadow: 
+    0 0 30px rgba(167, 139, 250, 0.7),
+    0 4px 15px rgba(167, 139, 250, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+}
+
+/* 🟠 Estado: Condiciones Regulares - NARANJA */
+.semaphore-regular {
+  background: radial-gradient(circle at 30% 30%, #fb923c, #f97316, #ea580c);
+  border-color: #fb923c;
+  color: #fb923c;
+  box-shadow: 
+    0 0 28px rgba(251, 146, 60, 0.7),
+    0 4px 15px rgba(251, 146, 60, 0.5),
+    inset 0 2px 4px rgba(255, 255, 255, 0.25);
 }
 
 /* Animación ULTRA LLAMATIVA para equipos en mantenimiento */
@@ -3671,6 +4336,18 @@ watch(currentPage, (val) => {
   animation: 
     pulse-semaphore 1.5s ease-in-out infinite,
     glow-pulse 1.5s ease-in-out infinite;
+}
+
+/* Animación de atención para calibración vencida */
+@keyframes pulse-attention {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0.8;
+  }
 }
 
 @keyframes pulse-semaphore {
@@ -3707,65 +4384,8 @@ watch(currentPage, (val) => {
   filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.3));
 }
 
-/* Colorear TODA LA FILA según estado */
 .data-row {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-/* Borde lateral de color según estado */
-.data-row::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: transparent;
-  transition: all 0.3s ease;
-  z-index: 1;
-}
-
-/* Estados de color en filas */
-.data-row.status-operational::before {
-  background: linear-gradient(180deg, #22c55e, #16a34a);
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
-}
-
-.data-row.status-in-progress::before {
-  background: linear-gradient(180deg, #f59e0b, #d97706);
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.6);
-}
-
-.data-row.status-critical::before {
-  background: linear-gradient(180deg, #ef4444, #dc2626);
-  box-shadow: 0 0 15px rgba(239, 68, 68, 0.7);
-}
-
-.data-row.status-calibration::before {
-  background: linear-gradient(180deg, #3b82f6, #2563eb);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.6);
-}
-
-.data-row.status-in-transit::before {
-  background: linear-gradient(180deg, #8b5cf6, #7c3aed);
-  box-shadow: 0 0 12px rgba(139, 92, 246, 0.6);
-}
-
-.data-row.status-warning::before {
-  background: linear-gradient(180deg, #eab308, #ca8a04);
-  box-shadow: 0 0 12px rgba(234, 179, 8, 0.6);
-}
-
-.data-row.status-offline::before {
-  background: linear-gradient(180deg, #64748b, #475569);
-  box-shadow: 0 0 10px rgba(100, 116, 139, 0.4);
-}
-
-/* Efecto hover más llamativo en filas */
-.data-row:hover::before {
-  width: 6px;
-  filter: brightness(1.3);
+  transition: background 0.15s ease;
 }
 
 .data-row:hover {
@@ -3776,6 +4396,15 @@ watch(currentPage, (val) => {
   position: sticky;
   left: 0;
   z-index: 15;
+}
+
+/* En la fila de encabezado, las celdas sticky laterales deben
+   estar por encima del sticky horizontal (top) */
+thead .sticky-col-left,
+thead .status-col,
+thead .sticky-col-right {
+  z-index: 30;
+  background: rgba(18, 32, 60, 0.97);
 }
 
 /* Actions Column - Más compacto */
@@ -3843,22 +4472,27 @@ watch(currentPage, (val) => {
   box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.3);
 }
 
-/* Row Status Classes */
-.data-row.row-available {
-  border-left: 4px solid var(--status-available);
+/* Row Status Classes — se usa box-shadow inset en la primera celda
+   para no alterar el layout de la tabla (evita desfase de encabezados) */
+.data-row.row-available td:first-child {
+  box-shadow: inset 4px 0 0 var(--status-available);
 }
 
+.data-row.row-maintenance td:first-child {
+  box-shadow: inset 4px 0 0 var(--status-maintenance);
+}
 .data-row.row-maintenance {
-  border-left: 4px solid var(--status-maintenance);
   background: rgba(245, 158, 11, 0.03);
 }
 
-.data-row.row-unavailable {
-  border-left: 4px solid var(--status-unavailable);
+.data-row.row-unavailable td:first-child {
+  box-shadow: inset 4px 0 0 var(--status-unavailable);
 }
 
+.data-row.row-retired td:first-child {
+  box-shadow: inset 4px 0 0 var(--status-retired);
+}
 .data-row.row-retired {
-  border-left: 4px solid var(--status-retired);
   opacity: 0.7;
 }
 
@@ -4953,6 +5587,111 @@ watch(currentPage, (val) => {
   background: #6b7280;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   SEMAFORIZACIÓN INTELIGENTE - NUEVOS ESTADOS
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 🔴 ROJO OSCURO - CRÍTICO (No funcional + MC activo o Condiciones Malas) */
+.status-critical,
+.status-non-functional,
+.status-poor-condition {
+  background: rgba(220, 38, 38, 0.2);
+  color: #fecaca;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  padding-left: 12px;
+}
+
+.status-critical::before,
+.status-non-functional::before,
+.status-poor-condition::before {
+  background: #dc2626;
+}
+
+/* � MORADO - MANTENIMIENTO CORRECTIVO */
+.status-warning,
+.status-corrective_maintenance,
+.status-corrective {
+  background: rgba(139, 92, 246, 0.2);
+  color: #ddd6fe;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  padding-left: 12px;
+}
+
+.status-warning::before,
+.status-corrective_maintenance::before,
+.status-corrective::before {
+  background: #8b5cf6;
+}
+
+/* 🟪 LILA - MANTENIMIENTO PREVENTIVO */
+.status-in-progress,
+.status-in_maintenance,
+.status-preventive_maintenance,
+.status-preventive {
+  background: rgba(167, 139, 250, 0.2);
+  color: #e9d5ff;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  padding-left: 12px;
+}
+
+.status-in-progress::before,
+.status-in_maintenance::before,
+.status-preventive_maintenance::before,
+.status-preventive::before {
+  background: #a78bfa;
+}
+
+/* 🟠 NARANJA - CONDICIONES REGULARES */
+.status-regular-condition,
+.status-regular {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fed7aa;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+  padding-left: 12px;
+}
+
+.status-regular-condition::before,
+.status-regular::before {
+  background: #fb923c;
+}
+
+/* ⚪ GRIS - FUERA DE SERVICIO */
+.status-offline {
+  background: rgba(100, 116, 139, 0.2);
+  color: #cbd5e1;
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  padding-left: 12px;
+}
+
+.status-offline::before {
+  background: #64748b;
+}
+
+/* 🟢 VERDE - OPERATIVO */
+.status-operational {
+  background: rgba(34, 197, 94, 0.2);
+  color: #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  padding-left: 12px;
+}
+
+.status-operational::before {
+  background: #22c55e;
+}
+
+/* ✨ VERDE BRILLANTE - EXCELENTE (Funcional + Condiciones Buenas) */
+.status-excellent {
+  background: rgba(16, 185, 129, 0.25);
+  color: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding-left: 12px;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.2);
+}
+
+.status-excellent::before {
+  background: #10b981;
+}
+
 /* ─────────────────────────────────────────────────────────────
    ANIMACIONES SEMÁFORO
    ───────────────────────────────────────────────────────────── */
@@ -4997,21 +5736,21 @@ watch(currentPage, (val) => {
    ROW STATUS STYLING
    ───────────────────────────────────────────────────────────── */
 
-.data-row.row-available {
-  border-left: 3px solid rgba(34, 197, 94, 0.3);
+.data-row.row-available td:first-child {
+  box-shadow: inset 4px 0 0 rgba(34, 197, 94, 0.6);
 }
 
-.data-row.row-maintenance {
-  border-left: 3px solid rgba(230, 81, 0, 0.4);
+.data-row.row-maintenance td:first-child {
+  box-shadow: inset 4px 0 0 rgba(230, 81, 0, 0.7);
 }
 
-.data-row.row-unavailable {
-  border-left: 3px solid rgba(183, 28, 28, 0.4);
+.data-row.row-unavailable td:first-child {
+  box-shadow: inset 4px 0 0 rgba(183, 28, 28, 0.7);
 }
 
-.data-row.row-retired,
-.data-row.row-unknown {
-  border-left: 3px solid rgba(107, 114, 128, 0.2);
+.data-row.row-retired td:first-child,
+.data-row.row-unknown td:first-child {
+  box-shadow: inset 4px 0 0 rgba(107, 114, 128, 0.4);
 }
 
 </style>

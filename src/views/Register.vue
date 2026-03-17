@@ -22,14 +22,14 @@
             <label class="field-label">Nombre Completo</label>
             <div class="input-wrapper">
               <component :is="UserIcon" class="input-icon" />
-              <input v-model="nombre" placeholder="Juan Pérez" required class="input" />
+              <input v-model="nombre" v-sanitize placeholder="Juan Pérez" required class="input" />
             </div>
           </div>
           <div class="form-group">
             <label class="field-label">Correo Electrónico</label>
             <div class="input-wrapper">
               <component :is="EnvelopeIcon" class="input-icon" />
-              <input v-model="email" placeholder="tu@email.com" type="email" required class="input" />
+              <input v-model="email" v-sanitize:email placeholder="tu@email.com" type="email" required class="input" />
             </div>
           </div>
           <button class="btn secondary btn-lg" type="submit">Enviar Código</button>
@@ -42,7 +42,7 @@
             <label class="field-label">Código de Verificación</label>
             <div class="input-wrapper">
               <component :is="KeyIcon" class="input-icon" />
-              <input v-model="token" placeholder="000000" type="text" maxlength="6" required class="input token-input" />
+              <input v-model="token" v-sanitize placeholder="000000" type="text" maxlength="6" required class="input token-input" />
             </div>
           </div>
           <div class="row mt-8">
@@ -58,7 +58,7 @@
             <label class="field-label">Contraseña</label>
             <div class="input-wrapper password-field">
               <component :is="LockClosedIcon" class="input-icon" />
-              <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="••••••••" required class="input" />
+              <input v-model="password" v-sanitize:password :type="showPassword ? 'text' : 'password'" placeholder="••••••••" required class="input" />
               <button type="button" class="toggle-eye" @click="showPassword = !showPassword">
                 <component :is="showPassword ? EyeSlashIcon : EyeIcon" class="eye-icon" />
               </button>
@@ -69,7 +69,7 @@
             <label class="field-label">Confirmar Contraseña</label>
             <div class="input-wrapper password-field">
               <component :is="LockClosedIcon" class="input-icon" />
-              <input v-model="confirmPassword" :type="showConfirm ? 'text' : 'password'" placeholder="••••••••" required class="input" />
+              <input v-model="confirmPassword" v-sanitize:password :type="showConfirm ? 'text' : 'password'" placeholder="••••••••" required class="input" />
               <button type="button" class="toggle-eye" @click="showConfirm = !showConfirm">
                 <component :is="showConfirm ? EyeSlashIcon : EyeIcon" class="eye-icon" />
               </button>
@@ -167,10 +167,11 @@ const sendToken = async () => {
     return
   }
   try {
+    const { sanitizeObject } = await import('@/utils/sanitizer.js')
     const res = await fetch('/api/auth/request-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nombre: nombre.value, email: email.value })
+      body: JSON.stringify(sanitizeObject({ nombre: nombre.value, email: email.value }))
     })
     const data = await parseJsonSafe(res)
     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar')
@@ -189,10 +190,11 @@ const verifyToken = async () => {
     return
   }
   try {
+    const { sanitizeObject } = await import('@/utils/sanitizer.js')
     const res = await fetch('/api/auth/verify-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value, token: token.value })
+      body: JSON.stringify(sanitizeObject({ email: email.value, token: token.value }))
     })
     const data = await parseJsonSafe(res)
     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar')
@@ -207,10 +209,11 @@ const verifyToken = async () => {
 const resendToken = async () => {
   error.value = ''
   try {
+    const { sanitizeObject } = await import('@/utils/sanitizer.js')
     const res = await fetch('/api/auth/resend-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: email.value })
+      body: JSON.stringify(sanitizeObject({ email: email.value }))
     })
     const data = await parseJsonSafe(res)
     if (!res.ok) throw new Error(data.msg || 'No se pudo conectar')
@@ -241,14 +244,15 @@ const completeRegistration = async () => {
    }
 
    try {
+     const { sanitizeObject } = await import('@/utils/sanitizer.js')
      const res = await fetch('/api/auth/complete-registration', {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
-       body: JSON.stringify({ 
+       body: JSON.stringify(sanitizeObject({ 
          email: email.value, 
          nombre: nombre.value, 
          password: password.value
-       })
+       }))
      })
      const data = await parseJsonSafe(res)
      if (!res.ok) throw new Error(data.msg || 'No se pudo conectar')

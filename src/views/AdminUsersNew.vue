@@ -433,13 +433,14 @@ async function savePermissions() {
 
     console.log('🔧 Guardando permisos:', payload)
 
+    const { sanitizeObject } = await import('@/utils/sanitizer.js')
     const res = await fetch('/api/auth/user-permissions', {
       method: 'PUT',
       headers: { 
         'Content-Type': 'application/json',
         'Accept': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(sanitizeObject(payload))
     })
 
     const data = await res.json()
@@ -477,10 +478,11 @@ async function confirmRoleChange() {
   try {
     const { user, newRole } = roleChangeTarget.value
     
+    const { sanitizeObject } = await import('@/utils/sanitizer.js')
     const res = await fetch(`/api/auth/users/${user.id}/role`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role: newRole })
+      body: JSON.stringify(sanitizeObject({ role: newRole }))
     })
 
     if (!res.ok) throw new Error('Error actualizando rol')
@@ -491,10 +493,10 @@ async function confirmRoleChange() {
         await fetch('/api/auth/user-permissions', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: JSON.stringify((await import('@/utils/sanitizer.js')).sanitizeObject({
             email: user.email,
             permissions: ['biomedical', 'orders-entrada', 'orders-salida', 'orders-resguardo', 'orders-servicio']
-          })
+          }))
         })
       } catch (e) {
         console.warn('No se pudieron asignar permisos de admin:', e)

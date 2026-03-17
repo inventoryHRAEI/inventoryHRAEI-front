@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { validateSession, clearStoredSessionData, isActiveWindow, getStoredToken } from './utils/auth.js'
+import { isAdmin, isPrivileged, getUserRole } from './composables/usePermissions.js'
 
 const Home = () => import('./views/Home.vue')
 const Login = () => import('./views/Login.vue')
@@ -20,6 +21,7 @@ const OpResguardo = () => import('./views/operations/OpResguardoNew.vue')
 const OpServicio = () => import('./views/operations/OpServicioNew.vue')
 const OpInventarioBiomedica = () => import('./views/operations/BiomedicalTestingEnvironment.vue')
 const OpInsumosConsumibles = () => import('./views/operations/OpInsumosConsumibles.vue')
+const ImportExport = () => import('./views/ImportExport.vue')
 const OrderManagement = () => import('./views/operations/OrderManagement.vue')
 const OrderManagementSalida = () => import('./views/operations/OrderManagementSalida.vue')
 const OrderManagementResguardo = () => import('./views/operations/OrderManagementResguardo.vue')
@@ -38,26 +40,29 @@ const routes = [
     { path: '/forgot', name: 'forgot', component: Forgot },
     { path: '/reset', name: 'reset', component: Reset },
     { path: '/dashboard', name: 'dashboard', component: Dashboard, meta: { requiresAuth: true } },
-    { path: '/admin/users', name: 'admin-users', component: AdminUsers, meta: { requiresAuth: true } },
-    { path: '/admin/users/:id', name: 'admin-user-detail', component: AdminUserDetail, meta: { requiresAuth: true } },
-    { path: '/admin/account-validation', name: 'admin-account-validation', component: AccountValidation, meta: { requiresAuth: true } },
+    // Rutas de administración - solo admin
+    { path: '/admin/users', name: 'admin-users', component: AdminUsers, meta: { requiresAuth: true, requiredRole: 'admin' } },
+    { path: '/admin/users/:id', name: 'admin-user-detail', component: AdminUserDetail, meta: { requiresAuth: true, requiredRole: 'admin' } },
+    { path: '/admin/account-validation', name: 'admin-account-validation', component: AccountValidation, meta: { requiresAuth: true, requiredRole: 'admin' } },
     { path: '/user-settings', name: 'user-settings', component: UserSettings, meta: { requiresAuth: true } },
     { path: '/add-account', name: 'add-account', component: AddAccount, meta: { addAccount: true } },
 
     // Rutas de operaciones (accesibles desde los dashboards)
+    // Ya no se usan - los wizards se abren como modales desde los componentes OrderManagement
+    // { path: '/op/entrada', name: 'op-entrada', component: OpEntrada, meta: { requiresAuth: true } },
+    // { path: '/op/entrada-new', name: 'op-entrada-new', component: OpEntradaNew, meta: { requiresAuth: true } },
+    // { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
+    // { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
+    // { path: '/op/servicio', name: 'op-servicio', component: OpServicio, meta: { requiresAuth: true } },
+    
     { path: '/op/order-management', name: 'order-management', component: OrderManagement, meta: { requiresAuth: true } },
     { path: '/op/order-management-salida', name: 'order-management-salida', component: OrderManagementSalida, meta: { requiresAuth: true } },
     { path: '/op/order-management-resguardo', name: 'order-management-resguardo', component: OrderManagementResguardo, meta: { requiresAuth: true } },
     { path: '/op/order-management-servicio', name: 'order-management-servicio', component: OrderManagementServicio, meta: { requiresAuth: true } },
-    { path: '/op/entrada', name: 'op-entrada', component: OpEntrada, meta: { requiresAuth: true } },
-    { path: '/op/entrada-new', name: 'op-entrada-new', component: OpEntradaNew, meta: { requiresAuth: true } },
-    // { path: '/op/entrada-legacy', name: 'op-entrada-legacy', component: OpEntradaLegacy, meta: { requiresAuth: true } },
-    { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
-    { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
-    { path: '/op/servicio', name: 'op-servicio', component: OpServicio, meta: { requiresAuth: true } },
     // Inventario Biomédica - Ruta PROTEGIDA (requiere sesión obligatoria)
     { path: '/op/inventario-biomedica', name: 'op-inventario-biomedica', component: OpInventarioBiomedica, meta: { requiresAuth: true } },
-    { path: '/op/insumos-consumibles', name: 'op-insumos-consumibles', component: OpInsumosConsumibles, meta: { requiresAuth: true } }
+    { path: '/op/insumos-consumibles', name: 'op-insumos-consumibles', component: OpInsumosConsumibles, meta: { requiresAuth: true } },
+    { path: '/import', name: 'import', component: ImportExport, meta: { requiresAuth: true, requiredRole: 'admin' } }
 ]
 
 // Evento global para mostrar/ocultar el modal de sesión requerida
@@ -146,7 +151,7 @@ router.beforeEach(async (to, from, next) => {
     }
     
     // Purga selectiva: limpiar caché cuando se sale de ciertas rutas operacionales
-    const routesToPurge = ['order-management', 'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio', 'order-management-salida', 'order-management-resguardo', 'order-management-servicio']
+    const routesToPurge = ['order-management', 'order-management-salida', 'order-management-resguardo', 'order-management-servicio']
     
     // Solo purgar si la ruta destino es diferente y está en la lista de purga
     if (routesToPurge.includes(from?.name) && to.name !== from?.name) {
@@ -194,6 +199,29 @@ router.beforeEach(async (to, from, next) => {
             }
             return next({ path: '/login', replace: true })
         }
+        
+        // === VERIFICACIÓN DE ROLES ===
+        // Verificar si la ruta requiere un rol específico
+        const requiredRole = to.matched.find(record => record.meta && record.meta.requiredRole)?.meta.requiredRole
+        
+        if (requiredRole) {
+            const userRole = getUserRole()
+            
+            // Verificar si el usuario tiene el rol requerido
+            let hasAccess = false
+            if (requiredRole === 'admin') {
+                hasAccess = isAdmin()
+            } else if (requiredRole === 'privileged') {
+                hasAccess = isPrivileged()
+            }
+            
+            if (!hasAccess) {
+                console.warn(`[ROUTER] Acceso denegado. Ruta "${to.name}" requiere rol "${requiredRole}", pero el usuario tiene rol "${userRole}"`)
+                // Redirigir al dashboard o home con mensaje de error
+                return next({ path: '/', query: { error: 'unauthorized' }, replace: true })
+            }
+        }
+        
         return next()
     }
 

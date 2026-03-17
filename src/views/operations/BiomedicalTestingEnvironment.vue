@@ -49,6 +49,7 @@
                         :loading="loading"
                         :pageSize="25"
                         :showAllColumns="true"
+                        :maintenanceMap="maintenanceMap"
                         @refresh="handleTableRefresh"
                         @view-item="onViewItem"
                         @edit-item="onEditItem"
@@ -234,7 +235,7 @@ const {
     getDynamicDatalistId
 } = useBiomedicalMeta()
 const { allData, filteredData, loading, metaError, mobileLimitApplied, serverTotal, hasRealValue, computeHasRealData, applyMobileLimit, runSearch: runSearchBase } = useBiomedicalSearch()
-const { maintenanceMap, isInMaintenance: isInMaintenanceBase, getMaintenanceEntry, onStartMaintenance, onFinishMaintenance, initMaintenanceMap, persistMaintenanceMap, refreshStatusForCodes } = useBiomedicalMaintenance()
+const { maintenanceMap, isInMaintenance: isInMaintenanceBase, getMaintenanceEntry, onStartMaintenance, onFinishMaintenance, initMaintenanceMap, persistMaintenanceMap, refreshStatusForCodes, setEntry } = useBiomedicalMaintenance()
 const { selectedItem, currentPage, pageSize, getItemKey, isExpanded, toggleSelect, getStatusAccentClass, getStatusGlowClass, getStatusPillClass, getStatusTextClass, isSparse, isFieldVisible: isFieldVisibleBase } = useBiomedicalCardRendering()
 const {
     filters,
@@ -316,8 +317,23 @@ const externalInitialCode = ref('')
 async function handleStartMaintenance(payload) {
     try {
         const result = await onStartMaintenance(payload)
-        // parent composable already updates map; also refresh status for this code
+        // Update local maintenance map immediately
+        if (payload?.code) {
+            const code = String(payload.code || '').trim().toUpperCase()
+            setEntry(code, {
+                status: 'en_mantenimiento',
+                maintenance: result?.maintenance || { id: result?.maintenance_id, status: 'in_progress' }
+            })
+        }
+        // Also refresh from server
         refreshStatusForCodes([payload.code])
+        try {
+            window.dispatchEvent(new CustomEvent('equipment:status-updated', {
+                detail: { inventoryNo: String(payload?.code || '').trim().toUpperCase() }
+            }))
+        } catch (_) {
+            // noop
+        }
         if (payload && typeof payload.done === 'function') payload.done(null, result)
         return result
     } catch (e) {
@@ -330,7 +346,33 @@ async function handleStartMaintenance(payload) {
 async function handleFinishMaintenance(payload) {
     try {
         const result = await onFinishMaintenance(payload)
+        // Update local maintenance map immediately
+        if (payload?.code) {
+            const code = String(payload.code || '').trim().toUpperCase()
+            const raw = String(payload?.return_condition || payload?.estado || payload?.data?.estado || '').trim().toLowerCase()
+            const isPartial = raw === 'partial' || raw.includes('parcial') || raw.includes('regular')
+            const isNonFunctional = raw === 'non_functional' || raw.includes('no funcional') || raw === 'no_funcional' || raw.includes('inoperativo')
+            const optimistic = isNonFunctional
+              ? { badge: 'critical', color: '#ff2400', label: 'No funcional o requiere atención', status: 'NON_FUNCTIONAL_OR_ATTENTION', animate: false }
+              : isPartial
+                ? { badge: 'partial', color: '#ec4899', label: 'Parcialmente funcional / Condiciones regulares', status: 'FUNCTIONAL_WITH_REGULAR_CONDITIONS', animate: false }
+                : { badge: 'operational', color: '#22c55e', label: 'Funcional', status: 'FUNCTIONAL_OPTIMAL', animate: false }
+
+            setEntry(code, {
+                ...optimistic,
+                status: 'en_biomedica',
+                maintenance: null
+            })
+        }
+        // Also refresh from server
         refreshStatusForCodes([payload.code])
+        try {
+            window.dispatchEvent(new CustomEvent('equipment:status-updated', {
+                detail: { inventoryNo: String(payload?.code || '').trim().toUpperCase() }
+            }))
+        } catch (_) {
+            // noop
+        }
         if (payload && typeof payload.done === 'function') payload.done(null, result)
         return result
     } catch (e) {
@@ -491,6 +533,18 @@ async function onScannerScan({ code, item }) {
 function onEditItem(item) {
     try {
         console.log('[onEditItem] Editing item:', item)
+        
+        // If edit comes from history panel, just save and refresh - don't open update modal
+        if (item.source === 'history-panel') {
+            console.log('[onEditItem] Edit from history panel - saving and refreshing')
+            // Close history panel and refresh data
+            isHistoryPanelVisible.value = false
+            // Trigger a refresh of the table data
+            handleTableRefresh()
+            return
+        }
+        
+        // For context menu edits, open the update modal as before
         // close the history panel since we're switching to the update form
         isHistoryPanelVisible.value = false
         handleShowUpdatePanel(item)
@@ -760,8 +814,18 @@ function handleShowHistoryPanel(item) {
 function onItemUpdated(result) {
     try {
         console.log('[onItemUpdated] Item updated successfully', result)
-        // Refrescar datos si es necesario
-        // TODO: actualizar el item en allData y mostrar notificación
+        // Refresh table data to reflect changes
+        handleTableRefresh()
+        // If history panel is open, also refresh it
+        if (isHistoryPanelVisible.value && historyItem.value) {
+            // Close and reopen to show updated data
+            const currentItem = historyItem.value
+            isHistoryPanelVisible.value = false
+            nextTick(() => {
+                historyItem.value = currentItem
+                isHistoryPanelVisible.value = true
+            })
+        }
     } catch (e) {
         console.warn('[onItemUpdated] Error handling update', e)
     }
@@ -1075,7 +1139,7 @@ function scheduleSearch() {
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = setTimeout(() => {
         renderedCount.value = 6 // ULTRA FAST: Reset to 6 items only
-        runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, useServerPagination.value ? { serverSide: true, page: currentPage.value, pageSize: pageSize.value, limitReactive: true } : { limitReactive: isMobileOrNetworkNow() })
+        runSearchBase(buildQueryParams, () => filters.value.estatus === SIN_ESTADO_VALUE, useServerPagination.value ? { serverSide: true, page: currentPage.value, pageSize: pageSize.value, limitReactive: true, bypassCache: true } : { limitReactive: isMobileOrNetworkNow(), bypassCache: true })
         currentPage.value = 1
         selectedItem.value = null
     }, 100) // Faster search scheduling

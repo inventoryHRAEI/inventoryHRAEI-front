@@ -232,29 +232,26 @@ const tooltip = computed(() => {
   }
 }
 
-/* Estilos específicos por estado */
+/* Estilos específicos por estado - SIMPLE (4 COLORES) */
+
+/* Verde: Operativo */
 .badge-operational {
-  --badge-color: #2e7d32;
+  --badge-color: #22c55e;
 }
 
-.badge-in-progress {
-  --badge-color: #e65100;
+/* Amarillo: Condición Regular/Mala */
+.badge-warning {
+  --badge-color: #f59e0b;
 }
 
-.badge-pending {
-  --badge-color: #f57c00;
-}
-
+/* Rojo: No Funcional */
 .badge-critical {
-  --badge-color: #b71c1c;
+  --badge-color: #dc2626;
 }
 
-.badge-overdue {
-  --badge-color: #c62828;
-}
-
+/* Gris: Dado de Baja o Desconocido */
 .badge-offline {
-  --badge-color: #616161;
+  --badge-color: #64748b;
 }
 
 .badge-unknown {

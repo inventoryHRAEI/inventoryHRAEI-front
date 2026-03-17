@@ -1,4 +1,59 @@
 <template>
+  <div class="biomed-table-v2">
+    <table>
+      <thead>
+        <tr><th>Clave</th><th>N</th><th>Lote</th><th>Marca</th><th>Modelo</th><th>Acciones</th></tr>
+      </thead>
+      <tbody>
+        <tr v-for="(item, idx) in items" :key="idx">
+          <td>{{ item.claveHRAEI || item['Clave  HRAEI'] }}</td>
+          <td>{{ item.N || item.n }}</td>
+          <td>{{ item.lote || item.Lote }}</td>
+          <td>{{ item.marca || item.MARCA }}</td>
+          <td>{{ item.modelo || item.MODELO }}</td>
+          <td>
+            <button @click="viewKardex(item)">Ver Kardex</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <KardexPreviewModal :isOpen="kardexVisible" :itemData="selectedItemData" @close="kardexVisible=false" />
+  </div>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import KardexPreviewModal from '@/components/KardexPreviewModal.vue'
+
+const props = defineProps({ items: { type: Array, default: () => [] } })
+
+const kardexVisible = ref(false)
+const selectedItemData = ref({})
+
+function viewKardex(item) {
+  // Construir identificador completo a partir de los campos disponibles
+  const payload = {
+    claveHRAEI: String(item.claveHRAEI || item['Clave  HRAEI'] || item.clave || '').trim(),
+    n: String(item.N || item.n || '').trim(),
+    lote: String(item.lote || item.Lote || '').trim(),
+    referencia: String(item.referencia || item.Referencia || item.REFERENCIA || '').trim(),
+    marca: String(item.marca || item.MARCA || '').trim(),
+    modelo: String(item.modelo || item.MODELO || '').trim(),
+    descripcion: String(item.nombre || item['Descripción del bien'] || item.descripcion || '').trim()
+  }
+
+  // Guardar para el modal (KardexPreviewModal usará estos campos al pedir el PDF)
+  selectedItemData.value = Object.assign({}, item, payload, { strict: true })
+  kardexVisible.value = true
+}
+</script>
+
+<style scoped>
+table { width: 100%; border-collapse: collapse }
+th, td { padding: 6px 8px; border: 1px solid #ddd }
+</style>
+soluciona el bug que hace que tenga que recargar la pagina para que la topbar cambie de estado de sin sesion a con una sesion activa sin que necesite recargar la pagina para que pase de iniciar sesion o registrarse a el nombre y la info de la cuenta cuando incias sesion osea que cambie de estado sin que yo recargue<template>
   <div class="biomedical-table-container" :class="containerThemeClass">
     <!-- Ambient Glow Effect -->
     <div class="ambient-glow"></div>
@@ -238,7 +293,7 @@
     <!-- ═══════════════════════════════════════════════════════════════
          TABLA PRINCIPAL
          ═══════════════════════════════════════════════════════════════ -->
-    <div class="table-wrapper glass-panel">
+    <div class="table-container glass-panel">
       <!-- Loading State -->
       <div v-if="loading" class="loading-state">
         <div class="loading-spinner">
@@ -265,8 +320,9 @@
       </div>
       
       <!-- Data Table -->
-      <div v-else class="scroll-container">
-        <table class="data-table">
+      <template v-else>
+        <div class="table-container-inner">
+          <table ref="dataTableRef" class="inventory-table data-table">
           <thead>
             <tr class="header-row">
               <!-- Checkbox Column -->
@@ -305,7 +361,7 @@
                 <button 
                   class="column-filter-btn"
                   :class="{ active: activeColumnFilter === col.field, 'has-filter': hasActiveFilter(col.field) }"
-                  @click.stop="toggleColumnFilter(col.field)"
+                  @click.stop="openColumnFilter($event, col)"
                   :title="hasActiveFilter(col.field) ? 'Filtro activo - clic para editar' : 'Filtrar por ' + col.header"
                 >
                   <i class="pi pi-filter"></i>
@@ -313,65 +369,6 @@
                     {{ getFilterCount(col.field) }}
                   </span>
                 </button>
-                
-                <!-- Column Filter Dropdown -->
-                <Transition name="filter-dropdown">
-                  <div 
-                    v-if="activeColumnFilter === col.field" 
-                    class="column-filter-dropdown"
-                    @click.stop
-                  >
-                    <div class="filter-header">
-                      <span>Filtrar: {{ col.header }}</span>
-                      <button @click="activeColumnFilter = null" class="filter-close">
-                        <i class="pi pi-times"></i>
-                      </button>
-                    </div>
-                    
-                    <div class="filter-search">
-                      <i class="pi pi-search"></i>
-                      <input 
-                        v-model="columnFilterSearch[col.field]"
-                        placeholder="Buscar valores..."
-                        class="filter-search-input"
-                        @keydown.stop
-                      />
-                    </div>
-                    
-                    <div class="filter-actions">
-                      <button @click="selectAllFilterValues(col.field)" class="filter-action-btn">
-                        <i class="pi pi-check-square"></i> Todos
-                      </button>
-                      <button @click="clearColumnFilter(col.field)" class="filter-action-btn">
-                        <i class="pi pi-times"></i> Ninguno
-                      </button>
-                    </div>
-                    
-                    <div class="filter-options">
-                      <label 
-                        v-for="value in getFilteredUniqueValues(col.field)"
-                        :key="value"
-                        class="filter-option"
-                        :class="{ selected: isFilterValueSelected(col.field, value) }"
-                      >
-                        <input 
-                          type="checkbox"
-                          :checked="isFilterValueSelected(col.field, value)"
-                          @change="toggleFilterValue(col.field, value)"
-                        />
-                        <span class="filter-checkbox"></span>
-                        <span class="filter-value">{{ value || '(Vacío)' }}</span>
-                        <span class="filter-count-badge">{{ getValueCount(col.field, value) }}</span>
-                      </label>
-                    </div>
-                    
-                    <div class="filter-footer">
-                      <button @click="applyAndCloseFilter(col.field)" class="apply-filter-btn">
-                        <i class="pi pi-check"></i> Aplicar
-                      </button>
-                    </div>
-                  </div>
-                </Transition>
               </th>
               
               <!-- Actions Column -->
@@ -414,7 +411,11 @@
                 <div class="cell-content">
                   <!-- Status Badge -->
                   <template v-if="col.field === 'ESTATUS'">
-                    <span class="status-badge" :class="getStatusColorClass(item[col.field])">
+                    <span 
+                      class="status-badge" 
+                      :class="getStatusColorClass(item[col.field])"
+                      :style="getDualColorStyle(item)"
+                    >
                       <i :class="getStatusIcon(item[col.field])"></i>
                       {{ item[col.field] || '-' }}
                     </span>
@@ -470,6 +471,7 @@
           </tbody>
         </table>
       </div>
+      </template>
     </div>
     
     <!-- ═══════════════════════════════════════════════════════════════
@@ -550,11 +552,22 @@
         </span>
       </div>
     </div>
+    <ColumnFilterPanel
+      :is-open="!!activeColumnFilter"
+      :title="activeColumnFilterTitle"
+      :items="activeColumnFilterItems"
+      :selected="activeColumnFilterSelected"
+      :anchor-el="filterAnchorEl"
+      @close="activeColumnFilter = null"
+      @apply="applyColumnFilter"
+      @update:selected="updateColumnFilterBuffer"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import ColumnFilterPanel from '@/components/ColumnFilterPanel.vue'
 
 // ═══════════════════════════════════════════════════════════════
 // PROPS Y EMITS
@@ -607,6 +620,23 @@ const openMenuIdx = ref(null)
 const activeColumnFilter = ref(null)
 const columnFilterSearch = ref({})
 const columnFilters = ref({})
+const filterAnchorEl = ref(null)
+const filterBuffer = ref([])
+// aggressive sync headers
+const dataTableRef = ref(null)
+
+function syncColumnWidths() {
+  const table = dataTableRef.value
+  if (!table) return
+  const ths = table.querySelectorAll('thead th')
+  const firstRow = table.querySelector('tbody tr')
+  if (!firstRow) return
+  const tds = firstRow.querySelectorAll('td')
+  tds.forEach((td, i) => {
+    const w = td.getBoundingClientRect().width
+    if (ths[i]) ths[i].style.width = w + 'px'
+  })
+}
 
 // ═══════════════════════════════════════════════════════════════
 // COLUMNAS COMPUTADAS
@@ -667,7 +697,7 @@ const filteredData = computed(() => {
   // Aplicar filtros de columna
   Object.keys(columnFilters.value).forEach(field => {
     const filterValues = columnFilters.value[field]
-    if (filterValues && filterValues.length > 0) {
+    if (Array.isArray(filterValues)) {
       result = result.filter(item => {
         const cellValue = String(item[field] ?? '')
         return filterValues.includes(cellValue)
@@ -739,16 +769,17 @@ function getValueCount(field, value) {
 
 function hasActiveFilter(field) {
   const filter = columnFilters.value[field]
-  return filter && filter.length > 0 && filter.length < getUniqueValues(field).length
+  if (!Array.isArray(filter)) return false
+  return filter.length !== getUniqueValues(field).length
 }
 
 function getFilterCount(field) {
-  return columnFilters.value[field]?.length || 0
+  return columnFilters.value[field]?.length ?? 0
 }
 
 function isFilterValueSelected(field, value) {
   const filter = columnFilters.value[field]
-  if (!filter || filter.length === 0) return true
+  if (!Array.isArray(filter)) return true
   return filter.includes(value)
 }
 
@@ -776,18 +807,24 @@ function clearColumnFilter(field) {
   currentPage.value = 1
 }
 
-function toggleColumnFilter(field) {
-  if (activeColumnFilter.value === field) {
-    activeColumnFilter.value = null
-  } else {
-    activeColumnFilter.value = field
-    if (!columnFilters.value[field]) {
-      columnFilters.value[field] = [...getUniqueValues(field)]
-    }
+function openColumnFilter(event, col) {
+  const headerEl = event?.currentTarget?.closest('th') || event?.currentTarget
+  filterAnchorEl.value = headerEl
+  activeColumnFilter.value = col.field
+  if (!Array.isArray(columnFilters.value[col.field])) {
+    columnFilters.value[col.field] = [...getUniqueValues(col.field)]
   }
+  filterBuffer.value = [...(columnFilters.value[col.field] || [])]
 }
 
-function applyAndCloseFilter(field) {
+function updateColumnFilterBuffer(values) {
+  filterBuffer.value = [...values]
+}
+
+function applyColumnFilter(values) {
+  if (!activeColumnFilter.value) return
+  columnFilters.value[activeColumnFilter.value] = [...values]
+  currentPage.value = 1
   activeColumnFilter.value = null
 }
 
@@ -800,6 +837,28 @@ function clearAllFiltersAndSearch() {
   searchTerm.value = ''
   clearAllFilters()
 }
+
+const activeColumnFilterTitle = computed(() => {
+  if (!activeColumnFilter.value) return ''
+  const col = allColumns.value.find(c => c.field === activeColumnFilter.value)
+  return col ? `Filtrar: ${col.header}` : 'Filtrar'
+})
+
+const activeColumnFilterItems = computed(() => {
+  if (!activeColumnFilter.value) return []
+  const field = activeColumnFilter.value
+  const values = getUniqueValues(field)
+  return values.map(v => ({
+    value: v,
+    label: v || '(Vacio)',
+    count: getValueCount(field, v)
+  }))
+})
+
+const activeColumnFilterSelected = computed(() => {
+  if (!activeColumnFilter.value) return []
+  return filterBuffer.value
+})
 
 // ═══════════════════════════════════════════════════════════════
 // FUNCIONES DE ESCANEO
@@ -990,6 +1049,35 @@ function getStatusIcon(status) {
     unknown: 'pi pi-question-circle'
   }
   return icons[normalized] || icons.unknown
+}
+
+// 🔥 FUNCIÓN PARA SEMAFORIZACIÓN DUAL-COLOR (BiomedicalEquipmentTableV2)
+function getDualColorStyle(item) {
+  if (!item) return {}
+  
+  // Si es CONDICIONAL, aplicar dual-color
+  if (item['ESTATUS'] === 'CONDICIONAL' || item['ESTATUS'] === 'Condiciones Regulares') {
+    return {
+      background: 'linear-gradient(90deg, #22c55e 50%, #f59e0b 50%) !important',
+      backgroundClip: 'padding-box',
+      color: 'white !important',
+      fontWeight: '600',
+      border: 'none !important'
+    }
+  }
+  
+  // Si tiene marca de dual-color
+  if (item._dualColor === true) {
+    return {
+      background: 'linear-gradient(90deg, #22c55e 50%, #f59e0b 50%) !important',
+      backgroundClip: 'padding-box',
+      color: 'white !important',
+      fontWeight: '600',
+      border: 'none !important'
+    }
+  }
+  
+  return {}
 }
 
 function getRowStatusClass(item) {
@@ -1196,6 +1284,7 @@ watch(filteredData, () => {
   if (currentPage.value > totalPages.value) {
     currentPage.value = Math.max(1, totalPages.value)
   }
+  nextTick(syncColumnWidths)
 })
 
 // ═══════════════════════════════════════════════════════════════
@@ -1210,6 +1299,9 @@ onMounted(() => {
   if (searchInputRef.value) {
     searchInputRef.value.addEventListener('keydown', handleScanInput)
   }
+  // sync widths initially and on resize
+  syncColumnWidths()
+  window.addEventListener('resize', syncColumnWidths)
 })
 
 onUnmounted(() => {
@@ -1221,6 +1313,7 @@ onUnmounted(() => {
     searchInputRef.value.removeEventListener('keydown', handleScanInput)
   }
   clearTimeout(scanTimeout.value)
+  window.removeEventListener('resize', syncColumnWidths)
 })
 </script>
 
@@ -1671,14 +1764,16 @@ onUnmounted(() => {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   TABLE WRAPPER
+   TABLE CONTAINER (replaces previous wrapper)
    ═══════════════════════════════════════════════════════════════ */
-.table-wrapper {
+.table-container {
   flex: 1;
   min-height: 350px;
-  display: flex;
   position: relative;
   overflow: hidden;
+  max-height: 600px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 /* Loading State */
@@ -1729,9 +1824,9 @@ onUnmounted(() => {
 .clear-filters-btn {
   margin-top: 12px;
   padding: 10px 20px;
-  background: rgba(59, 130, 246, 0.2);
+  background: rgba(30, 41, 59, 0.3);
   border: 1px solid rgba(59, 130, 246, 0.3);
-  border-radius: 8px;
+  border-radius: 4px;
   color: #93c5fd;
   cursor: pointer;
   display: flex;
@@ -1745,52 +1840,73 @@ onUnmounted(() => {
   transform: translateY(-2px);
 }
 
-/* Scroll Container */
-.scroll-container {
-  width: 100%;
-  overflow-x: auto;
+/* scroll-container removed per new architecture */
+
+/* ═══════════════════════════════════════════════════════════════
+   TABLE CONTAINER
+   ═══════════════════════════════════════════════════════════════ */
+.table-container {
+  max-height: 600px;
   overflow-y: auto;
-  max-height: 500px;
+  scrollbar-gutter: stable;
 }
 
-.scroll-container::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.scroll-container::-webkit-scrollbar-track {
-  background: rgba(30, 41, 59, 0.3);
-  border-radius: 4px;
-}
-
-.scroll-container::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.4);
-  border-radius: 4px;
-}
-
-.scroll-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.6);
+/* adapt inner wrapper if present */
+.table-container-inner {
+  width: 100%;
+  /* no scroll here intentionally */
 }
 
 /* ═══════════════════════════════════════════════════════════════
    DATA TABLE
    ═══════════════════════════════════════════════════════════════ */
+.inventory-table,
 .data-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
+  table-layout: fixed;
+}
+
+.inventory-table th,
+.inventory-table td,
+.data-table th,
+.data-table td {
+  box-sizing: border-box;
+  padding: 8px 12px;
+  width: 1%; /* Forzar consistencia en el ancho */
+}
+
+/* Encabezados: eliminar posibles conflictos de sticky */
+.inventory-table thead th,
+.data-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #0f172a;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+}
+
+/* Celdas: asegurar alineación */
+.inventory-table td,
+.data-table td {
+  text-align: left;
+  vertical-align: middle;
 }
 
 /* Header Row */
 .header-row {
   background: linear-gradient(90deg, rgba(30, 58, 138, 0.4) 0%, rgba(30, 41, 59, 0.3) 100%);
-  position: sticky;
-  top: 0;
+  /* removed sticky from row; individual th elements are sticky */
   z-index: 20;
 }
 
+.table-header, .data-cell {
+  box-sizing: border-box; /* Asegura consistencia en el tamaño */
+}
+
 .table-header {
-  padding: 14px 16px;
+  padding: 8px 12px;  /* match th/td rule */
   text-align: left;
   color: #93c5fd;
   font-weight: 700;
@@ -2097,7 +2213,10 @@ onUnmounted(() => {
 .sticky-col-left {
   position: sticky;
   left: 0;
-  z-index: 15;
+  z-index: 16; /* higher than header */
+  background: #0f172a;
+  padding: 8px 12px;
+  box-sizing: border-box;
 }
 
 /* Actions Column */
@@ -2112,7 +2231,10 @@ onUnmounted(() => {
 .sticky-col-right {
   position: sticky;
   right: 0;
-  z-index: 15;
+  z-index: 16;
+  background: #0f172a;
+  padding: 8px 12px;
+  box-sizing: border-box;
 }
 
 .checkbox {
@@ -2158,7 +2280,7 @@ onUnmounted(() => {
 
 /* Data Cells */
 .data-cell {
-  padding: 12px 16px;
+  padding: 8px 12px;  /* align with header */
   color: var(--text-secondary);
   border-right: 1px solid rgba(59, 130, 246, 0.05);
   max-width: 200px;
@@ -2227,6 +2349,59 @@ onUnmounted(() => {
   background: rgba(107, 114, 128, 0.2);
   color: #d1d5db;
   border: 1px solid rgba(107, 114, 128, 0.3);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SEMAFORIZACIÓN INTELIGENTE - NUEVOS ESTADOS (V2)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 🔴 ROJO OSCURO - CRÍTICO */
+.status-badge.status-critical,
+.status-badge.status-non-functional,
+.status-badge.status-poor-condition {
+  background: rgba(220, 38, 38, 0.25);
+  color: #fecaca;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+}
+
+/* 🟠 NARANJA - ADVERTENCIA */
+.status-badge.status-warning,
+.status-badge.status-corrective_maintenance,
+.status-badge.status-regular-condition {
+  background: rgba(249, 115, 22, 0.25);
+  color: #fed7aa;
+  border: 1px solid rgba(249, 115, 22, 0.4);
+}
+
+/* 🟡 AMARILLO - MANTENIMIENTO EN PROGRESO */
+.status-badge.status-in-progress,
+.status-badge.status-in_maintenance,
+.status-badge.status-preventive_maintenance {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fef3c7;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+/* ⚪ GRIS - FUERA DE SERVICIO */
+.status-badge.status-offline {
+  background: rgba(100, 116, 139, 0.25);
+  color: #cbd5e1;
+  border: 1px solid rgba(100, 116, 139, 0.4);
+}
+
+/* 🟢 VERDE - OPERATIVO */
+.status-badge.status-operational {
+  background: rgba(34, 197, 94, 0.25);
+  color: #bbf7d0;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+/* ✨ VERDE BRILLANTE - EXCELENTE */
+.status-badge.status-excellent {
+  background: rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
 }
 
 /* Action Buttons */

@@ -431,7 +431,7 @@ async function handleSubmit() {
 
         // Resetear después de envío exitoso
         resetForm()
-        closeWizard()
+        closeWizard(true)
     } catch (error) {
         console.error('Error al guardar equipo:', error)
         alert('Error al guardar el equipo. Por favor intenta de nuevo.')
@@ -460,9 +460,11 @@ function resetForm() {
     currentStep.value = 1
 }
 
-function closeWizard() {
-    resetForm()
-    emit('close')
+function closeWizard(force = false) {
+    if (force || window.confirm('¿Está seguro de que desea cerrar el wizard? Se perderán los cambios no guardados.')) {
+        resetForm()
+        emit('close')
+    }
 }
 
 // Escuchar tecla Escape

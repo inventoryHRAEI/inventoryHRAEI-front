@@ -1,7 +1,7 @@
 <template>
   <div class="inventory-suggestions-autocomplete">
     <!-- Campo de búsqueda/input con sugerencias -->
-    <div class="autocomplete-wrapper">
+    <div class="autocomplete-wrapper" ref="wrapperRef">
       <input
         ref="inputRef"
         class="control autocomplete-input"
@@ -50,7 +50,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   modelValue: {
@@ -70,6 +70,7 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'select'])
 
 const inputRef = ref(null)
+const wrapperRef = ref(null)
 const inputValue = ref(props.modelValue)
 const showDropdown = ref(false)
 const selectedIndex = ref(-1)
@@ -131,6 +132,21 @@ const onBlur = () => {
     showDropdown.value = false
   }, 200)
 }
+
+// Click outside para cerrar el dropdown
+function handleClickOutside(event) {
+  if (wrapperRef.value && !wrapperRef.value.contains(event.target)) {
+    showDropdown.value = false
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>

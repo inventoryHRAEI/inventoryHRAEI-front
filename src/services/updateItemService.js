@@ -51,8 +51,22 @@ export async function getItemDetails(itemId) {
       throw new Error(result.msg || 'Unknown error fetching item')
     }
 
-    // El backend retorna { ok: true, data: {...} }
-    return result.data || result.item || {}
+    // El backend retorna { ok: true, data: {...}, item: {...} }
+    const itemData = result.data || result.item || {}
+    
+    // Asegurar que imagenes esté como array
+    if (itemData.imagenes && typeof itemData.imagenes === 'string') {
+      try {
+        itemData.imagenes = JSON.parse(itemData.imagenes)
+      } catch (e) {
+        console.warn('[updateItemService] Could not parse imagenes:', e)
+        itemData.imagenes = []
+      }
+    } else if (!itemData.imagenes) {
+      itemData.imagenes = []
+    }
+    
+    return itemData
   } catch (error) {
     console.error('[updateItemService.getItemDetails] Error:', error)
     throw error

@@ -50,6 +50,68 @@
         </div>
 
         <div class="form-group">
+          <label for="hours" class="form-label">Horas Invertidas <span class="required">*</span></label>
+          <input
+            v-model.number="formData.hours"
+            id="hours"
+            type="number"
+            step="0.5"
+            min="0"
+            class="form-control"
+            placeholder="Número de horas (ej: 2.5)"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Pruebas Realizadas <span class="required">*</span></label>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input
+                v-model="formData.tests"
+                id="routine"
+                type="checkbox"
+                value="routine"
+              />
+              <label for="routine">Rutina de Mantenimiento Preventivo/Correctivo</label>
+            </div>
+            <div class="checkbox-item">
+              <input
+                v-model="formData.tests"
+                id="simulator"
+                type="checkbox"
+                value="simulator"
+              />
+              <label for="simulator">Pruebas con Simuladores</label>
+            </div>
+            <div class="checkbox-item">
+              <input
+                v-model="formData.tests"
+                id="analyzer"
+                type="checkbox"
+                value="analyzer"
+              />
+              <label for="analyzer">Pruebas con Analizador de Seguridad Eléctrica</label>
+            </div>
+          </div>
+          <p v-if="formData.tests.length === 0" class="form-error">
+            Debes seleccionar al menos una prueba realizada
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="folioNumber" class="form-label">Folio de Mantenimiento Preventivo/Correctivo <span class="required">*</span></label>
+          <input
+            v-model="formData.folioNumber"
+            id="folioNumber"
+            type="text"
+            class="form-control"
+            placeholder="Número de folio (ej: MP-2026-001)"
+            required
+          />
+        </div>
+
+        <div class="form-group">
           <label for="notes" class="form-label">Trabajo Realizado <span class="required">*</span></label>
           <textarea
             v-model="formData.notes"
@@ -72,6 +134,47 @@
           ></textarea>
         </div>
 
+        <div class="form-group">
+          <label for="images" class="form-label">Imágenes del Mantenimiento</label>
+          <div class="image-upload-area">
+            <input
+              ref="imageInput"
+              id="images"
+              type="file"
+              multiple
+              accept="image/*"
+              @change="handleImageSelect"
+              style="display: none"
+            />
+            <button
+              type="button"
+              class="upload-btn"
+              @click="$refs.imageInput.click()"
+            >
+              📷 Seleccionar Imágenes
+            </button>
+            <p class="upload-hint">Selecciona una o varias imágenes (JPG, PNG, GIF, WebP)</p>
+          </div>
+
+          <div v-if="formData.images.length > 0" class="images-preview">
+            <p class="preview-title">Imágenes seleccionadas ({{ formData.images.length }})</p>
+            <div class="image-grid">
+              <div v-for="(img, idx) in formData.images" :key="idx" class="image-item">
+                <img :src="img.preview" :alt="img.name" />
+                <button
+                  type="button"
+                  class="remove-btn"
+                  @click="removeImage(idx)"
+                  title="Eliminar"
+                >
+                  ✕
+                </button>
+                <p class="image-name">{{ img.name }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" @click="$emit('close')">Cancelar</button>
           <button type="submit" class="btn btn-primary">Finalizar y Descargar PDF</button>
@@ -82,7 +185,7 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 defineProps({
   item: { type: Object, required: true }
@@ -90,11 +193,17 @@ defineProps({
 
 const emit = defineEmits(['close', 'confirm'])
 
+const imageInput = ref(null)
+
 const formData = reactive({
   technician: '',
   status: '',
+  hours: null,
+  tests: [],
+  folioNumber: '',
   notes: '',
-  signature: ''
+  signature: '',
+  images: []
 })
 
 function getStatusClass(status) {
@@ -102,6 +211,28 @@ function getStatusClass(status) {
   if (status === 'DISPONIBLE') return 'is-green'
   if (status === 'OPERATIVO') return 'is-blue'
   return ''
+}
+
+function handleImageSelect(event) {
+  const files = Array.from(event.target.files || [])
+  files.forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        formData.images.push({
+          file,
+          preview: e.target.result,
+          name: file.name
+        })
+      }
+      reader.readAsDataURL(file)
+    }
+  })
+  event.target.value = ''
+}
+
+function removeImage(idx) {
+  formData.images.splice(idx, 1)
 }
 
 function submitForm() {
@@ -113,6 +244,18 @@ function submitForm() {
     alert('Por favor selecciona el estado resultante')
     return
   }
+  if (formData.hours === null || formData.hours === '') {
+    alert('Por favor ingresa el número de horas invertidas')
+    return
+  }
+  if (formData.tests.length === 0) {
+    alert('Por favor selecciona al menos una prueba realizada')
+    return
+  }
+  if (!formData.folioNumber.trim()) {
+    alert('Por favor ingresa el folio de mantenimiento')
+    return
+  }
   if (!formData.notes.trim()) {
     alert('Por favor describe el trabajo realizado')
     return
@@ -121,15 +264,23 @@ function submitForm() {
   emit('confirm', {
     technician: formData.technician.trim(),
     status: formData.status,
+    hours: formData.hours,
+    tests: formData.tests,
+    folioNumber: formData.folioNumber.trim(),
     notes: formData.notes.trim(),
     signature: formData.signature.trim(),
+    images: formData.images.map(img => img.file),
     end: new Date().toISOString()
   })
 
   formData.technician = ''
   formData.status = ''
+  formData.hours = null
+  formData.tests = []
+  formData.folioNumber = ''
   formData.notes = ''
   formData.signature = ''
+  formData.images = []
 }
 </script>
 
@@ -300,6 +451,41 @@ function submitForm() {
   color: #ef4444;
 }
 
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #f59e0b;
+}
+
+.checkbox-item label {
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 500;
+  margin: 0;
+}
+
+.form-error {
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin: 8px 0 0 0;
+  font-weight: 500;
+}
+
 .form-control {
   width: 100%;
   padding: 12px 14px;
@@ -372,6 +558,108 @@ textarea.form-control {
   transform: translateY(-1px);
 }
 
+.image-upload-area {
+  padding: 20px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.image-upload-area:hover {
+  border-color: #f59e0b;
+  background: #fffbf0;
+}
+
+.upload-btn {
+  padding: 12px 24px;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 10px;
+}
+
+.upload-btn:hover {
+  background: #d97706;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.upload-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.images-preview {
+  margin-top: 20px;
+}
+
+.preview-title {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.image-item {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.image-item img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  display: block;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.remove-btn:hover {
+  background: rgb(220, 38, 38);
+  transform: scale(1.1);
+}
+
+.image-name {
+  padding: 6px 4px;
+  font-size: 0.7rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .modal-container {
     max-width: 95vw;
@@ -395,6 +683,10 @@ textarea.form-control {
 
   .form-actions {
     flex-direction: column;
+  }
+
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
 }
 </style>

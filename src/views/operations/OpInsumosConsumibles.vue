@@ -4,7 +4,15 @@
       <template #title>Insumos y Consumibles</template>
 
       <template #body>
-  <div class="op-card insumos" ref="rootRef">
+  <!-- Vista de solo lectura para usuarios sin permisos de creación -->
+  <div v-if="!canCreateConsumable" class="op-card insumos read-only-notice" style="text-align:center;padding:3rem 2rem;">
+    <div style="font-size:3rem;margin-bottom:1rem;">🔍</div>
+    <h3 style="margin:0 0 .5rem;font-size:1.2rem;color:var(--text,#e0e0e0);">Modo consulta</h3>
+    <p style="color:var(--text-muted,#aaa);max-width:400px;margin:0 auto;line-height:1.5;">
+      Tu cuenta solo tiene permisos de lectura. Puedes consultar los equipos e insumos desde la vista de <strong>Inventario Biomédica</strong>. Para registrar nuevos consumibles, contacta a un administrador.
+    </p>
+  </div>
+  <div v-else class="op-card insumos" ref="rootRef">
         <form @submit.prevent="onSubmit" class="form-grid" id="insumos-form" novalidate>
           <div class="section-card combined-card">
             <div class="section-head">
@@ -115,6 +123,22 @@
                     />
                   </div>
                   <div class="field">
+                    <label>Lote</label>
+                    <input
+                      class="control w-16ch"
+                      v-model.trim="item.lote"
+                      placeholder="Ej. 0936-01"
+                    />
+                  </div>
+                  <div class="field">
+                    <label>Fecha Caducidad</label>
+                    <input
+                      class="control w-16ch"
+                      v-model="item.fechaCaducidad"
+                      type="date"
+                    />
+                  </div>
+                  <div class="field">
                     <label>Cantidad</label>
                     <input
                       class="control w-12ch"
@@ -170,6 +194,7 @@
 import { reactive, ref, watch, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
+import { usePermissions } from '@/composables/usePermissions.js'
 import FormShell from '@/components/FormShell.vue'
 import DatePickerModern from '@/components/DatePickerModern.vue'
 import TimePickerModern from '@/components/TimePickerModern.vue'
@@ -181,6 +206,9 @@ const LOCAL_KEY = 'op-insumos-consumibles'
 
 // Router para navegación
 const router = useRouter()
+
+// Permisos del usuario
+const { canCreateConsumable } = usePermissions()
 
 const form = reactive({
   descripcion: '',
@@ -269,6 +297,8 @@ function makeEmptyItem() {
   return {
     descripcion: '',
     claveHRAEI: '',
+    lote: '',
+    fechaCaducidad: '',
     cantidad: null
   }
 }
@@ -361,6 +391,8 @@ async function onSubmit() {
     items: form.items.map(item => ({
       descripcion: item.descripcion,
       claveHRAEI: item.claveHRAEI,
+      lote: item.lote,
+      fechaCaducidad: item.fechaCaducidad,
       cantidad: item.cantidad
     })),
     createdAt: new Date().toISOString()

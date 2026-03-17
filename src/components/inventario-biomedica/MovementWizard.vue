@@ -14,6 +14,10 @@
     @next="goNext"
     @submit="submit"
   >
+    <div v-if="submitError" class="mv-error-banner">
+      {{ submitError }}
+    </div>
+
     <!-- Step 0: Dirección -->
     <div v-if="step === 0" class="mv-step fade-in">
       <p class="mv-hint">¿Hacia dónde se moverá el stock?</p>
@@ -80,7 +84,9 @@
             :quantities="quantities"
             :loading="loadingItems"
             :max-per-item="Infinity"
-            placeholder="Buscar artículo…"
+            :search-scopes="['all', 'clave', 'descripcion', 'marca', 'modelo', 'referencia', 'lote', 'n']"
+            :stock-filters="['all', 'with-stock', 'zero-stock']"
+            placeholder="Buscar por varios términos: drager 15041 brazalete…"
             @update:quantities="quantities = $event"
           />
         </div>
@@ -145,6 +151,7 @@ const items      = ref([]);
 const quantities = ref({});
 const loadingItems = ref(false);
 const submitting = ref(false);
+const submitError = ref('');
 const meta = ref({
   responsable: '',
   tipoMovimiento: 'regular',
@@ -177,12 +184,53 @@ const selectedCount = computed(() =>
 const totalUnits = computed(() =>
   Object.values(quantities.value).reduce((s, q) => s + (Number(q) || 0), 0)
 );
+
+const pickValue = (item, aliases = [], fallback = '') => {
+  if (!item || typeof item !== 'object') return fallback;
+
+  const normalizeKey = (key) => String(key || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+
+  const normalizedLookup = new Map();
+  Object.keys(item).forEach((k) => {
+    const normalized = normalizeKey(k);
+    if (normalized && !normalizedLookup.has(normalized)) normalizedLookup.set(normalized, k);
+  });
+
+  for (const alias of aliases) {
+    if (Object.prototype.hasOwnProperty.call(item, alias) && item[alias] !== null && item[alias] !== undefined && item[alias] !== '') {
+      return item[alias];
+    }
+    const found = normalizedLookup.get(normalizeKey(alias));
+    if (found && item[found] !== null && item[found] !== undefined && item[found] !== '') {
+      return item[found];
+    }
+  }
+
+  return fallback;
+};
+
+const getItemId = (item) => {
+  const clave = pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], 'SIN_CLAVE');
+  const serie = pickValue(item, ['N', 'Número de serie', 'Numero de serie', 'id'], '');
+  const modelo = pickValue(item, ['MODELO', 'Modelo', 'modelo'], '');
+  const marca = pickValue(item, ['MARCA', 'Marca', 'marca'], '');
+  return `${clave}|${serie}|${modelo}|${marca}`;
+};
+
+const getItemClave = (item) => String(pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], '') || '').trim();
+const getItemName = (item) => String(pickValue(item, ['Descripción del bien', 'Descripcion del bien', 'DESCRIPCIÓN ARTÍCULO', 'descripcion', 'NOMBRE'], '—') || '—');
+
 const selectedList = computed(() => {
   return Object.entries(quantities.value)
     .filter(([, q]) => Number(q) > 0)
-    .map(([clave, qty]) => {
-      const item = items.value.find(i => i['Clave  HRAEI'] === clave);
-      return { clave, qty: Number(qty), nombre: item?.['Descripción del bien'] || clave };
+    .map(([itemId, qty]) => {
+      const item = items.value.find(i => getItemId(i) === itemId);
+      const clave = item ? getItemClave(item) : itemId;
+      return { clave, qty: Number(qty), nombre: item ? getItemName(item) : itemId };
     });
 });
 
@@ -230,6 +278,7 @@ const resetState = () => {
   items.value = [];
   quantities.value = {};
   submitting.value = false;
+  submitError.value = '';
   meta.value = { responsable: '', tipoMovimiento: 'regular', servicio: '', motivo: '', notas: '' };
 };
 
@@ -239,11 +288,26 @@ watch(() => props.open, (v) => { if (v) resetState(); });
 
 /* Submit */
 const submit = async () => {
+  submitError.value = '';
   submitting.value = true;
   try {
     const itemsToMove = Object.entries(quantities.value)
       .filter(([, q]) => q > 0)
-      .map(([claveHRAEI, cantidad]) => ({ claveHRAEI, cantidad: Number(cantidad) }));
+      .map(([itemId, cantidad]) => {
+        const item = items.value.find(i => getItemId(i) === itemId);
+        const claveHRAEI = item ? getItemClave(item) : String(itemId || '').trim();
+        return {
+          claveHRAEI,
+          descripcion: item ? getItemName(item) : '',
+          marca: item ? String(pickValue(item, ['MARCA', 'Marca', 'marca'], '') || '').trim() : '',
+          modelo: item ? String(pickValue(item, ['MODELO', 'Modelo', 'modelo'], '') || '').trim() : '',
+          referencia: item ? String(pickValue(item, ['REFERENCIA', 'Referencia', 'referencia'], '') || '').trim() : '',
+          lote: item ? String(pickValue(item, ['LOTE', 'Lote', 'lote'], '') || '').trim() : '',
+          itemN: item ? String(pickValue(item, ['N', 'n', 'id'], '') || '').trim() : '',
+          n: item ? String(pickValue(item, ['N', 'n', 'id'], '') || '').trim() : '',
+          cantidad: Number(cantidad)
+        };
+      });
     if (!itemsToMove.length) throw new Error('Selecciona artículos');
 
     let desde = 'OFICINA', hacia = 'SUBCEYE';
@@ -261,7 +325,8 @@ const submit = async () => {
     emit('success');
     close();
   } catch (err) {
-    alert('Error: ' + err.message);
+    const detail = String(err?.message || 'No se pudo completar el movimiento entre bodegas');
+    submitError.value = `Movimiento entre bodegas no completado: ${detail}`;
   } finally {
     submitting.value = false;
   }
@@ -273,6 +338,16 @@ const submit = async () => {
 @keyframes mvFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 .mv-step { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+.mv-error-banner {
+  margin-bottom: 12px;
+  border: 1px solid rgba(248, 113, 113, .35);
+  background: rgba(127, 29, 29, .35);
+  color: #fecaca;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+}
 
 /* --- Step 0: Direction --- */
 .mv-hint { font-size: 14px; color: rgba(255,255,255,.45); margin: 0 0 20px; }

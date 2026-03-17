@@ -664,10 +664,11 @@ const handleSave = async () => {
       updateData.foto = previewUrl.value
     }
 
+    const { sanitizeObject } = await import('@/utils/sanitizer.js')
     const res = await fetch('/api/auth/update-profile', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateData)
+      body: JSON.stringify(sanitizeObject(updateData))
     })
 
     if (!res.ok) {

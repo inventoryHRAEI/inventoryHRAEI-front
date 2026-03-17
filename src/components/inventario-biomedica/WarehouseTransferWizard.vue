@@ -255,27 +255,27 @@
                                     <div v-else-if="filteredItems.length > 0" class="items-list-custom" @scroll.passive="onItemsScroll">
                                         <div
                                             v-for="item in visibleItems"
-                                            :key="item['Clave  HRAEI']"
+                                            :key="getItemId(item)"
                                             class="item-row-glass"
-                                            :class="{ 'has-qty': quantities[item['Clave  HRAEI']] > 0 }"
+                                            :class="{ 'has-qty': quantities[getItemId(item)] > 0 }"
                                         >
                                             <div class="item-main-info">
                                                 <span class="item-name">{{ item['Descripción del bien'] }}</span>
                                                 <div class="item-meta-tags">
                                                     <span class="tag-clave"># {{ item['Clave  HRAEI'] }}</span>
-                                                    <span class="tag-stock">Existencia: {{ item['TOTAL EXISTENCIAS'] }}</span>
+                                                    <span class="tag-stock">Existencia: {{ getItemStock(item) }}</span>
                                                 </div>
                                             </div>
                                             
                                             <div class="qty-stepper">
-                                                <button @click="stepQuantity(getItemId(item), -1, item['TOTAL EXISTENCIAS'])" class="step-btn">-</button>
+                                                <button @click="stepQuantity(getItemId(item), -1, getItemStock(item))" class="step-btn">-</button>
                                                 <input 
                                                     type="number" 
                                                     :value="quantities[getItemId(item)] || 0"
                                                     @input="updateQuantity(getItemId(item), $event)"
                                                     class="qty-val"
                                                 >
-                                                <button @click="stepQuantity(getItemId(item), 1, item['TOTAL EXISTENCIAS'])" class="step-btn">+</button>
+                                                <button @click="stepQuantity(getItemId(item), 1, getItemStock(item))" class="step-btn">+</button>
                                             </div>
                                         </div>
                                     </div>
@@ -456,7 +456,7 @@
                                             <span>Clave: {{ newItem.claveHRAEI }} | Cantidad: {{ newItem.cantidad }} {{ newItem.unidadMedida }}</span>
                                         </div>
                                     </div>
-                                    <div v-else v-for="item in selectedItems" :key="item['Clave  HRAEI']" class="summary-item-premium">
+                                    <div v-else v-for="item in selectedItems" :key="getItemId(item)" class="summary-item-premium">
                                         <PackageIcon size="20" />
                                         <div class="txt">
                                             <strong>{{ item['Descripción del bien'] }}</strong>
@@ -530,6 +530,7 @@ const direction = ref(null);
 const intakeType = ref(null);
 const items = ref([]);
 const quantities = ref({});
+let itemUidCounter = 0;
 // Metadatos generales de la operación (más "reales")
 const operationMeta = ref({
     responsable: '',
@@ -560,14 +561,58 @@ const newItem = ref({
     referencia: '',
 });
 
+const pickValue = (item, aliases = [], fallback = '') => {
+    if (!item || typeof item !== 'object') return fallback;
+
+    const normalizeKey = (key) => String(key || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .toLowerCase();
+
+    const normalizedLookup = new Map();
+    Object.keys(item).forEach((k) => {
+        const normalized = normalizeKey(k);
+        if (normalized && !normalizedLookup.has(normalized)) normalizedLookup.set(normalized, k);
+    });
+
+    for (const alias of aliases) {
+        if (Object.prototype.hasOwnProperty.call(item, alias) && item[alias] !== null && item[alias] !== undefined && item[alias] !== '') {
+            return item[alias];
+        }
+        const found = normalizedLookup.get(normalizeKey(alias));
+        if (found && item[found] !== null && item[found] !== undefined && item[found] !== '') {
+            return item[found];
+        }
+    }
+
+    return fallback;
+};
+
+const getItemStock = (item) => {
+    const raw = pickValue(item, ['TOTAL EXISTENCIAS', 'Total Excistencias', 'total_existencias', 'totalExistencias', 'Cantidad_Stock', 'CANTIDAD', 'Cantidad', 'cantidad'], 0);
+    const parsed = parseInt(raw, 10);
+    if (Number.isFinite(parsed)) return parsed;
+    const num = Number(raw);
+    return Number.isFinite(num) ? num : 0;
+};
+
 // Helper para crear ID único por item (incluye N para items sin clave)
 const getItemId = (item) => {
-    const clave = item['Clave  HRAEI'] || 'SIN_CLAVE';
-    const serie = item['N'] || item['Número de serie'] || '';
-    const modelo = item['MODELO'] || '';
-    const marca = item['MARCA'] || '';
-    return `${clave}|${serie}|${modelo}|${marca}`;
+    // Si ya tenemos un identificador único asignado al cargar los datos, lo usamos.
+    if (item && item.__uid) return String(item.__uid);
+
+    const clave = pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], 'SIN_CLAVE');
+    const serie = pickValue(item, ['N', 'Número de serie', 'Numero de serie', 'id'], '');
+    const modelo = pickValue(item, ['MODELO', 'Modelo', 'modelo'], '');
+    const marca = pickValue(item, ['MARCA', 'Marca', 'marca'], '');
+    const lote = pickValue(item, ['LOTE', 'Lote', 'lote'], '');
+    // Crea una llave sólida incluyendo lote para evitar que artículos “similares” compartan la misma ID
+    return `${clave}|${serie}|${modelo}|${marca}|${lote}`;
 };
+
+const getItemClave = (item) => String(pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], '') || '').trim();
+const getItemName = (item) => String(pickValue(item, ['Descripción del bien', 'Descripcion del bien', 'DESCRIPCIÓN ARTÍCULO', 'descripcion', 'NOMBRE'], '') || '').trim();
 
 // Icons + Meta summary logic
 const selectedItems = computed(() => {
@@ -583,7 +628,7 @@ const filteredItems = computed(() => {
         result = result.filter(item => {
             const name = (item['Descripción del bien'] || '').toString().toLowerCase();
             const clave = (item['Clave  HRAEI'] || '').toString().toLowerCase();
-            const exist = (item['TOTAL EXISTENCIAS'] || '').toString().toLowerCase();
+            const exist = String(getItemStock(item)).toLowerCase();
             return name.includes(query) || clave.includes(query) || exist.includes(query);
         });
     }
@@ -750,7 +795,12 @@ const loadItems = async () => {
         const response = await fetch(`/api/ops/stock-biomedica?bodega=${warehouse}`);
         if (response.ok) {
             const data = await response.json();
-            items.value = Array.isArray(data) ? data : (data.data || []);
+            const rawItems = Array.isArray(data) ? data : (data.data || []);
+            // Aseguramos IDs únicos para cada registro (evita colisiones en UI de cantidades)
+            items.value = rawItems.map((item) => ({
+                __uid: `item_${++itemUidCounter}`,
+                ...item,
+            }));
             quantities.value = {};
         } else {
             console.error('Error loading items:', response.status);
@@ -827,8 +877,16 @@ const submitMovement = async () => {
         const itemId = getItemId(item);
         const qty = quantities.value[itemId];
         if (qty && qty > 0) {
+            const claveHRAEI = getItemClave(item) || itemId;
             itemsToMove.push({
-                claveHRAEI: itemId, // Usar ID compuesta (incluye N para items sin clave)
+                claveHRAEI,
+                descripcion: getItemName(item),
+                marca: String(pickValue(item, ['MARCA', 'Marca', 'marca'], '') || '').trim(),
+                modelo: String(pickValue(item, ['MODELO', 'Modelo', 'modelo'], '') || '').trim(),
+                referencia: String(pickValue(item, ['REFERENCIA', 'Referencia', 'referencia'], '') || '').trim(),
+                lote: String(pickValue(item, ['LOTE', 'Lote', 'lote'], '') || '').trim(),
+                itemN: String(pickValue(item, ['N', 'n', 'id'], '') || '').trim(),
+                n: String(pickValue(item, ['N', 'n', 'id'], '') || '').trim(),
                 cantidad: Number(qty)
             });
         }
@@ -872,8 +930,15 @@ const submitIntake = async () => {
             const itemId = getItemId(item);
             const qty = quantities.value[itemId];
             if (qty && qty > 0) {
+                const claveHRAEI = getItemClave(item) || itemId;
                 itemsToRefill.push({
-                    claveHRAEI: itemId, // Usar ID compuesta (incluye N para items sin clave)
+                    claveHRAEI,
+                    descripcion: getItemName(item),
+                    marca: String(pickValue(item, ['MARCA', 'Marca', 'marca'], '') || '').trim(),
+                    modelo: String(pickValue(item, ['MODELO', 'Modelo', 'modelo'], '') || '').trim(),
+                    referencia: String(pickValue(item, ['REFERENCIA', 'Referencia', 'referencia'], '') || '').trim(),
+                    lote: String(pickValue(item, ['LOTE', 'Lote', 'lote'], '') || '').trim(),
+                    itemN: String(pickValue(item, ['N', 'n', 'id'], '') || '').trim(),
                     distribucion: {
                         subceye: Number(qty),
                         oficina: 0,

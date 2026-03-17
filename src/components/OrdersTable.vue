@@ -3,7 +3,8 @@
         <!-- Multi-delete toggle and delete selected button -->
         <div v-if="paginatedOrders.length > 0" class="multi-delete-toolbar">
             <div class="toolbar-left">
-                <label class="toggle-switch">
+                <!-- Toggle de eliminación múltiple - solo visible para usuarios con permisos -->
+                <label v-if="canDeleteOrder" class="toggle-switch">
                     <input type="checkbox" v-model="multiDeleteMode" />
                     <span class="slider"></span>
                     <span class="toggle-label">Eliminar varios</span>
@@ -12,7 +13,8 @@
                     {{ selectedForDelete.size }} seleccionado{{ selectedForDelete.size !== 1 ? 's' : '' }}
                 </span>
             </div>
-            <button v-if="multiDeleteMode && selectedForDelete.size > 0" @click="deleteSelected"
+            <!-- Botón eliminar seleccionadas - solo visible para usuarios con permisos -->
+            <button v-if="multiDeleteMode && selectedForDelete.size > 0 && canDeleteOrder" @click="deleteSelected"
                 class="btn-delete-selected">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -31,7 +33,8 @@
             <table v-if="paginatedOrders.length > 0" class="orders-table">
                 <thead>
                     <tr>
-                        <th v-if="multiDeleteMode" class="checkbox-col">
+                        <!-- Columna de selección - solo visible para usuarios con permisos -->
+                        <th v-if="multiDeleteMode && canDeleteOrder" class="checkbox-col">
                             <input type="checkbox" :checked="allSelectedOnPage" @change="toggleSelectAllOnPage"
                                 class="header-checkbox" />
                         </th>
@@ -136,7 +139,8 @@
                                         <line x1="12" y1="3" x2="12" y2="15"></line>
                                     </svg>
                                 </button>
-                                <button @click="$emit('edit', order)" class="action-btn edit-btn" title="Editar">
+                                <!-- Botón editar - solo visible para usuarios con permisos -->
+                                <button v-if="canEditOrder" @click="$emit('edit', order)" class="action-btn edit-btn" title="Editar">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round">
@@ -144,7 +148,8 @@
                                     </svg>
                                 </button>
                                 <!-- Excel button removed (duplicated icon). Use the Document button to open document modal. -->
-                                <button @click="$emit('delete', order.id)" class="action-btn delete-btn"
+                                <!-- Botón eliminar - solo visible para usuarios con permisos -->
+                                <button v-if="canDeleteOrder" @click="$emit('delete', order.id)" class="action-btn delete-btn"
                                     title="Eliminar">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -274,6 +279,10 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { usePermissions } from '@/composables/usePermissions.js'
+
+// Permisos del usuario
+const { canEditOrder, canDeleteOrder } = usePermissions()
 
 const props = defineProps({
     filteredOrders: {

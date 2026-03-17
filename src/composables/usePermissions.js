@@ -1,163 +1,462 @@
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+// Composables para gestión de permisos y roles de usuario
+// Sistema de protección basado en roles: admin, privileged, user
+// NO requiere Pinia - funciona con localStorage directamente
+
+import { computed, reactive, watch } from 'vue'
+
+// NO se usa Pinia - funciona directamente con localStorage
+// El rol se guarda en localStorage bajo la clave 'role'
+
+// Definición de permisos por rol
+// Los usuarios con rol 'user' tienen acceso limitado (solo lectura/catálogo)
+// Los usuarios con rol 'privileged' tienen permisos adicionales
+// Los usuarios con rol 'admin' tienen acceso completo
+
+const PERMISSIONS = {
+  // Permisos de usuario básico (user)
+  user: {
+    // Órdenes - PUEDE crear y ver, pero NO editar/eliminar/descargar
+    orders: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false,
+      download: false
+    },
+    // Inventario biomédica - solo catálogo/búsqueda (NO puede modificar equipos ni mantenimiento)
+    biomedical: {
+      create: false,
+      read: true,
+      update: false,
+      delete: false,
+      downloadHistory: false,
+      downloadReports: false,
+      manage: false
+    },
+    // Inventario de insumos - PUEDE crear
+    consumables: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false,
+      download: false
+    },
+    // Resguardos - PUEDE crear
+    guards: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false
+    },
+    // Servicios - PUEDE crear
+    services: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false
+    },
+    // Entradas - PUEDE crear
+    entries: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false
+    },
+    // Salidas - PUEDE crear
+    exits: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false
+    },
+    // Usuarios - gestión
+    users: {
+      read: false,
+      create: false,
+      update: false,
+      delete: false,
+      manageRoles: false
+    },
+    // Dashboard y estadísticas
+    dashboard: {
+      full: false,
+      read: true
+    },
+    // Configuración del sistema
+    settings: {
+      read: false,
+      write: false
+    }
+  },
+  
+  // Permisos de usuario privilegiado (privileged)
+  // Por defecto: usuarios nuevos son privileged
+  // Puede crear órdenes, pero inventario biomédico es solo lectura (catálogo)
+  privileged: {
+    // Órdenes - creación
+    orders: {
+      create: true,
+      read: true,
+      update: false,  // No puede editar órdenes
+      delete: false,
+      download: false  // No puede descargar información
+    },
+    // Inventario biomédica - SOLO CATÁLOGO (readonly)
+    biomedical: {
+      create: false,  // No puede crear equipos
+      read: true,    // Solo lectura - catálogo
+      update: false, // No puede actualizar equipos
+      delete: false,
+      downloadHistory: false,  // No puede descargar historial
+      downloadReports: false, // No puede descargar reportes
+      manage: false,           // No puede gestionar
+      startMaintenance: false, // No puede iniciar mantenimiento
+      addEquipment: false     // No puede adicionar bienes
+    },
+    // Inventario de insumos
+    consumables: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false,
+      download: false
+    },
+    // Resguardos
+    guards: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false
+    },
+    // Servicios
+    services: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false
+    },
+    // Entradas
+    entries: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false
+    },
+    // Salidas
+    exits: {
+      create: true,
+      read: true,
+      update: false,
+      delete: false
+    },
+    // Usuarios - solo lectura
+    users: {
+      read: true,
+      create: false,
+      update: false,
+      delete: false,
+      manageRoles: false
+    },
+    // Dashboard y estadísticas
+    dashboard: {
+      full: false,
+      read: true
+    },
+    // Configuración del sistema
+    settings: {
+      read: true,
+      write: false
+    }
+  },
+  
+  // Permisos de administrador (admin) - acceso completo
+  admin: {
+    orders: {
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+      download: true
+    },
+    biomedical: {
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+      downloadHistory: true,
+      downloadReports: true,
+      manage: true
+    },
+    consumables: {
+      create: true,
+      read: true,
+      update: true,
+      delete: true,
+      download: true
+    },
+    guards: {
+      create: true,
+      read: true,
+      update: true,
+      delete: true
+    },
+    services: {
+      create: true,
+      read: true,
+      update: true,
+      delete: true
+    },
+    entries: {
+      create: true,
+      read: true,
+      update: true,
+      delete: true
+    },
+    exits: {
+      create: true,
+      read: true,
+      update: true,
+      delete: true
+    },
+    users: {
+      read: true,
+      create: true,
+      update: true,
+      delete: true,
+      manageRoles: true
+    },
+    dashboard: {
+      full: true,
+      read: true
+    },
+    settings: {
+      read: true,
+      write: true
+    }
+  }
+}
 
 /**
- * Composable para gestionar permisos granulares de usuarios
- * 
- * Niveles: 'none' (sin acceso), 'read' (lectura), 'admin' (acceso completo)
+ * Obtener el rol del usuario desde localStorage
+ * Primero intenta desde window.__USER_ROLE__ (set by login), luego localStorage
  */
-export function usePermissions() {
-  const router = useRouter()
-  
-  // Intentar cargar permisos del localStorage
-  const storedPerms = localStorage.getItem('userPermissions')
-  const defaultPerms = {
-    biomedical: 'none',
-    orders_entrada: 'none',
-    orders_salida: 'none',
-    orders_resguardo: 'none',
-    orders_servicio: 'none'
-  }
-  
-  const permissionLevels = ref(storedPerms ? JSON.parse(storedPerms) : defaultPerms)
-
-  const currentUser = computed(() => {
-    const user = localStorage.getItem('user')
-    return user ? JSON.parse(user) : null
-  })
-
-  const isAdmin = computed(() => currentUser.value?.role === 'admin')
-
-  /**
-   * Obtener permisos del usuario actual desde el backend
-   */
-  async function loadUserPermissions() {
-    try {
-      if (isAdmin.value) {
-        // Los admins tienen todos los permisos en nivel 'admin'
-        permissionLevels.value = {
-          biomedical: 'admin',
-          orders_entrada: 'admin',
-          orders_salida: 'admin',
-          orders_resguardo: 'admin',
-          orders_servicio: 'admin'
-        }
-        return
-      }
-
-      const email = currentUser.value?.email
-      if (!email) return
-
-      const token = localStorage.getItem('token')
-      if (!token) return
-
-      const res = await fetch(`/api/auth/user-permission-levels/${email}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      })
-
-      if (res.ok) {
-        const data = await res.json()
-        permissionLevels.value = data
-        console.log('✅ Permisos cargados:', data)
-      } else {
-        console.warn('No se pudieron cargar permisos:', res.status)
-      }
-    } catch (e) {
-      console.error('Error cargando permisos:', e)
-    }
-  }
-
-  /**
-   * Verificar si el usuario tiene un nivel específico de acceso en un módulo
-   * @param {string} module - ID del módulo ('biomedical', 'orders_entrada', etc)
-   * @param {string} requiredLevel - Nivel requerido ('read', 'admin')
-   * @returns {boolean}
-   */
-  function hasPermission(module, requiredLevel = 'read') {
-    // Admin tiene todos los permisos
-    if (isAdmin.value) return true
-
-    const userLevel = permissionLevels.value[module] || 'none'
-    
-    if (requiredLevel === 'read') {
-      // read: puede acceder si tiene 'read' o 'admin'
-      return userLevel === 'read' || userLevel === 'admin'
+export function getUserRole() {
+  try {
+    // Intentar desde variable global primero (set by login)
+    if (typeof window !== 'undefined' && window.__USER_ROLE__) {
+      return window.__USER_ROLE__
     }
     
-    if (requiredLevel === 'admin') {
-      // admin: solo si tiene 'admin'
-      return userLevel === 'admin'
-    }
+    // Fallback a localStorage - busca 'role' o 'userRole'
+    const role = localStorage.getItem('role') || localStorage.getItem('userRole')
+    return role || 'user'
+  } catch (e) {
+    // Si no hay acceso, usar valor por defecto
+    return 'user'
+  }
+}
 
+/**
+ * Verificar si el usuario tiene un rol específico
+ */
+export function hasRole(role) {
+  const userRole = getUserRole()
+  return userRole === role
+}
+
+/**
+ * Verificar si el usuario es administrador
+ */
+export function isAdmin() {
+  return hasRole('admin')
+}
+
+/**
+ * Verificar si el usuario es privilegiado o administrador
+ */
+export function isPrivileged() {
+  const userRole = getUserRole()
+  return userRole === 'admin' || userRole === 'privileged'
+}
+
+/**
+ * Obtener los permisos del usuario actual
+ */
+export function getUserPermissions() {
+  const userRole = getUserRole()
+  return PERMISSIONS[userRole] || PERMISSIONS.user
+}
+
+/**
+ * Verificar si el usuario tiene un permiso específico
+ * @param {string} module - Módulo (orders, biomedical, consumables, etc.)
+ * @param {string} permission - Permiso (create, read, update, delete, download, etc.)
+ */
+export function hasPermission(module, permission) {
+  const permissions = getUserPermissions()
+  const modulePermissions = permissions[module]
+  
+  if (!modulePermissions) {
+    // Si el módulo no existe, denegar por defecto
+    console.warn(`[Permissions] Módulo "${module}" no encontrado en permisos`)
     return false
   }
+  
+  return modulePermissions[permission] === true
+}
 
+/**
+ * Verificar permiso con callback (para usar en v-if)
+ */
+export function can(module, permission) {
+  return hasPermission(module, permission)
+}
+
+/**
+ * Composables para usar en componentes Vue
+ */
+export function usePermissions() {
+  const role = computed(() => getUserRole())
+  
+  const isAdmin = computed(() => hasRole('admin'))
+  const isPrivileged = computed(() => isPrivileged())
+  const isUser = computed(() => hasRole('user'))
+  
+  // Métodos para verificar permisos específicos
+  const canCreateOrder = computed(() => hasPermission('orders', 'create'))
+  const canEditOrder = computed(() => hasPermission('orders', 'update'))
+  const canDeleteOrder = computed(() => hasPermission('orders', 'delete'))
+  const canDownloadOrderHistory = computed(() => hasPermission('orders', 'download'))
+  
+  const canCreateBiomedicalEquipment = computed(() => hasPermission('biomedical', 'create'))
+  const canEditBiomedicalEquipment = computed(() => hasPermission('biomedical', 'update'))
+  const canDeleteBiomedicalEquipment = computed(() => hasPermission('biomedical', 'delete'))
+  const canDownloadBiomedicalHistory = computed(() => hasPermission('biomedical', 'downloadHistory'))
+  const canDownloadBiomedicalReports = computed(() => hasPermission('biomedical', 'downloadReports'))
+  const canManageBiomedical = computed(() => hasPermission('biomedical', 'manage'))
+  
+  const canCreateConsumable = computed(() => hasPermission('consumables', 'create'))
+  const canEditConsumable = computed(() => hasPermission('consumables', 'update'))
+  const canDeleteConsumable = computed(() => hasPermission('consumables', 'delete'))
+  const canDownloadConsumableReport = computed(() => hasPermission('consumables', 'download'))
+  
+  const canManageUsers = computed(() => hasPermission('users', 'manageRoles'))
+  const canCreateUser = computed(() => hasPermission('users', 'create'))
+  const canEditUser = computed(() => hasPermission('users', 'update'))
+  const canDeleteUser = computed(() => hasPermission('users', 'delete'))
+  
+  const canAccessFullDashboard = computed(() => hasPermission('dashboard', 'full'))
+  const canAccessSettings = computed(() => hasPermission('settings', 'write'))
+  
   /**
-   * Verificar si puede LEER (solo lectura)
+   * Verificar permiso dinámicamente (para métodos)
    */
-  function canRead(module) {
-    return hasPermission(module, 'read')
+  const checkPermission = (module, permission) => {
+    return hasPermission(module, permission)
   }
-
+  
   /**
-   * Verificar si puede EDITAR/ELIMINAR (admin)
+   * Obtener el nivel de acceso del usuario como texto
    */
-  function canEdit(module) {
-    return hasPermission(module, 'admin')
-  }
-
-  /**
-   * Verificar si tiene ACCESO (read o admin)
-   */
-  function hasAccess(module) {
-    return hasPermission(module, 'read')
-  }
-
-  /**
-   * Verificar si NO tiene acceso (bloqueado)
-   */
-  function isBlocked(module) {
-    return !hasAccess(module)
-  }
-
-  /**
-   * Obtener el nivel actual de un módulo
-   */
-  function getLevel(module) {
-    if (isAdmin.value) return 'admin'
-    return permissionLevels.value[module] || 'none'
-  }
-
-  /**
-   * Obtener descripción del nivel de acceso
-   */
-  function getLevelLabel(module) {
-    const level = getLevel(module)
-    const labels = {
-      'none': '❌ Sin acceso',
-      'read': '👁️ Lectura y búsqueda',
-      'admin': '⚙️ Administrador'
-    }
-    return labels[level] || level
-  }
-
+  const accessLevel = computed(() => {
+    const r = role.value
+    if (r === 'admin') return 'Administrador - Acceso completo'
+    if (r === 'privileged') return 'Usuario privilegiado - Acceso limitado'
+    return 'Usuario - Solo catálogo y búsqueda'
+  })
+  
   return {
     // Estado
-    permissionLevels,
-    currentUser,
+    role,
     isAdmin,
+    isPrivileged,
+    isUser,
+    accessLevel,
     
-    // Métodos
-    loadUserPermissions,
-    hasPermission,
-    canRead,
-    canEdit,
-    hasAccess,
-    isBlocked,
-    getLevel,
-    getLevelLabel
+    // Permisos de órdenes
+    canCreateOrder,
+    canEditOrder,
+    canDeleteOrder,
+    canDownloadOrderHistory,
+    
+    // Permisos de inventario biomédico
+    canCreateBiomedicalEquipment,
+    canEditBiomedicalEquipment,
+    canDeleteBiomedicalEquipment,
+    canDownloadBiomedicalHistory,
+    canDownloadBiomedicalReports,
+    canManageBiomedical,
+    
+    // Permisos de consumibles
+    canCreateConsumable,
+    canEditConsumable,
+    canDeleteConsumable,
+    canDownloadConsumableReport,
+    
+    // Permisos de usuarios
+    canManageUsers,
+    canCreateUser,
+    canEditUser,
+    canDeleteUser,
+    
+    // Permisos de dashboard y settings
+    canAccessFullDashboard,
+    canAccessSettings,
+    
+    // Método genérico
+    checkPermission
   }
+}
+
+/**
+ * Middleware para verificar permisos antes de una acción
+ * Retorna true si tiene permiso, false si no
+ */
+export function requirePermission(module, permission) {
+  if (!hasPermission(module, permission)) {
+    console.warn(`[Permissions] Acceso denegado. Usuario "${getUserRole()}" no tiene permiso "${permission}" en "${module}"`)
+    return false
+  }
+  return true
+}
+
+/**
+ * Verificar acceso a ruta - para usar en router
+ */
+export function canAccessRoute(routeName) {
+  // Rutas que requieren admin
+  const adminRoutes = [
+    'admin-users',
+    'admin-user-detail',
+    'admin-account-validation'
+  ]
+  
+  // Rutas que requieren privileged o admin
+  const privilegedRoutes = [
+    'dashboard'
+  ]
+  
+  if (adminRoutes.includes(routeName)) {
+    return isAdmin()
+  }
+  
+  if (privilegedRoutes.includes(routeName)) {
+    return isPrivileged()
+  }
+  
+  // Para otras rutas, solo necesita estar autenticado
+  return true
+}
+
+export default {
+  getUserRole,
+  hasRole,
+  isAdmin,
+  isPrivileged,
+  getUserPermissions,
+  hasPermission,
+  can,
+  usePermissions,
+  requirePermission,
+  canAccessRoute
 }

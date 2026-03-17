@@ -19,7 +19,10 @@ const route = useRoute()
 
 const hasAccess = ref(false)
 const roleRef = ref(localStorage.getItem('role') || 'user')
-const isAdmin = computed(() => (roleRef.value || '').toLowerCase() === 'admin')
+const isAdmin = computed(() => {
+  const role = (roleRef.value || '').toLowerCase()
+  return role === 'admin' || role === 'privileged'
+})
 const loading = ref(true)
 const dashboardKey = ref(0)
 

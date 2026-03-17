@@ -10,7 +10,32 @@
                             <p v-if="item">{{ item['No DE INVENTARIO'] }}</p>
                             <p v-if="item">{{ item['EQUIPO MEDICO'] }}</p>
                         </div>
-                        <button @click="closePanel" class="btn-close-simple">✕</button>
+                        <div class="header-actions">
+                            <button 
+                                v-if="!isEditMode" 
+                                @click="toggleEditMode" 
+                                class="btn-edit-mode"
+                                title="Editar información"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                                Editar
+                            </button>
+                            <template v-else>
+                                <button @click="toggleEditMode" class="btn-cancel">
+                                    Cancelar
+                                </button>
+                                <button @click="saveChanges" class="btn-save" :disabled="isSaving">
+                                    <svg v-if="!isSaving" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                    </svg>
+                                    {{ isSaving ? 'Guardando...' : 'Guardar' }}
+                                </button>
+                            </template>
+                            <button @click="closePanel" class="btn-close-simple">✕</button>
+                        </div>
                     </div>
 
                     <!-- MAINTENANCE BANNER -->
@@ -106,44 +131,56 @@
                             <ListBulletIcon class="tab-icon" />
                             ESTADOS
                         </button>
+                        <button @click="activeTab = 'images'" :class="{ active: activeTab === 'images' }">
+                            <PhotoIcon class="tab-icon" />
+                            IMÁGENES
+                        </button>
                     </div>
 
                     <!-- CONTENT -->
                     <div class="panel-content">
                         <!-- Info Tab -->
                         <div v-show="activeTab === 'info'" class="tab-content">
-                            <div v-if="item" class="info-grid">
+                            <div v-if="item" class="info-grid" :class="{ 'edit-mode': isEditMode }">
                                 <div class="info-item">
                                     <label>Inventario:</label>
-                                    <span>{{ item['No DE INVENTARIO'] }}</span>
+                                    <span v-if="!isEditMode">{{ item['No DE INVENTARIO'] }}</span>
+                                    <input v-else v-model="editedItem['No DE INVENTARIO']" type="text" class="edit-input" />
                                 </div>
                                 <div class="info-item">
                                     <label>Equipo:</label>
-                                    <span>{{ item['EQUIPO MEDICO'] }}</span>
+                                    <span v-if="!isEditMode">{{ item['EQUIPO MEDICO'] }}</span>
+                                    <input v-else v-model="editedItem['EQUIPO MEDICO']" type="text" class="edit-input" />
                                 </div>
                                 <div class="info-item">
                                     <label>Marca:</label>
-                                    <span>{{ item['MARCA'] || '—' }}</span>
+                                    <span v-if="!isEditMode">{{ item['MARCA'] || '—' }}</span>
+                                    <input v-else v-model="editedItem['MARCA']" type="text" class="edit-input" />
                                 </div>
                                 <div class="info-item">
                                     <label>Modelo:</label>
-                                    <span>{{ item['MODELO'] || '—' }}</span>
+                                    <span v-if="!isEditMode">{{ item['MODELO'] || '—' }}</span>
+                                    <input v-else v-model="editedItem['MODELO']" type="text" class="edit-input" />
                                 </div>
                                 <div class="info-item">
                                     <label>Serie:</label>
-                                    <span>{{ item['NUMERO DE SERIE'] || item['SERIE'] || 'N/A' }}</span>
+                                    <span v-if="!isEditMode">{{ item['NUMERO DE SERIE'] || item['SERIE'] || 'N/A' }}</span>
+                                    <input v-else v-model="editedItem['NUMERO DE SERIE']" type="text" class="edit-input" />
                                 </div>
                                 <div class="info-item">
                                     <label>Ubicación:</label>
-                                    <span>{{ item['UBICACION ESPECIFICA'] || 'N/A' }}</span>
+                                    <span v-if="!isEditMode">{{ item['UBICACION ESPECIFICA'] || 'N/A' }}</span>
+                                    <input v-else v-model="editedItem['UBICACION ESPECIFICA']" type="text" class="edit-input" />
                                 </div>
                                 <div class="info-item">
                                     <label>Especialidad:</label>
-                                    <span>{{ item['ESPECIALIDAD AREA DEL HOSPITAL'] || 'N/A' }}</span>
+                                    <span v-if="!isEditMode">{{ item['ESPECIALIDAD AREA DEL HOSPITAL'] || 'N/A' }}</span>
+                                    <input v-else v-model="editedItem['ESPECIALIDAD AREA DEL HOSPITAL']" type="text" class="edit-input" />
                                 </div>
                                 <div class="info-item">
                                     <label>Condición:</label>
-                                    <span>{{ item['CONDICIONES DEL EQUIPO'] || item['ESTATUS'] || 'N/A' }}</span>
+                                    <span v-if="!isEditMode">{{ item['CONDICIONES DEL EQUIPO'] || item['ESTATUS'] || 'N/A' }}</span>
+                                    <input v-else v-model="editedItem['CONDICIONES DEL EQUIPO']" type="text" class="edit-input" />
                                 </div>
                             </div>
                         </div>
@@ -204,6 +241,73 @@
                             <div v-else class="empty">No hay estados</div>
                         </div>
 
+                        <!-- Images Tab -->
+                        <div v-show="activeTab === 'images'" class="tab-content">
+                            <div class="images-section">
+                                <!-- Upload section -->
+                                <div v-if="isEditMode" class="upload-section">
+                                    <h3 class="section-title">Agregar Imágenes</h3>
+                                    <div class="upload-area">
+                                        <input 
+                                            type="file" 
+                                            id="imageUpload" 
+                                            @change="handleImageUpload" 
+                                            accept="image/*" 
+                                            multiple 
+                                            class="file-input"
+                                        />
+                                        <label for="imageUpload" class="upload-label">
+                                            <PhotoIcon class="upload-icon" />
+                                            <span>Arrastra imágenes aquí o haz clic para seleccionar</span>
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- Preview of uploaded images -->
+                                    <div v-if="uploadedImages.length > 0" class="uploaded-images">
+                                        <h4>Imágenes pendientes ({{ uploadedImages.length }})</h4>
+                                        <div class="images-grid">
+                                            <div v-for="(img, idx) in uploadedImages" :key="'upload-'+idx" class="image-preview">
+                                                <img :src="img.data" :alt="img.name" />
+                                                <button @click="removeUploadedImage(idx)" class="remove-btn">✕</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Existing images from item -->
+                                <div class="existing-images">
+                                    <h3 class="section-title">Imágenes del Equipo</h3>
+                                    <div v-if="equipmentImages && equipmentImages.length > 0" class="images-grid">
+                                        <div v-for="(img, idx) in equipmentImages" :key="'existing-'+idx" class="image-preview">
+                                            <!-- Handle both object and string formats -->
+                                            <img v-if="typeof img === 'string'" 
+                                                 :src="img.startsWith('/') ? img : '/api/uploads/' + img" 
+                                                 :alt="'Imagen ' + (idx + 1)"
+                                                 @error="handleImageError" />
+                                            <img v-else-if="img.path" 
+                                                 :src="img.path.startsWith('data:') ? img.path : (img.path.startsWith('/api') ? img.path : '/api' + (img.path.startsWith('/') ? img.path : '/' + img.path))" 
+                                                 :alt="img.originalName || 'Imagen ' + (idx + 1)"
+                                                 @error="handleImageError" />
+                                            <img v-else-if="img.filename"
+                                                 :src="'/api/uploads/' + img.filename"
+                                                 :alt="img.originalName || 'Imagen ' + (idx + 1)"
+                                                 @error="handleImageError" />
+                                            <img v-else 
+                                                 :src="img.url || img" 
+                                                 :alt="'Imagen ' + (idx + 1)"
+                                                 @error="handleImageError" />
+                                            <button v-if="isEditMode" @click="removeExistingImage(idx)" class="remove-btn">✕</button>
+                                        </div>
+                                    </div>
+                                    <div v-else class="no-images">
+                                        <PhotoIcon class="no-images-icon" />
+                                        <p>No hay imágenes registradas para este equipo</p>
+                                        <p v-if="!isEditMode" class="hint">Usa el botón "Editar" para agregar imágenes</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Maintenance Tab -->
                         <div v-show="activeTab === 'maintenance'" class="tab-content">
                             <div v-if="maintenanceFlow.last_completed || maintenanceFlow.in_progress" class="maintenance-details">
@@ -231,10 +335,10 @@
                                             <div class="maint-card">
                                                 <div class="maint-label">Estado Final</div>
                                                 <div class="maint-value">
-                                                    <span class="badge" :class="maintenanceFlow.last_completed.result_status === 'functional' ? 'functional' : 'non-functional'">
+                                                    <span class="badge" :class="maintenanceFlow.last_completed.result_status === 'functional' ? 'functional' : maintenanceFlow.last_completed.result_status === 'partial' ? 'warning' : 'non-functional'">
                                                         <template v-if="maintenanceFlow.last_completed.result_status === 'functional'"><CheckCircleIcon class="badge-icon" /></template>
                                                         <template v-else><ExclamationCircleIcon class="badge-icon" /></template>
-                                                        {{ maintenanceFlow.last_completed.result_status === 'functional' ? 'Funcional' : 'No Funcional' }}
+                                                        {{ maintenanceFlow.last_completed.result_status === 'functional' ? 'Funcional' : maintenanceFlow.last_completed.result_status === 'partial' ? 'Parcialmente Funcional' : 'No Funcional' }}
                                                     </span>
                                                 </div>
                                             </div>
@@ -353,10 +457,19 @@
                     </div>
 
                     <!-- FOOTER -->
+                    <!-- DEBUG: Mostrar estado de mantenimiento para depuración (solo si prop `showDebug` = true) -->
+                    <div v-if="showDebug" style="background: #1a1a2e; color: #00ff00; padding: 10px; font-family: monospace; font-size: 12px; border-bottom: 1px solid #333;">
+                        <div>🔍 DEBUG: maintenanceFlow.in_progress = {{ maintenanceFlow.in_progress ? 'EXISTS (ID: ' + maintenanceFlow.in_progress.id + ')' : 'NULL' }}</div>
+                        <div>📊 Estado: {{ maintenanceFlow }}</div>
+                    </div>
                     <div class="panel-footer-simple">
-                        <button @click="openMaintenanceWizard" class="btn-simple maintenance">
-                            <WrenchIcon class="footer-icon" />
-                            Mantenimiento
+                        <button v-if="!maintenanceFlow.in_progress" @click="openMaintenanceWizard" class="btn-simple start">
+                            <VueIcon name="fa-play-circle" class="footer-icon" />
+                            Iniciar Mantenimiento
+                        </button>
+                        <button v-else @click="openMaintenanceWizard" class="btn-simple finish">
+                            <VueIcon name="fa-check-circle" class="footer-icon" />
+                            Finalizar Mantenimiento
                         </button>
                         <button @click="previewPdf" class="btn-simple">
                             <EyeIcon class="footer-icon" />
@@ -395,7 +508,8 @@
         <MaintenanceWizardV2 v-model:visible="wizardVisible" :inventoryNo="item ? item['No DE INVENTARIO'] : ''"
             :equipmentName="item ? item['EQUIPO MEDICO'] : ''"
             :currentStatus="maintenanceFlow.in_progress ? { ...maintenanceFlow.in_progress, state: 'in_progress' } : null"
-            @close="wizardVisible = false" @saved="onMaintenanceSaved" />
+            @close="wizardVisible = false" @saved="onMaintenanceSaved"
+            @maintenance-started="onMaintenanceSaved" @maintenance-finished="onMaintenanceSaved" />
 
         <!-- PDF Preview Modal -->
         <div v-if="pdfPreviewVisible" class="pdf-preview-overlay" @click.self="closePdfPreview">
@@ -412,11 +526,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
+import VueIcon from '@kalimahapps/vue-icons/VueIcon';
 // Icons from Heroicons
-import { WrenchIcon, CheckIcon, ClockIcon, BuildingLibraryIcon, CalendarIcon, MapPinIcon, UserCircleIcon, InformationCircleIcon, ListBulletIcon, EyeIcon, ArrowDownTrayIcon, XMarkIcon, DocumentIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/vue/24/outline';
+import { WrenchIcon, CheckIcon, ClockIcon, BuildingLibraryIcon, CalendarIcon, MapPinIcon, UserCircleIcon, InformationCircleIcon, ListBulletIcon, EyeIcon, ArrowDownTrayIcon, XMarkIcon, DocumentIcon, CheckCircleIcon, ExclamationCircleIcon, PhotoIcon } from '@heroicons/vue/24/outline';
 import { getEquipmentHistory } from '@/services/historialService.js';
 import { generateEquipmentPDF } from '@/services/pdfService.js';
+import { updateItem, getItemDetails } from '@/services/updateItemService.js';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import DOMPurify from 'dompurify';
@@ -431,6 +547,8 @@ import encabezadoImg from '@/images/encabezado.jpeg?inline';
 const props = defineProps({
     visible: { type: Boolean, default: false },
     item: { type: Object, default: null },
+    // Mostrar información de depuración en pantalla (desactivado por defecto)
+    showDebug: { type: Boolean, default: false }
 });
 
 const emit = defineEmits(['close', 'edit-item']);
@@ -442,6 +560,14 @@ const history = ref([]);
 const historyMeta = ref([]);       // meta.fields from backend
 const historyMovimientos = ref([]); // ENTRADA/SALIDA/RESGUARDO/SERVICIO entries
 const openCategories = ref(new Set());
+
+// Edit mode state
+const isEditMode = ref(false);
+const editedItem = ref({});
+const isSaving = ref(false);
+const uploadedImages = ref([]);
+const existingImages = ref([]); // URLs of existing images
+const equipmentImages = ref([]); // Images fetched from backend (equipment_images table)
 
 function toggleCategory(cat) {
     if (openCategories.value.has(cat)) {
@@ -484,6 +610,168 @@ function closePanel() {
 
 function openMaintenanceWizard() {
     wizardVisible.value = true;
+}
+
+// Edit mode functions
+function toggleEditMode() {
+    if (isEditMode.value) {
+        // Cancel editing - reset
+        isEditMode.value = false;
+        editedItem.value = {};
+    } else {
+        // Enter edit mode - copy current item
+        isEditMode.value = true;
+        editedItem.value = { ...props.item };
+    }
+}
+
+async function loadEquipmentImages() {
+    if (!props.item) return;
+    const itemId = props.item['No DE INVENTARIO'] || props.item['CODIGO'];
+    if (!itemId) {
+        console.warn('[EquipmentHistoryPanel] No itemId found');
+        return;
+    }
+    try {
+        const details = await getItemDetails(itemId);
+        if (details) {
+            // Try multiple field names that might contain images
+            if (Array.isArray(details.imagenes) && details.imagenes.length > 0) {
+                equipmentImages.value = details.imagenes;
+            } else if (Array.isArray(details.images) && details.images.length > 0) {
+                equipmentImages.value = details.images;
+            } else {
+                equipmentImages.value = [];
+            }
+            console.log('[EquipmentHistoryPanel] Loaded images:', {
+                count: equipmentImages.value.length,
+                first: equipmentImages.value[0],
+                structure: equipmentImages.value.map((img, i) => ({
+                    idx: i,
+                    type: typeof img,
+                    keys: typeof img === 'object' ? Object.keys(img) : 'N/A',
+                    img
+                }))
+            });
+        } else {
+            console.warn('[EquipmentHistoryPanel] No details returned');
+            equipmentImages.value = [];
+        }
+    } catch (e) {
+        console.error('[EquipmentHistoryPanel] Could not load equipment images:', e);
+        equipmentImages.value = [];
+    }
+}
+
+async function saveChanges() {
+    isSaving.value = true;
+    try {
+        const itemId = editedItem.value['No DE INVENTARIO'] || editedItem.value['CODIGO'] || props.item?.['No DE INVENTARIO'];
+        
+        if (!itemId) {
+            throw new Error('No se puede identificar el equipo');
+        }
+        
+        // Preparar datos para actualización - enviar todos los campos editados
+        const updates = {};
+        Object.entries(editedItem.value).forEach(([key, value]) => {
+            // Comparar como strings para evitar falsos negativos por tipos
+            const original = props.item?.[key];
+            const valStr = (value === null || value === undefined) ? '' : String(value);
+            const origStr = (original === null || original === undefined) ? '' : String(original);
+            if (valStr !== origStr) {
+                updates[key] = value;
+            }
+        });
+        
+        // Convertir imágenes base64 a File objects para que multer las procese
+        const imageFiles = [];
+        for (const img of uploadedImages.value) {
+            if (img.data && typeof img.data === 'string' && img.data.startsWith('data:')) {
+                // Convert base64 data URL to File
+                try {
+                    // Extraer el tipo de MIME del data URL
+                    const matches = img.data.match(/^data:([^;]+);base64,/);
+                    const mimeType = matches ? matches[1] : 'image/png';
+                    
+                    // Decodificar base64 y crear blob
+                    const base64Data = img.data.replace(/^data:[^;]+;base64,/, '');
+                    const binaryString = atob(base64Data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let i = 0; i < binaryString.length; i++) {
+                        bytes[i] = binaryString.charCodeAt(i);
+                    }
+                    const blob = new Blob([bytes], { type: mimeType });
+                    imageFiles.push(new File([blob], img.name || 'image.png', { type: mimeType }));
+                } catch (e) {
+                    console.warn('[EquipmentHistoryPanel] Could not convert image:', e);
+                }
+            }
+        }
+        
+        // Llamar al servicio de actualización
+        const result = await updateItem(
+            itemId,
+            updates,
+            imageFiles,
+            [] // captions
+        );
+        
+        console.log('[EquipmentHistoryPanel] Changes saved:', result);
+        
+        // Refresh equipment images after save
+        if (result && Array.isArray(result.images)) {
+            equipmentImages.value = result.images;
+        } else {
+            await loadEquipmentImages();
+        }
+        
+        // Emit the edit-item event for parent to refresh
+        emit('edit-item', { 
+            ...editedItem.value, 
+            newImages: uploadedImages.value,
+            source: 'history-panel'
+        });
+        
+        isEditMode.value = false;
+        uploadedImages.value = [];
+    } catch (error) {
+        console.error('Error saving changes:', error);
+        alert('Error al guardar: ' + error.message);
+    } finally {
+        isSaving.value = false;
+    }
+}
+
+function handleImageUpload(event) {
+    const files = event.target.files;
+    if (!files) return;
+    
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImages.value.push({
+                    name: file.name,
+                    data: e.target.result
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+}
+
+function removeUploadedImage(index) {
+    uploadedImages.value.splice(index, 1);
+}
+
+function removeExistingImage(index) {
+    existingImages.value.splice(index, 1);
+}
+
+function handleImageError(event) {
+    console.warn('[EquipmentHistoryPanel] Image failed to load:', event.target.src);
 }
 
 async function loadHeaderImage() {
@@ -751,6 +1039,82 @@ async function buildPdfHtml() {
 }
 
 // build PDF using jsPDF and autoTable for cleaner appearance
+// Función auxiliar para convertir URL a Data URL
+async function urlToDataUrl(url) {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    } catch (e) {
+        console.warn('[EquipmentHistoryPanel] Error converting URL to Data URL:', url, e);
+        return null;
+    }
+}
+
+// Función para procesar imágenes del mantenimiento
+async function processMaintenanceImages(images) {
+    if (!Array.isArray(images)) {
+        console.warn('[EquipmentHistoryPanel] processMaintenanceImages recibió non-array:', typeof images);
+        return [];
+    }
+    
+    console.log('[EquipmentHistoryPanel] Procesando', images.length, 'imágenes de mantenimiento');
+    
+    const processed = [];
+    for (const img of images) {
+        try {
+            let dataUrl = null;
+            let source = 'unknown';
+            
+            // Si ya es Data URL, usarlo directamente
+            if (typeof img === 'string' && img.startsWith('data:image/')) {
+                dataUrl = img;
+                source = 'data-url (existing)';
+            } 
+            // Si es objeto con path, cargar desde la URL
+            else if (typeof img === 'object' && img.path) {
+                let fullUrl = img.path;
+                if (fullUrl.startsWith('/uploads/')) {
+                    fullUrl = `/api${fullUrl}`;
+                } else if (!fullUrl.startsWith('http') && !fullUrl.startsWith('/api')) {
+                    fullUrl = `/api${fullUrl}`;
+                }
+                console.log('[EquipmentHistoryPanel] Convirtiendo ruta a Data URL:', fullUrl);
+                dataUrl = await urlToDataUrl(fullUrl);
+                source = `object-path: ${img.path}`;
+            }
+            // Si es string que es una ruta relativa o absoluta
+            else if (typeof img === 'string' && (img.startsWith('/') || img.startsWith('http'))) {
+                let fullUrl = img;
+                if (img.startsWith('/uploads/')) {
+                    fullUrl = `/api${img}`;
+                } else if (!img.startsWith('http') && !img.startsWith('/api')) {
+                    fullUrl = `/api${img}`;
+                }
+                console.log('[EquipmentHistoryPanel] Convirtiendo string-ruta a Data URL:', fullUrl);
+                dataUrl = await urlToDataUrl(fullUrl);
+                source = `string-path: ${img}`;
+            }
+            
+            if (dataUrl) {
+                processed.push(dataUrl);
+                console.log(`[EquipmentHistoryPanel] ✅ Imagen convertida exitosamente (${source})`);
+            } else {
+                console.warn('[EquipmentHistoryPanel] No se pudo convertir imagen:', source, img);
+            }
+        } catch (e) {
+            console.warn('[EquipmentHistoryPanel] Error procesando imagen:', img, e);
+        }
+    }
+    console.log('[EquipmentHistoryPanel] Procesadas', processed.length, '/', images.length, 'imágenes');
+    return processed;
+}
+
 async function generateDoc() {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -1092,8 +1456,14 @@ async function generateDoc() {
         
         y += 4;
         
-        // Renderizar cada mantenimiento como una tarjeta ordenada
-        completedMaintenances.forEach((maint, idx) => {
+        // Convertir imágenes de los mantenimientos a Data URLs
+        const convertedMaintenances = await Promise.all(completedMaintenances.map(async (maint) => {
+            const convertedImages = await processMaintenanceImages(maint.images || []);
+            return { ...maint, images: convertedImages };
+        }));
+    
+    // Renderizar cada mantenimiento como una tarjeta ordenada
+        convertedMaintenances.forEach((maint, idx) => {
             const boxWidth = pageWidth - 2 * margin;
             const cardPadding = 5;
             
@@ -1201,27 +1571,32 @@ async function generateDoc() {
             doc.text('FOTOS:', imgXStart + 3, cardY + 5);
             
             if (Array.isArray(maint.images) && maint.images.length) {
-                // RENDERIZAR IMÁGENES
+                // RENDERIZAR IMÁGENES (ya convertidas a Data URLs)
                 const images = maint.images.slice(0, 5);
                 const imgW = 18;
                 const imgH = 18;
                 const imgGap = 3;
                 let imgX = imgXStart + 27;
                 const imgY = cardY + 3;
+                let successCount = 0;
                 
-                images.forEach((img, imgIdx) => {
+                images.forEach((imgSrc, imgIdx) => {
                     try {
-                        const fmt = img.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-                        doc.addImage(img, fmt, imgX, imgY, imgW, imgH);
-                        imgX += imgW + imgGap;
+                        if (imgSrc && typeof imgSrc === 'string' && imgSrc.startsWith('data:image/')) {
+                            // Determinar formato basado en el data URL
+                            const fmt = imgSrc.includes('data:image/png') ? 'PNG' : 'JPEG';
+                            doc.addImage(imgSrc, fmt, imgX, imgY, imgW, imgH);
+                            imgX += imgW + imgGap;
+                            successCount++;
+                        }
                     } catch (e) {
-                        console.warn('Error imagen:', e);
+                        console.warn('[EquipmentHistoryPanel] Error renderizando imagen en PDF:', e);
                     }
                 });
                 
                 // Contador
                 doc.setFontSize(5).setTextColor(130, 120, 160).setFont(undefined, 'normal');
-                doc.text(`(${images.length})`, imgXStart + 27, cardY + 23);
+                doc.text(`(${successCount})`, imgXStart + 27, cardY + 23);
             } else {
                 // SIN IMÁGENES - Mismo estilo, texto en lugar de fotos
                 doc.setFontSize(6).setTextColor(160, 150, 185).setFont(undefined, 'italic');
@@ -1566,10 +1941,25 @@ async function downloadPdf() {
     }
 }
 
-function onMaintenanceSaved() {
+async function onMaintenanceSaved() {
+    console.log('[EquipmentHistoryPanel] onMaintenanceSaved called - starting reload');
     wizardVisible.value = false;
-    fetchHistory();
-    loadMaintenanceFlow();
+    // Wait for backend to fully process
+    await new Promise(r => setTimeout(r, 800));
+    
+    console.log('[EquipmentHistoryPanel] Reloading maintenance flow...');
+    await loadMaintenanceFlow();
+    console.log('[EquipmentHistoryPanel] maintenanceFlow after reload:', JSON.stringify(maintenanceFlow.value));
+    
+    await fetchHistory();
+    console.log('[EquipmentHistoryPanel] History reloaded');
+    
+    await fetchStatuses();
+    console.log('[EquipmentHistoryPanel] Statuses reloaded');
+    
+    // Force Vue reactivity update
+    maintenanceFlow.value = { ...maintenanceFlow.value };
+    console.log('[EquipmentHistoryPanel] Force update applied');
 }
 
 function formatDate(dateStr) {
@@ -1735,6 +2125,31 @@ async function fetchStatuses() {
     }
 }
 
+// Global listener for equipment status updates from MaintenanceWizardV2
+function handleEquipmentStatusUpdated(event) {
+    const { inventoryNo } = event.detail || {};
+    const eventCode = String(inventoryNo || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const currentCode = String(props.item?.['No DE INVENTARIO'] || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (eventCode && currentCode && eventCode === currentCode) {
+        console.log('[EquipmentHistoryPanel] Escuché equipment:status-updated para', inventoryNo, '— recargando...');
+        // Reload maintenance flow and history after a small delay to ensure backend is ready
+        setTimeout(async () => {
+            await loadMaintenanceFlow();
+            await fetchHistory();
+            await fetchStatuses();
+        }, 500);
+    }
+}
+
+// Register and unregister the global listener
+onMounted(() => {
+    window.addEventListener('equipment:status-updated', handleEquipmentStatusUpdated);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('equipment:status-updated', handleEquipmentStatusUpdated);
+});
+
 // Watchers
 watch(() => props.visible, async (newVal) => {
     if (newVal && props.item) {
@@ -1743,6 +2158,7 @@ watch(() => props.visible, async (newVal) => {
         await fetchHistory();
         await loadMaintenanceFlow();
         await fetchStatuses();
+        await loadEquipmentImages();
     } else {
         document.body.style.overflow = 'auto';
         // make sure PDF modal is closed when panel hides
@@ -1806,42 +2222,97 @@ watch(() => props.visible, async (newVal) => {
 
 .panel-header-simple {
     padding: 16px 24px;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    flex-shrink: 0;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.05), rgba(59, 130, 246, 0.02));
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
 }
 
 .header-info h1 {
-    margin: 0;
+    margin: 0 0 4px 0;
     font-size: 18px;
     font-weight: 700;
     color: #fff;
 }
 
 .header-info p {
-    margin: 2px 0 0 0;
-    font-size: 12px;
-    color: #a0aec0;
+    margin: 0;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.6);
 }
 
-.btn-close-simple {
-    background: none;
-    border: none;
-    font-size: 28px;
-    color: #cbd5e1;
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
+.header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.btn-edit-mode {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 8px;
+    color: #60a5fa;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.btn-close-simple:hover {
+.btn-edit-mode:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.5);
+}
+
+.btn-cancel {
+    padding: 8px 14px;
+    background: rgba(100, 116, 139, 0.2);
+    border: 1px solid rgba(100, 116, 139, 0.3);
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+    background: rgba(100, 116, 139, 0.3);
+    color: #fff;
+}
+
+.btn-save {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: rgba(34, 197, 94, 0.2);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+    border-radius: 8px;
+    color: #4ade80;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-save:hover:not(:disabled) {
+    background: rgba(34, 197, 94, 0.3);
+}
+
+.btn-save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.header-info h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
     color: #fff;
 }
 
@@ -1929,6 +2400,168 @@ watch(() => props.visible, async (newVal) => {
     font-size: 12px;
     color: #e2e8f0;
     font-weight: 500;
+}
+
+/* Edit mode styles */
+.info-grid.edit-mode {
+    gap: 12px;
+}
+
+.info-grid.edit-mode .info-item {
+    flex-direction: column;
+    gap: 4px;
+}
+
+.edit-input {
+    width: 100%;
+    padding: 8px 12px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 12px;
+    transition: all 0.2s ease;
+}
+
+.edit-input:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Images section styles */
+.images-section {
+    padding: 16px 0;
+}
+
+.section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    margin: 0 0 12px 0;
+}
+
+.upload-section {
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.upload-area {
+    position: relative;
+}
+
+.file-input {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    border: 2px dashed rgba(59, 130, 246, 0.4);
+    border-radius: 12px;
+    background: rgba(59, 130, 246, 0.05);
+    color: rgba(59, 130, 246, 0.8);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upload-label:hover {
+    border-color: rgba(59, 130, 246, 0.6);
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.upload-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 8px;
+}
+
+.uploaded-images {
+    margin-top: 16px;
+}
+
+.uploaded-images h4 {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 8px 0;
+}
+
+.images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+}
+
+.image-preview {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.5);
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-preview .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.9);
+    border: none;
+    color: #fff;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.image-preview:hover .remove-btn {
+    opacity: 1;
+}
+
+.no-images {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.no-images-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+}
+
+.no-images p {
+    margin: 0;
+    font-size: 13px;
+}
+
+.no-images .hint {
+    font-size: 12px;
+    margin-top: 8px;
+    opacity: 0.7;
 }
 
 .history-list {
@@ -2347,6 +2980,28 @@ watch(() => props.visible, async (newVal) => {
 .btn-simple.maintenance {
     background: linear-gradient(135deg, #8b5cf6, #7c3aed);
     border-color: #8b5cf6;
+}
+
+.btn-simple.start {
+    background: rgba(34, 197, 94, 0.1);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.btn-simple.start:hover {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.btn-simple.finish {
+    background: rgba(245, 158, 11, 0.1);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.btn-simple.finish:hover {
+    background: rgba(245, 158, 11, 0.2);
+    border-color: rgba(245, 158, 11, 0.4);
 }
 
 .btn-simple.close {

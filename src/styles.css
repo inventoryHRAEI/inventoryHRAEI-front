@@ -188,6 +188,17 @@ input[type="date"] {
   }
 }
 
+/* Ensure SweetAlert2 modals always appear above wizards/overlays */
+.swal2-container {
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+}
+
+.swal2-popup {
+  z-index: 2147483648 !important;
+  pointer-events: auto !important;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    TOPBAR PREMIUM - Glassmorphism + Animated Gradient Border + Glow Effects
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -296,7 +307,8 @@ input[type="date"] {
   justify-content: space-between;
   width: 100%;
   gap: 16px;
-  flex-wrap: nowrap
+  flex-wrap: nowrap;
+  position: relative; /* Enable absolute positioning for notification bell */
 }
 
 /* Control del overflow en el topbar: truncar hijos para evitar que aumente la altura */
@@ -577,12 +589,17 @@ input[type="date"] {
   box-sizing: border-box
 }
 
-.t/* Notification Bell */
+/* Notification Bell */
 .notif-bell-action {
   flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 240;
+  position: relative;
 }
 
-opbar {
+.topbar {
   width: calc(100% - 32px);
   left: 50%;
   transform: translateX(-50%);
@@ -590,14 +607,38 @@ opbar {
 
 /* Evitar overflow en el área de acciones; truncar texto largo y mantener visibles las acciones */
 .topbar-actions {
-  min-width: 0
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
 .topbar-actions .actions {
   min-width: 0;
   display: flex;
   gap: 8px;
-  align-items: center
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
+.topbar-actions .actions > * {
+  flex-shrink: 0;
+}
+
+.topbar-actions .actions > .notif-bell-integrated {
+  position: relative;
+  z-index: 200;
+  pointer-events: auto;
+  isolation: isolate;
+}
+
+.topbar-actions .actions > .user-menu {
+  position: relative;
+  z-index: 300;
+  isolation: isolate;
 }
 
 .topbar .top-action {
@@ -727,7 +768,8 @@ opbar {
 /* Dropdown del menú de usuario - Premium Edition */
 .user-menu {
   position: relative;
-  z-index: 250;
+  z-index: 300;
+  isolation: isolate;
 }
 
 .user-btn {
@@ -2610,4 +2652,26 @@ input[type="date"]::-webkit-calendar-picker-footer button:hover {
   color: #00ff6a !important;
   border-color: rgba(0, 255, 106, 0.5) !important;
   transform: scale(1.02) !important;
+}
+
+
+
+/* NOTIVUE NOTIFICATIONS - GLOBAL Z-INDEX MANAGEMENT */
+/* SOLUCIÓN AGRESIVA: position fixed + z-index ultra alto */
+.notivue-container {
+  z-index: 999999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+.notivue-item {
+  z-index: 999999 !important;
+  position: relative !important;
+}
+
+.notivue {
+  z-index: 999999 !important;
+  position: fixed !important;
 }

@@ -35,12 +35,39 @@ export function useBiomedicalCardRendering() {
       windowWidth.value = window.innerWidth
       windowHeight.value = window.innerHeight
       window.addEventListener('resize', handleResize)
+      
+      // ✅ CRITICAL: Escuchar eventos de actualización de semaforización
+      // Cuando cambia el estado, forzar re-render de la UI
+      const handleSemaforoUpdate = () => {
+        console.log('[useBiomedicalCardRendering] Received semaforization update, forcing UI refresh');
+        // Forzar actualización reactiva
+        windowWidth.value = window.innerWidth
+        renderedCount.value = 0
+        resetBatchRender()
+      };
+      
+      window.addEventListener('ui:refresh-semaforizacion', handleSemaforoUpdate);
+      window.addEventListener('equipment:status-updated', handleSemaforoUpdate);
+      
+      // Guardar referencias para limpiar después
+      if (!window.__semaforoListeners) window.__semaforoListeners = [];
+      window.__semaforoListeners.push({ listener: handleSemaforoUpdate, type: 'useBiomedicalCardRendering' });
     }
   })
 
   onBeforeUnmount(() => {
     if (typeof window !== 'undefined') {
       window.removeEventListener('resize', handleResize)
+      
+      // ✅ Limpiar listeners de actualización
+      if (window.__semaforoListeners) {
+        const handleSemaforoUpdate = window.__semaforoListeners.find(l => l.type === 'useBiomedicalCardRendering');
+        if (handleSemaforoUpdate) {
+          window.removeEventListener('ui:refresh-semaforizacion', handleSemaforoUpdate.listener);
+          window.removeEventListener('equipment:status-updated', handleSemaforoUpdate.listener);
+          window.__semaforoListeners = window.__semaforoListeners.filter(l => l !== handleSemaforoUpdate);
+        }
+      }
     }
   })
   
@@ -74,36 +101,81 @@ export function useBiomedicalCardRendering() {
   }
 
   function getStatusAccentClass(item) {
-    const status = item['ESTATUS']?.toLowerCase()
-    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
-    if (funcional === 'no') return 'accent-critical'
-    if (status?.includes('mantenimiento')) return 'accent-warning'
-    if (status === 'inactivo' || status?.includes('no operativo')) return 'accent-warning'
-    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'accent-success'
+    if (!item) return 'accent-default'
+    
+    const statusRaw = item['ESTATUS']
+    const status = statusRaw ? String(statusRaw).toLowerCase().trim() : ''
+    const funcional = item['FUNCIONAL SI NO'] ? String(item['FUNCIONAL SI NO']).toLowerCase().trim() : ''
+    
+    // ✅ PRIORIDAD 1: Estados post-mantenimiento (máxima prioridad)
+    // Estos vienen de equipment_monthly_status después de finalizar mantenimiento
+    if (status === 'fuera de servicio') return 'accent-critical'                   // Rojo exacto
+    if (status.includes('fuera') && status.includes('servicio')) return 'accent-critical'  // Variante
+    
+    if (status === 'parcialmente operativo') return 'accent-partial'               // Naranja
+    if (status.includes('parcialmente') && status.includes('operativo')) return 'accent-partial'  // Variante
+    
+    if (status === 'operativo' && (funcional === 'si' || !funcional)) return 'accent-success'  // Verde exacto
+    if (status.includes('operativo') && !status.includes('no') && funcional === 'si') return 'accent-success'  // Verde variante
+    
+    // ✅ PRIORIDAD 2: Fallback a lógica anterior (para compatibilidad)
+    if (funcional === 'no') return 'accent-critical'                              // Rojo
+    if (status.includes('mantenimiento')) return 'accent-warning'                // Naranja durante MT
+    if (status === 'inactivo' || status.includes('no operativo')) return 'accent-warning'  // Naranja
+    if ((status === 'activo' || status.includes('operativo')) && funcional === 'si') return 'accent-success'  // Verde
+    
     return 'accent-default'
   }
 
   function getStatusGlowClass(item) {
-    const status = item['ESTATUS']?.toLowerCase()
-    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
-    if (funcional === 'no') return 'glow-critical'
-    if (status?.includes('mantenimiento')) return 'glow-warning'
-    if (status === 'inactivo' || status?.includes('no operativo')) return 'glow-warning'
-    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'glow-success'
+    if (!item) return 'glow-default'
+    
+    const statusRaw = item['ESTATUS']
+    const status = statusRaw ? String(statusRaw).toLowerCase().trim() : ''
+    const funcional = item['FUNCIONAL SI NO'] ? String(item['FUNCIONAL SI NO']).toLowerCase().trim() : ''
+    
+    // ✅ PRIORIDAD 1: Estados post-mantenimiento (máxima prioridad)
+    if (status === 'fuera de servicio') return 'glow-critical'                    // Rojo exacto
+    if (status.includes('fuera') && status.includes('servicio')) return 'glow-critical'  // Variante
+    
+    if (status === 'parcialmente operativo') return 'glow-partial'                // Naranja
+    if (status.includes('parcialmente') && status.includes('operativo')) return 'glow-partial'  // Variante
+    
+    if (status === 'operativo' && (funcional === 'si' || !funcional)) return 'glow-success'  // Verde exacto
+    if (status.includes('operativo') && !status.includes('no') && funcional === 'si') return 'glow-success'  // Verde variante
+    
+    // ✅ PRIORIDAD 2: Fallback a lógica anterior
+    if (funcional === 'no') return 'glow-critical'                               // Rojo
+    if (status.includes('mantenimiento')) return 'glow-warning'                  // Naranja
+    if (status === 'inactivo' || status.includes('no operativo')) return 'glow-warning'  // Naranja
+    if ((status === 'activo' || status.includes('operativo')) && funcional === 'si') return 'glow-success'  // Verde
     return 'glow-default'
   }
 
   function getStatusPillClass(item) {
+    if (!item) return 'status-unknown'
+    
     const statusRaw = item?.['ESTATUS']
-    const status = statusRaw ? String(statusRaw).toLowerCase() : ''
-    const funcional = item['FUNCIONAL SI NO']?.toLowerCase()
+    const status = statusRaw ? String(statusRaw).toLowerCase().trim() : ''
+    const funcional = item['FUNCIONAL SI NO'] ? String(item['FUNCIONAL SI NO']).toLowerCase().trim() : ''
     const hasRealValue = statusRaw && String(statusRaw).trim() && !['n/a', 'sin clave', 'sin datos', 'no disponible', 'na'].includes(String(statusRaw).toLowerCase())
     if (!hasRealValue) return 'status-unknown'
-    if (status.includes('propio')) return 'status-success'
-    if (funcional === 'no') return 'status-critical'
-    if (status?.includes('mantenimiento')) return 'status-warning'
-    if (status === 'inactivo' || status?.includes('no operativo')) return 'status-warning'
-    if ((status === 'activo' || status?.includes('operativo')) && funcional === 'si') return 'status-success'
+    
+    // ✅ PRIORIDAD 1: Estados post-mantenimiento (máxima prioridad)
+    if (status === 'fuera de servicio') return 'status-critical'                   // Rojo exacto
+    if (status.includes('fuera') && status.includes('servicio')) return 'status-critical'  // Variante
+    
+    if (status === 'parcialmente operativo') return 'status-partial'               // Naranja
+    if (status.includes('parcialmente') && status.includes('operativo')) return 'status-partial'  // Variante
+    
+    if (status.includes('propio')) return 'status-success'                        // Verde
+    if (status === 'operativo' && (funcional === 'si' || !funcional)) return 'status-success'  // Verde exacto
+    if (status.includes('operativo') && !status.includes('no') && funcional === 'si') return 'status-success'  // Verde variante
+    
+    // ✅ PRIORIDAD 2: Fallback a lógica anterior
+    if (funcional === 'no') return 'status-critical'                              // Rojo
+    if (status.includes('mantenimiento')) return 'status-warning'                // Naranja
+    if (status === 'inactivo' || status.includes('no operativo')) return 'status-warning'  // Naranja
     return 'status-default'
   }
 

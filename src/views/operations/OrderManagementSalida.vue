@@ -11,7 +11,7 @@
                         </svg>
                     </button>
                     <span>Gestión de Órdenes de Salida</span>
-                    <button class="btn-create-order" @click="goToCreateOrder">
+                    <button v-if="canCreateOrder" class="btn-create-order" @click="goToCreateOrder">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -262,6 +262,25 @@
                 @edit="openEditModal" @delete="deleteOrder" @deleteMultiple="handleDeleteMultipleWithModal"
                 @create="goToCreateOrder" @openHistory="openDocumentModal" @upload="openUploadModal" />
         </ActionPanel>
+
+        <!-- Modal: Wizard de creación de orden de salida -->
+        <Teleport to="body">
+            <Transition name="modal-fade">
+                <div v-if="showWizardModal" class="wizard-modal-overlay" @click.self="requestCloseWizard">
+                    <div class="wizard-modal-container">
+                        <button class="wizard-modal-close" @click="requestCloseWizard" aria-label="Cerrar">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                        <div class="wizard-modal-content">
+                            <OpSalida v-if="showWizardModal" @created="onWizardCreated" @cancel="closeWizardImmediately" />
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
 
         <!-- Modal: edición única (no permite múltiples) + tabs de versiones (ramas) -->
         <ModalBase :open="showEditModal" @close="handleModalClose" @close-request="handleModalClose" :maxWidth="1100"
@@ -704,7 +723,10 @@ import PdfViewer from '@/components/PdfViewer.vue'
 import BlobPdfViewer from '@/components/BlobPdfViewer.vue'
 import { confirmDelete, showSuccess } from '@/utils/sweetAlertConfig'
 import Swal from 'sweetalert2'
+import { useCloseConfirmation } from '@/composables/useCloseConfirmation.js'
 import { darkThemeConfig } from '@/utils/sweetAlertConfig'
+import { usePermissions } from '@/composables/usePermissions.js'
+import { authedFetch } from '@/utils/api.js'
 const OpSalida = defineAsyncComponent(() => import('@/views/operations/OpSalidaNew.vue'))
 
 // Mock helper para versiones de PDF (se puede reemplazar por API real)
@@ -768,6 +790,12 @@ const allOrders = ref([])
 const editExternalOffsetTop = ref(0)
 const editExternalOffsetRight = ref(0)
 
+// Estado para el modal del wizard de creación de órdenes
+const showWizardModal = ref(false)
+
+// Permisos del usuario
+const { canCreateOrder, canEditOrder, canDeleteOrder, canDownloadOrderHistory } = usePermissions()
+
 // Estado y helpers para modal de documento (versiones / preview)
 const showDocModal = ref(false)
 const docVersions = ref([])
@@ -798,6 +826,17 @@ const docPreviewHtml = ref('')
 const isUploading = ref(false)
 const dragOverActive = ref(false)
 const uploadSuccessData = ref(null)
+
+function withAuthQuery(url) {
+    try {
+        const token = localStorage.getItem('token')
+        if (token) {
+            const sep = url.includes('?') ? '&' : '?'
+            return `${url}${sep}token=${encodeURIComponent(token)}`
+        }
+    } catch (e) {}
+    return url
+}
 
 function resetUploadState() {
     uploadFile.value = null
@@ -838,7 +877,7 @@ async function fetchDocVersionsFor(folio) {
     const minDuration = 1200 // Duración mínima para que se vea la animación (1 vuelta completa)
 
     try {
-        const res = await fetch(`/api/ops/salida/${encodeURIComponent(folio)}/pdfs`)
+        const res = await authedFetch(`/api/ops/salida/${encodeURIComponent(folio)}/pdfs`)
         if (!res.ok) {
             const payload = await res.json().catch(() => ({}))
             throw new Error(payload && (payload.msg || payload.error) ? (payload.msg || payload.error) : 'Error obteniendo versiones')
@@ -851,12 +890,17 @@ async function fetchDocVersionsFor(folio) {
         else if (json && Array.isArray(json.rows)) items = json.rows
         else if (json && Array.isArray(json.data)) items = json.data
 
+        const token = localStorage.getItem('token') || null
         docVersions.value = (items || []).map((it, idx) => {
             const id = it.id || it.pdfId || it.filename || `tmp-${idx}-${Date.now()}`
             const createdAt = it.createdAt || it.created_at || it.timestamp || null
             const createdBy = it.createdBy || it.created_by || it.uploader || null
-            const previewUrl = it.previewUrl || it.preview_url || `/api/ops/salida/${encodeURIComponent(folio)}/pdfs/${encodeURIComponent(id)}/preview`
-            const downloadUrl = it.downloadUrl || it.download_url || `/api/ops/salida/${encodeURIComponent(folio)}/pdfs/${encodeURIComponent(id)}/download`
+            let previewUrl = it.previewUrl || it.preview_url || `/api/ops/salida/${encodeURIComponent(folio)}/pdfs/${encodeURIComponent(id)}/preview`
+            let downloadUrl = it.downloadUrl || it.download_url || `/api/ops/salida/${encodeURIComponent(folio)}/pdfs/${encodeURIComponent(id)}/download`
+            if (token) {
+                previewUrl = withAuthQuery(previewUrl)
+                downloadUrl = withAuthQuery(downloadUrl)
+            }
             return {
                 ...it,
                 id,
@@ -869,7 +913,7 @@ async function fetchDocVersionsFor(folio) {
 
         // Also fetch snapshot versions and merge
         try {
-            const versRes = await fetch(`/api/ops/salida/${encodeURIComponent(folio)}/versions?limit=50`)
+            const versRes = await authedFetch(`/api/ops/salida/${encodeURIComponent(folio)}/versions?limit=50`)
             if (versRes.ok) {
                 const versJson = await versRes.json()
                 const rows = (versJson && Array.isArray(versJson.items)) ? versJson.items : []
@@ -961,7 +1005,7 @@ async function fetchSignedDocuments(folio) {
     // Try fetching signed documents; if 404, attempt common folio variants
     try {
         const tryFetch = async (f) => {
-            const r = await fetch(`/api/ops/salida/${encodeURIComponent(f)}/signed-documents`)
+            const r = await authedFetch(`/api/ops/salida/${encodeURIComponent(f)}/signed-documents`)
             return r
         }
 
@@ -1009,7 +1053,7 @@ async function fetchSignedDocuments(folio) {
         // Ensure we have uploader photos by resolving users list once
         try {
             if (!usersCache.value) {
-                const ures = await fetch('/api/auth/users')
+                const ures = await authedFetch('/api/auth/users')
                 if (ures.ok) {
                     const ujson = await ures.json()
                     usersCache.value = Array.isArray(ujson) ? ujson : []
@@ -1309,12 +1353,13 @@ function selectDocVersion(v) {
     // For mobile viewers, route via backend proxy to avoid CORS/session issues
     if (isMobileView.value) {
         if (v.version) {
-            currentPreviewUrl.value = `/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&version=${encodeURIComponent(v.version)}`
+            currentPreviewUrl.value = withAuthQuery(`/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&version=${encodeURIComponent(v.version)}`)
         } else {
-            currentPreviewUrl.value = `/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&id=${encodeURIComponent(v.id)}`
+            currentPreviewUrl.value = withAuthQuery(`/api/ops/preview-proxy?folio=${encodeURIComponent(folio)}&id=${encodeURIComponent(v.id)}`)
         }
     } else {
-        currentPreviewUrl.value = v.previewUrl || `/api/ops/salida/${encodeURIComponent(folio)}/pdfs/${v.id}/preview`
+        const base = v.previewUrl || `/api/ops/salida/${encodeURIComponent(folio)}/pdfs/${v.id}/preview`
+        currentPreviewUrl.value = withAuthQuery(base)
     }
     selectedPdfId.value = v.id
 }
@@ -1328,14 +1373,14 @@ function selectSignedDocument(d) {
     currentPreviewType.value = d.contentType || ''
 
     // Build preview URL (backend already provides absolute/relative previewUrl)
-    const url = d.previewUrl || d.downloadUrl || (d.filePath ? `/api${d.filePath}` : null)
+    let url = d.previewUrl || d.downloadUrl || (d.filePath ? `/api${d.filePath}` : null)
     if (!url) {
         currentPreviewUrl.value = ''
         return
     }
 
     // For mobile, route through proxy only for generated PDFs/versions; uploaded files are served under /api/uploads
-    currentPreviewUrl.value = url
+    currentPreviewUrl.value = withAuthQuery(url)
 }
 
 function playDownloadAnimation(id) {
@@ -1745,8 +1790,34 @@ function formatDate(dateStr) {
 }
 
 function goToCreateOrder() {
-    console.debug('[OrderManagement] navigating to op-salida')
-    navigateAndRefresh(router, { name: 'op-salida', query: { from: 'order-management', t: Date.now() } })
+    console.debug('[OrderManagementSalida] opening create order modal')
+    showWizardModal.value = true
+}
+
+// Manejar cuando se crea una orden exitosamente desde el wizard
+async function onWizardCreated() {
+    console.debug('[OrderManagementSalida] order created, closing modal and refreshing')
+    showWizardModal.value = false
+    // Recargar la lista de órdenes
+    await reloadOrdersFromServer()
+}
+
+const { confirmAndClose } = useCloseConfirmation({
+    title: '¿Cerrar este wizard?',
+    message: 'Se perderán los cambios no guardados. ¿Deseas cerrar de todas formas?',
+    confirmText: 'Sí, cerrar',
+    cancelText: 'Seguir editando',
+    icon: 'warning'
+})
+
+function requestCloseWizard() {
+    confirmAndClose(() => {
+        showWizardModal.value = false
+    })
+}
+
+function closeWizardImmediately() {
+    showWizardModal.value = false
 }
 
 function goToDashboard() {
@@ -5733,6 +5804,116 @@ onMounted(() => {
     50% {
         transform: scale(1.1);
         opacity: 0.8;
+    }
+}
+
+/* Wizard Modal Styles */
+.wizard-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 20px;
+}
+
+.wizard-modal-container {
+    position: relative;
+    width: 100%;
+    max-width: 1200px;
+    max-height: 92vh;
+    background: #0a0f1a;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: wizardModalIn 0.3s ease-out;
+}
+
+@keyframes wizardModalIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.wizard-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(239, 68, 68, 0.15);
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wizard-modal-close:hover {
+    background: rgba(239, 68, 68, 0.3);
+}
+
+.wizard-modal-close svg {
+    stroke: rgba(239, 68, 68, 0.9);
+}
+
+.wizard-modal-content {
+    height: 92vh;
+    max-height: 92vh;
+    overflow-y: auto;
+}
+
+.wizard-modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.wizard-modal-content::-webkit-scrollbar-track {
+    background: rgba(59, 130, 246, 0.08);
+}
+
+.wizard-modal-content::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.3);
+    border-radius: 4px;
+}
+
+.wizard-modal-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.5);
+}
+
+/* Modal fade transition */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+    opacity: 0;
+}
+
+@media (max-width: 768px) {
+    .wizard-modal-overlay {
+        padding: 10px;
+    }
+    
+    .wizard-modal-container {
+        max-height: 95vh;
+        border-radius: 12px;
+    }
+    
+    .wizard-modal-content {
+        max-height: 95vh;
     }
 }
 </style>

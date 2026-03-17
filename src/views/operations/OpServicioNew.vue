@@ -186,9 +186,12 @@
                                 style="margin-top: 16px" />
                         </Transition>
 
-                        <ModernInput v-model="form.descripcion" label="Descripción del servicio"
-                            placeholder="Describe las actividades a realizar" multiline :rows="4" class="span-full"
-                            style="margin-top: 16px" />
+                        <ModernInput v-model="form.descripcionReporte" label="Descripción del Reporte"
+                            placeholder="Describe el reporte recibido" multiline :rows="3" class="span-full" style="margin-top: 16px" />
+
+                        <ModernInput v-model="form.accionesRealizadas"
+                            label="Acciones realizadas para atender el reporte"
+                            placeholder="Detalla las acciones realizadas" multiline :rows="3" class="span-full" style="margin-top: 16px" />
 
                         <DynamicFieldsSection :schema="formSchema" :model="form.extraFields" sectionId="motivo"
                             style="margin-top: 16px;" />
@@ -512,6 +515,23 @@
                                 </div>
                             </div>
                         </Transition>
+
+                        <!-- Toggle: Agregar al Inventario -->
+                        <div class="inventory-toggle-section" style="margin-top: 24px;">
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <span class="toggle-label">✓ Registrar en inventario</span>
+                                    <span class="toggle-description">
+                                        Activa esta opción para registrar los equipos en el sistema de inventario.
+                                        Se creará un nuevo registro en el historial de equipos.
+                                    </span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" v-model="form.agregarAlInventario">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
                     </WizardStepCard>
 
                     <WizardStepCard v-if="form.equiposEntrada.length > 0"
@@ -587,13 +607,6 @@
                         </template>
 
                         <div class="fields-grid">
-                            <ModernInput v-model="form.descripcionReporte" label="Descripción del Reporte"
-                                placeholder="Describe el reporte recibido" multiline :rows="3" class="span-full" />
-
-                            <ModernInput v-model="form.accionesRealizadas"
-                                label="Acciones realizadas para atender el reporte"
-                                placeholder="Detalla las acciones realizadas" multiline :rows="3" class="span-full" />
-
                             <div class="observations-with-image span-full">
                                 <ModernInput v-model="form.observaciones" label="Observaciones"
                                     placeholder="Escribe cualquier observación relevante..." multiline :rows="4"
@@ -717,10 +730,21 @@
             </template>
         </OperationWizard>
 
+        <!-- Equipment Warning Modal -->
+        <EquipmentWarningModal
+            v-model="showWarningModal"
+            :warnings="equipmentWarnings"
+            title="Advertencia de Equipo"
+            subtitle="El equipo que intentas añadir tiene las siguientes alertas:"
+            @confirm="confirmAddWithWarnings"
+            @cancel="cancelAddWithWarnings"
+        />
+
         <!-- PDF Preview Modal -->
-        <Teleport to="body">
+        <Teleport to="html">
             <Transition name="modal-fade">
-                <div v-if="showPdfPreview" class="pdf-preview-overlay" @click.self="closePdfPreview">
+                <Teleport to="body">
+                  <div v-if="showPdfPreview" class="pdf-preview-overlay" @click.self="closePdfPreview">
                     <div class="pdf-preview-modal">
                         <div class="pdf-preview-header">
                             <h3>Vista Previa del PDF</h3>
@@ -750,7 +774,8 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                  </div>
+                </Teleport>
             </Transition>
         </Teleport>
     </div>
@@ -772,6 +797,7 @@ import SearchableInput from '@/components/SearchableInput.vue'
 import FormSchemaAdminPanel from '@/components/FormSchemaAdminPanel.vue'
 import DynamicFieldsSection from '@/components/DynamicFieldsSection.vue'
 import BlobPdfViewer from '@/components/BlobPdfViewer.vue'
+import EquipmentWarningModal from '@/components/EquipmentWarningModal.vue'
 import { Settings } from 'lucide-vue-next'
 import { fetchFormSchema, saveFormSchema } from '@/services/formSchemaService.js'
 import { getDefaultSchema } from '@/data/defaultFormSchemas.js'
@@ -794,14 +820,23 @@ import notificationStore from '@/stores/notificationStore'
 
 // Composables
 import { useInventorySuggestions } from '@/composables/useInventorySuggestions.js'
+import { getEquipmentStatus } from '@/composables/useEquipmentWarnings.js'
+import { useCloseConfirmation } from '@/composables/useCloseConfirmation.js'
 
 // Props
 const props = defineProps({
     modo: { type: String, default: 'crear' },
-    ordenId: { type: [String, Number], default: null }
+    ordenId: { type: [String, Number], default: null },
+    enModal: { type: Boolean, default: false },
+    readOnly: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['close', 'actualizado'])
+const emit = defineEmits({
+    close: () => true,
+    actualizado: () => true,
+    created: () => true,
+    cancel: () => true
+})
 const router = useRouter()
 
 // --- ADMIN / SCHEMA ---
@@ -859,6 +894,11 @@ const {
 const wizardRef = ref(null)
 const currentStep = ref(0)
 const loading = ref(false)
+
+// Equipment Warnings
+const showWarningModal = ref(false)
+const pendingEquipment = ref(null)
+const equipmentWarnings = ref([])
 const isMobileView = ref(false)
 const errors = ref({})
 const belongsToHospital = ref(null) // Para la pregunta: ¿Pertenece al Hospital?
@@ -941,6 +981,7 @@ const form = reactive({
     observacionesImg: null,
     nombreIngeniero: '',
     equiposEntrada: [], // Backend expects equiposEntrada
+    agregarAlInventario: false,
     signatures: JSON.parse(JSON.stringify(DEFAULT_SIGNATURES)),
     extraFields: {}
 })
@@ -1127,7 +1168,8 @@ function agregarItem() {
     // Use the first unit as the main description
     const firstUnit = newItem.unidades[0]
     if (firstUnit?.nombre?.trim()) {
-        form.equiposEntrada.push({
+        // Preparar el equipo para añadir
+        const equipmentToAdd = {
             tipo: newItem.tipo,
             cantidad: newItem.cantidad,
             descripcion: firstUnit.nombre,
@@ -1141,10 +1183,126 @@ function agregarItem() {
             serieEquipoAsociado: firstUnit.serieEquipoAsociado || '',
             claveHRAEI: firstUnit.claveHRAEI,
             unidades: newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 }))
-        })
+        }
+
+        // Verificar estado del equipo antes de añadir (solo para equipos médicos con clave HRAEI o serie válida)
+        // Construir lista de términos de búsqueda (serie, claveHRAEI, nombre, marca, modelo)
+        const searchTerms = []
+        
+        // 1. Número de serie primero (más específico)
+        if (firstUnit.serie && firstUnit.serie.toUpperCase() !== 'N/A' && firstUnit.serie.trim() !== '') {
+            searchTerms.push(firstUnit.serie.trim())
+        }
+        
+        // 2. Clave HRAEI
+        if (firstUnit.claveHRAEI && firstUnit.claveHRAEI.toUpperCase() !== 'N/A' && firstUnit.claveHRAEI.trim() !== '') {
+            searchTerms.push(firstUnit.claveHRAEI.trim())
+        }
+        
+        // 3. Nombre del equipo
+        if (firstUnit.nombre && firstUnit.nombre.trim() !== '') {
+            searchTerms.push(firstUnit.nombre.trim())
+        }
+        
+        // 4. Marca
+        if (firstUnit.marca && firstUnit.marca.toUpperCase() !== 'N/A' && firstUnit.marca.trim() !== '') {
+            searchTerms.push(firstUnit.marca.trim())
+        }
+        
+        // 5. Modelo
+        if (firstUnit.modelo && firstUnit.modelo.toUpperCase() !== 'N/A' && firstUnit.modelo.trim() !== '') {
+            searchTerms.push(firstUnit.modelo.trim())
+        }
+        
+        console.log('[OpServicioNew] Términos de búsqueda:', searchTerms)
+        const isValidInventory = searchTerms.length > 0
+        
+        if (newItem.tipo === 'equipo-medico' && isValidInventory) {
+            
+            // Enviar todos los términos de búsqueda al backend
+            getEquipmentStatus(searchTerms).then(async (statusData) => {
+                console.log('[OpServicioNew] Estado recibido:', statusData)
+                console.log('[OpServicioNew] SearchTerms:', searchTerms, 'StatusData keys:', Object.keys(statusData))
+                
+                // Buscar el primer término que tenga un estado válido
+                let equipmentStatus = null
+                let matchedTerm = null
+                
+                for (const term of searchTerms) {
+                    console.log(`[OpServicioNew] Checking term "${term}":`, statusData[term])
+                    if (statusData[term] && statusData[term].status && statusData[term].status !== 'unknown') {
+                        equipmentStatus = statusData[term]
+                        matchedTerm = term
+                        console.log(`[OpServicioNew] Found valid status for term "${term}"`)
+                        break
+                    }
+                }
+                
+                if (equipmentStatus) {
+                    console.log('[OpServicioNew] Equipo encontrado con término:', matchedTerm, 'Estado:', equipmentStatus)
+                    const { analyzeEquipmentStatus } = await import('@/composables/useEquipmentWarnings.js')
+                    const warnings = analyzeEquipmentStatus(equipmentStatus, matchedTerm)
+                    console.log('[OpServicioNew] Warnings generadas:', warnings)
+                    const highSeverityWarnings = warnings.filter(w => w.severity === 'high' && w.allowOverride)
+                    
+                    if (highSeverityWarnings.length > 0) {
+                        console.log('[OpServicioNew] Showing warning modal with', highSeverityWarnings.length, 'high-severity warnings')
+                        pendingEquipment.value = equipmentToAdd
+                        equipmentWarnings.value = warnings
+                        showWarningModal.value = true
+                        return
+                    } else {
+                        console.log('[OpServicioNew] No high-severity warnings found, proceeding without modal')
+                    }
+                } else {
+                    console.log('[OpServicioNew] No equipment status found for any search term')
+                }
+                
+                // Si no hay advertencias, añadir normalmente
+                form.equiposEntrada.push(equipmentToAdd)
+                notifier.success('Item agregado')
+                resetNewItem()
+            }).catch(err => {
+                console.warn('[OpServicioNew] Error verificando estado:', err)
+                form.equiposEntrada.push(equipmentToAdd)
+                notifier.success('Item agregado')
+                resetNewItem()
+            })
+        } else {
+            form.equiposEntrada.push(equipmentToAdd)
+            notifier.success('Item agregado')
+            resetNewItem()
+        }
     }
-    notifier.success('Item agregado')
-    resetNewItem()
+}
+
+// Confirmar añadir equipo con advertencias
+function confirmAddWithWarnings() {
+    if (pendingEquipment.value) {
+        form.equiposEntrada.push(pendingEquipment.value)
+        notifier.success('Item agregado 尽管 las advertencias')
+        pendingEquipment.value = null
+        equipmentWarnings.value = []
+        resetNewItem()
+    }
+}
+
+// Composable para confirmación de cierre
+const { confirmAndClose } = useCloseConfirmation({
+    title: '¿Deseas salir de la creación de orden de servicio?',
+    message: 'Los cambios que hayas realizado se perderán. ¿Realmente deseas cerrar?',
+    confirmText: 'Sí, salir',
+    cancelText: 'Cancelar',
+    icon: 'warning'
+})
+
+// Cancelar añadir equipo con advertencias
+function cancelAddWithWarnings() {
+    confirmAndClose(() => {
+        pendingEquipment.value = null
+        equipmentWarnings.value = []
+        emit('cancel')
+    })
 }
 
 function resetNewItem() {
@@ -1270,6 +1428,7 @@ function handleSuggestionSelect(suggestion, unidad, field) {
 // PDF Preview
 function closePdfPreview() {
     showPdfPreview.value = false
+    document.body.classList.remove('pdf-preview-active')
     if (pdfPreviewUrl.value) {
         try { URL.revokeObjectURL(pdfPreviewUrl.value) } catch (e) { }
         pdfPreviewUrl.value = ''
@@ -1333,12 +1492,13 @@ async function onPreviewPDF() {
             pdfPreviewBlob.value = blob
             pdfPreviewUrl.value = URL.createObjectURL(blob)
             showPdfPreview.value = true
-        } else {
-            throw new Error('Error generando PDF')
-        }
-    } catch (err) {
-        console.error(err)
-        notifier.error('Error al generar preview')
+            document.body.classList.add('pdf-preview-active')
+            } else {
+             throw new Error('Error generando PDF')
+            }
+            } catch (err) {
+            console.error(err)
+            notifier.error('Error al generar preview')
     } finally {
         loadingPreview.value = false
     }
@@ -1439,6 +1599,7 @@ async function onSubmit() {
         const payload = {
             ...form,
             motivoServicio: form.motivoEntrada || '',  // Mapear a campo correcto
+            agregarAlInventario: form.agregarAlInventario,
             categories: categories
         }
 
@@ -1483,7 +1644,9 @@ async function onSubmit() {
 
             // Redirigir al order management
             setTimeout(() => {
-                router.push('/op/order-management-servicio')
+                // Emitir evento de creación exitosa
+                emit('created')
+                // Ya no navegamos - el componente padre maneja el cierre del modal
             }, 500)
         } else {
             throw new Error('Error al guardar')
@@ -1526,9 +1689,28 @@ async function loadOrden() {
         const res = await authedFetch(`/api/ops/servicio/${props.ordenId}`)
         if (res.ok) {
             const data = await res.json()
-            Object.assign(form, data)
+            if (data && data.orden) {
+                // Mapear campos de snake_case a camelCase para compatibilidad con el formulario
+                const mappedOrden = mapSnakeToCamel(data.orden)
+                Object.assign(form, mappedOrden)
+            }
+            if (data && Array.isArray(data.items)) {
+                // Mapear cada item también de snake_case a camelCase
+                form.equiposEntrada = data.items.map(item => mapSnakeToCamel(item))
+            }
         }
     } catch (err) { console.error(err) }
+}
+
+// Función para mapear campos de snake_case a camelCase
+function mapSnakeToCamel(obj) {
+    if (!obj || typeof obj !== 'object') return obj
+    const result = {}
+    for (const key in obj) {
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+        result[camelKey] = obj[key]
+    }
+    return result
 }
 
 onMounted(() => {
@@ -1545,6 +1727,14 @@ onMounted(() => {
     fetchAllInventorySuggestions()
     fetchEquipoMedicoSuggestions()
     fetchInsumosRefaccionesSuggestions()
+
+    // if editing, load the order; also watch for changes
+    if (props.modo === 'editar' && props.ordenId) {
+        loadOrden()
+    }
+    watch(() => props.ordenId, (newId) => {
+        if (props.modo === 'editar' && newId) loadOrden()
+    })
 
     if (props.modo === 'editar' && props.ordenId) {
         loadOrden()
@@ -1566,21 +1756,20 @@ onBeforeUnmount(() => {
 <style scoped>
 /* Reuse styles from OpEntradaNew/OpSalidaNew essentially */
 .op-servicio-new {
-    min-height: 100vh;
     background: #0a0f1a;
 }
 
 .wizard-step {
     display: flex;
     flex-direction: column;
-    gap: 28px;
-    padding: 18px 8px;
+    gap: 20px;
+    padding: 4px 0;
 }
 
 .fields-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    gap: 24px;
 }
 
 .fields-grid.cols-4 {
@@ -2023,7 +2212,7 @@ onBeforeUnmount(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 9998;
     padding: 20px;
 }
 
@@ -2392,7 +2581,7 @@ onBeforeUnmount(() => {
     height: 100%;
     background: rgba(0, 0, 0, 0.85);
     backdrop-filter: blur(4px);
-    z-index: 100;
+    z-index: 9997;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2514,5 +2703,230 @@ onBeforeUnmount(() => {
 
 .form-input::placeholder {
     color: rgba(255, 255, 255, 0.3);
+}
+
+/* Hospital Selection Cards - Same as OpEntradaNew */
+.selection-cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 600px) {
+    .selection-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
+.hospital-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.hospital-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+    transform: translateY(-2px);
+}
+
+.hospital-card.is-selected {
+    background: rgba(6, 182, 212, 0.15);
+    border-color: rgba(6, 182, 212, 0.5);
+    box-shadow: 0 0 24px rgba(6, 182, 212, 0.2);
+}
+
+.hospital-card.is-selected.yes-card {
+    background: rgba(34, 197, 94, 0.15);
+    border-color: rgba(34, 197, 94, 0.5);
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.2);
+}
+
+.hospital-card.is-selected.no-card {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow: 0 0 24px rgba(59, 130, 246, 0.2);
+}
+
+.card-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    color: white;
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.card-icon.sí {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+}
+
+.card-icon.no {
+    background: rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+
+.card-content {
+    flex: 1;
+}
+
+.card-content h4 {
+    margin: 0 0 4px 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #e2e8f0;
+}
+
+.card-subtitle {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.hospital-feedback {
+    margin-top: 12px;
+}
+
+.feedback-box {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid;
+    font-size: 0.9rem;
+}
+
+.feedback-box.success {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+    color: #4ade80;
+}
+
+.feedback-box.info {
+    background: rgba(59, 130, 246, 0.1);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
+
+.feedback-text {
+    flex: 1;
+}
+
+.feedback-text p {
+    margin: 0;
+}
+
+/* Inventory Toggle Styles */
+.inventory-toggle-section {
+    padding: 8px 0;
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+}
+
+.toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.toggle-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.toggle-description {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    max-width: 400px;
+    line-height: 1.4;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 56px;
+    height: 30px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: 0.3s;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #22c55e;
+    border-color: #22c55e;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.toggle-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+    color: #fbbf24;
+    font-size: 0.85rem;
+}
+
+.toggle-notice svg {
+    flex-shrink: 0;
 }
 </style>

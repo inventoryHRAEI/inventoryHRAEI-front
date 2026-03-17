@@ -1352,3 +1352,137 @@ input[type="time"] {
 .field.field--cantidad { width: 160px }
 .field.field--tipo { transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); }
 .field.field--tipo.is-shifted { transform: translateX(-70px); }
+
+/* ============================================= 
+   NUCLEAR Z-INDEX FIX - MODALES SIEMPRE ENCIMA
+   ============================================= */
+
+/* Forzar overlay de PDF siempre encima - bypasea todos los stacking contexts */
+.pdf-preview-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 2147483647 !important; /* máximo z-index posible en 32-bit */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(0, 0, 0, 0.85) !important;
+  backdrop-filter: blur(4px) !important;
+  padding: 20px !important;
+}
+
+/* Modal dentro del overlay */
+.pdf-preview-modal {
+  position: relative !important;
+  z-index: auto !important;
+  max-width: 1000px !important;
+  width: 100% !important;
+  height: 90vh !important;
+  flex-shrink: 0 !important;
+}
+
+/* Bloquear interacción con el wizard cuando modal está activo */
+body.pdf-preview-active .wizard-card {
+  pointer-events: none !important;
+  opacity: 0.5 !important;
+  filter: blur(2px) !important;
+}
+
+/* Transiciones del modal */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: all 0.3s ease !important;
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0 !important;
+}
+
+.modal-fade-enter-from .pdf-preview-modal {
+  transform: scale(0.95) !important;
+}
+
+.modal-fade-leave-to .pdf-preview-modal {
+  transform: scale(0.95) !important;
+}
+
+/* Kardex modal - también debe estar encima */
+.kardex-modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 2147483646 !important; /* un poco menos que PDF pero aún encima */
+  background: rgba(0, 0, 0, 0.6) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Admin panel - también encima */
+.admin-panel-overlay,
+.schema-admin-panel {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 2147483645 !important;
+}
+
+/* Notyf toasts - z-index alto para wizards */
+.notyf__toast {
+  z-index: 2147483640 !important;
+}
+
+/* Toasts en contexto de wizard - z-index súper alto para superar el panel */
+.wizard-context .notyf__toast,
+.notyf__toast[style*="z-index: 2147483650"] {
+  z-index: 2147483650 !important;
+}
+
+/* Contenedor Notyf posicionamiento */
+.notyf {
+  z-index: 2147483640 !important;
+  position: fixed !important;
+}
+
+/* Toastify (vue3-toastify) override */
+.Toastify__toast-container {
+  z-index: 2147483640 !important;
+  position: fixed !important;
+}
+.Toastify__toast {
+  z-index: 2147483641 !important; /* ensure each toast inside container is above */
+}
+
+/* Vue‑toastification if used */
+.vue-toastification,
+.vue-toastification__container,
+.vue-toastification__toast {
+  z-index: 2147483640 !important;
+  position: fixed !important;
+}
+
+/* Generic catch‑all for any toast-like element */
+[class*="toast"],
+[class*="Toast"] {
+  z-index: 2147483640 !important;
+}
+
+/* Explicit fix for custom toast-notification elements */
+.toast-notification {
+  z-index: 2147483640 !important;
+  position: fixed !important;
+}
+
+/* catch-all for any element with 'notification' in its class */
+[class*="notification"],
+[class*="Notification"] {
+  z-index: 2147483640 !important;
+  position: fixed !important;
+}

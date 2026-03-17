@@ -48,6 +48,14 @@
             </div>
 
             <div class="row">
+              <label class="field">
+                <span>Fecha de Caducidad</span>
+                <input v-model="form.caducidad" type="date" class="date-input" />
+              </label>
+              <div class="field" style="flex: 1;"></div>
+            </div>
+
+            <div class="row">
               <label class="field" tabindex="0">
                 <span class="field-label">Existencia SUBCEYE
                   <button type="button" class="hint-btn" aria-haspopup="true" aria-label="Ayuda existencias">?</button>
@@ -103,7 +111,7 @@ const visible = computed({
 });
 
 const form = ref({
-  descripcion: '', marca: '', modelo: '', referencia: '', unidadMedida: '', subceye: 0, oficina: 0
+  descripcion: '', marca: '', modelo: '', referencia: '', unidadMedida: '', subceye: 0, oficina: 0, caducidad: ''
 });
 
 const saving = ref(false);
@@ -126,6 +134,23 @@ watch(() => props.item, (it) => {
     form.value.unidadMedida = it['Unidad de medida (presentación)'] || '';
     form.value.subceye = parseInt(it['Existencia SUBCEYE IB'] || 0);
     form.value.oficina = parseInt(it[' Almacén IB (OFICINA)'] || 0);
+    
+    // Cargar fecha de caducidad (convertir de DD/MM/YYYY a YYYY-MM-DD para el input date)
+    const cad = it['CADUCIDAD'] || '';
+    if (cad) {
+        try {
+            const parts = cad.split('/');
+            if (parts.length === 3) {
+                form.value.caducidad = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            } else {
+                form.value.caducidad = cad;
+            }
+        } catch (e) {
+            form.value.caducidad = cad;
+        }
+    } else {
+        form.value.caducidad = '';
+    }
   }
 }, { immediate: true });
 
@@ -151,7 +176,8 @@ async function save() {
       marca: form.value.marca,
       modelo: form.value.modelo,
       referencia: form.value.referencia,
-      unidadMedida: form.value.unidadMedida
+      unidadMedida: form.value.unidadMedida,
+      caducidad: form.value.caducidad || null
     };
     const token = getStoredToken();
     const res = await fetch(`/api/ops/inventory/accessory/${encodeURIComponent(clave)}`, {
@@ -224,4 +250,32 @@ async function save() {
 .btn-primary { background: linear-gradient(135deg,#2563eb,#60a5fa); color: #fff; border: none; }
 .form-error { color: #f87171; font-weight:700 }
 .feedback { color: #10b981 }
+
+/* Estilos para input de fecha */
+.date-input {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  border-radius: 6px;
+  color: #e2e8f0;
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  width: 100%;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.date-input:hover {
+  border-color: rgba(59, 130, 246, 0.7);
+}
+
+.date-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Estilo para el selector de fecha en Firefox y Chrome */
+.date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+}
 </style>

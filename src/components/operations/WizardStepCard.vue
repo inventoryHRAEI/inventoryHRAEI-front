@@ -127,11 +127,18 @@ defineExpose({ isCollapsed, toggleCollapse })
 
 <style scoped>
 .wizard-step-card {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(30, 41, 59, 0.4);
+  backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
+  border-radius: 24px;
   overflow: visible; /* allow popovers/dropdowns to escape card */
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 20px -8px rgba(0, 0, 0, 0.4);
+  /* ensure the card sizes to its content and doesn't stretch inside grids/flex parents */
+  align-self: start;
+  flex: 0 0 auto;
+  height: auto !important;
+  min-height: 0 !important;
 }
 
 /* Tall variation for cards that need more vertical space */
@@ -141,8 +148,10 @@ defineExpose({ isCollapsed, toggleCollapse })
 }
 
 .wizard-step-card:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(30, 41, 59, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px -10px rgba(0, 0, 0, 0.5);
 }
 
 /* Sizes */
@@ -151,11 +160,11 @@ defineExpose({ isCollapsed, toggleCollapse })
 }
 
 .size-normal .card-body {
-  padding: 24px;
+  padding: 24px 32px;
 }
 
 .size-large .card-body {
-  padding: 32px;
+  padding: 32px 40px;
 }
 
 /* Header */
@@ -163,9 +172,9 @@ defineExpose({ isCollapsed, toggleCollapse })
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 20px 24px;
+  padding: 24px 32px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  transition: background 0.2s;
+  transition: all 0.3s ease;
 }
 
 .card-header.clickable {
@@ -173,7 +182,7 @@ defineExpose({ isCollapsed, toggleCollapse })
 }
 
 .card-header.clickable:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .header-icon {
@@ -186,6 +195,7 @@ defineExpose({ isCollapsed, toggleCollapse })
   background: color-mix(in srgb, var(--icon-color, #3b82f6) 15%, transparent);
   color: var(--icon-color, #3b82f6);
   flex-shrink: 0;
+  box-shadow: 0 4px 12px -2px color-mix(in srgb, var(--icon-color, #3b82f6) 40%, transparent);
 }
 
 .header-content {
@@ -195,16 +205,16 @@ defineExpose({ isCollapsed, toggleCollapse })
 
 .card-title {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #e2e8f0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f1f5f9;
   letter-spacing: -0.01em;
 }
 
 .card-subtitle {
   margin: 4px 0 0;
-  font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.875rem;
+  color: #94a3b8;
 }
 
 .header-actions {
@@ -215,31 +225,36 @@ defineExpose({ isCollapsed, toggleCollapse })
 
 .header-badge {
   padding: 4px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   border-radius: 20px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
+  border: 1px solid transparent;
 }
 
 .header-badge.neutral {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .header-badge.success {
-  background: rgba(34, 197, 94, 0.2);
-  color: #4ade80;
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 .header-badge.warning {
-  background: rgba(245, 158, 11, 0.2);
+  background: rgba(245, 158, 11, 0.15);
   color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
 .header-badge.error {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.15);
   color: #f87171;
+  border-color: rgba(239, 68, 68, 0.2);
 }
 
 .collapse-btn {
@@ -248,21 +263,22 @@ defineExpose({ isCollapsed, toggleCollapse })
   justify-content: center;
   width: 32px;
   height: 32px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .collapse-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .chevron {
-  transition: transform 0.3s ease;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chevron.rotated {
@@ -272,20 +288,32 @@ defineExpose({ isCollapsed, toggleCollapse })
 /* Body */
 .card-body-wrapper {
   overflow: visible;
+  height: auto;
 }
 
 .card-body {
-  padding: 24px;
+  padding: 24px 32px 32px;
+  min-height: 0;
+  height: auto;
 }
 
 /* Collapsed state */
+.is-collapsed {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+  transform: none !important;
+}
+
 .is-collapsed .card-header {
   border-bottom-color: transparent;
 }
 
+.is-collapsed:hover {
+  background: rgba(30, 41, 59, 0.5);
+}
+
 /* Focus states */
 .wizard-step-card:focus-within {
-  border-color: rgba(59, 130, 246, 0.3);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 </style>

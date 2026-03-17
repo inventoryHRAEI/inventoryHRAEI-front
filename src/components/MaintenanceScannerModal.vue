@@ -97,6 +97,48 @@
                                                 <MagnifyingGlassIcon class="icon" />
                                             </button>
                                         </div>
+
+                                        <div class="form-group">
+                                          <label>Técnico Responsable</label>
+                                          <input v-model="finishForm.technician" type="text" class="form-input" placeholder="Nombre del técnico" />
+                                          <p v-if="canFinish===undefined && !finishForm.technician" class="form-error">Obligatorio</p>
+                                        </div>
+
+                                        <div class="form-group">
+                                          <label>Estado del Equipo al Finalizar</label>
+                                          <select v-model="finishForm.estado" class="form-input">
+                                            <option v-for="opt in estadosFuncionales" :key="opt.value" :value="opt.value">
+                                              {{ opt.label }}
+                                            </option>
+                                          </select>
+                                        </div>
+
+                                        <div v-if="showEstadoDetalle" class="form-group">
+                                          <label>Especificar condición:</label>
+                                          <textarea v-model="finishForm.estadoDetalle" class="form-input form-textarea" 
+                                            placeholder="Describe la condición específica..."></textarea>
+                                        </div>
+
+                                        <div class="form-group">
+                                          <label>Horas Invertidas</label>
+                                          <input v-model.number="finishForm.hours" type="number" step="0.5" min="0" class="form-input" placeholder="0.0" />
+                                          <p v-if="canFinish===undefined && (finishForm.hours===null || finishForm.hours==='')" class="form-error">Obligatorio</p>
+                                        </div>
+
+                                        <div class="form-group checkbox-group">
+                                          <label><input type="checkbox" v-model="finishForm.tests" value="routine" /> Rutina preventivo/correctivo</label>
+                                          <label><input type="checkbox" v-model="finishForm.tests" value="simulator" /> Pruebas con simuladores</label>
+                                          <label><input type="checkbox" v-model="finishForm.tests" value="analyzer" /> Pruebas con analizador eléctrico</label>
+                                        </div>
+                                        <p v-if="finishForm.tests.length === 0" class="form-error">Debes seleccionar al menos una prueba realizada</p>
+<!-- optional: could add messages for missing hours/folio/tech here if desired -->
+
+                                        <div class="form-group">
+                                          <label>Folio de Mantenimiento</label>
+                                          <input v-model="finishForm.folioNumber" type="text" class="form-input" placeholder="Ej: MP-2026-001" />
+                                          <p v-if="canFinish===undefined && !finishForm.folioNumber" class="form-error">Obligatorio</p>
+                                        </div>
+
                                         <textarea v-model="finishForm.trabajoRealizado"
                                             placeholder="Trabajo realizado"></textarea>
                                         <textarea v-model="finishForm.observaciones" placeholder="Observaciones"></textarea>
@@ -178,7 +220,30 @@ let stream = null
 let zxingReader = null
 
 const startForm = ref({ responsable: '', tipo: '', empresa: '', observaciones: '' })
-const finishForm = ref({ estado: 'funcional', trabajoRealizado: '', observaciones: '' })
+const finishForm = ref({
+    estado: 'funcional',
+    estadoDetalle: '',
+    trabajoRealizado: '',
+    observaciones: '',
+    technician: '',
+    hours: null,
+    tests: [],
+    folioNumber: ''
+})
+
+// Opciones de estado funcional
+const estadosFuncionales = [
+  { value: 'funcional', label: '✅ Funcional', color: '#22c55e' },
+  { value: 'parcialmente_funcional', label: '⚠️ Parcialmente funcional', color: '#f59e0b' },
+  { value: 'condicional', label: '🔶 Condicionalmente funcional', color: '#f97316' },
+  { value: 'fuera_servicio', label: '❌ Fuera de servicio', color: '#ef4444' }
+]
+
+const showEstadoDetalle = computed(() => {
+  return finishForm.value.estado === 'parcialmente_funcional' || 
+         finishForm.value.estado === 'condicional' || 
+         finishForm.value.estado === 'fuera_servicio'
+})
 
 watch(() => props.modelValue, (val) => {
     visible.value = val
@@ -207,7 +272,12 @@ const selectedItem = computed(() => {
 const isInMaintenance = computed(() => {
     const code = selectedCode.value
     if (!code) return false
-    const entry = props.maintenanceMap?.[code] || null
+    const normalized = String(code || '').trim().toUpperCase()
+    const compact = normalized.replace(/[^A-Z0-9]/g, '')
+    const entry = props.maintenanceMap?.[code]
+        || props.maintenanceMap?.[normalized]
+        || props.maintenanceMap?.[compact]
+        || null
     if (!entry) return false
     return entry.status === 'in_progress'
         || entry.status === 'en_mantenimiento'
@@ -220,9 +290,18 @@ const canStart = computed(() => {
     return !!startForm.value.responsable && !!reason
 })
 const canFinish = computed(() => {
-    return !!selectedCode.value
-        && verificationCode.value === selectedCode.value
-        && !!finishForm.value.trabajoRealizado
+    // verification code must match, but notes are optional now
+    const base = !!selectedCode.value && verificationCode.value === selectedCode.value
+    const hasTest = Array.isArray(finishForm.value.tests) && finishForm.value.tests.length > 0
+    const hasFolio = String(finishForm.value.folioNumber || '').trim().length > 0
+    const hasHours = finishForm.value.hours !== null && finishForm.value.hours !== '' && !isNaN(finishForm.value.hours)
+    const hasTech = String(finishForm.value.technician || '').trim().length > 0
+    // Si el estado requiere detalle, debe ingresarlo
+    const needsDetalle = finishForm.value.estado === 'parcialmente_funcional' || 
+                         finishForm.value.estado === 'condicional' || 
+                         finishForm.value.estado === 'fuera_servicio'
+    const hasDetalle = !needsDetalle || String(finishForm.value.estadoDetalle || '').trim().length > 0
+    return base && hasTest && hasFolio && hasHours && hasTech && hasDetalle
 })
 
 const hasChanges = computed(() => {
@@ -243,7 +322,16 @@ function resetState() {
     manualCode.value = ''
     verificationCode.value = ''
     startForm.value = { responsable: '', tipo: '', empresa: '', observaciones: '' }
-    finishForm.value = { trabajoRealizado: '', observaciones: '' }
+    finishForm.value = {
+      estado: 'funcional',
+      estadoDetalle: '',
+      trabajoRealizado: '',
+      observaciones: '',
+      technician: '',
+      hours: null,
+      tests: [],
+      folioNumber: ''
+    }
     stopScan()
 }
 

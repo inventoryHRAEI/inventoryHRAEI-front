@@ -74,6 +74,47 @@
           />
         </div>
 
+        <div class="form-group">
+          <label for="images" class="form-label">Imágenes Iniciales (Opcional)</label>
+          <div class="image-upload-area">
+            <input
+              ref="imageInput"
+              id="images"
+              type="file"
+              multiple
+              accept="image/*"
+              @change="handleImageSelect"
+              style="display: none"
+            />
+            <button
+              type="button"
+              class="upload-btn"
+              @click="$refs.imageInput.click()"
+            >
+              📷 Seleccionar Imágenes
+            </button>
+            <p class="upload-hint">Selecciona una o varias imágenes (JPG, PNG, GIF, WebP)</p>
+          </div>
+
+          <div v-if="formData.images.length > 0" class="images-preview">
+            <p class="preview-title">Imágenes seleccionadas ({{ formData.images.length }})</p>
+            <div class="image-grid">
+              <div v-for="(img, idx) in formData.images" :key="idx" class="image-item">
+                <img :src="img.preview" :alt="img.name" />
+                <button
+                  type="button"
+                  class="remove-btn"
+                  @click="removeImage(idx)"
+                  title="Eliminar"
+                >
+                  ✕
+                </button>
+                <p class="image-name">{{ img.name }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="button" class="btn btn-secondary" @click="$emit('close')">Cancelar</button>
           <button type="submit" class="btn btn-primary">Iniciar Mantenimiento</button>
@@ -84,7 +125,7 @@
 </template>
 
 <script setup>
-import { reactive } from 'vue'
+import { reactive, ref } from 'vue'
 
 defineProps({
   item: { type: Object, required: true }
@@ -92,12 +133,37 @@ defineProps({
 
 const emit = defineEmits(['close', 'confirm'])
 
+const imageInput = ref(null)
+
 const formData = reactive({
   reason: '',
   technician: '',
   description: '',
-  serialNumber: ''
+  serialNumber: '',
+  images: []
 })
+
+function handleImageSelect(event) {
+  const files = Array.from(event.target.files || [])
+  files.forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        formData.images.push({
+          file,
+          preview: e.target.result,
+          name: file.name
+        })
+      }
+      reader.readAsDataURL(file)
+    }
+  })
+  event.target.value = ''
+}
+
+function removeImage(idx) {
+  formData.images.splice(idx, 1)
+}
 
 function submitForm() {
   if (!formData.reason) {
@@ -114,6 +180,7 @@ function submitForm() {
     technician: formData.technician.trim(),
     description: formData.description.trim(),
     serialNumber: formData.serialNumber.trim(),
+    images: formData.images.map(img => img.file),
     start: new Date().toISOString()
   })
 
@@ -121,6 +188,7 @@ function submitForm() {
   formData.technician = ''
   formData.description = ''
   formData.serialNumber = ''
+  formData.images = []
 }
 </script>
 
@@ -338,6 +406,108 @@ textarea.form-control {
   transform: translateY(-1px);
 }
 
+.image-upload-area {
+  padding: 20px;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.image-upload-area:hover {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.upload-btn {
+  padding: 12px 24px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 10px;
+}
+
+.upload-btn:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.upload-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.images-preview {
+  margin-top: 20px;
+}
+
+.preview-title {
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+}
+
+.image-item {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.image-item img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  display: block;
+}
+
+.remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.remove-btn:hover {
+  background: rgb(220, 38, 38);
+  transform: scale(1.1);
+}
+
+.image-name {
+  padding: 6px 4px;
+  font-size: 0.7rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .modal-container {
     max-width: 95vw;
@@ -361,6 +531,10 @@ textarea.form-control {
 
   .form-actions {
     flex-direction: column;
+  }
+
+  .image-grid {
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
   }
 }
 </style>

@@ -19,7 +19,7 @@
             <label class="field-label">Correo Electrónico</label>
             <div class="input-wrapper">
               <component :is="EnvelopeIcon" class="input-icon" />
-              <input v-model="email" placeholder="tu@email.com" type="email" required class="input" />
+              <input v-model="email" v-sanitize:email placeholder="tu@email.com" type="email" required class="input" />
             </div>
           </div>
 
@@ -27,7 +27,7 @@
             <label class="field-label">Contraseña</label>
             <div class="input-wrapper password-field">
               <component :is="KeyIcon" class="input-icon" />
-              <input v-model="password" :type="show ? 'text' : 'password'" placeholder=" • • • • • • • •" required class="input" />
+              <input v-model="password" v-sanitize:password :type="show ? 'text' : 'password'" placeholder=" • • • • • • • •" required class="input" />
               <button type="button" class="toggle-eye" @click="show = !show" :aria-label="show ? 'Ocultar contraseña' : 'Mostrar contraseña'" :aria-pressed="show">
                 <transition name="eye" mode="out-in">
                   <component :is="show ? EyeSlashIcon : EyeIcon" class="eye-icon" :key="show ? 'off' : 'on'" aria-hidden="true" />
@@ -141,11 +141,15 @@ const login = async () => {
    }
    
    try {
+     // sanitize before sending
+     const { sanitizeObject } = await import('@/utils/sanitizer.js')
+     const bodyData = sanitizeObject({ email: email.value, password: password.value })
+
      const res = await fetch('/api/auth/login', {
        method: 'POST',
        headers: { 'Content-Type': 'application/json' },
        credentials: 'include', // IMPORTANTE: permite que el backend establezca la cookie
-       body: JSON.stringify({ email: email.value, password: password.value })
+       body: JSON.stringify(bodyData)
      })
      let data
      try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Respuesta vacía' } }
@@ -159,7 +163,13 @@ const login = async () => {
      }
      
      // Guardar datos del usuario
-     if (data.role) localStorage.setItem('role', data.role)
+     if (data.role) {
+        localStorage.setItem('role', data.role)
+        // También establecer variable global para acceso rápido
+        if (typeof window !== 'undefined') {
+          window.__USER_ROLE__ = data.role
+        }
+      }
      if (data.nombre) localStorage.setItem('nombre', data.nombre)
      if (data.email) localStorage.setItem('email', data.email)
      const usuario = { nombre: data.nombre, role: data.role, email: data.email, foto: data.foto }
@@ -186,10 +196,29 @@ const login = async () => {
        }
      } catch (e) { console.warn('windowManager no disponible', e) }
      notifier.success('Sesión iniciada')
-     try { window.dispatchEvent(new Event('session:updated')) } catch {}
-
+     
+     // === SOLUCIÓN: Forzar actualización de sesión ANTES de navegar ===
+     console.log('[Login] 🔔 Forzando sincronización de sesión')
+     
+     // 1. Guardar datos en variables globales para acceso directo
+     window.__sessionUser = usuario
+     window.__sessionToken = data.token
+     
+     // 2. Disparar evento de actualización de sesión
+     window.dispatchEvent(new Event('session:updated'))
+     
+     // 3. También dispara storage event para otras pestañas
+     try { localStorage.setItem('__sessionSync', Date.now().toString()) } catch {}
+     
+     // 4. Esperar a que Vue procese los cambios
+     await new Promise(resolve => setTimeout(resolve, 150))
+     
+     console.log('[Login] ✅ Sesión sincronizada, intentando navegar...')
+     
+     // Navegar
      const nextTarget = typeof route.query?.next === 'string' ? String(route.query.next) : ''
      const safeNext = nextTarget && nextTarget.startsWith('/') ? nextTarget : ''
+     
      if (safeNext) {
        await navigateAndRefresh(router, safeNext)
      } else {

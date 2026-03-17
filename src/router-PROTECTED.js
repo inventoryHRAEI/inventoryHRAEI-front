@@ -47,11 +47,12 @@ const routes = [
     { path: '/op/order-management-salida', name: 'order-management-salida', component: OrderManagementSalida, meta: { requiresAuth: true } },
     { path: '/op/order-management-resguardo', name: 'order-management-resguardo', component: OrderManagementResguardo, meta: { requiresAuth: true } },
     { path: '/op/order-management-servicio', name: 'order-management-servicio', component: OrderManagementServicio, meta: { requiresAuth: true } },
-    { path: '/op/entrada', name: 'op-entrada', component: OpEntrada, meta: { requiresAuth: true } },
-    { path: '/op/entrada-new', name: 'op-entrada-new', component: OpEntradaNew, meta: { requiresAuth: true } },
-    { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
-    { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
-    { path: '/op/servicio', name: 'op-servicio', component: OpServicio, meta: { requiresAuth: true } },
+    // Rutas de wizards comentadas - ahora se usan como modales
+    // { path: '/op/entrada', name: 'op-entrada', component: OpEntrada, meta: { requiresAuth: true } },
+    // { path: '/op/entrada-new', name: 'op-entrada-new', component: OpEntradaNew, meta: { requiresAuth: true } },
+    // { path: '/op/salida', name: 'op-salida', component: OpSalida, meta: { requiresAuth: true } },
+    // { path: '/op/resguardo', name: 'op-resguardo', component: OpResguardo, meta: { requiresAuth: true } },
+    // { path: '/op/servicio', name: 'op-servicio', component: OpServicio, meta: { requiresAuth: true } },
     
     // INVENTARIO BIOMÉDICA - AHORA PROTEGIDA (REQUIERE SESIÓN OBLIGATORIA)
     { path: '/op/inventario-biomedica', name: 'op-inventario-biomedica', component: OpInventarioBiomedica, meta: { requiresAuth: true } },
@@ -98,7 +99,7 @@ router.beforeEach(async (to, from, next) => {
     console.debug('[ROUTER] beforeEach', { from: from && from.fullPath, to: to && to.fullPath })
     
     // Purga agresiva: limpiar caché cuando se sale de ciertas rutas
-    const routesToPurge = ['order-management', 'op-entrada', 'op-salida', 'op-resguardo', 'op-servicio', 'order-management-salida', 'order-management-resguardo', 'order-management-servicio']
+    const routesToPurge = ['order-management', 'order-management-salida', 'order-management-resguardo', 'order-management-servicio']
     if (routesToPurge.includes(from.name) && to.name !== from.name) {
         try {
             localStorage.removeItem('orders_list')

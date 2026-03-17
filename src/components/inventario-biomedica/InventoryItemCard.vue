@@ -1,8 +1,8 @@
 <template>
   <div class="inventory-item-card" :class="[statusClass, { 'is-new': isNew }]">
     <div class="card-glow"></div>
-    <!-- Floating update button (more prominent) -->
-    <button class="btn-update floating" @click.prevent.stop="$emit('edit', item)" aria-label="Actualizar información del equipo">
+    <!-- Floating update button (only for admin) -->
+    <button v-if="canEditBiomedicalEquipment" class="btn-update floating" @click.prevent.stop="$emit('edit', item)" aria-label="Actualizar información del equipo">
       <VueIcon name="ic:baseline-edit" size="16" />
       <span class="btn-label">Actualizar</span>
     </button>
@@ -37,8 +37,8 @@
       <div class="badge-row">
         <div class="availability-badge" :class="stockStatusClass">
           <VueIcon :name="stockIcon" size="16" />
-          <span class="count">{{ displayValue(item['TOTAL EXISTENCIAS']) }}</span>
-          <span class="unit"><VueIcon name="ic:baseline-scale" size="10" class="unit-icon" />{{ displayValue(item['Unidad de medida (presentación)']) }}</span>
+          <span class="count">{{ displayValue(getFieldValue(item, ['TOTAL EXISTENCIAS', 'Total Excistencias', 'total_existencias', 'totalExistencias', 'Cantidad_Stock', 'CANTIDAD', 'Cantidad', 'cantidad'])) }}</span>
+          <span class="unit"><VueIcon name="ic:baseline-scale" size="10" class="unit-icon" />{{ displayValue(getFieldValue(item, ['Unidad de medida (presentación)', 'Unidad de medida (presentacion)', 'Unidad de medida', 'UNIDAD'])) }}</span>
         </div>
         <div v-if="isNew" class="new-badge">
           <VueIcon name="ic:baseline-star" size="16" />
@@ -90,12 +90,12 @@
     <div class="card-locations">
       <div class="location">
         <span class="loc-label"><VueIcon name="ic:baseline-storefront" size="14" class="loc-icon" /> Central de Equipos</span>
-        <span class="loc-val"><VueIcon name="ic:baseline-layers" size="12" class="loc-val-icon" /> {{ displayValue(item['Existencia SUBCEYE IB']) }}</span>
+        <span class="loc-val"><VueIcon name="ic:baseline-layers" size="12" class="loc-val-icon" /> {{ displayValue(getFieldValue(item, ['Existencia SUBCEYE IB', 'Existencia SUBCEYE', 'existencia_subceye'])) }}</span>
       </div>
       <div class="location-divider"></div>
       <div class="location">
         <span class="loc-label"><VueIcon name="ic:baseline-inventory" size="14" class="loc-icon" /> Almacén de Oficina</span>
-        <span class="loc-val"><VueIcon name="ic:baseline-box" size="12" class="loc-val-icon" /> {{ displayValue(item[' Almacén IB (OFICINA)']) }}</span>
+        <span class="loc-val"><VueIcon name="ic:baseline-box" size="12" class="loc-val-icon" /> {{ displayValue(getFieldValue(item, [' Almacén IB (OFICINA)', 'Almacén IB (OFICINA)', 'existencia_oficina'])) }}</span>
       </div>
     </div>
 
@@ -114,6 +114,9 @@ import { computed, ref } from 'vue';
 import VueIcon from '@kalimahapps/vue-icons/VueIcon';
 import KardexPreviewModal from '@/components/KardexPreviewModal.vue';
 import { getStoredToken } from '@/utils/auth.js';
+import { usePermissions } from '@/composables/usePermissions.js'
+
+const { canEditBiomedicalEquipment } = usePermissions()
 
 const props = defineProps({
   item: {
@@ -131,22 +134,58 @@ const emit = defineEmits(['edit']);
 // Estado para modal de kardex
 const showKardexModal = ref(false);
 
+const getFieldValue = (item, aliases = [], fallback = '') => {
+  if (!item || typeof item !== 'object') return fallback;
+
+  const normalizeKey = (key) => String(key || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase();
+
+  const normalizedLookup = new Map();
+  Object.keys(item).forEach((k) => {
+    const normalized = normalizeKey(k);
+    if (normalized && !normalizedLookup.has(normalized)) normalizedLookup.set(normalized, k);
+  });
+
+  for (const alias of aliases) {
+    if (Object.prototype.hasOwnProperty.call(item, alias) && item[alias] !== null && item[alias] !== undefined && item[alias] !== '') {
+      return item[alias];
+    }
+    const foundKey = normalizedLookup.get(normalizeKey(alias));
+    if (foundKey && item[foundKey] !== null && item[foundKey] !== undefined && item[foundKey] !== '') {
+      return item[foundKey];
+    }
+  }
+
+  return fallback;
+};
+
 const totalCount = computed(() => {
-  return parseInt(props.item['TOTAL EXISTENCIAS']) || 0;
+  const raw = getFieldValue(props.item, ['TOTAL EXISTENCIAS', 'Total Excistencias', 'total_existencias', 'totalExistencias', 'Cantidad_Stock', 'CANTIDAD', 'Cantidad', 'cantidad'], 0);
+  const parsed = parseInt(raw, 10);
+  if (Number.isFinite(parsed)) return parsed;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : 0;
 });
 
 const knownKeys = [
   'N',
   'Clave  HRAEI',
   'TOTAL EXISTENCIAS',
+  'Total Excistencias',
   'Unidad de medida (presentación)',
+  'Unidad de medida (presentacion)',
   'Descripción del bien',
+  'Descripcion del bien',
   'MARCA',
   'MODELO',
   'REFERENCIA',
   'CADUCIDAD',
   'Existencia SUBCEYE IB',
-  ' Almacén IB (OFICINA)'
+  ' Almacén IB (OFICINA)',
+  'Almacén IB (OFICINA)'
 ];
 
 const hasRealValue = (value) => {

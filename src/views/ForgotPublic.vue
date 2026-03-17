@@ -21,7 +21,7 @@
             <label class="field-label">Correo Electrónico</label>
             <div class="input-wrapper">
               <component :is="EnvelopeIcon" class="input-icon" />
-              <input v-model="email" placeholder="tu@email.com" type="email" required class="input" />
+              <input v-model="email" v-sanitize:email placeholder="tu@email.com" type="email" required class="input" />
             </div>
           </div>
 
@@ -95,7 +95,8 @@ const forgot = async () => {
   if (!email.value) { notifier.error('Email requerido'); return }
   try {
     const res = await fetch('/api/auth/forgot', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.value })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify((await import('@/utils/sanitizer.js')).sanitizeObject({ email: email.value }))
     })
     let data
     try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Respuesta vacía' } }

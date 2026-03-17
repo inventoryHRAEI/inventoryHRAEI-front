@@ -1,7 +1,8 @@
 <template>
   <div class="op-wizard" :class="[`op-wizard--${type}`, { 'is-submitting': isSubmitting }]">
-    <!-- Progress Header -->
-    <header class="wizard-header">
+    <div class="wizard-card">
+      <!-- Progress Header -->
+      <header class="wizard-header">
       <button class="btn-back" @click="$emit('back')" type="button">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M19 12H5M12 19l-7-7 7-7"/>
@@ -48,8 +49,8 @@
       </nav>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="wizard-body">
+      <!-- Main Content Area (scrollable internamente) -->
+      <main class="wizard-body wizard-inner">
       <div class="wizard-content">
         <TransitionGroup name="step-slide" tag="div" class="step-container">
           <slot :name="`step-${currentStep}`" :key="currentStep" />
@@ -71,8 +72,8 @@
       </aside>
     </main>
 
-    <!-- Footer Actions -->
-    <footer class="wizard-footer">
+      <!-- Footer Actions -->
+      <footer class="wizard-footer">
       <div class="footer-left">
         <button 
           v-if="currentStep > 0" 
@@ -130,7 +131,8 @@
           </template>
         </button>
       </div>
-    </footer>
+      </footer>
+    </div>
   </div>
 </template>
 
@@ -215,57 +217,86 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
 .op-wizard {
   --wizard-primary: #3b82f6;
   --wizard-success: #22c55e;
-  --wizard-bg: #0a0f1a;
-  --wizard-surface: rgba(255, 255, 255, 0.03);
+  --wizard-bg: #0b1120;
+  --wizard-surface: rgba(30, 41, 59, 0.4);
   --wizard-border: rgba(255, 255, 255, 0.08);
-  --wizard-text: #e2e8f0;
-  --wizard-text-muted: rgba(255, 255, 255, 0.5);
+  --wizard-radius-lg: 24px;
+  --wizard-radius-md: 16px;
+  --wizard-text: #f1f5f9;
+  --wizard-text-muted: #94a3b8;
   
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background: var(--wizard-bg);
+  min-height: auto;
+  background: radial-gradient(circle at top right, #1e293b 0%, #0b1120 100%);
   color: var(--wizard-text);
+  /* altura del topbar externo (ej. barra superior de la app). Ajustable si la app tiene header fijo */
+  --external-topbar-height: 84px;
+
+  align-items: center;
+  justify-content: flex-start;
+  padding: calc(var(--external-topbar-height) + 8px) 16px 16px;
+  
+  /* IMPORTANTE: Sin transform, no crear stacking context nuevo */
+  position: relative;
+  z-index: auto;
 }
 
 /* Type-specific colors */
-.op-wizard--entrada { --wizard-accent: #22c55e; }
-.op-wizard--salida { --wizard-accent: #f59e0b; }
-.op-wizard--resguardo { --wizard-accent: #a855f7; }
-.op-wizard--servicio { --wizard-accent: #3b82f6; }
+.op-wizard--entrada { --wizard-accent: #10b981; --wizard-accent-glow: rgba(16, 185, 129, 0.15); }
+.op-wizard--salida { --wizard-accent: #f59e0b; --wizard-accent-glow: rgba(245, 158, 11, 0.15); }
+.op-wizard--resguardo { --wizard-accent: #8b5cf6; --wizard-accent-glow: rgba(139, 92, 246, 0.15); }
+.op-wizard--servicio { --wizard-accent: #3b82f6; --wizard-accent-glow: rgba(59, 130, 246, 0.15); }
 
 /* ===== HEADER ===== */
+.wizard-card {
+  width: 100%;
+  max-width: 1200px;
+  height: auto; /* allow the card to grow with content */
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* ensure children stack from top, no space-between */
+  background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(255,255,255,0.01) 100%);
+  border-radius: var(--wizard-radius-lg);
+  border: 1px solid var(--wizard-border);
+  overflow: visible;
+  box-shadow: 0 20px 60px rgba(2,6,23,0.6);
+  position: relative;
+  z-index: 5000;
+}
+
 .wizard-header {
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 20px 32px;
-  background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 100%);
-  border-bottom: 1px solid var(--wizard-border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  backdrop-filter: blur(20px);
+  gap: 20px;
+  padding: 12px 24px;
+  background: rgba(11, 17, 32, 0.6);
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(8px);
 }
 
 .btn-back {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border: 1px solid var(--wizard-border);
-  border-radius: 12px;
+  border-radius: var(--wizard-radius-md);
   background: var(--wizard-surface);
   color: var(--wizard-text-muted);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-back:hover {
-  background: rgba(255,255,255,0.08);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--wizard-text);
-  transform: translateX(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateX(-3px);
 }
 
 .wizard-meta {
@@ -372,17 +403,18 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
   height: 28px;
   border-radius: 50%;
   background: var(--wizard-surface);
-  border: 2px solid var(--wizard-border);
+  border: 1px solid var(--wizard-border);
   font-size: 0.8rem;
   font-weight: 700;
-  transition: all 0.25s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .step-item.is-active .step-circle {
   background: var(--wizard-accent);
   border-color: var(--wizard-accent);
   color: white;
-  box-shadow: 0 0 20px rgba(var(--wizard-accent), 0.4);
+  box-shadow: 0 0 15px var(--wizard-accent-glow);
+  transform: scale(1.1);
 }
 
 .step-item.is-completed .step-circle {
@@ -393,6 +425,8 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
 
 .step-label {
   display: none;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 @media (min-width: 1024px) {
@@ -403,44 +437,83 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
 
 /* ===== BODY ===== */
 .wizard-body {
-  flex: 1;
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 32px;
-  padding: 32px;
-  max-width: 1600px;
-  margin: 0 auto;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  padding: 20px 24px;
   width: 100%;
+  align-items: start; /* evitar que las columnas se estiren a la misma altura */
+  height: auto; /* allow body to size to content */
+}
+
+/* Contenedor interno desplazable (como un iframe) */
+.wizard-inner {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* espacio inferior razonable para separarlo del footer interno */
+  padding-bottom: 16px;
 }
 
 @media (min-width: 1200px) {
   .wizard-body {
-    grid-template-columns: 1fr 340px;
+    /* fija una columna principal que puede encoger y una sidebar de 340px */
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start; /* important: evita stretch vertical entre columnas */
   }
 }
 
 .wizard-content {
   min-width: 0;
+  align-self: start; /* no estirar el contenedor izquierdo */
+  height: auto; /* asegurar altura automática basada en contenido */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 24px;
 }
 
 .step-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch; /* ancho completo pero no afecta altura porque es column */
+  gap: 24px;
   position: relative;
+}
+
+/* Deep overrides para evitar stretch de elementos anidados */
+.step-container :deep(.wizard-step) {
+  flex: 0 0 auto;
+  height: auto;
+}
+
+.step-container :deep(.wizard-step-card) {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  align-self: stretch; /* ancho completo pero no altura */
+}
+
+.step-container :deep(.card-body) {
+  height: auto !important;
+  min-height: 0 !important;
+  flex: 0 0 auto !important;
 }
 
 /* Step Transitions */
 .step-slide-enter-active,
 .step-slide-leave-active {
-  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .step-slide-enter-from {
   opacity: 0;
-  transform: translateX(30px);
+  transform: translateY(10px);
 }
 
 .step-slide-leave-to {
   opacity: 0;
-  transform: translateX(-30px);
+  transform: translateY(-10px);
   position: absolute;
   width: 100%;
 }
@@ -448,6 +521,7 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
 /* ===== SIDEBAR ===== */
 .wizard-sidebar {
   display: none;
+  align-self: start; /* no estirar la sidebar para igualar la columna izquierda */
 }
 
 @media (min-width: 1200px) {
@@ -458,11 +532,13 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
 
 .sidebar-card {
   position: sticky;
-  top: 120px;
-  background: var(--wizard-surface);
+  top: 28px;
+  background: rgba(30, 41, 59, 0.55);
   border: 1px solid var(--wizard-border);
-  border-radius: 20px;
-  padding: 24px;
+  border-radius: calc(var(--wizard-radius-lg) - 8px);
+  padding: 20px;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 8px 24px -8px rgba(0,0,0,0.35);
 }
 
 .sidebar-title {
@@ -470,9 +546,11 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
   align-items: center;
   gap: 10px;
   margin: 0 0 20px;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 700;
   color: var(--wizard-text);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .sidebar-title svg {
@@ -484,12 +562,11 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 32px;
-  background: linear-gradient(0deg, rgba(0,0,0,0.3) 0%, transparent 100%);
-  border-top: 1px solid var(--wizard-border);
-  position: sticky;
-  bottom: 0;
-  backdrop-filter: blur(20px);
+  padding: 12px 24px;
+  background: rgba(11, 17, 32, 0.7);
+  border-top: 1px solid rgba(255,255,255,0.03);
+  position: relative;
+  z-index: 2;
 }
 
 .footer-left,
@@ -509,24 +586,26 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
 
 .step-dots {
   display: flex;
-  gap: 8px;
+  gap: 10px;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
   background: var(--wizard-border);
-  transition: all 0.25s;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dot.active {
   background: var(--wizard-accent);
-  transform: scale(1.25);
+  width: 20px;
+  box-shadow: 0 0 10px var(--wizard-accent-glow);
 }
 
 .dot.completed {
   background: var(--wizard-accent);
+  opacity: 0.6;
 }
 
 /* Buttons */
@@ -534,19 +613,20 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 24px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 12px;
+  gap: 10px;
+  padding: 10px 24px;
+  font-size: 0.925rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  border-radius: var(--wizard-radius-md);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
+  filter: grayscale(1);
 }
 
 .btn-secondary {
@@ -556,29 +636,32 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .btn-primary {
   background: var(--wizard-accent);
   color: white;
+  box-shadow: 0 4px 15px -5px var(--wizard-accent-glow);
 }
 
 .btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px var(--wizard-accent-glow);
   filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(var(--wizard-accent), 0.3);
 }
 
 .btn-success {
-  background: linear-gradient(135deg, #22c55e, #16a34a);
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
+  box-shadow: 0 4px 15px -5px rgba(16, 185, 129, 0.3);
 }
 
 .btn-success:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(16, 185, 129, 0.4);
   filter: brightness(1.1);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
 }
 
 /* Spinner */
@@ -632,15 +715,15 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
   }
   
   .step-nav {
-    position: fixed;
-    bottom: 80px;
+    position: absolute;
+    bottom: 128px; /* colocado dentro de la tarjeta, sobre el footer interno */
     left: 50%;
     transform: translateX(-50%);
     background: rgba(10, 15, 26, 0.95);
     padding: 8px 12px;
     border-radius: 20px;
     border: 1px solid var(--wizard-border);
-    z-index: 99;
+    z-index: 30;
     gap: 4px;
   }
   
@@ -656,7 +739,6 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
   
   .wizard-body {
     padding: 20px;
-    padding-bottom: 100px;
   }
   
   .wizard-footer {

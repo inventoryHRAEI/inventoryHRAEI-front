@@ -9,7 +9,7 @@
 
       <template #body>
         <form @submit.prevent="forgot">
-          <input v-model="email" placeholder="Email" type="email" required class="input" />
+          <input v-model="email" v-sanitize:email placeholder="Email" type="email" required class="input" />
           <div style="margin-top:12px">
             <button class="btn secondary ui-btn ui-btn--md" type="submit">Enviar código</button>
           </div>
@@ -64,7 +64,8 @@ const forgot = async () => {
   if (!email.value) { notifier.error('Email requerido'); return }
   try {
     const res = await fetch('/api/auth/forgot', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email.value })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify((await import('@/utils/sanitizer.js')).sanitizeObject({ email: email.value }))
     })
     let data
     try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Respuesta vacía' } }

@@ -494,6 +494,23 @@
                                 </div>
                             </div>
                         </Transition>
+
+                        <!-- Toggle: Agregar al Inventario -->
+                        <div class="inventory-toggle-section" style="margin-top: 24px;">
+                            <div class="toggle-row">
+                                <div class="toggle-info">
+                                    <span class="toggle-label">✓ Registrar en inventario</span>
+                                    <span class="toggle-description">
+                                        Activa esta opción para registrar los equipos en el sistema de inventario.
+                                        <strong>Entrada:</strong> Aumenta el stock. <strong>Salida:</strong> Disminuye el stock.
+                                    </span>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" v-model="form.agregarAlInventario">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
                     </WizardStepCard>
 
                     <!-- Added Equipment List -->
@@ -694,10 +711,21 @@
             </template>
         </OperationWizard>
 
+        <!-- Equipment Warning Modal -->
+        <EquipmentWarningModal
+            v-model="showWarningModal"
+            :warnings="equipmentWarnings"
+            title="Advertencia de Equipo"
+            subtitle="El equipo que intentas añadir tiene las siguientes alertas:"
+            @confirm="confirmAddWithWarnings"
+            @cancel="cancelAddWithWarnings"
+        />
+
         <!-- PDF Preview Modal -->
-        <Teleport to="body">
+        <Teleport to="html">
             <Transition name="modal-fade">
-                <div v-if="showPdfPreview" class="pdf-preview-overlay" @click.self="closePdfPreview">
+                <Teleport to="body">
+                  <div v-if="showPdfPreview" class="pdf-preview-overlay" @click.self="closePdfPreview">
                     <div class="pdf-preview-modal">
                         <div class="pdf-preview-header">
                             <h3>Vista Previa del PDF</h3>
@@ -724,16 +752,14 @@
                             <iframe :src="pdfPreviewUrl" class="pdf-iframe" title="Vista previa del documento"></iframe>
                         </div>
                     </div>
-                </div>
+                  </div>
+                </Teleport>
             </Transition>
         </Teleport>
     </div>
 
     <!-- Kardex Preview Modal (accessible from unit cards) -->
-    <KardexPreviewModal :isOpen="kardexModalVisible" :itemData="{
-        clave: kardexItem.claveHRAEI || '',
-        descripcion: kardexItem.nombre || kardexItem.descripcion || ''
-    }" title="Vista previa del Kardex" @close="kardexModalVisible = false" />
+    <KardexPreviewModal :isOpen="kardexModalVisible" :itemData="kardexItem" title="Vista previa del Kardex" @close="kardexModalVisible = false" />
 </template>
 
 <script setup>
@@ -763,6 +789,7 @@ import VueIcon from '@kalimahapps/vue-icons/VueIcon';
 
 // PDF and Kardex modals
 import KardexPreviewModal from '@/components/KardexPreviewModal.vue';
+import EquipmentWarningModal from '@/components/EquipmentWarningModal.vue';
 
 // Utils
 import notifier from '@/utils/notifier'
@@ -772,14 +799,23 @@ import notificationStore from '@/stores/notificationStore'
 
 // Composables
 import { useInventorySuggestions } from '@/composables/useInventorySuggestions.js'
+import { useEquipmentWarnings, getEquipmentStatus, validateItemForOrder } from '@/composables/useEquipmentWarnings.js'
+import { useCloseConfirmation } from '@/composables/useCloseConfirmation.js'
 
 // Props
 const props = defineProps({
     modo: { type: String, default: 'crear' },
-    ordenId: { type: [String, Number], default: null }
+    ordenId: { type: [String, Number], default: null },
+    enModal: { type: Boolean, default: false },
+    readOnly: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['close', 'actualizado'])
+const emit = defineEmits({
+    close: () => true,
+    actualizado: () => true,
+    created: () => true,
+    cancel: () => true
+})
 const router = useRouter()
 
 function getAuthenticatedUserName() {
@@ -816,6 +852,11 @@ const currentStep = ref(0)
 const loading = ref(false)
 const isMobileView = ref(false)
 const errors = ref({})
+
+// Equipment Warnings
+const showWarningModal = ref(false)
+const pendingEquipment = ref(null)
+const equipmentWarnings = ref([])
 const belongsToHospital = ref(null)
 
 // Info popover states
@@ -836,7 +877,20 @@ const kardexModalVisible = ref(false)
 const kardexItem = ref({})
 
 function openKardex(item) {
-    kardexItem.value = item || {}
+    const it = item || {}
+    const payload = {
+        n: String(it.n || it.N || it['N'] || it.numero || it.numeroSerie || '').trim(),
+        clave: String(it.claveHRAEI || it['Clave  HRAEI'] || it.clave || '').trim(),
+        lote: String(it.lote || it.Lote || it.LOTE || '').trim(),
+        referencia: String(it.referencia || it.Referencia || it.REFERENCIA || '').trim(),
+        cucop: String(it.cucop || it.cucops || it.CUCOP || it.CUCOPS || '').trim(),
+        descripcion: it.descripcion || it.nombre || it.descripcion || '',
+        marca: it.marca || it.MARCA || '',
+        modelo: it.modelo || it.MODELO || '',
+        strict: true
+    }
+    console.log('[KARDEX_DEBUG] Enviando tupla:', payload)
+    kardexItem.value = payload
     kardexModalVisible.value = true
 }
 
@@ -872,6 +926,7 @@ const form = reactive({
     observacionesImg: null,
     nombreIngeniero: '',
     equiposEntrada: [],
+    agregarAlInventario: false,
     signatures: JSON.parse(JSON.stringify(DEFAULT_SIGNATURES)),
     extraFields: {}
 })
@@ -1133,7 +1188,7 @@ function removeUnit(idx) {
 }
 
 // Add equipment
-function agregarItem() {
+async function agregarItem() {
     if (!canAddItem.value) {
         if (newItem.tipo === 'accesorio') {
             notifier.error('Completa los campos requeridos: nombre, marca, modelo, lote, serie, referencia, ubicación y clave HRAEI')
@@ -1145,7 +1200,8 @@ function agregarItem() {
 
     const firstUnit = newItem.unidades[0]
     if (firstUnit?.nombre?.trim()) {
-        form.equiposEntrada.push({
+        // Preparar el equipo para añadir
+        const equipmentToAdd = {
             tipo: newItem.tipo,
             cantidad: newItem.cantidad,
             descripcion: firstUnit.nombre,
@@ -1159,11 +1215,130 @@ function agregarItem() {
             serieEquipoAsociado: firstUnit.serieEquipoAsociado || '',
             claveHRAEI: firstUnit.claveHRAEI,
             unidades: newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 }))
-        })
-    }
+        }
 
-    notifier.success('Equipo(s) agregado(s)')
-    resetNewItem()
+        // Verificar estado del equipo antes de añadir
+        console.log('[OpEntradaNew] Verificando equipo:', { tipo: newItem.tipo, claveHRAEI: firstUnit.claveHRAEI, serie: firstUnit.serie, nombre: firstUnit.nombre, marca: firstUnit.marca, modelo: firstUnit.modelo })
+        
+        // Construir lista de términos de búsqueda (serie, claveHRAEI, nombre, marca, modelo)
+        const searchTerms = []
+        
+        // 1. Número de serie primero (más específico)
+        if (firstUnit.serie && firstUnit.serie.toUpperCase() !== 'N/A' && firstUnit.serie.trim() !== '') {
+            searchTerms.push(firstUnit.serie.trim())
+        }
+        
+        // 2. Clave HRAEI
+        if (firstUnit.claveHRAEI && firstUnit.claveHRAEI.toUpperCase() !== 'N/A' && firstUnit.claveHRAEI.trim() !== '') {
+            searchTerms.push(firstUnit.claveHRAEI.trim())
+        }
+        
+        // 3. Nombre del equipo
+        if (firstUnit.nombre && firstUnit.nombre.trim() !== '') {
+            searchTerms.push(firstUnit.nombre.trim())
+        }
+        
+        // 4. Marca
+        if (firstUnit.marca && firstUnit.marca.toUpperCase() !== 'N/A' && firstUnit.marca.trim() !== '') {
+            searchTerms.push(firstUnit.marca.trim())
+        }
+        
+        // 5. Modelo
+        if (firstUnit.modelo && firstUnit.modelo.toUpperCase() !== 'N/A' && firstUnit.modelo.trim() !== '') {
+            searchTerms.push(firstUnit.modelo.trim())
+        }
+        
+        console.log('[OpEntradaNew] Términos de búsqueda:', searchTerms)
+        
+        // Verificar para cualquier tipo de equipo (equipo-medico, accesorio, consumible, refaccion)
+        const validTypes = ['equipo-medico', 'accesorio', 'consumible', 'refaccion']
+        if (validTypes.includes(newItem.tipo) && searchTerms.length > 0) {
+            console.log('[OpEntradaNew] Obteniendo estado para términos:', searchTerms)
+            
+            try {
+                // Enviar todos los términos de búsqueda al backend
+                const statusData = await getEquipmentStatus(searchTerms)
+                console.log('[OpEntradaNew] Estado recibido:', statusData)
+                console.log('[OpEntradaNew] SearchTerms:', searchTerms, 'StatusData keys:', Object.keys(statusData))
+                
+                // Buscar el primer término que tenga un estado válido
+                let equipmentStatus = null
+                let matchedTerm = null
+                
+                for (const term of searchTerms) {
+                    console.log(`[OpEntradaNew] Checking term "${term}":`, statusData[term])
+                    if (statusData[term] && statusData[term].status && statusData[term].status !== 'unknown') {
+                        equipmentStatus = statusData[term]
+                        matchedTerm = term
+                        console.log(`[OpEntradaNew] Found valid status for term "${term}"`)
+                        break
+                    }
+                }
+                
+                if (equipmentStatus) {
+                    console.log('[OpEntradaNew] Equipo encontrado con término:', matchedTerm, 'Estado:', equipmentStatus)
+                    
+                    // Importar la función de análisis de estado
+                    const { analyzeEquipmentStatus } = await import('@/composables/useEquipmentWarnings.js')
+                    const warnings = analyzeEquipmentStatus(equipmentStatus, matchedTerm)
+                    console.log('[OpEntradaNew] Advertencias generadas:', warnings)
+                    
+                    // Si hay advertencias de alta severidad que permiten overrides, mostrar modal
+                    const highSeverityWarnings = warnings.filter(w => w.severity === 'high' && w.allowOverride)
+                    
+                    if (highSeverityWarnings.length > 0) {
+                        console.log('[OpEntradaNew] Mostrando modal de advertencias con', highSeverityWarnings.length, 'advertencias de alta severidad')
+                        pendingEquipment.value = equipmentToAdd
+                        equipmentWarnings.value = warnings
+                        showWarningModal.value = true
+                        return // No añadir todavía, esperar confirmación
+                    } else {
+                        console.log('[OpEntradaNew] No hay advertencias de alta severidad, procediendo sin modal')
+                    }
+                } else {
+                    console.log('[OpEntradaNew] Equipo sin estado o desconocido para todos los términos')
+                }
+            } catch (error) {
+                console.error('[OpEntradaNew] Error verificando estado del equipo:', error)
+            }
+        } else {
+            console.log('[OpEntradaNew] No se verifica: tipo o términos de búsqueda faltantes')
+        }
+
+        // Si no hay advertencias o son de baja severidad, añadir directamente
+        form.equiposEntrada.push(equipmentToAdd)
+        notifier.success('Equipo(s) agregado(s)')
+        resetNewItem()
+    }
+}
+
+// Confirmar añadir equipo con advertencias
+function confirmAddWithWarnings() {
+    if (pendingEquipment.value) {
+        form.equiposEntrada.push(pendingEquipment.value)
+        notifier.success('Equipo(s) agregado(s) 尽管 las advertencias')
+        pendingEquipment.value = null
+        equipmentWarnings.value = []
+        resetNewItem()
+    }
+}
+
+// Composable para confirmación de cierre
+const { confirmAndClose } = useCloseConfirmation({
+    title: '¿Deseas salir de la creación de orden de entrada?',
+    message: 'Los cambios que hayas realizado se perderán. ¿Realmente deseas cerrar?',
+    confirmText: 'Sí, salir',
+    cancelText: 'Cancelar',
+    icon: 'warning'
+})
+
+// Cancelar añadir equipo con advertencias
+function cancelAddWithWarnings() {
+    confirmAndClose(() => {
+        pendingEquipment.value = null
+        equipmentWarnings.value = []
+        emit('cancel')
+    })
 }
 
 function resetNewItem() {
@@ -1252,6 +1427,7 @@ function handleSuggestionSelect(suggestion, unidad, field) {
 // Close PDF preview modal
 function closePdfPreview() {
     showPdfPreview.value = false
+    document.body.classList.remove('pdf-preview-active')
     if (pdfPreviewUrl.value) {
         URL.revokeObjectURL(pdfPreviewUrl.value)
         pdfPreviewUrl.value = ''
@@ -1358,15 +1534,16 @@ async function onPreviewPDF() {
             }
             pdfPreviewUrl.value = URL.createObjectURL(blob)
             showPdfPreview.value = true
+            document.body.classList.add('pdf-preview-active')
             notifier.success('Vista previa generada')
-        } else {
-            throw new Error('Error al generar PDF')
-        }
-    } catch (err) {
-        console.error('Error preview:', err)
-        notifier.error('No se pudo generar la vista previa')
-    } finally {
-        loadingPreview.value = false
+            } else {
+             throw new Error('Error al generar PDF')
+            }
+            } catch (err) {
+            console.error('Error preview:', err)
+            notifier.error('No se pudo generar la vista previa')
+            } finally {
+            loadingPreview.value = false
     }
 }
 
@@ -1409,6 +1586,7 @@ async function onSubmit() {
                     itemId: `${item.claveHRAEI || 'SIN_CLAVE'}|${safeSerie}|${safeModelo}|${safeMarca}`
                 }
             }),
+            agregarAlInventario: form.agregarAlInventario,
             signatures: form.signatures,
             extraFields: form.extraFields
         }
@@ -1459,9 +1637,11 @@ async function onSubmit() {
                 notifier.error('La orden se guardó, pero falló la descarga del PDF')
             }
 
-            // Redirigir al order management
+            // Redirigir al order management o cerrar modal
             setTimeout(() => {
-                router.push('/op/order-management')
+                // Emitir evento de creación exitosa
+                emit('created')
+                // Ya no navegamos - el componente padre maneja el cierre del modal
             }, 500)
         } else {
             throw new Error('Error al guardar')
@@ -1522,16 +1702,21 @@ onMounted(() => {
     fetchEquipoMedicoSuggestions()
     fetchInsumosRefaccionesSuggestions()
 
-    // Load existing order if editing
+    // Auto-assign date & folio for new orders, load order for editing
     if (props.modo === 'editar' && props.ordenId) {
+        // Cargar la orden existente cuando se monta en modo edición
         loadOrden()
     } else {
-        // Auto-assign date for new orders
         initializeDateAndTime()
-        // Auto-generate folio for new orders
         generateFolioAutomatically()
-        // Start live timer for new orders (automatic, no controls)
         startLiveTimer()
+    }
+})
+
+// reload whenever the passed ID changes (modal re‑opens or user selects another order)
+watch(() => props.ordenId, (newId) => {
+    if (props.modo === 'editar' && newId) {
+        loadOrden()
     }
 })
 
@@ -1553,18 +1738,37 @@ async function loadOrden() {
         const res = await authedFetch(`/api/ops/entrada/${props.ordenId}`)
         if (res.ok) {
             const data = await res.json()
-            Object.assign(form, data)
+            // backend returns { ok:true, orden: {...}, items: [...] }
+            if (data && data.orden) {
+                // Mapear campos de snake_case a camelCase para compatibilidad con el formulario
+                const mappedOrden = mapSnakeToCamel(data.orden)
+                Object.assign(form, mappedOrden)
+            }
+            if (data && Array.isArray(data.items)) {
+                // Mapear cada item también de snake_case a camelCase
+                form.equiposEntrada = data.items.map(item => mapSnakeToCamel(item))
+            }
             forceAuthenticatedEngineerName()
         }
     } catch (err) {
         console.error('Error loading order:', err)
     }
 }
+
+// Función para mapear campos de snake_case a camelCase
+function mapSnakeToCamel(obj) {
+    if (!obj || typeof obj !== 'object') return obj
+    const result = {}
+    for (const key in obj) {
+        const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase())
+        result[camelKey] = obj[key]
+    }
+    return result
+}
 </script>
 
 <style scoped>
 .op-entrada-new {
-    min-height: 100vh;
     background: #0a0f1a;
 }
 
@@ -1572,15 +1776,15 @@ async function loadOrden() {
 .wizard-step {
     display: flex;
     flex-direction: column;
-    gap: 28px;
-    padding: 18px 8px;
+    gap: 20px;
+    padding: 4px 0;
 }
 
 /* Fields Grid */
 .fields-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    gap: 24px;
     grid-auto-rows: minmax(64px, auto);
 }
 
@@ -2817,7 +3021,7 @@ async function loadOrden() {
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    z-index: 1000;
+    z-index: 9998;
 }
 
 /* Form Input */
@@ -2850,7 +3054,7 @@ async function loadOrden() {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 9997;
     padding: 24px;
 }
 
@@ -2993,5 +3197,106 @@ async function loadOrden() {
     .pdf-preview-body {
         padding: 12px;
     }
+}
+
+/* Inventory Toggle Styles */
+.inventory-toggle-section {
+    padding: 8px 0;
+}
+
+.toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+}
+
+.toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.toggle-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.toggle-description {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    max-width: 400px;
+    line-height: 1.4;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 56px;
+    height: 30px;
+    flex-shrink: 0;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: 0.3s;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #22c55e;
+    border-color: #22c55e;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+.toggle-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 8px;
+    color: #fbbf24;
+    font-size: 0.85rem;
+}
+
+.toggle-notice svg {
+    flex-shrink: 0;
 }
 </style>
