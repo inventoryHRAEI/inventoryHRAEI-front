@@ -18,10 +18,10 @@ export function useFuseSearch(items, options = {}) {
       { name: 'modelo',      weight: 0.15 },
       { name: 'serie',       weight: 0.12 },
       { name: 'noInventario', weight: 0.10 },
+      { name: 'lote',        weight: 0.10 },  // Aumentado para dar prioridad a búsquedas por lote
       { name: 'referencia',  weight: 0.08 },
       { name: 'claveHRAEI',  weight: 0.05 },
       { name: 'claveCNIS',   weight: 0.04 },
-      { name: 'lote',        weight: 0.03 },
       { name: 'ubicacion',   weight: 0.03 },
     ],
     // Fuse.js config
@@ -96,7 +96,11 @@ export function useFuseSearch(items, options = {}) {
 
     const trimmed = query.trim()
 
-    const rawResults = fuseInstance.value.search(trimmed, { limit: maxResults })
+    // Para búsquedas cortas (lotes, series, referencias), usar threshold más bajo
+    const isShortQuery = trimmed.length <= 8
+    const dynamicThreshold = isShortQuery ? 0.2 : threshold
+    
+    const rawResults = fuseInstance.value.search(trimmed, { limit: maxResults, threshold: dynamicThreshold })
 
     // Mapear resultados con score normalizado y matches
     const mapped = rawResults.map((r) => ({

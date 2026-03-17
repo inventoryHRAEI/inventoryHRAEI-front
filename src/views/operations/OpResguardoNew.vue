@@ -1531,10 +1531,22 @@ function stopLiveTimer() {
 }
 
 function handleSuggestionSelect(suggestion, unidad, field) {
-    if (fillUnitFromSuggestion) {
-        fillUnitFromSuggestion(unidad, suggestion, field)
+    // Solo pasar 2 parámetros a fillUnitFromSuggestion
+    // La función llenará TODOS los campos del objeto unidad
+    if (fillUnitFromSuggestion && typeof fillUnitFromSuggestion === 'function') {
+        fillUnitFromSuggestion(unidad, suggestion)
     } else {
+        // Fallback manual fill if composable function not available
         if (suggestion.nombre) unidad.nombre = suggestion.nombre
+        if (suggestion.marca) unidad.marca = suggestion.marca
+        if (suggestion.modelo) unidad.modelo = suggestion.modelo
+        if (suggestion.serie) unidad.serie = suggestion.serie
+        if (suggestion.ubicacion) unidad.ubicacion = suggestion.ubicacion
+        if (suggestion.claveHRAEI) unidad.claveHRAEI = suggestion.claveHRAEI
+        if (suggestion.lote) unidad.lote = suggestion.lote
+        if (suggestion.referencia) unidad.referencia = suggestion.referencia
+        if (suggestion.noInventario) unidad.noInventario = suggestion.noInventario
+        if (suggestion.claveCNIS) unidad.claveCNIS = suggestion.claveCNIS
     }
 }
 
@@ -1826,13 +1838,21 @@ function mapSnakeToCamel(obj) {
     return result
 }
 
-onMounted(() => {
+onMounted(async () => {
     checkMobileView()
     window.addEventListener('resize', checkMobileView)
     document.addEventListener('click', handleClickOutsideMotivo)
-    fetchAllInventorySuggestions()
-    fetchEquipoMedicoSuggestions()
-    fetchInsumosRefaccionesSuggestions()
+    
+    // Load ONLY insumos (accesorios, consumibles, refacciones) immediately
+    // Equipos médicos se cargan SOLO cuando el usuario selecciona ese tipo
+    try {
+        // Cargar stock general que es base para insumos
+        await fetchAllInventorySuggestions()
+        // Cargar insumos/refacciones DESPUÉS de que allInventoryList esté lleno
+        await fetchInsumosRefaccionesSuggestions()
+    } catch (err) {
+        console.error('[OpResguardoNew] Error loading insumos suggestions:', err)
+    }
 
     if (props.modo === 'editar' && props.ordenId) {
         loadOrden()
@@ -1848,6 +1868,17 @@ onMounted(() => {
         initializeDateAndTime()
         generateFolioAutomatically()
         startLiveTimer()
+    }
+})
+
+// Lazy load equipos médicos cuando el usuario selecciona ese tipo
+watch(() => newItem.tipo, async (nuevoTipo) => {
+    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !equipoMedicoList.value.length) {
+        try {
+            await fetchEquipoMedicoSuggestions()
+        } catch (err) {
+            console.error('[OpResguardoNew] Error loading equipos médicos:', err)
+        }
     }
 })
 

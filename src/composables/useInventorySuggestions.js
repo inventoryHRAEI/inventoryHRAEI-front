@@ -66,7 +66,7 @@ export function useInventorySuggestions() {
         ]) || 'N/A'
         const modelo = pickFirstValue(item, ['MODELO', 'Modelo', 'MODELO / VERSIÓN', 'Modelo / Versión', 'Modelo / Version'])
         const serie = pickFirstValue(item, ['No. de Serie', 'No de Serie', 'NUMERO DE SERIE', 'NÚMERO DE SERIE', 'SERIE', 'Serie'])
-        const lote = pickFirstValue(item, ['Lote', 'LOTE'])
+        const lote = pickFirstValue(item, ['Lote', 'LOTE', 'lote', 'NÚMERO DE LOTE', 'Número de lote', 'NUMERO DE LOTE', 'Numero de lote'])
         const referencia = pickFirstValue(item, ['REFERENCIA', 'Referencia', 'Codigo Ref', 'Código Ref', 'CODIGO REF', 'CÓDIGO REF'])
         const claveHRAEI = pickFirstValue(item, ['Clave  HRAEI', 'CLAVE HRAEI', 'Clave HRAEI', 'CLAVE  HRAEI'])
         const tipo = inferItemType(item, nombre)
@@ -81,6 +81,9 @@ export function useInventorySuggestions() {
             referencia,
             claveHRAEI,
             tipo,
+            // Campos adicionales para mejor búsqueda
+            noInventario: pickFirstValue(item, ['No. Inventario', 'No Inventario', 'NUMERO INVENTARIO', 'NÚMERO INVENTARIO', 'noInventario']),
+            claveCNIS: pickFirstValue(item, ['CLAVE CNIS', 'Clave CNIS', 'claveCNIS']),
             label: `${nombre || 'Sin descripción'} - ${marca || 'Sin marca'} (${ubicacion || 'N/A'})`
         }
     }
@@ -164,8 +167,15 @@ export function useInventorySuggestions() {
             await fetchAllInventorySuggestions()
         }
         // Para insumos, devolver TODOS los items de stock-biomedica (accesorios, consumibles, refacciones)
-        // No filtrar por tipo ya que esta tabla contiene específicamente estos tipos de items
-        insumosRefaccionesList.value = allInventoryList.value
+        // Asegurar que tienen el campo tipo inferido
+        insumosRefaccionesList.value = allInventoryList.value.map(item => ({
+            ...item,
+            tipo: item.tipo || inferItemType(item, item.nombre)
+        }))
+        console.log(`[fetchInsumosRefaccionesSuggestions] Cargados ${insumosRefaccionesList.value.length} insumos`)
+        if (insumosRefaccionesList.value.length > 0) {
+            console.log('[fetchInsumosRefaccionesSuggestions] Sample:', insumosRefaccionesList.value[0])
+        }
     }
 
     /**
