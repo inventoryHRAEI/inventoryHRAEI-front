@@ -2245,6 +2245,8 @@ async function persistEditedOrder(payload) {
                         mergedPayload.equiposResguardo = items.map(it => ({
                             line: it.line,
                             tipo: it.tipo,
+                            consumibleEstado: it.consumible_estado || it.consumibleEstado || null,
+                            consumible_estado: it.consumible_estado || it.consumibleEstado || null,
                             cantidad: it.cantidad || 1,
                             descripcion: it.descripcion || '',
                             marca: it.marca || '',
@@ -2339,6 +2341,8 @@ async function reloadOrdersFromServer() {
                 id: `${item.orden_folio}-${item.line}`,
                 line: item.line,
                 tipo: item.tipo || 'N/A',
+                consumibleEstado: item.consumible_estado || item.consumibleEstado || null,
+                consumible_estado: item.consumible_estado || item.consumibleEstado || null,
                 cantidad: item.cantidad || 1,
                 descripcion: item.descripcion || 'N/A',
                 marca: item.marca || 'N/A',

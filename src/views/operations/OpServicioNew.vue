@@ -373,6 +373,7 @@
                                     </div>
                                 </div>
 
+
                                 <div class="units-list">
                                     <TransitionGroup name="unit-list">
                                         <div v-for="(unidad, idx) in newItem.unidades" :key="idx" class="unit-card">
@@ -516,8 +517,30 @@
                             </div>
                         </Transition>
 
+                        <!-- Estado del item (Consumibles, Accesorios, Refacciones) -->
+                        <div class="consumible-state-section" style="margin-top: 24px;">
+                            <span class="consumible-state-label">Estado del item</span>
+                            <div class="consumible-state-options">
+                                <button type="button" class="consumible-state-option"
+                                    :class="{ active: newItem.consumibleEstado === 'nuevo' }"
+                                    :disabled="!isConsumibleLikeType(newItem.tipo)"
+                                    @click="setConsumibleEstado('nuevo')">
+                                    Nuevo
+                                </button>
+                                <button type="button" class="consumible-state-option"
+                                    :class="{ active: newItem.consumibleEstado === 'usado' }"
+                                    :disabled="!isConsumibleLikeType(newItem.tipo)"
+                                    @click="setConsumibleEstado('usado')">
+                                    Usado
+                                </button>
+                            </div>
+                            <span v-if="!isConsumibleLikeType(newItem.tipo)" class="consumible-state-hint">
+                                Selecciona Accesorios, Consumibles o Refacciones para activar.
+                            </span>
+                        </div>
+
                         <!-- Toggle: Agregar al Inventario -->
-                        <div class="inventory-toggle-section" style="margin-top: 24px;">
+                        <div class="inventory-toggle-section" style="margin-top: 16px;">
                             <div class="toggle-row">
                                 <div class="toggle-info">
                                     <span class="toggle-label">✓ Registrar en inventario</span>
@@ -553,6 +576,10 @@
                                 <div v-for="(item, index) in form.equiposEntrada" :key="index" class="equipment-item">
                                     <div class="item-type-badge" :class="`type-${item.tipo}`">
                                         {{ getTipoLabel(item.tipo) }}
+                                    </div>
+                                    <div v-if="isConsumibleLikeType(item.tipo)" class="consumible-state-badge"
+                                        :class="(item.consumibleEstado || item.consumible_estado) === 'usado' ? 'is-usado' : 'is-nuevo'">
+                                        {{ (item.consumibleEstado || item.consumible_estado) === 'usado' ? 'Usado' : 'Nuevo' }}
                                     </div>
 
                                     <div class="item-info">
@@ -990,6 +1017,7 @@ const form = reactive({
 const newItem = reactive({
     tipo: '',
     cantidad: 1,
+    consumibleEstado: 'nuevo',
     unidades: []
 })
 
@@ -1102,12 +1130,26 @@ function getFieldError(field) { return errors.value[field] || '' }
 function selectEquipmentType(tipo) {
     newItem.tipo = tipo
     newItem.cantidad = 1
+    newItem.consumibleEstado = isConsumibleLikeType(tipo) ? 'nuevo' : ''
+    if (isConsumibleLikeType(tipo)) {
+        form.agregarAlInventario = true
+    }
     newItem.unidades = [createEmptyUnit()]
 }
 
 function getSelectedTypeLabel() {
     const type = tipoEntradaOptions.find(t => t.value === newItem.tipo)
     return type?.label || ''
+}
+
+function isConsumibleLikeType(tipo) {
+    return ['consumible', 'accesorio', 'refaccion'].includes(tipo)
+}
+
+function setConsumibleEstado(value) {
+    if (!isConsumibleLikeType(newItem.tipo)) return
+    newItem.consumibleEstado = value
+    form.agregarAlInventario = value === 'nuevo'
 }
 
 function getTipoLabel(tipo) {
@@ -1171,6 +1213,7 @@ function agregarItem() {
         // Preparar el equipo para añadir
         const equipmentToAdd = {
             tipo: newItem.tipo,
+            consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
             cantidad: newItem.cantidad,
             descripcion: firstUnit.nombre,
             marca: firstUnit.marca,
@@ -1308,6 +1351,7 @@ function cancelAddWithWarnings() {
 function resetNewItem() {
     newItem.tipo = ''
     newItem.cantidad = 1
+    newItem.consumibleEstado = 'nuevo'
     newItem.unidades = []
 }
 
@@ -1320,6 +1364,7 @@ function agregarItemBlanco() {
 
     form.equiposEntrada.push({
         tipo: newItem.tipo,
+        consumibleEstado: newItem.tipo === 'consumible' ? newItem.consumibleEstado : null,
         cantidad: 1,
         descripcion: 'N/A',
         marca: 'N/A',
@@ -1351,6 +1396,7 @@ function agregarItemBlanco() {
 function agregarItemBlancoConTipo(tipo) {
     form.equiposEntrada.push({
         tipo: tipo,
+        consumibleEstado: tipo === 'consumible' ? 'nuevo' : null,
         cantidad: 1,
         descripcion: 'N/A',
         marca: 'N/A',
@@ -1586,6 +1632,7 @@ async function onSubmit() {
 
                 categoriesMap[categoria].push({
                     claveHRAEI: item.claveHRAEI || '',
+                    consumibleEstado: item.consumibleEstado || item.consumible_estado || null,
                     itemId: `${item.claveHRAEI || 'SIN_CLAVE'}|${safeSerie}|${safeModelo}|${safeMarca}`,
                     cantidad: item.cantidad || 1,
                     descripcion: item.descripcion || '',
@@ -2407,6 +2454,70 @@ onBeforeUnmount(() => {
     background: rgba(239, 68, 68, 0.25);
     color: #fca5a5;
     border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.consumible-state-selector {
+    margin: 10px 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.consumible-state-label {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.consumible-state-options {
+    display: inline-flex;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.consumible-state-option {
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.consumible-state-option.active {
+    background: rgba(59, 130, 246, 0.22);
+    color: #bfdbfe;
+}
+
+.consumible-state-hint {
+    font-size: 0.75rem;
+    color: rgba(203, 213, 225, 0.8);
+    margin-top: 6px;
+}
+
+.consumible-state-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 8px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.consumible-state-badge.is-nuevo {
+    background: rgba(34, 197, 94, 0.25);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: #86efac;
+}
+
+.consumible-state-badge.is-usado {
+    background: rgba(148, 163, 184, 0.22);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    color: #cbd5e1;
 }
 
 .item-info {

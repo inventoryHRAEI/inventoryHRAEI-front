@@ -150,6 +150,41 @@
                       placeholder="0"
                     />
                   </div>
+
+                  <div class="field">
+                    <label>Unidad de medida</label>
+                    <div class="unidad-grid">
+                      <select class="control w-18ch" v-model="item.unidadTipo">
+                        <option value="" disabled>Selecciona tipo</option>
+                        <option v-for="opt in UNIDAD_TIPOS" :key="opt.value" :value="opt.value">
+                          {{ opt.label }}
+                        </option>
+                      </select>
+
+                      <select
+                        class="control w-18ch"
+                        v-model="item.unidadMedida"
+                        :disabled="!item.unidadTipo"
+                      >
+                        <option value="" disabled>Selecciona medida</option>
+                        <option
+                          v-for="opt in getUnidadOptions(item.unidadTipo)"
+                          :key="opt"
+                          :value="opt"
+                        >
+                          {{ opt }}
+                        </option>
+                      </select>
+
+                      <input
+                        v-if="isUnidadCustom(item.unidadTipo, item.unidadMedida)"
+                        class="control w-16ch"
+                        v-model.trim="item.unidadMedidaCustom"
+                        placeholder="Especificar cantidad"
+                        type="text"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -279,10 +314,34 @@ const onHoverEnd = () => {
   // Hover end simple
 }
 
+function isItemValid(item) {
+  if (!item) return false
+  const descripcion = (item.descripcion || '').trim()
+  const clave = (item.claveHRAEI || '').trim()
+  const cantidad = normalizedCount(item.cantidad)
+  const tipo = item.unidadTipo
+  const medida = item.unidadMedida
+
+  if (!descripcion || !clave || cantidad <= 0) return false
+  if (!tipo) return false
+  if (!medida) return false
+
+  if (isUnidadCustom(tipo, medida)) {
+    const custom = (item.unidadMedidaCustom || '').trim()
+    if (!custom) return false
+  }
+
+  return true
+}
+
 const isValid = computed(() => {
   const descripcion = (form.descripcion || '').trim()
   const solicitante = (form.solicitante || '').trim()
-  return descripcion.length > 0 && solicitante.length > 0
+  if (!descripcion || !solicitante) return false
+
+  // Require all rows to be valid
+  if (!Array.isArray(form.items) || form.items.length === 0) return false
+  return form.items.every(isItemValid)
 })
 
 function normalizedCount(value) {
@@ -293,14 +352,36 @@ function normalizedCount(value) {
   return Math.max(0, Math.round(numeric))
 }
 
+const UNIDAD_TIPOS = [
+  { value: 'caja', label: 'Caja', options: ['10', '20', '50', '100', '250', 'Otro'] },
+  { value: 'envase', label: 'Envase', options: ['1lt', '4lts', '5lts', '10lts', 'Otro'] },
+  { value: 'paquete', label: 'Paquete', options: ['2pz', '5pz', '10pz', '20pz', 'Otro'] },
+  { value: 'pieza', label: 'Pieza', options: ['Especificar'] }
+]
+
 function makeEmptyItem() {
   return {
     descripcion: '',
     claveHRAEI: '',
     lote: '',
     fechaCaducidad: '',
-    cantidad: null
+    cantidad: null,
+    unidadTipo: '',
+    unidadMedida: '',
+    unidadMedidaCustom: ''
   }
+}
+
+function getUnidadOptions(tipo) {
+  const found = UNIDAD_TIPOS.find(t => t.value === tipo)
+  return found ? found.options : []
+}
+
+function isUnidadCustom(tipo, medida) {
+  if (!tipo) return false
+  if (tipo === 'pieza') return true
+  const opts = getUnidadOptions(tipo)
+  return medida === 'Otro' || medida === 'Especificar'
 }
 
 function announceChange(verb, count) {
@@ -393,7 +474,10 @@ async function onSubmit() {
       claveHRAEI: item.claveHRAEI,
       lote: item.lote,
       fechaCaducidad: item.fechaCaducidad,
-      cantidad: item.cantidad
+      cantidad: normalizedCount(item.cantidad),
+      unidadTipo: item.unidadTipo,
+      unidadMedida: item.unidadMedida,
+      unidadMedidaCustom: item.unidadMedidaCustom
     })),
     createdAt: new Date().toISOString()
   }
@@ -467,7 +551,12 @@ onMounted(async () => {
         const it = storedItems[i] || {}
         form.items[i].descripcion = it.descripcion || ''
         form.items[i].claveHRAEI = it.claveHRAEI || ''
+        form.items[i].lote = it.lote || ''
+        form.items[i].fechaCaducidad = it.fechaCaducidad || ''
         form.items[i].cantidad = it.cantidad ?? null
+        form.items[i].unidadTipo = it.unidadTipo || ''
+        form.items[i].unidadMedida = it.unidadMedida || ''
+        form.items[i].unidadMedidaCustom = it.unidadMedidaCustom || ''
       }
       savedAt.value = new Date().toLocaleTimeString()
     } else {
@@ -1588,6 +1677,18 @@ select {
   max-width: 80px !important;
   text-align: center !important;
   padding: 0.55rem 0.5rem !important;
+}
+
+.unidad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.unidad-grid input,
+.unidad-grid select {
+  width: 100%;
 }
 
 @media (max-width: 520px) {

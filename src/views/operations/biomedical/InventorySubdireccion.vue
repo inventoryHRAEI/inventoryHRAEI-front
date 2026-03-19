@@ -437,7 +437,7 @@ const fetchArticulos = async () => {
     fetchError.value = false;
     try {
         console.log('[InventorySubdireccion] Iniciando fetch de /api/ops/stock-biomedica');
-        const response = await fetch('/api/ops/stock-biomedica');
+        const response = await fetch(`/api/ops/stock-biomedica?t=${Date.now()}`, { cache: 'no-store' });
         console.log('[InventorySubdireccion] Response status:', response.status, response.ok);
         if (!response.ok) {
             throw new Error(`Error del servidor: ${response.status} ${response.statusText}`);

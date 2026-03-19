@@ -83,48 +83,110 @@
 
     <!-- Step 1 (new): Formulario de nuevo bien -->
     <div v-if="step === 1 && intakeType === 'new'" class="ik-step fade-in">
-      <div class="ik-new-layout">
-        <aside class="ik-new-side">
-          <div class="ik-new-badge">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="ik-new-badge-icon"><path d="M12 3l1.5 4.5H18l-3.6 2.7L15.9 15 12 12.3 8.1 15l1.5-4.8L6 7.5h4.5z"/></svg>
+      <div class="ik-new-form">
+        <!-- Header del formulario -->
+        <div class="ik-new-header">
+          <div class="ik-header-content">
+            <div class="ik-header-badge">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3l1.5 4.5H18l-3.6 2.7L15.9 15 12 12.3 8.1 15l1.5-4.8L6 7.5h4.5z"/></svg>
+            </div>
+            <div class="ik-header-text">
+              <h3>Nuevo Registro</h3>
+              <p>Completa la información esencial de cada consumible</p>
+            </div>
           </div>
-          <h3>Nuevo Registro</h3>
-          <p>Completa la información esencial del consumible</p>
-        </aside>
-        <div class="ik-new-form">
-          <div class="ik-form-grid">
-            <label class="ik-field span-2">
-              <span>Nombre / Descripción *</span>
-              <input v-model="newItem.descripcion" class="ik-input" placeholder="Ej. Jeringa estéril de 5ml" />
-            </label>
-            <label class="ik-field">
-              <span>Clave HRAEI *</span>
-              <input v-model="newItem.claveHRAEI" class="ik-input" placeholder="C-XXXXX" />
-            </label>
-            <label class="ik-field">
-              <span>Unidad de Medida *</span>
-              <select v-model="newItem.unidadMedida" class="ik-input">
-                <option value="">Selecciona…</option>
-                <option value="Pieza">Pieza</option>
-                <option value="Caja">Caja</option>
-                <option value="Envase">Envase</option>
-                <option value="Paquete">Paquete</option>
-                <option value="Litro">Litro</option>
-              </select>
-            </label>
-            <label class="ik-field">
-              <span>Cantidad Inicial *</span>
-              <div class="ik-qty-wrap">
-                <button class="ik-qty-btn" @click="newItem.cantidad = Math.max(0, (newItem.cantidad || 0) - 1)">−</button>
-                <input v-model.number="newItem.cantidad" type="number" class="ik-qty-val" />
-                <button class="ik-qty-btn" @click="newItem.cantidad = (newItem.cantidad || 0) + 1">+</button>
+        </div>
+
+        <!-- Resumen de estadísticas -->
+        <div class="ik-new-summary">
+          <div class="ik-sum-card">
+            <span>Renglones</span>
+            <strong>{{ newItems.length }}</strong>
+          </div>
+          <div class="ik-sum-card">
+            <span>Unidades totales</span>
+            <strong>{{ newItemsTotal }}</strong>
+          </div>
+          <div class="ik-sum-card">
+            <span>Validos</span>
+            <strong>{{ areNewItemsValid() ? 'Sí' : 'No' }}</strong>
+          </div>
+        </div>
+
+        <!-- Formulario principal -->
+        <div class="ik-form-grid">
+          <div class="ik-new-items-header">
+            <h4>Renglones a registrar</h4>
+            <button type="button" class="ik-add-row" @click="addNewItemRow">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Agregar renglón
+            </button>
+          </div>
+
+          <div class="ik-items-grid">
+              <div class="ik-item-row" v-for="(item, idx) in newItems" :key="idx">
+                <div class="ik-item-row-header">
+                  <span class="ik-item-badge">#{{ idx + 1 }}</span>
+                  <button type="button" class="ik-remove-row" @click="removeNewItemRow(idx)" v-if="newItems.length > 1">
+                    ✕
+                  </button>
+                </div>
+
+                <div class="ik-item-fields">
+                  <label class="ik-field ik-field-full">
+                    <span>Descripción *</span>
+                    <input v-model="item.descripcion" class="ik-input" placeholder="Ej. Jeringa estéril de 5ml" />
+                  </label>
+                  <label class="ik-field ik-field-full">
+                    <span>Clave HRAEI *</span>
+                    <input v-model="item.claveHRAEI" class="ik-input" placeholder="C-XXXXX" />
+                  </label>
+                  <label class="ik-field">
+                    <span>Unidad (tipo) *</span>
+                    <select v-model="item.unidadTipo" class="ik-input">
+                      <option value="">Selecciona tipo</option>
+                      <option v-for="opt in UNIT_TYPES" :key="opt.value" :value="opt.value">
+                        {{ opt.label }}
+                      </option>
+                    </select>
+                  </label>
+                  <label class="ik-field">
+                    <span>Medida *</span>
+                    <select v-model="item.unidadMedida" class="ik-input" :disabled="!item.unidadTipo">
+                      <option value="">Selecciona medida</option>
+                      <option v-for="opt in getUnidadOptions(item.unidadTipo)" :key="opt" :value="opt">
+                        {{ opt }}
+                      </option>
+                    </select>
+                  </label>
+                  <label v-if="isUnidadCustom(item.unidadTipo, item.unidadMedida)" class="ik-field ik-field-full">
+                    <span>Especifica la cantidad *</span>
+                    <input v-model.trim="item.unidadMedidaCustom" class="ik-input" placeholder="Ej. 7 cajas" />
+                  </label>
+                  <label class="ik-field">
+                    <span>Cantidad *</span>
+                    <div class="ik-qty-wrap">
+                      <button class="ik-qty-btn" @click="item.cantidad = Math.max(0, (item.cantidad || 0) - 1)">−</button>
+                      <input v-model.number="item.cantidad" type="number" class="ik-qty-val" />
+                      <button class="ik-qty-btn" @click="item.cantidad = (item.cantidad || 0) + 1">+</button>
+                    </div>
+                  </label>
+                  <label class="ik-field">
+                    <span>Lote</span>
+                    <input v-model="item.lote" class="ik-input" placeholder="Ej. 0936-01" />
+                  </label>
+                  <label class="ik-field">
+                    <span>Fecha caducidad</span>
+                    <input v-model="item.fechaCaducidad" type="date" class="ik-input" />
+                  </label>
+                </div>
               </div>
-            </label>
-            <label class="ik-field">
+            </div>
+
+            <label class="ik-field ik-field-full">
               <span>Responsable *</span>
               <input v-model="meta.responsable" class="ik-input" placeholder="Nombre completo" />
             </label>
-          </div>
         </div>
       </div>
     </div>
@@ -148,12 +210,12 @@
             <span class="ik-cg-value">{{ meta.responsable || '—' }}</span>
           </div>
           <div class="ik-cg-card">
-            <span class="ik-cg-label">{{ intakeType === 'refill' ? 'Artículos' : 'Artículo' }}</span>
-            <span class="ik-cg-value">{{ intakeType === 'refill' ? selectedCount : newItem.descripcion || '—' }}</span>
+            <span class="ik-cg-label">{{ intakeType === 'refill' ? 'Artículos' : 'Artículos' }}</span>
+            <span class="ik-cg-value">{{ intakeType === 'refill' ? selectedCount : newItems.length }}</span>
           </div>
           <div class="ik-cg-card">
             <span class="ik-cg-label">Unidades</span>
-            <span class="ik-cg-value accent">{{ intakeType === 'refill' ? totalUnits : newItem.cantidad || 0 }}</span>
+            <span class="ik-cg-value accent">{{ intakeType === 'refill' ? totalUnits : newItemsTotal }}</span>
           </div>
         </div>
 
@@ -170,11 +232,16 @@
 
         <!-- Detalle para new -->
         <div v-if="intakeType === 'new'" class="ik-confirm-list">
-          <div class="ik-cl-row">
+          <div v-for="(item, idx) in newItems" :key="idx" class="ik-cl-row">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="ik-cl-icon"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
             <div class="ik-cl-info">
-              <strong>{{ newItem.descripcion }}</strong>
-              <span>Clave: {{ newItem.claveHRAEI }} · {{ newItem.cantidad }} {{ newItem.unidadMedida }}</span>
+              <strong>{{ item.descripcion || '—' }}</strong>
+              <span>
+                Clave: {{ item.claveHRAEI || '—' }} ·
+                {{ item.cantidad || 0 }}
+                {{ item.unidadMedida || '—' }}
+                <span v-if="isUnidadCustom(item.unidadTipo, item.unidadMedida)">({{ item.unidadMedidaCustom || '...' }})</span>
+              </span>
             </div>
           </div>
         </div>
@@ -200,7 +267,68 @@ const submitting = ref(false);
 const submitError = ref('');
 
 const meta = ref({ responsable: '', proveedor: '', motivo: '', notas: '' });
-const newItem = ref({ claveHRAEI: '', descripcion: '', unidadMedida: '', cantidad: null });
+
+const UNIT_TYPES = [
+  { value: 'caja', label: 'Caja', options: ['10', '20', '50', '100', '250', 'Otro'] },
+  { value: 'envase', label: 'Envase', options: ['1lt', '4lts', '5lts', '10lts', 'Otro'] },
+  { value: 'paquete', label: 'Paquete', options: ['2pz', '5pz', '10pz', '20pz', 'Otro'] },
+  { value: 'pieza', label: 'Pieza', options: ['Especificar'] }
+];
+
+const newItems = ref([makeNewItem()]);
+
+function makeNewItem() {
+  return {
+    descripcion: '',
+    claveHRAEI: '',
+    lote: '',
+    fechaCaducidad: '',
+    cantidad: null,
+    unidadTipo: '',
+    unidadMedida: '',
+    unidadMedidaCustom: ''
+  };
+}
+
+function getUnidadOptions(tipo) {
+  const found = UNIT_TYPES.find(t => t.value === tipo);
+  return found ? found.options : [];
+}
+
+function isUnidadCustom(tipo, medida) {
+  if (!tipo) return false;
+  if (tipo === 'pieza') return true;
+  return medida === 'Otro' || medida === 'Especificar';
+}
+
+function addNewItemRow() {
+  newItems.value.push(makeNewItem());
+}
+
+function removeNewItemRow(index) {
+  if (newItems.value.length <= 1) return;
+  newItems.value.splice(index, 1);
+}
+
+function isNewItemValid(item) {
+  if (!item) return false;
+  const desc = (item.descripcion || '').trim();
+  const clave = (item.claveHRAEI || '').trim();
+  const cantidad = Number(item.cantidad);
+  const tipo = item.unidadTipo;
+  const medida = item.unidadMedida;
+
+  if (!desc || !clave || !tipo || !medida || cantidad <= 0) return false;
+  if (isUnidadCustom(tipo, medida)) {
+    const custom = (item.unidadMedidaCustom || '').trim();
+    if (!custom) return false;
+  }
+  return true;
+}
+
+function areNewItemsValid() {
+  return newItems.value.length > 0 && newItems.value.every(isNewItemValid);
+}
 
 const pickValue = (item, aliases = [], fallback = '') => {
   if (!item || typeof item !== 'object') return fallback;
@@ -277,22 +405,18 @@ const selectedList = computed(() => {
     });
 });
 
-/* Navigation */
+const newItemsTotal = computed(() => newItems.value.reduce((sum, it) => sum + (Number(it.cantidad) || 0), 0));
+
 const canNext = computed(() => {
   if (step.value === 0) return !!intakeType.value;
   if (step.value === 1 && intakeType.value === 'refill') return selectedCount.value > 0 && !!meta.value.responsable;
-  if (step.value === 1 && intakeType.value === 'new') {
-    return !!newItem.value.descripcion && !!newItem.value.claveHRAEI
-      && !!newItem.value.unidadMedida && (newItem.value.cantidad || 0) > 0
-      && !!meta.value.responsable;
-  }
+  if (step.value === 1 && intakeType.value === 'new') return areNewItemsValid() && !!meta.value.responsable;
   return true;
 });
+
 const canFinish = computed(() => {
   if (intakeType.value === 'refill') return selectedCount.value > 0 && !!meta.value.responsable;
-  return !!newItem.value.descripcion && !!newItem.value.claveHRAEI
-    && !!newItem.value.unidadMedida && (newItem.value.cantidad || 0) > 0
-    && !!meta.value.responsable;
+  return areNewItemsValid() && !!meta.value.responsable;
 });
 
 /* Load items for refill */
@@ -330,7 +454,7 @@ const resetState = () => {
   submitting.value = false;
   submitError.value = '';
   meta.value = { responsable: '', proveedor: '', motivo: '', notas: '' };
-  newItem.value = { claveHRAEI: '', descripcion: '', unidadMedida: '', cantidad: null };
+  newItems.value = [makeNewItem()]
 };
 const close = (force = false) => {
     if (force || window.confirm('¿Está seguro de que desea cerrar el wizard? Se perderán los cambios no guardados.')) {
@@ -373,14 +497,21 @@ const submit = async () => {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false) throw new Error(data.msg || data.error || 'El resurtido falló');
     } else {
+      const itemsPayload = newItems.value.map(item => ({
+        claveHRAEI: item.claveHRAEI,
+        descripcion: item.descripcion,
+        lote: item.lote,
+        fechaCaducidad: item.fechaCaducidad,
+        cantidad: Number(item.cantidad || 0),
+        unidadTipo: item.unidadTipo,
+        unidadMedida: item.unidadMedida,
+        unidadMedidaCustom: item.unidadMedidaCustom,
+        distribucion: { subceye: Number(item.cantidad || 0), oficina: 0 },
+      }));
+
       const payload = {
         tipoRegistro: 'new',
-        items: [{
-          claveHRAEI: newItem.value.claveHRAEI,
-          descripcion: newItem.value.descripcion,
-          unidadMedida: newItem.value.unidadMedida,
-          distribucion: { subceye: Number(newItem.value.cantidad || 0), oficina: 0 },
-        }],
+        items: itemsPayload,
         metadata: { ...meta.value },
       };
       const res = await fetch('/api/ops/inventory/consumables-intake', {
@@ -468,18 +599,31 @@ const submit = async () => {
 }
 .ik-meta-title { margin: 0 0 4px; font-size: 13px; font-weight: 700; text-transform: uppercase; color: rgba(255,255,255,.45); letter-spacing: .5px; }
 
-.ik-field { display: flex; flex-direction: column; gap: 5px; }
-.ik-field span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: rgba(255,255,255,.35); }
+.ik-field { display: flex; flex-direction: column; gap: 8px; }
+.ik-field span { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: rgba(255,255,255,.5); }
 
 .ik-input {
   background: rgba(0,0,0,.25);
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 10px; padding: 10px 14px;
-  color: #fff; font-size: 14px; font-family: inherit;
-  transition: border-color .2s, box-shadow .2s; outline: none;
+  border-radius: 12px; 
+  padding: 11px 14px;
+  color: #fff; 
+  font-size: 14px; 
+  font-family: inherit;
+  transition: border-color .2s, box-shadow .2s, background .2s; 
+  outline: none;
   width: 100%;
+  min-height: 40px;
 }
-.ik-input:focus { border-color: #60a5fa; box-shadow: 0 0 0 3px rgba(96,165,250,.1); }
+.ik-input:hover {
+  background: rgba(0,0,0,.35);
+  border-color: rgba(255,255,255,.12);
+}
+.ik-input:focus { 
+  background: rgba(0,0,0,.4);
+  border-color: #60a5fa; 
+  box-shadow: 0 0 0 3px rgba(96,165,250,.1); 
+}
 select.ik-input {
   appearance: none; cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
@@ -495,56 +639,317 @@ select.ik-input option {
 .ik-items { display: flex; flex-direction: column; min-height: 0; }
 
 /* --- Step 1 (new): Form --- */
-.ik-new-layout {
-  display: grid; grid-template-columns: 240px 1fr;
-  gap: 20px; flex: 1; min-height: 0;
+.ik-new-form {
+  padding: 0;
+  overflow: visible !important;
+  min-height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  height: auto !important;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  gap: 28px;
 }
 
-.ik-new-side {
-  display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
-  background: rgba(0,0,0,.3);
-  border-radius: 18px; padding: 32px 24px;
+.ik-new-header {
+  padding: 28px 32px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  backdrop-filter: blur(10px) !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
-.ik-new-badge {
-  width: 48px; height: 48px;
-  border-radius: 14px;
+
+.ik-header-content {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.ik-header-badge {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  border-radius: 16px;
   background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  display: flex; align-items: center; justify-content: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0;
+  overflow: hidden !important;
 }
-.ik-new-badge-icon { width: 24px; height: 24px; color: #fff; }
-.ik-new-side h3 { margin: 0; font-size: 18px; font-weight: 700; color: #f8fafc; }
-.ik-new-side p { margin: 0; font-size: 13px; color: rgba(255,255,255,.45); line-height: 1.5; }
 
-.ik-new-form { padding: 8px 0; overflow-y: auto; }
+.ik-header-badge svg {
+  width: 28px !important;
+  height: 28px !important;
+  color: #fff !important;
+  stroke-width: 2 !important;
+}
 
-.ik-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.ik-header-text h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.ik-header-text p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: rgba(255,255,255,.55);
+  line-height: 1.5;
+}
+
+.ik-new-summary {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+  gap: 16px !important;
+  padding: 20px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.ik-sum-card {
+  flex: 1;
+  min-width: 140px;
+  padding: 14px 16px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ik-sum-card span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 500;
+}
+
+.ik-sum-card strong {
+  font-size: 20px;
+  color: #fff;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.ik-new-items-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.ik-add-row {
+  background: rgba(96, 165, 250, 0.15);
+  border: 1px solid rgba(96, 165, 250, 0.35);
+  color: #60a5fa;
+  padding: 10px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s, border-color 0.2s;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ik-add-row:hover {
+  background: rgba(96, 165, 250, 0.22);
+  border-color: rgba(96, 165, 250, 0.45);
+  transform: translateY(-1px);
+}
+
+.ik-items-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  overflow-y: visible !important;
+}
+
+.ik-item-row {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ik-item-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.ik-item-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: rgba(96, 165, 250, 0.18);
+  color: #60a5fa;
+}
+
+.ik-remove-row {
+  background: rgba(248, 113, 113, 0.12);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: #fecaca;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  font-size: 16px;
+  font-weight: 600;
+  min-width: 36px;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ik-remove-row:hover {
+  background: rgba(248, 113, 113, 0.18);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.ik-item-fields {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
+}
+
+.ik-item-fields .ik-field {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ik-item-fields .ik-field span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.ik-item-fields .ik-field input,
+.ik-item-fields .ik-field select {
+  width: 100%;
+  padding: 10px 12px !important;
+  font-size: 14px !important;
+  min-height: 40px !important;
+}
+
+.ik-item-fields .ik-field-full {
+  grid-column: 1 / -1;
+}
+
+.ik-item-fields .ik-field:nth-child(n) {
+  grid-column: span 1;
+}
+
+.ik-form-grid {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 26px !important;
+  padding: 0 20px !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
 .span-2 { grid-column: span 2; }
 
-.ik-qty-wrap {
-  display: flex; align-items: center; gap: 0;
-  background: rgba(0,0,0,.3);
-  border-radius: 12px; padding: 4px;
-  border: 1px solid rgba(255,255,255,.06);
-  width: fit-content;
+.ik-form-grid .ik-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
+
+.ik-form-grid .ik-field span {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.ik-form-grid .ik-field input,
+.ik-form-grid .ik-field select {
+  padding: 11px 14px !important;
+  font-size: 14px !important;
+  min-height: 42px !important;
+}
+
+.ik-qty-wrap {
+  display: flex; 
+  align-items: center; 
+  gap: 6px;
+  background: rgba(0,0,0,.25);
+  border-radius: 14px; 
+  padding: 6px 8px;
+  border: 1px solid rgba(255,255,255,.12);
+  width: fit-content;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.ik-qty-wrap:focus-within {
+  background: rgba(0,0,0,.35);
+  border-color: rgba(96,165,250,.3);
+}
+
 .ik-qty-btn {
-  width: 38px; height: 38px;
-  border-radius: 10px; border: none;
-  background: rgba(255,255,255,.06);
-  color: #fff; font-size: 18px; font-weight: 700;
-  cursor: pointer; transition: background .12s;
-  display: flex; align-items: center; justify-content: center;
+  width: 40px; 
+  height: 40px;
+  border-radius: 10px; 
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.08);
+  color: #fff; 
+  font-size: 18px; 
+  font-weight: 700;
+  cursor: pointer; 
+  transition: background .15s, border-color .15s;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
   font-family: inherit;
 }
-.ik-qty-btn:hover { background: rgba(255,255,255,.12); }
-.ik-qty-val {
-  width: 70px; background: none; border: none;
-  text-align: center; color: #fff;
-  font-size: 20px; font-weight: 800;
-  -moz-appearance: textfield; appearance: textfield; font-family: inherit;
+
+.ik-qty-btn:hover { 
+  background: rgba(255,255,255,.14);
+  border-color: rgba(255,255,255,.15);
 }
+
+.ik-qty-val {
+  width: 80px; 
+  background: none; 
+  border: none;
+  text-align: center; 
+  color: #fff;
+  font-size: 21px; 
+  font-weight: 800;
+  -moz-appearance: textfield; 
+  appearance: textfield; 
+  font-family: inherit;
+  padding: 0 4px;
+}
+
 .ik-qty-val::-webkit-inner-spin-button,
-.ik-qty-val::-webkit-outer-spin-button { display: none; }
+.ik-qty-val::-webkit-outer-spin-button { 
+  display: none; 
+}
 
 /* --- Step 2: Confirmation --- */
 .ik-confirm {
@@ -596,11 +1001,54 @@ select.ik-input option {
 .ik-cl-info strong { font-size: 13px; color: rgba(255,255,255,.85); }
 .ik-cl-info span { font-size: 11px; color: rgba(255,255,255,.35); }
 
-@media (max-width: 700px) {
-  .ik-type-grid { grid-template-columns: 1fr; }
-  .ik-cols { grid-template-columns: 1fr; }
-  .ik-new-layout { grid-template-columns: 1fr; }
-  .ik-new-side { display: none; }
-  .ik-confirm-grid { grid-template-columns: 1fr 1fr; }
+@media (max-width: 1024px) {
+  .ik-item-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ik-new-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .ik-type-grid { 
+    grid-template-columns: 1fr; 
+  }
+  
+  .ik-cols { 
+    grid-template-columns: 1fr; 
+  }
+  
+  .ik-new-form {
+    gap: 20px;
+  }
+  
+  .ik-new-header {
+    padding: 20px;
+  }
+  
+  .ik-header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    text-align: left;
+  }
+  
+  .ik-new-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .ik-form-grid {
+    padding: 0 16px;
+    gap: 20px;
+  }
+  
+  .ik-item-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  
+  .ik-confirm-grid { 
+    grid-template-columns: 1fr 1fr; 
+  }
 }
 </style>

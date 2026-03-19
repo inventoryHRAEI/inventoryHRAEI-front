@@ -357,6 +357,22 @@
                                     </div>
                                 </div>
 
+                                <div v-if="newItem.tipo === 'consumible'" class="consumible-state-selector">
+                                    <span class="consumible-state-label">Estado del consumible</span>
+                                    <div class="consumible-state-options">
+                                        <button type="button" class="consumible-state-option"
+                                            :class="{ active: newItem.consumibleEstado === 'nuevo' }"
+                                            @click="newItem.consumibleEstado = 'nuevo'">
+                                            Nuevo
+                                        </button>
+                                        <button type="button" class="consumible-state-option"
+                                            :class="{ active: newItem.consumibleEstado === 'usado' }"
+                                            @click="newItem.consumibleEstado = 'usado'">
+                                            Usado
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <div v-if="newItem.tipo === 'accesorio'" class="accessory-note">
                                     <small><strong>Requeridos para accesorios:</strong> Nombre/Descripción, Marca,
                                         Modelo, Lote, No. Serie,
@@ -533,6 +549,10 @@
                                 <div v-for="(item, index) in form.equiposEntrada" :key="index" class="equipment-item">
                                     <div class="item-type-badge" :class="`type-${item.tipo}`">
                                         {{ getTipoLabel(item.tipo) }}
+                                    </div>
+                                    <div v-if="item.tipo === 'consumible'" class="consumible-state-badge"
+                                        :class="(item.consumibleEstado || item.consumible_estado) === 'usado' ? 'is-usado' : 'is-nuevo'">
+                                        {{ (item.consumibleEstado || item.consumible_estado) === 'usado' ? 'Usado' : 'Nuevo' }}
                                     </div>
 
                                     <div class="item-info">
@@ -926,7 +946,8 @@ const form = reactive({
     observacionesImg: null,
     nombreIngeniero: '',
     equiposEntrada: [],
-    agregarAlInventario: false,
+    // By default, entradas should impact inventory unless the user explicitly disables it.
+    agregarAlInventario: true,
     signatures: JSON.parse(JSON.stringify(DEFAULT_SIGNATURES)),
     extraFields: {}
 })
@@ -935,6 +956,7 @@ const form = reactive({
 const newItem = reactive({
     tipo: '',
     cantidad: 1,
+    consumibleEstado: 'nuevo',
     descripcion: '',
     marca: '',
     modelo: '',
@@ -1128,6 +1150,7 @@ function getFieldError(field) {
 function selectEquipmentType(tipo) {
     newItem.tipo = tipo
     newItem.cantidad = 1
+    newItem.consumibleEstado = tipo === 'consumible' ? 'nuevo' : ''
     newItem.unidades = [createEmptyUnit()]
 }
 
@@ -1203,6 +1226,7 @@ async function agregarItem() {
         // Preparar el equipo para añadir
         const equipmentToAdd = {
             tipo: newItem.tipo,
+            consumibleEstado: newItem.tipo === 'consumible' ? newItem.consumibleEstado : null,
             cantidad: newItem.cantidad,
             descripcion: firstUnit.nombre,
             marca: firstUnit.marca,
@@ -1344,6 +1368,7 @@ function cancelAddWithWarnings() {
 function resetNewItem() {
     newItem.tipo = ''
     newItem.cantidad = 1
+    newItem.consumibleEstado = 'nuevo'
     newItem.descripcion = ''
     newItem.marca = ''
     newItem.modelo = ''
@@ -1616,6 +1641,11 @@ async function onSubmit() {
         if (res.ok) {
             const responseData = await res.json()
             const folioGuardado = responseData.folio || form.folio
+            console.log('[OpEntradaNew] Save response', {
+                folio: folioGuardado,
+                inventoryUpdatesCount: Array.isArray(responseData.inventoryUpdates) ? responseData.inventoryUpdates.length : 0,
+                serverMessage: responseData.msg
+            })
 
             // Mostrar mensaje provisto por el servidor (incluye tipo y folio cuando aplica)
             notifier.success(responseData.msg || (props.modo === 'editar' ? 'Orden actualizada' : 'Orden guardada'))
@@ -2346,6 +2376,64 @@ function mapSnakeToCamel(obj) {
     background: rgba(239, 68, 68, 0.25);
     color: #fca5a5;
     border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.consumible-state-selector {
+    margin: 10px 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.consumible-state-label {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+.consumible-state-options {
+    display: inline-flex;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.consumible-state-option {
+    border: none;
+    background: transparent;
+    color: #cbd5e1;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.consumible-state-option.active {
+    background: rgba(59, 130, 246, 0.22);
+    color: #bfdbfe;
+}
+
+.consumible-state-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border-radius: 8px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.consumible-state-badge.is-nuevo {
+    background: rgba(34, 197, 94, 0.25);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: #86efac;
+}
+
+.consumible-state-badge.is-usado {
+    background: rgba(148, 163, 184, 0.22);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    color: #cbd5e1;
 }
 
 .item-info {

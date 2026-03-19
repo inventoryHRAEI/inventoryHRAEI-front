@@ -51,6 +51,7 @@
                         <th v-if="showColumnHora">Hora Término</th>
                         <th v-if="showColumnTipo">Tipo</th>
                         <th v-if="showColumnItems">Items</th>
+                        <th>Consumible</th>
                         <th v-if="showColumnEstado">Estado</th>
                         <th>Documentos</th>
                         <th>Acciones</th>
@@ -96,6 +97,14 @@
                             <td v-if="showColumnTipo" data-label="Tipo">{{ order.tipo || '-' }}</td>
                             <td v-if="showColumnItems" class="items-count" data-label="Items">
                                 <span class="count-badge">{{ (order.equiposEntrada || []).length }}</span>
+                            </td>
+                            <td class="consumible-column" data-label="Consumible">
+                                <span
+                                    v-if="getOrderConsumibleStatus(order)"
+                                    class="consumible-status-badge"
+                                    :class="`consumible-${getOrderConsumibleStatus(order).toLowerCase()}`">
+                                    {{ getOrderConsumibleStatus(order) }}
+                                </span>
                             </td>
                             <td v-if="showColumnEstado" data-label="Estado">
                                 <span class="status-badge"
@@ -176,7 +185,13 @@
                                             <div class="item-details-col">
                                                 <div class="item-main">
                                                     <span class="item-description">{{ item.descripcion || '-' }}</span>
-                                                    <span class="item-qty-badge">x{{ item.cantidad }}</span>
+                                                    <div class="item-main-badges">
+                                                        <span class="item-qty-badge">x{{ item.cantidad }}</span>
+                                                        <span v-if="isConsumibleItem(item)" class="item-consumible-estado"
+                                                            :class="getConsumibleEstado(item) === 'usado' ? 'is-usado' : 'is-nuevo'">
+                                                            {{ getConsumibleEstado(item) === 'usado' ? 'Usado' : 'Nuevo' }}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                                 <div class="item-specs">
                                                     <span v-if="item.marca" class="spec">
@@ -424,6 +439,8 @@ function getColSpan() {
     if (props.showColumnHora) colCount += 2
     if (props.showColumnTipo) colCount++
     if (props.showColumnItems) colCount++
+    // Consumible column (nuevo/usado/mixto)
+    colCount++
     if (props.showColumnEstado) colCount++
     if (multiDeleteMode.value) colCount++
     return colCount
@@ -450,6 +467,29 @@ const allSelectedOnPage = computed({
         }
     }
 })
+
+function isConsumibleItem(item) {
+    return String(item?.tipo || '').toLowerCase() === 'consumible'
+}
+
+function getConsumibleEstado(item) {
+    const state = String(item?.consumibleEstado || item?.consumible_estado || '').toLowerCase()
+    return state === 'usado' ? 'usado' : 'nuevo'
+}
+
+function getOrderConsumibleStatus(order) {
+    const items = Array.isArray(order?.equiposEntrada) ? order.equiposEntrada : []
+    const estados = new Set(
+        items
+            .filter(i => i && i.tipo)
+            .filter(i => ['consumible', 'accesorio', 'refaccion'].includes(String(i.tipo || '').toLowerCase()))
+            .map(getConsumibleEstado)
+    )
+
+    if (estados.size === 0) return ''
+    if (estados.size === 1) return estados.has('usado') ? 'Usado' : 'Nuevo'
+    return 'Mixto'
+}
 
 function toggleOrderSelection(orderId) {
     if (selectedForDelete.value.has(orderId)) {
@@ -763,6 +803,35 @@ function deleteSelected() {
     font-weight: 700;
     text-transform: capitalize;
     border: 1px solid;
+}
+
+/* CONSUMIBLE STATUS BADGE (Orders table) */
+.consumible-status-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    border: 1px solid;
+}
+
+.consumible-nuevo {
+    background: rgba(34, 197, 94, 0.15);
+    color: #86efac;
+    border-color: rgba(34, 197, 94, 0.25);
+}
+
+.consumible-usado {
+    background: rgba(148, 163, 184, 0.22);
+    color: #cbd5e1;
+    border-color: rgba(148, 163, 184, 0.4);
+}
+
+.consumible-mixto {
+    background: rgba(245, 158, 11, 0.18);
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.35);
 }
 
 .status-pendiente {
@@ -1594,6 +1663,19 @@ function deleteSelected() {
     justify-content: space-between;
 }
 
+.item-main-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.item-main-badges {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
 .item-description {
     color: rgba(230, 235, 245, 0.9);
     font-weight: 500;
@@ -1608,6 +1690,46 @@ function deleteSelected() {
     border-radius: 3px;
     font-size: 0.75rem;
     font-weight: 600;
+}
+
+.item-consumible-estado {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.item-consumible-estado.is-nuevo {
+    background: rgba(34, 197, 94, 0.2);
+    color: rgba(134, 239, 172, 0.95);
+    border: 1px solid rgba(34, 197, 94, 0.38);
+}
+
+.item-consumible-estado.is-usado {
+    background: rgba(148, 163, 184, 0.2);
+    color: rgba(226, 232, 240, 0.95);
+    border: 1px solid rgba(148, 163, 184, 0.38);
+}
+
+.item-consumible-estado {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.item-consumible-estado.is-nuevo {
+    background: rgba(46, 221, 90, 0.2);
+    color: rgba(46, 221, 90, 0.9);
+}
+
+.item-consumible-estado.is-usado {
+    background: rgba(148, 163, 184, 0.22);
+    color: rgba(203, 213, 225, 0.9);
 }
 
 .item-specs {

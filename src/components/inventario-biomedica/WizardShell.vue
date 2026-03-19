@@ -130,7 +130,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 .wz-container {
   --accent: #60a5fa; --accent-dim: rgba(96,165,250,.15);
   position: relative;
-  width: 100%; max-width: 1060px;
+  width: 100%; max-width: 1400px;
   max-height: 88vh;
   background: rgba(15,20,35,.92);
   backdrop-filter: blur(24px);
