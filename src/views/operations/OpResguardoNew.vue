@@ -470,7 +470,7 @@
                                                     class="searchable-field">
                                                     <label class="mini-label">Equipo Asociado</label>
                                                     <SearchableInput v-model="unidad.equipoAsociado"
-                                                        :suggestions="equipoMedicoList" tipo="equipo-medico"
+                                                        :suggestions="suggestions" tipo="equipo-medico"
                                                         field-name="nombre" placeholder="Buscar equipo asociado..."
                                                         @select="(s) => unidad.equipoAsociado = (s.nombre || s.label || '')" />
                                                 </div>
@@ -968,15 +968,37 @@ onMounted(() => {
 // ----------------------------
 
 // Inventory suggestions
+const seccionActual = computed(() => {
+    if (!newItem.tipo) return null
+    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') return 'equipo'
+    if (['accesorio', 'consumible', 'refaccion'].includes(newItem.tipo)) return 'insumo'
+    return null
+})
+
+function agregarItemALaOrden(item, seccion) {
+    if (!item) return
+    const mapped = {
+        ...item,
+        tipo: item.tipo || (seccion === 'equipo' ? 'equipo-medico' : 'accesorio'),
+        cantidad: item.cantidad || 1
+    }
+    form.equiposEntrada.push(mapped)
+}
+
 const {
-    equipoMedicoList,
-    insumosRefaccionesList,
-    loading: loadingInventory,
+    suggestions,
+    searchTerm,
+    selectItem,
+    clearSuggestions,
+    isLoading: loadingInventory,
     fetchAllInventorySuggestions,
     fetchEquipoMedicoSuggestions,
     fetchInsumosRefaccionesSuggestions,
     fillUnitFromSuggestion
-} = useInventorySuggestions()
+} = useInventorySuggestions({
+    tipo: seccionActual,
+    onSelect: (item) => agregarItemALaOrden(item, seccionActual.value)
+})
 
 // Refs
 const wizardRef = ref(null)
@@ -1181,15 +1203,9 @@ const liveTimeDisplay = ref('')
 const displayEndTime = computed(() => liveTimeDisplay.value || form.horaTermino || '--:--:--')
 
 const currentSuggestions = computed(() => {
-    // Si es externo al hospital, no mostrar sugerencias de inventario
-    if (belongsToHospital.value === false) {
-        return []
-    }
+    if (belongsToHospital.value === false) return []
     if (!newItem.tipo) return []
-    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-        return equipoMedicoList.value
-    }
-    return insumosRefaccionesList.value
+    return suggestions.value || []
 })
 
 const summaryItems = computed(() => [
@@ -1645,6 +1661,8 @@ async function onPreviewPDF() {
 
         const payload = {
             ...form,
+            // Forzar tipo de orden para que el backend detecte correctamente "resguardo"
+            orderType: 'resguardo',
             preview: true,
             extraFieldsList,
             customTitle: formSchema.value?.settings?.customTitle || 'VALE DE RESGUARDO',
@@ -1882,7 +1900,27 @@ function mapSnakeToCamel(obj) {
     return result
 }
 
+function forceAuthenticatedEngineerName() {
+    try {
+        const name = getAuthenticatedUserName()
+        if (name) form.nombreIngeniero = name
+    } catch (e) {
+        console.warn('[OpResguardoNew] Could not auto-assign engineer name', e)
+    }
+}
+
+function getAuthenticatedUserName() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}')
+        const candidate = user.fullName || user.full_name || user.nombreCompleto || user.nombre || user.name || user.username || ''
+        return String(candidate || '').trim()
+    } catch {
+        return ''
+    }
+}
+
 onMounted(async () => {
+    forceAuthenticatedEngineerName()
     checkMobileView()
     window.addEventListener('resize', checkMobileView)
     document.addEventListener('click', handleClickOutsideMotivo)
@@ -1917,7 +1955,7 @@ onMounted(async () => {
 
 // Lazy load equipos médicos cuando el usuario selecciona ese tipo
 watch(() => newItem.tipo, async (nuevoTipo) => {
-    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !equipoMedicoList.value.length) {
+    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !suggestions.value.length) {
         try {
             await fetchEquipoMedicoSuggestions()
         } catch (err) {

@@ -1,9 +1,12 @@
 export default [
   { value: '', label: 'Seleccionar motivo' },
-  { value: 'mantenimiento-preventivo-externo', label: 'MANTENIMIENTO PREVENTIVO EXTERNO' },
-  { value: 'mantenimiento-correctivo-externo', label: 'MANTENIMIENTO CORRECTIVO EXTERNO' },
-  { value: 'traslado', label: 'TRASLADO' },
-  { value: 'prestamo', label: 'PRÉSTAMO' },
-  { value: 'baja', label: 'BAJA' },
+  { value: 'sustitucion-desgaste', label: 'SUSTITUCIÓN POR DESGASTE' },
+  { value: 'sustitucion-perdida', label: 'SUSTITUCIÓN PERDIDA' },
+  { value: 'sustitucion-dano-mal-uso', label: 'SUSTITUCIÓN POR DAÑO DE MAL USO' },
+  { value: 'sustitucion-desechable', label: 'SUSTITUCIÓN DESECHABLE' },
+  { value: 'solicitud-insumos-adicionales', label: 'SOLICITUD INSUMOS ADICIONALES' },
+  { value: 'prestamo-temporal-equipo-medico', label: 'PRESTAMO TEMPORAL DE EQUIPO MEDICO' },
+  { value: 'asignacion-equipo-medico', label: 'ASIGNACIÓN DE EQUIPO MÉDICO' },
+  { value: 'asignacion-mobiliario', label: 'ASIGNACIÓN DE MOBILIARIO' },
   { value: 'otro', label: 'OTRO; ESPECIFICAR' }
 ]

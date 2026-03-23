@@ -118,7 +118,7 @@
           <!-- Fuente de datos -->
           <div class="dropdown-footer">
             <span class="source-label">
-              Búsqueda inteligente · Fuse.js
+              Búsqueda exacta · Solo coincidencias perfectas
             </span>
           </div>
         </div>

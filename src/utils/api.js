@@ -44,7 +44,42 @@ export async function authedFetch(url, options = {}) {
     body
   }
   console.debug('[authedFetch] ', url, init)
-  return fetch(url, init)
+
+  // Ejecutar la petición y si recibimos 401 intentar refrescar token una vez
+  let res = await fetch(url, init)
+  try {
+    if (res && res.status === 401) {
+      // Intentar refrescar token (inactivity handler o auth util)
+      try {
+        const auth = await import('./auth.js')
+        console.warn('[authedFetch] 401 recibido, intentando refreshToken...')
+        const refreshed = await auth.refreshToken()
+        if (refreshed && refreshed.ok) {
+          // Update Authorization header with new token and retry
+          const token = auth.getStoredToken()
+          if (token) {
+            headers.set('Authorization', `Bearer ${token}`)
+            const retryInit = { ...init, headers }
+            console.debug('[authedFetch] Reintentando petición con token renovado', url)
+            res = await fetch(url, retryInit)
+            return res
+          }
+        }
+      } catch (e) {
+        console.warn('[authedFetch] refreshToken falló:', e)
+      }
+
+      // Si llegamos aquí, no se pudo refrescar -> forzar logout local
+      try {
+        const auth = await import('./auth.js')
+        await auth.logout()
+      } catch (e) { console.warn('[authedFetch] logout tras 401 falló:', e) }
+    }
+  } catch (e) {
+    console.warn('[authedFetch] error handling 401:', e)
+  }
+
+  return res
 }
 
 // Helper opcional: GET JSON con auth

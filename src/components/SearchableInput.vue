@@ -29,6 +29,7 @@
                     <div class="search-status-bar">
                         <span class="result-count" v-if="query.length > 0">
                             {{ totalResults }} resultado{{ totalResults !== 1 ? 's' : '' }}
+                            <span v-if="exactMatchesCount > 0" class="exact-status">· Coincidencia exacta</span>
                         </span>
                         <span class="result-count" v-else>
                             Sugerencias del inventario
@@ -127,11 +128,14 @@
 
                             <div v-for="(result, ri) in group.items" :key="`${group.key}-${ri}`"
                                 :ref="el => setItemRef(el, flatIndex(gi, ri))"
-                                :class="['result-card', { 'is-active': flatIndex(gi, ri) === activeIndex }]"
+                                :class="['result-card', { 'is-active': flatIndex(gi, ri) === activeIndex, 'exact-match': result.exactMatch }]"
                                 @click="selectResult(result)" @mouseenter="activeIndex = flatIndex(gi, ri)">
 
                                 <div class="card-main">
-                                    <div class="card-name" v-html="highlightField(result, 'nombre')"></div>
+                                    <div class="card-name">
+                                        <span v-html="highlightField(result, 'nombre')"></span>
+                                        <span v-if="result.exactMatch" class="exact-badge" title="Coincidencia exacta">✓</span>
+                                    </div>
                                     <div class="card-relevance" :title="`Relevancia: ${result.relevance}%`">
                                         <div class="relevance-bar">
                                             <div class="relevance-fill" :style="{ width: result.relevance + '%' }">
@@ -356,11 +360,24 @@ function buildStrictFieldFallbackResults(text, filters = null) {
     const matched = source.filter((item) => normalizeText(pickFieldValue(item, props.fieldName)).includes(q))
     if (!matched.length) return []
 
+    const qNorm = String(text || '').trim().toLowerCase()
+    const exactMatchToQuery = (candidate) => {
+        if (!qNorm) return false
+        const fieldKey = props.fieldName || 'nombre'
+        if (fieldKey && candidate[fieldKey] && String(candidate[fieldKey]).trim().toLowerCase() === qNorm) return true
+        const keysToCheck = ['nombre', 'marca', 'modelo', 'serie', 'lote', 'referencia', 'claveHRAEI', 'claveCNIS', 'noInventario']
+        return keysToCheck.some((key) => {
+            const val = candidate[key]
+            return val && String(val).trim().toLowerCase() === qNorm
+        })
+    }
+
     const wrapped = matched.slice(0, 60).map((item) => ({
         item,
         score: 0,
         relevance: 100,
-        matches: []
+        matches: [],
+        exactMatch: exactMatchToQuery(item)
     }))
 
     const label = FIELD_LABELS[props.fieldName] || props.fieldName || 'Campo'
@@ -408,6 +425,10 @@ const groupedResults = computed(() => {
 
 const totalResults = computed(() =>
     groupedResults.value.reduce((sum, g) => sum + g.count, 0)
+)
+
+const exactMatchesCount = computed(() =>
+    flatItems.value.filter(item => item.exactMatch).length
 )
 
 // Flatten index helper para navegación teclado
@@ -547,20 +568,13 @@ function handleDocumentPointerDown(event) {
 // ------- Selection -------
 function selectResult(result) {
     try {
-        const value = result.item[props.fieldName] || result.item.nombre || result.item.label || ''
+        const selected = result.item
+        const value = selected[props.fieldName] || selected.nombre || selected.label || ''
         query.value = value
         emit('update:modelValue', value)
 
-        // Emitir el item completo desde las sugerencias originales para asegurar que tiene todos los campos
-        const fullItem = suggestionsRef.value?.find(item =>
-            (item[props.fieldName] === result.item[props.fieldName] ||
-                item.label === result.item.label ||
-                item.nombre === result.item.nombre) &&
-            (props.fieldName === 'nombre' || item.nombre === result.item.nombre)
-        ) || result.item
-
-        console.log('[SearchableInput.selectResult] Emitting select event with:', fullItem)
-        emit('select', fullItem)
+        console.log('[SearchableInput.selectResult] Emitting select event with:', selected)
+        emit('select', selected)
         isOpen.value = false
         activeIndex.value = -1
     } catch (e) {
@@ -579,7 +593,25 @@ function selectCustom() {
 function confirmSelection() {
     if (activeIndex.value >= 0 && flatItems.value[activeIndex.value]) {
         selectResult(flatItems.value[activeIndex.value])
-    } else if (query.value) {
+        return
+    }
+
+    if (query.value) {
+        // Si no hay selección con flechas y existe exactMatch, lo seleccionamos automáticamente
+        const qNorm = String(query.value || '').trim().toLowerCase()
+        const exactCandidate = flatItems.value.find((r) => {
+            if (!r || !r.item) return false
+            if (r.exactMatch) return true
+            const fields = ['lote', 'referencia', 'claveHRAEI', 'noInventario', 'n', 'serie']
+            return fields.some((field) => {
+                const val = r.item[field]
+                return val && String(val).trim().toLowerCase() === qNorm
+            })
+        })
+        if (exactCandidate) {
+            selectResult(exactCandidate)
+            return
+        }
         selectCustom()
     }
 }
@@ -755,6 +787,43 @@ onBeforeUnmount(() => {
 .smart-input.has-na:focus {
     border-color: #dc2626;
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.exact-badge {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 0.7rem;
+    color: #10b981;
+    font-weight: 700;
+    background: rgba(16, 185, 129, 0.14);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: 999px;
+    padding: 0 6px;
+    animation: pulse-strong 1s ease-in-out infinite;
+}
+
+.result-card.exact-match {
+    border: 1px solid #22c55e;
+    box-shadow: 0 0 18px rgba(34, 197, 94, 0.65), 0 0 10px rgba(34, 197, 94, 0.38);
+    animation: pulse-glow 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-strong {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 18px rgba(34, 197, 94, 0.65), 0 0 10px rgba(34, 197, 94, 0.38); }
+    50% { box-shadow: 0 0 28px rgba(34, 197, 94, 0.95), 0 0 12px rgba(34, 197, 94, 0.5); }
+}
+
+.exact-status {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #10b981;
+    margin-left: 8px;
 }
 
 .smart-input::placeholder {

@@ -1046,7 +1046,28 @@ onMounted(async () => {
 const router = useRouter()
 
 // Initialize suggestions composable
+const seccionActual = computed(() => {
+  if (!newItem.tipo) return null
+  if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') return 'equipo'
+  if (['accesorio', 'consumible', 'refaccion'].includes(newItem.tipo)) return 'insumo'
+  return null
+})
+
+function agregarItemALaOrden(item, seccion) {
+  if (!item) return
+  const mapped = {
+    ...item,
+    tipo: item.tipo || (seccion === 'equipo' ? 'equipo-medico' : 'accesorio'),
+    cantidad: item.cantidad || 1
+  }
+  form.equiposSalida.push(mapped)
+}
+
 const {
+  suggestions,
+  searchTerm,
+  selectItem,
+  clearSuggestions,
   equipoMedicoList,
   insumosRefaccionesList,
   loading: suggestionsLoading,
@@ -1054,7 +1075,10 @@ const {
   initSuggestions,
   getDynamicSuggestions,
   fillUnitFromSuggestion
-} = useInventorySuggestions()
+} = useInventorySuggestions({
+  tipo: seccionActual,
+  onSelect: (item) => agregarItemALaOrden(item, seccionActual.value)
+})
 
 // Admin state
 const isAdmin = ref(false)
@@ -1528,8 +1552,8 @@ function sanitizeFolio(f) {
     // extraer números
     const m = s.match(/(\d+)$/)
     if (!m) return ''
-    const digits = m[1].slice(0, 6)
-    return `S-${digits.padStart(6, '0')}`
+    const digits = m[1].slice(0, 4)
+    return `S-${digits.padStart(4, '0')}`
 }
 
 // Opciones del select de tipo de entrada
@@ -3985,6 +4009,7 @@ async function onSubmit() {
         servicio: form.servicio,
         especialidad: form.especialidad,
         folio: sanitizeFolio(form.folio),
+        orderType: 'salida',
         fecha: normalizeFecha(form.fecha),  // Normalizar a DD-MM-YYYY
         horaInicio: form.horaInicio,
         horaTermino: form.horaTermino,

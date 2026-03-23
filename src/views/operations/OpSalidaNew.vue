@@ -77,6 +77,11 @@
                                 <FolioInput v-model="form.folio" prefix="S-" />
                             </div>
 
+                            <div class="field-wrapper span-1" v-if="isFieldVisible('folioAsociado')">
+                                <label class="field-label">Folio Asociado</label>
+                                <ModernInput v-model="form.folioAsociado" placeholder="Folio relacionado (opcional)" />
+                            </div>
+
                             <div class="field-wrapper span-1" v-if="isFieldVisible('fecha')">
                                 <label class="field-label">
                                     Fecha
@@ -519,7 +524,7 @@
                                                     class="searchable-field">
                                                     <label class="mini-label">Equipo Asociado</label>
                                                     <SearchableInput v-model="unidad.equipoAsociado"
-                                                        :suggestions="equipoMedicoList" tipo="equipo-medico"
+                                                        :suggestions="suggestions" tipo="equipo-medico"
                                                         field-name="nombre" placeholder="Buscar equipo asociado..."
                                                         @select="(s) => unidad.equipoAsociado = (s.nombre || s.label || '')" />
                                                 </div>
@@ -1065,15 +1070,37 @@ const motivoSalidaOptionsComputed = computed(() => {
 // ----------------------------
 
 // Inventory suggestions
+const seccionActual = computed(() => {
+    if (!newItem.tipo) return null
+    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') return 'equipo'
+    if (['accesorio', 'consumible', 'refaccion'].includes(newItem.tipo)) return 'insumo'
+    return null
+})
+
+function agregarItemALaOrden(item, seccion) {
+    if (!item) return
+    const mapped = {
+        ...item,
+        tipo: item.tipo || (seccion === 'equipo' ? 'equipo-medico' : 'accesorio'),
+        cantidad: item.cantidad || 1
+    }
+    form.equiposSalida.push(mapped)
+}
+
 const {
-    equipoMedicoList,
-    insumosRefaccionesList,
-    loading: loadingInventory,
+    suggestions,
+    searchTerm,
+    selectItem,
+    clearSuggestions,
+    isLoading: loadingInventory,
     fetchAllInventorySuggestions,
     fetchEquipoMedicoSuggestions,
     fetchInsumosRefaccionesSuggestions,
     fillUnitFromSuggestion
-} = useInventorySuggestions()
+} = useInventorySuggestions({
+    tipo: seccionActual,
+    onSelect: (item) => agregarItemALaOrden(item, seccionActual.value)
+})
 
 // Order Item Warnings
 const { getAllItemsWarnings } = useOrderItemValidation()
@@ -1157,6 +1184,7 @@ const form = reactive({
     servicio: '',
     especialidad: '',
     folio: '',
+    folioAsociado: '',
     fecha: '',
     fechaISO: '',
     horaInicio: '',
@@ -1295,17 +1323,11 @@ const displayEndTime = computed(() => {
     return liveTimeDisplay.value || form.horaTermino || '--:--:--'
 })
 
-// Suggestions list based on current item type
+// Suggestions list based on current item type (modern composable)
 const currentSuggestions = computed(() => {
-    // Si es externo al hospital, no mostrar sugerencias de inventario
-    if (belongsToHospital.value === false) {
-        return []
-    }
+    if (belongsToHospital.value === false) return []
     if (!newItem.tipo) return []
-    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-        return equipoMedicoList.value
-    }
-    return insumosRefaccionesList.value
+    return suggestions.value || []
 })
 
 const summaryItems = computed(() => [
@@ -1883,6 +1905,7 @@ async function onPreviewPDF() {
             servicio: form.servicio,
             especialidad: form.especialidad,
             folio: form.folio || 'PREVIEW',
+            orderType: 'salida',
             fecha: form.fecha,
             horaInicio: form.horaInicio,
             horaTermino: form.horaTermino,
@@ -2101,7 +2124,6 @@ async function generateFolioAutomatically() {
         console.error('Error generating folio:', err)
     }
 }
-
 // Lifecycle
 onMounted(async () => {
     forceAuthenticatedEngineerName()
@@ -2135,7 +2157,7 @@ onMounted(async () => {
 
 // Lazy load equipos médicos cuando el usuario selecciona ese tipo
 watch(() => newItem.tipo, async (nuevoTipo) => {
-    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !equipoMedicoList.value.length) {
+    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !suggestions.value.length) {
         try {
             await fetchEquipoMedicoSuggestions()
         } catch (err) {

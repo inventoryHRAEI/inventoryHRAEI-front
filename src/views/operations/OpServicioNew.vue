@@ -443,7 +443,7 @@
                                                     class="searchable-field">
                                                     <label class="mini-label">Equipo Asociado</label>
                                                     <SearchableInput v-model="unidad.equipoAsociado"
-                                                        :suggestions="equipoMedicoList" tipo="equipo-medico"
+                                                        :suggestions="suggestions" tipo="equipo-medico"
                                                         field-name="nombre" placeholder="Buscar equipo asociado..."
                                                         @select="(s) => unidad.equipoAsociado = (s.nombre || s.label || '')" />
                                                 </div>
@@ -842,7 +842,7 @@ import {
 import notifier from '@/utils/notifier'
 import { authedFetch } from '@/utils/api.js'
 // Usando opciones de Entrada como base para servicio, o deberíamos usar uno específico
-import motivoEntradaOptions from '@/data/motivoEntradaOptions.js'
+import motivoServicioOptions from '@/data/motivoServicioOptions.js'
 import notificationStore from '@/stores/notificationStore'
 
 // Composables
@@ -907,15 +907,37 @@ function openAdminSettings() {
 // ----------------------
 
 // Inventory suggestions
+const seccionActual = computed(() => {
+    if (!newItem.tipo) return null
+    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') return 'equipo'
+    if (['accesorio', 'consumible', 'refaccion'].includes(newItem.tipo)) return 'insumo'
+    return null
+})
+
+function agregarItemALaOrden(item, seccion) {
+    if (!item) return
+    const mapped = {
+        ...item,
+        tipo: item.tipo || (seccion === 'equipo' ? 'equipo-medico' : 'accesorio'),
+        cantidad: item.cantidad || 1
+    }
+    form.equiposEntrada.push(mapped)
+}
+
 const {
-    equipoMedicoList,
-    insumosRefaccionesList,
-    loading: loadingInventory,
+    suggestions,
+    searchTerm,
+    selectItem,
+    clearSuggestions,
+    isLoading: loadingInventory,
     fetchAllInventorySuggestions,
     fetchEquipoMedicoSuggestions,
     fetchInsumosRefaccionesSuggestions,
     fillUnitFromSuggestion
-} = useInventorySuggestions()
+} = useInventorySuggestions({
+    tipo: seccionActual,
+    onSelect: (item) => agregarItemALaOrden(item, seccionActual.value)
+})
 
 // Refs
 const wizardRef = ref(null)
@@ -1048,8 +1070,8 @@ const submitLabel = computed(() =>
 )
 
 const motivoOptions = computed(() => {
-    if (!Array.isArray(motivoEntradaOptions)) return []
-    return motivoEntradaOptions
+    if (!Array.isArray(motivoServicioOptions)) return []
+    return motivoServicioOptions
         .filter(m => m.value)
         .map(m => {
             if (typeof m === 'string') return { value: m, label: m }
@@ -1099,15 +1121,9 @@ const liveTimeDisplay = ref('')
 const displayEndTime = computed(() => liveTimeDisplay.value || form.horaTermino || '--:--:--')
 
 const currentSuggestions = computed(() => {
-    // Si es externo al hospital, no mostrar sugerencias de inventario
-    if (belongsToHospital.value === false) {
-        return []
-    }
+    if (belongsToHospital.value === false) return []
     if (!newItem.tipo) return []
-    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-        return equipoMedicoList.value
-    }
-    return insumosRefaccionesList.value
+    return suggestions.value || []
 })
 
 const summaryItems = computed(() => [
@@ -1533,6 +1549,10 @@ async function onPreviewPDF() {
 
         const payload = {
             ...form,
+            // Forzar tipo de orden para que el backend detecte correctamente "servicio"
+            orderType: 'servicio',
+            motivoServicio: form.motivoEntrada,
+            motivo_servicio: form.motivoEntrada,
             preview: true,
             extraFieldsList,
             customTitle: formSchema.value?.settings?.customTitle || 'ORDEN DE SERVICIO',
@@ -1772,12 +1792,33 @@ function mapSnakeToCamel(obj) {
     return result
 }
 
+function forceAuthenticatedEngineerName() {
+    try {
+        const name = getAuthenticatedUserName()
+        if (name) form.nombreIngeniero = name
+    } catch (e) {
+        console.warn('[OpServicioNew] Could not auto-assign engineer name', e)
+    }
+}
+
+function getAuthenticatedUserName() {
+    try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}')
+        const candidate = user.fullName || user.full_name || user.nombreCompleto || user.nombre || user.name || user.username || user.displayName || ''
+        return String(candidate || '').trim()
+    } catch (e) {
+        return ''
+    }
+}
+
 onMounted(async () => {
     // Admin Check
     try {
         const user = JSON.parse(localStorage.getItem('user') || '{}')
         isAdmin.value = ['admin', 'sub_admin'].includes(user.role)
     } catch { isAdmin.value = false }
+    
+    forceAuthenticatedEngineerName()
     loadFormSchema()
 
     checkMobileView()
@@ -1814,7 +1855,7 @@ onMounted(async () => {
 
 // Lazy load equipos médicos cuando el usuario selecciona ese tipo
 watch(() => newItem.tipo, async (nuevoTipo) => {
-    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !equipoMedicoList.value.length) {
+    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !suggestions.value.length) {
         try {
             await fetchEquipoMedicoSuggestions()
         } catch (err) {
@@ -1882,7 +1923,7 @@ onBeforeUnmount(() => {
     cursor: pointer;
 }
 
-.motivo-dropdown {
+    .motivo-dropdown {
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
@@ -1891,13 +1932,13 @@ onBeforeUnmount(() => {
     border: 1px solid rgba(148, 163, 184, 0.2);
     border-radius: 12px;
     z-index: 50;
-    overflow: hidden;
-    max-height: 380px;
+    /* allow inner scrolling rather than clipping entire dropdown */
+    overflow: visible;
     display: flex;
     flex-direction: column;
 }
 
-.dropdown-search {
+    .dropdown-search {
     padding: 12px;
     border-bottom: 1px solid rgba(148, 163, 184, 0.1);
     display: flex;
@@ -1905,20 +1946,28 @@ onBeforeUnmount(() => {
     gap: 10px;
 }
 
-.search-input {
+    /* style the input inside the search area */
+    .dropdown-search input {
     flex: 1;
     background: transparent;
     border: none;
     color: #fff;
     outline: none;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.03);
 }
 
-.dropdown-options {
+    /* make the list scrollable inside the visible dropdown */
+    .dropdown-list {
     padding: 6px;
     overflow-y: auto;
+    max-height: 320px;
+    -webkit-overflow-scrolling: touch;
 }
 
-.dropdown-option {
+    /* buttons inside the list */
+    .dropdown-list .dropdown-item {
     width: 100%;
     text-align: left;
     padding: 10px 12px;
@@ -1931,12 +1980,12 @@ onBeforeUnmount(() => {
     cursor: pointer;
 }
 
-.dropdown-option:hover {
+    .dropdown-list .dropdown-item:hover {
     background: rgba(59, 130, 246, 0.1);
     color: #60a5fa;
 }
 
-.dropdown-option.is-selected {
+    .dropdown-list .dropdown-item.is-selected {
     background: rgba(59, 130, 246, 0.2);
     color: #60a5fa;
 }

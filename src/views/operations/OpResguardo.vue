@@ -1045,7 +1045,28 @@ onMounted(async () => {
 const router = useRouter()
 
 // Initialize suggestions composable
+const seccionActual = computed(() => {
+  if (!newItem.tipo) return null
+  if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') return 'equipo'
+  if (['accesorio', 'consumible', 'refaccion'].includes(newItem.tipo)) return 'insumo'
+  return null
+})
+
+function agregarItemALaOrden(item, seccion) {
+  if (!item) return
+  const mapped = {
+    ...item,
+    tipo: item.tipo || (seccion === 'equipo' ? 'equipo-medico' : 'accesorio'),
+    cantidad: item.cantidad || 1
+  }
+  form.equiposEntrada.push(mapped)
+}
+
 const {
+  suggestions,
+  searchTerm,
+  selectItem,
+  clearSuggestions,
   equipoMedicoList,
   insumosRefaccionesList,
   loading: suggestionsLoading,
@@ -1053,7 +1074,10 @@ const {
   initSuggestions,
   getDynamicSuggestions,
   fillUnitFromSuggestion
-} = useInventorySuggestions()
+} = useInventorySuggestions({
+  tipo: seccionActual,
+  onSelect: (item) => agregarItemALaOrden(item, seccionActual.value)
+})
 
 // Admin state
 const isAdmin = ref(false)
@@ -1528,8 +1552,8 @@ function sanitizeFolio(f) {
     // extraer números
     const m = s.match(/(\d+)$/)
     if (!m) return ''
-    const digits = m[1].slice(0, 6)
-    return `E-${digits.padStart(6, '0')}`
+    const digits = m[1].slice(0, 4)
+    return `E-${digits.padStart(4, '0')}`
 }
 
 // Opciones del select de tipo de entrada
@@ -1683,9 +1707,10 @@ async function generarPdfEntrada(payloadParam) {
     }
 
     try {
-        const res = await authedFetch('/api/ops/entrada-pdf', {
+        // Use resguardo-pdf endpoint and tag orderType so template selects correct labels
+        const res = await authedFetch('/api/ops/resguardo-pdf', {
             method: 'POST',
-            body: JSON.stringify(payloadToSend)
+            body: JSON.stringify(Object.assign({}, payloadToSend, { orderType: 'resguardo' }))
         })
         if (res && res.ok) {
             const contentDisposition = res.headers.get('content-disposition') || ''

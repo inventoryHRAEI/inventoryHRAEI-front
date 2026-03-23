@@ -71,6 +71,11 @@
                             </div>
 
                             <div class="field-wrapper span-1">
+                                <label class="field-label">Folio Asociado</label>
+                                <ModernInput v-model="form.folioAsociado" placeholder="Folio relacionado (opcional)" />
+                            </div>
+
+                            <div class="field-wrapper span-1">
                                 <label class="field-label">
                                     Fecha
                                     <button type="button" class="info-popover-btn" @mouseenter="showDateInfo = true"
@@ -461,7 +466,7 @@
                                                     class="searchable-field">
                                                     <label class="mini-label">Equipo Asociado</label>
                                                     <SearchableInput v-model="unidad.equipoAsociado"
-                                                        :suggestions="equipoMedicoList" tipo="equipo-medico"
+                                                        :suggestions="suggestions" tipo="equipo-medico"
                                                         field-name="nombre" placeholder="Buscar equipo asociado..."
                                                         @select="(s) => unidad.equipoAsociado = (s.nombre || s.label || '')" />
                                                 </div>
@@ -481,6 +486,30 @@
                                                         :suggestions="currentSuggestions" field-name="claveHRAEI"
                                                         placeholder="Ej. COMODATO"
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'claveHRAEI')" />
+                                                </div>
+
+                                                <div class="quantity-field">
+                                                    <label class="mini-label">Cantidad de esta unidad</label>
+                                                    <div class="quantity-input-wrapper">
+                                                        <button type="button" class="qty-btn"
+                                                            @click="unidad.cantidad > 1 ? unidad.cantidad-- : null"
+                                                            :disabled="unidad.cantidad <= 1">
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                stroke="currentColor" stroke-width="3">
+                                                                <line x1="5" y1="12" x2="19" y2="12" />
+                                                            </svg>
+                                                        </button>
+                                                        <input type="number" v-model.number="unidad.cantidad" min="1"
+                                                            class="qty-input" placeholder="1" />
+                                                        <button type="button" class="qty-btn"
+                                                            @click="unidad.cantidad++">
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                stroke="currentColor" stroke-width="3">
+                                                                <line x1="12" y1="5" x2="12" y2="19" />
+                                                                <line x1="5" y1="12" x2="19" y2="12" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -556,14 +585,13 @@
                                     </div>
 
                                     <div class="item-info">
-                                        <div class="item-header">
+                                            <div class="item-header">
                                             <h5 class="item-name">{{ item.descripcion || item.unidades?.[0]?.nombre ||
                                                 'Sin nombre' }}</h5>
-                                            <div class="item-quantity-badge">{{ item.unidades?.length || 1 }}</div>
+                                            <div class="item-quantity-badge">{{ getItemQuantity(item) }}</div>
                                         </div>
-                                        <p class="item-quantity-text">{{ item.unidades?.length || 1 }} unidad{{
-                                            (item.unidades?.length || 1)
-                                                !== 1 ? 'es' : '' }} de {{ getTipoLabel(item.tipo).toLowerCase() }}</p>
+                                        <p class="item-quantity-text">{{ getItemQuantity(item) }} unidad{{
+                                            (getItemQuantity(item)) !== 1 ? 'es' : '' }} de {{ getTipoLabel(item.tipo).toLowerCase() }}</p>
                                         <div class="item-details">
                                             <span v-if="item.marca"><strong>Marca:</strong> {{ item.marca }}</span>
                                             <span v-if="item.modelo"><strong>Modelo:</strong> {{ item.modelo }}</span>
@@ -856,15 +884,37 @@ function forceAuthenticatedEngineerName() {
 }
 
 // Inventory suggestions
+const seccionActual = computed(() => {
+    if (!newItem.tipo) return null
+    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') return 'equipo'
+    if (['accesorio', 'consumible', 'refaccion'].includes(newItem.tipo)) return 'insumo'
+    return null
+})
+
+function agregarItemALaOrden(item, seccion) {
+    if (!item) return
+    const mapped = {
+        ...item,
+        tipo: item.tipo || (seccion === 'equipo' ? 'equipo-medico' : 'accesorio'),
+        cantidad: item.cantidad || 1
+    }
+    form.equiposEntrada.push(mapped)
+}
+
 const {
-    equipoMedicoList,
-    insumosRefaccionesList,
-    loading: loadingInventory,
+    suggestions,
+    searchTerm,
+    selectItem,
+    clearSuggestions,
+    isLoading: loadingInventory,
     fetchAllInventorySuggestions,
     fetchEquipoMedicoSuggestions,
     fetchInsumosRefaccionesSuggestions,
     fillUnitFromSuggestion
-} = useInventorySuggestions()
+} = useInventorySuggestions({
+    tipo: seccionActual,
+    onSelect: (item) => agregarItemALaOrden(item, seccionActual.value)
+})
 
 // Refs
 const wizardRef = ref(null)
@@ -935,6 +985,7 @@ const form = reactive({
     servicio: '',
     especialidad: '',
     folio: '',
+    folioAsociado: '',
     fecha: '',
     fechaISO: '',
     horaInicio: '',
@@ -1074,17 +1125,11 @@ const displayEndTime = computed(() => {
     return liveTimeDisplay.value || form.horaTermino || '--:--:--'
 })
 
-// Suggestions list based on current item type
+// Suggestions list based on current item type (modern composable)
 const currentSuggestions = computed(() => {
-    // Si es externo al hospital, no mostrar sugerencias de inventario
-    if (belongsToHospital.value === false) {
-        return []
-    }
+    if (belongsToHospital.value === false) return []
     if (!newItem.tipo) return []
-    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-        return equipoMedicoList.value
-    }
-    return insumosRefaccionesList.value
+    return suggestions.value || []
 })
 
 const summaryItems = computed(() => [
@@ -1164,6 +1209,14 @@ function getTipoLabel(tipo) {
     return type?.label || tipo
 }
 
+function getItemQuantity(item) {
+    if (!item) return 1
+    const q = Number(item.cantidad)
+    if (q && q > 0) return q
+    if (Array.isArray(item.unidades)) return item.unidades.reduce((s, u) => s + (Number(u && u.cantidad) || 1), 0)
+    return 1
+}
+
 function getNombrePlaceholder() {
     switch (newItem.tipo) {
         case 'equipo-medico': return 'Ej. Monitor de signos vitales'
@@ -1224,10 +1277,12 @@ async function agregarItem() {
     const firstUnit = newItem.unidades[0]
     if (firstUnit?.nombre?.trim()) {
         // Preparar el equipo para añadir
+        const totalQty = (newItem.unidades || []).reduce((s, u) => s + (Number(u && u.cantidad) || 1), 0)
+
         const equipmentToAdd = {
             tipo: newItem.tipo,
             consumibleEstado: newItem.tipo === 'consumible' ? newItem.consumibleEstado : null,
-            cantidad: newItem.cantidad,
+            cantidad: totalQty,
             descripcion: firstUnit.nombre,
             marca: firstUnit.marca,
             modelo: firstUnit.modelo,
@@ -1540,6 +1595,7 @@ async function onPreviewPDF() {
             observaciones: form.observaciones,
             observacionesImg: form.observacionesImg,
             nombreIngeniero: form.nombreIngeniero,
+            folioAsociado: form.folioAsociado,
             equiposEntrada: (form.equiposEntrada || []).map(item => {
                 const _serieVal = item.serie || item.N || '';
                 const _modeloVal = item.modelo || item.MODELO || '';
@@ -1601,6 +1657,7 @@ async function onSubmit() {
             servicio: form.servicio,
             especialidad: form.especialidad,
             folio: form.folio,
+                folioAsociado: form.folioAsociado,
             fecha: form.fecha,
             horaInicio: form.horaInicio,
             horaTermino: form.horaTermino,
@@ -1761,7 +1818,7 @@ onMounted(async () => {
 
 // Lazy load equipos médicos cuando el usuario selecciona ese tipo
 watch(() => newItem.tipo, async (nuevoTipo) => {
-    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !equipoMedicoList.value.length) {
+    if ((nuevoTipo === 'equipo-medico' || nuevoTipo === 'mobiliario') && !suggestions.value.length) {
         try {
             await fetchEquipoMedicoSuggestions()
         } catch (err) {
@@ -2229,6 +2286,64 @@ function mapSnakeToCamel(obj) {
         grid-template-columns: 1fr;
     }
 }
+
+/* Per-unit quantity styling (match OpSalida/OpResguardo) */
+.quantity-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quantity-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 12px;
+    padding: 8px;
+    width: fit-content;
+}
+
+.qty-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255,255,255,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.qty-btn:hover:not(:disabled) {
+    background: rgba(255,255,255,0.12);
+}
+
+.qty-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.qty-input {
+    width: 96px;
+    min-width: 64px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.04);
+    background: transparent;
+    color: #e2e8f0;
+    text-align: center;
+    font-weight: 700;
+}
+
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
 
 /* Add Equipment Button */
 .btn-add-equipment {

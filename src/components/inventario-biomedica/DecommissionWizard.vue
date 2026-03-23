@@ -57,7 +57,6 @@
         </label>
       </div>
     </div>
-
     <!-- ========== Step 1: Selección de artículos (checkbox) ========== -->
     <div v-if="step === 1" class="dc-step fade-in">
       <!-- Search -->
@@ -85,12 +84,11 @@
         <span class="dc-stats-accent"><strong>{{ selectedClaves.size }}</strong> marcados para baja</span>
       </div>
 
-      <!-- Loading -->
       <div v-if="loadingItems" class="dc-loading">
         <div class="dc-shimmer" v-for="i in 5" :key="i"></div>
       </div>
 
-      <!-- Item list -->
+    
       <div
         v-else-if="visibleItems.length > 0"
         ref="listRef"

@@ -368,6 +368,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 import { formatRole } from '@/utils/roles'
+import Swal from 'sweetalert2'
 import { confirmDelete, showSuccess, showError, showLoading, closeModal as closeSwalModal } from '@/utils/sweetAlertConfig'
 import notifier from '@/utils/notifier'
 

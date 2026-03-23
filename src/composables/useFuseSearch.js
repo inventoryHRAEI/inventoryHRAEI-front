@@ -108,7 +108,56 @@ export function useFuseSearch(items, options = {}) {
       score: r.score,           // 0 = perfecto, 1 = peor
       relevance: Math.round((1 - r.score) * 100), // 0-100 donde 100 es perfecto
       matches: r.matches || [],
+      exactMatch: false,
     }))
+
+    // Detectar coincidencias exactas en los datos originales (por cualquiera de las keys indexadas)
+    try {
+      const qNorm = trimmed.toLowerCase()
+      const keyNames = keys.map(k => (typeof k === 'string' ? k : k.name))
+
+      // Marcar exactMatch en los resultados ya devueltos por Fuse
+      mapped.forEach(m => {
+        for (const kn of keyNames) {
+          const val = m.item && (m.item[kn] || '')
+          if (val && String(val).trim().toLowerCase() === qNorm) {
+            m.exactMatch = true
+            m.relevance = 100
+            break
+          }
+        }
+      })
+
+      // Añadir items que no fueron devueltos por Fuse pero que coinciden exactamente (por ejemplo: claves)
+      const existing = new Set(mapped.map(r => r.item))
+      const extra = []
+      const all = items.value || []
+      for (const it of all) {
+        if (existing.has(it)) continue
+        for (const kn of keyNames) {
+          const val = it && (it[kn] || '')
+          if (val && String(val).trim().toLowerCase() === qNorm) {
+            extra.push({ item: it, score: 0, relevance: 100, matches: [], exactMatch: true })
+            existing.add(it)
+            break
+          }
+        }
+      }
+
+      // Preponer exact matches para que aparezcan primero
+      if (extra.length) {
+        mapped.unshift(...extra)
+      }
+    } catch (e) {
+      // No bloquear búsqueda si la detección falla
+      console.error('[useFuseSearch] exactMatch detection error', e)
+    }
+
+    // Ordenar: exactMatch primero, luego por score ascendente (mejor score primero)
+    mapped.sort((a, b) => {
+      if ((b.exactMatch ? 1 : 0) - (a.exactMatch ? 1 : 0) !== 0) return (b.exactMatch ? 1 : 0) - (a.exactMatch ? 1 : 0)
+      return (a.score || 0) - (b.score || 0)
+    })
 
     results.value = mapped
     return mapped

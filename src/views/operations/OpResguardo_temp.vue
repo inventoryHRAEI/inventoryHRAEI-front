@@ -1220,8 +1220,8 @@ function sanitizeFolio(f) {
     // extraer números
     const m = s.match(/(\d+)$/)
     if (!m) return ''
-    const digits = m[1].slice(0, 6)
-    return `E-${digits.padStart(6, '0')}`
+    const digits = m[1].slice(0, 4)
+    return `E-${digits.padStart(4, '0')}`
 }
 
 // Opciones del select de tipo de entrada
