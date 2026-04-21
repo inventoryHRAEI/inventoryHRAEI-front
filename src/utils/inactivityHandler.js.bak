@@ -1,0 +1,428 @@
+﻿import IdleJs from 'idle-js'
+import { logout, refreshToken } from './auth'
+import notifier from './notifier'
+
+class InactivityHandler {
+  constructor() {
+    this.idleInstance = null
+    this._countdownInterval = null
+    this._logoutTimer = null
+
+    this.inactivityDuration = 15 * 60 * 1000 // 15 min
+    this.warningDuration = 60 * 1000 // 60s warning
+    this.preWarningSeconds = 60
+    this.idleThreshold = 14 * 60 * 1000 // inactivityDuration - warningDuration
+
+    this.isEnabled = false
+    this.isInitialized = false
+    this.isInactive = false
+    this.isPreWarningShown = false
+    this.isWarningShown = false
+    this.isCountingDown = false
+    this.isInLogoutProcess = false
+
+    this.countdownRemaining = this.warningDuration
+
+    this.syncAcrossTabs = true
+    this.keepAliveRefresh = true
+
+    this._channelName = 'inactivity_channel'
+    this._broadcast = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel(this._channelName) : null
+    this._bindBroadcast()
+
+    this._loadSavedSettings()
+    console.debug('[InactivityHandler] Instancia creada')
+  }
+
+  _bindBroadcast() {
+    if (this._broadcast) {
+      this._broadcast.onmessage = (msg) => {
+        if (!msg || !msg.data) return
+        const data = msg.data
+        this._handleBroadcastMessage(data)
+      }
+    }
+
+    window.addEventListener('storage', (event) => {
+      if (!event.key || event.key !== `${this._channelName}:msg`) return
+      try {
+        const data = JSON.parse(event.newValue)
+        this._handleBroadcastMessage(data)
+      } catch {
+        // ignore parse errors
+      }
+    })
+  }
+
+  _loadSavedSettings() {
+    try {
+      const w = localStorage.getItem('inactivityWarningSeconds')
+      if (w) this.warningDuration = Math.max(5, parseInt(w, 10)) * 1000
+
+      const sync = localStorage.getItem('inactivitySyncTabs')
+      if (sync !== null) this.syncAcrossTabs = sync === 'true'
+
+      const ka = localStorage.getItem('inactivityKeepAliveRefresh')
+      if (ka !== null) this.keepAliveRefresh = ka === 'true'
+    } catch (e) {
+      console.warn('[InactivityHandler] Error cargando settings:', e)
+    }
+  }
+
+  init(durationMinutes = 15, warningSeconds = 60) {
+    if (this.isInitialized) {
+      console.debug('[InactivityHandler] Ya inicializado, actualizando duración')
+      this.updateDuration(durationMinutes)
+      this.setWarningDuration(warningSeconds)
+      return
+    }
+
+    this.inactivityDuration = Math.max(15, durationMinutes) * 60 * 1000
+    this.warningDuration = Math.max(5, warningSeconds) * 1000
+    this.preWarningSeconds = Math.min(300, Math.max(5, warningSeconds))
+
+    const threshold = this.inactivityDuration - this.warningDuration
+    this.idleThreshold = Math.max(5000, threshold)
+
+    this._clearAllTimers()
+    this._startIdleTracker()
+
+    this.isEnabled = true
+    this.isInitialized = true
+    this.isInactive = false
+    this.isPreWarningShown = false
+    this.isWarningShown = false
+    this.isCountingDown = false
+    this.isInLogoutProcess = false
+
+    console.log('[InactivityHandler] Inicializado con IdleJs')
+    console.log(`    Inactividad: ${this.inactivityDuration / 60000}min`)
+    console.log(`    Pre-warning: ${this.warningDuration / 1000}s (umbral: ${this.idleThreshold / 1000}s)`)
+  }
+
+  _startIdleTracker() {
+    this._stopIdleTracker()
+
+    this.idleInstance = new IdleJs({
+      idle: this.idleThreshold,
+      onIdle: () => this._onIdle(),
+      onActive: () => this._onActive(),
+      onHide: () => this._onHide(),
+      onShow: () => this._onShow(),
+      keepTracking: true,
+      startAtIdle: false
+    })
+
+    try {
+      this.idleInstance.start()
+      console.debug('[InactivityHandler] IdleJS track started')
+    } catch (e) {
+      console.error('[InactivityHandler] Impossible start IdleJS', e)
+    }
+  }
+
+  _stopIdleTracker() {
+    if (!this.idleInstance) return
+    try {
+      this.idleInstance.stop()
+    } catch {
+      // ignore
+    }
+    this.idleInstance = null
+  }
+
+  _onIdle() {
+    if (!this.isEnabled) return
+
+    this.isInactive = true
+
+    if (!this.isPreWarningShown) {
+      this.isPreWarningShown = true
+      this._emitPreWarning()
+    }
+
+    if (!this.isWarningShown) {
+      this._startWarningPhase()
+    }
+  }
+
+  _onActive() {
+    if (!this.isEnabled) return
+
+    if (this.isWarningShown || this.isPreWarningShown || this.isInactive) {
+      this.keepAlive()
+    }
+
+    this._resetState()
+  }
+
+  _onHide() {
+    // Opción: continuar temporizador al estar oculta; actualmente se deja en proceso
+    console.debug('[InactivityHandler] Visibility hidden')
+  }
+
+  _onShow() {
+    console.debug('[InactivityHandler] Visibility visible')
+  }
+
+  _emitPreWarning() {
+    console.log('[InactivityHandler] pre-warning emitido')
+    try { window.dispatchEvent(new Event('inactivity:prewarning')) } catch(e){}
+    try { notifier.warn(`Inactividad detectada. Sesión expira en ${this.preWarningSeconds} segundos.`, { duration: 8000 }) } catch(e){ console.warn(e) }
+    this._broadcastMessage({ type: 'prewarning', timestamp: Date.now() })
+  }
+
+  _startWarningPhase() {
+    if (!this.isEnabled) return
+
+    this.isWarningShown = true
+    this.isCountingDown = true
+    this.countdownRemaining = this.warningDuration
+
+    console.log('[InactivityHandler] warning emitido')
+    try { window.dispatchEvent(new Event('inactivity:warning')) } catch(e){}
+    try { notifier.info('Tu sesión expirará pronto. Haz clic para continuar.', { duration: Math.max(10000, this.warningDuration) }) } catch(e){ console.warn(e) }
+
+    this._broadcastMessage({ type: 'warning', timestamp: Date.now() })
+
+    this._clearCountdownTimers()
+
+    const start = Date.now()
+    this._countdownInterval = setInterval(() => {
+      const elapsed = Date.now() - start
+      this.countdownRemaining = Math.max(0, this.warningDuration - elapsed)
+      window.dispatchEvent(new Event('inactivity:countdown'))
+
+      if (this.countdownRemaining <= 0) {
+        this._clearCountdownTimers()
+        this.performLogout('timeout')
+      }
+    }, 250)
+
+    this._logoutTimer = setTimeout(() => {
+      this.performLogout('timeout-fallback')
+    }, this.warningDuration + 500)
+  }
+
+  _clearCountdownTimers() {
+    if (this._countdownInterval) {
+      clearInterval(this._countdownInterval)
+      this._countdownInterval = null
+    }
+    if (this._logoutTimer) {
+      clearTimeout(this._logoutTimer)
+      this._logoutTimer = null
+    }
+    this.isCountingDown = false
+  }
+
+  _resetState() {
+    this.isInactive = false
+    this.isPreWarningShown = false
+    this.isWarningShown = false
+    this._clearCountdownTimers()
+    if (this.idleInstance) {
+      try {
+        this.idleInstance.stop()
+      } catch {}
+      this._startIdleTracker()
+    }
+  }
+
+  keepAlive() {
+    if (!this.isEnabled) return
+
+    console.log('[InactivityHandler] ✅ Sesión extendida por actividad')
+    if (this.keepAliveRefresh) {
+      refreshToken().then((result) => {
+        if (result.ok) {
+          console.log('[InactivityHandler] Token refrescado')
+        } else {
+          console.warn('[InactivityHandler] No se pudo refrescar token')
+        }
+      }).catch((err) => {
+        console.warn('[InactivityHandler] Error refreshToken', err)
+      })
+    }
+
+    this._resetState()
+    window.dispatchEvent(new Event('inactivity:warning-dismissed'))
+    this._broadcastMessage({ type: 'active', timestamp: Date.now() })
+  }
+
+  performLogout(reason = 'timeout') {
+    if (this.isInLogoutProcess) return
+    this.isInLogoutProcess = true
+
+    console.log([InactivityHandler] 🚪 performLogout: )
+    this.isEnabled = false
+    this._clearAllTimers()
+
+    if (this.syncAcrossTabs) {
+      this._broadcastMessage({ type: 'logout', reason, timestamp: Date.now() })
+    }
+
+    logout().finally(() => {
+      try { window.location.href = '/' } catch (e) { console.error(e) }
+    })
+  }
+
+  _handleBroadcastMessage(data) {
+    if (!data || !data.type) return
+    if (data.type === 'logout') {
+      console.log('[InactivityHandler] Logout remoto recibido')
+      this.isEnabled = false
+      this._clearAllTimers()
+      try { window.location.href = '/' } catch (e) {}
+    } else if (data.type === 'warning') {
+      window.dispatchEvent(new Event('inactivity:warning-passive'))
+    } else if (data.type === 'prewarning') {
+      window.dispatchEvent(new Event('inactivity:warning-passive'))
+    }
+  }
+
+  _broadcastMessage(data) {
+    if (this.syncAcrossTabs && this._broadcast) {
+      try {
+        this._broadcast.postMessage(data)
+      } catch (e) {
+        console.warn('[InactivityHandler] No se puede broadcast', e)
+      }
+    } else {
+      try {
+        localStorage.setItem(${this._channelName}:msg, JSON.stringify(data))
+      } catch {}
+    }
+  }
+
+  destroy() {
+    this.isEnabled = false
+    this.isInitialized = false
+    this._stopIdleTracker()
+    this._clearAllTimers()
+    this.isInactive = false
+    this.isPreWarningShown = false
+    this.isWarningShown = false
+    this.isCountingDown = false
+    this.isInLogoutProcess = false
+
+    if (this._broadcast) {
+      try { this._broadcast.close() } catch {}
+      this._broadcast = null
+    }
+
+    console.debug('[InactivityHandler] Destruido')
+  }
+
+  pause() {
+    this.isEnabled = false
+    this._clearAllTimers()
+    if (this.idleInstance) {
+      try { this.idleInstance.pause() } catch {};
+    }
+    console.debug('[InactivityHandler] Pausado')
+  }
+
+  resume() {
+    if (!this.isInitialized) {
+      console.warn('[InactivityHandler] No inicializado, no se puede reanudar')
+      return
+    }
+    this.isEnabled = true
+    if (this.idleInstance) {
+      try { this.idleInstance.resume() } catch {}
+    } else {
+      this._startIdleTracker()
+    }
+    console.debug('[InactivityHandler] Reanudad')
+  }
+
+  updateDuration(minutes) {
+    this.inactivityDuration = Math.max(15, minutes) * 60 * 1000
+    this.idleThreshold = Math.max(5000, this.inactivityDuration - this.warningDuration)
+    if (this.idleInstance) this._startIdleTracker()
+    console.debug('[InactivityHandler] Duración actualizada:', minutes)
+  }
+
+  setPreWarningSeconds(seconds) {
+    this.preWarningSeconds = Math.max(5, Number(seconds))
+    localStorage.setItem('inactivityPreWarningSeconds', this.preWarningSeconds.toString())
+    return this.preWarningSeconds
+  }
+
+  setSyncAcrossTabs(enabled) {
+    this.syncAcrossTabs = !!enabled
+    localStorage.setItem('inactivitySyncTabs', String(this.syncAcrossTabs))
+  }
+
+  setKeepAliveRefresh(enabled) {
+    this.keepAliveRefresh = !!enabled
+    localStorage.setItem('inactivityKeepAliveRefresh', String(this.keepAliveRefresh))
+  }
+
+  setWarningDuration(seconds) {
+    this.warningDuration = Math.max(5, Number(seconds)) * 1000
+    this.preWarningSeconds = Math.min(300, Math.max(5, Number(seconds)))
+    localStorage.setItem('inactivityWarningSeconds', String(Math.round(this.warningDuration / 1000)))
+    this.idleThreshold = Math.max(5000, this.inactivityDuration - this.warningDuration)
+    if (this.idleInstance) this._startIdleTracker()
+  }
+
+  _clearAllTimers() {
+    this._clearCountdownTimers()
+  }
+
+  saveSessionState(reason = 'unknown') {
+    try {
+      const sessionState = {
+        timestamp: Date.now(),
+        reason,
+        route: window.location.pathname,
+        hash: window.location.hash,
+        query: window.location.search,
+        scrollPosition: { x: window.scrollX, y: window.scrollY }
+      }
+      sessionStorage.setItem('sessionStateBeforeLogout', JSON.stringify(sessionState))
+    } catch {}
+  }
+
+  static restoreSessionState() {
+    try {
+      const saved = sessionStorage.getItem('sessionStateBeforeLogout')
+      if (!saved) return null
+      const state = JSON.parse(saved)
+      sessionStorage.removeItem('sessionStateBeforeLogout')
+      return state
+    } catch {
+      return null
+    }
+  }
+
+  getDebugInfo() {
+    return {
+      isEnabled: this.isEnabled,
+      isInitialized: this.isInitialized,
+      isInactive: this.isInactive,
+      isPreWarningShown: this.isPreWarningShown,
+      isWarningShown: this.isWarningShown,
+      isCountingDown: this.isCountingDown,
+      inactivityDuration: this.inactivityDuration,
+      warningDuration: this.warningDuration,
+      countdownRemaining: this.countdownRemaining
+    }
+  }
+
+  getDurationMinutes() {
+    return Math.round(this.inactivityDuration / 60000)
+  }
+
+  forcePreWarning() {
+    this._emitPreWarning()
+  }
+
+  forceWarning() {
+    this._startWarningPhase()
+  }
+}
+
+export default new InactivityHandler()

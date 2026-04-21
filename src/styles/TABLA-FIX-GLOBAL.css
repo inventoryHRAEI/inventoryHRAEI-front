@@ -1,0 +1,103 @@
+/* =====================================
+   SOLUCIÓN GLOBAL PARA TODAS LAS TABLAS
+   Alinea thead perfectamente con tbody
+   ===================================== */
+
+/* REGLA 1: Tabla base */
+table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+}
+
+/* REGLA 2: Headers - Padding y ancho */
+thead th,
+th {
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+    height: auto !important;
+    line-height: 1.4 !important;
+}
+
+/* REGLA 3: Data cells - Padding y ancho */
+tbody td,
+td {
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+    height: auto !important;
+}
+
+/* REGLA 4: Alineación de filas */
+tr {
+    height: auto !important;
+}
+
+/* REGLA 5: Scrollbar NO afecta width */
+::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.3) !important;
+    border-radius: 4px !important;
+}
+
+/* REGLA 6: Específico para data-table */
+.data-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+}
+
+.data-table thead {
+    display: table-header-group !important;
+}
+
+.data-table tbody {
+    display: table-row-group !important;
+}
+
+.data-table th {
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+    background-color: #f9fafb !important;
+}
+
+.data-table td {
+    padding: 12px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+}
+
+/* REGLA 7: Tabla wrapper no corta contenido */
+.table-wrapper,
+.table-container {
+    overflow-x: auto !important;
+    overflow-y: auto !important;
+    width: 100% !important;
+}
+
+/* REGLA 8: Específico para BiomedicalInventoryDataTable */
+.maintenance-datatable-container table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+}
+
+.maintenance-datatable-container table th {
+    padding: 12px !important;
+    box-sizing: border-box !important;
+}
+
+.maintenance-datatable-container table td {
+    padding: 12px !important;
+    box-sizing: border-box !important;
+}

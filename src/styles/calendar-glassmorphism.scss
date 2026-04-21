@@ -1,0 +1,386 @@
+/* ===== CALENDARIO GLASSMORPHISM - VERSIÓN SASS SIMPLE ===== */
+/* Los estilos principales están en public/calendar-force.css */
+/* Este archivo existe solo para evitar errores de importación */
+
+// Variables básicas
+$calendar-primary: #00ff6a;
+
+// === MIXINS PARA GLASSMORPHISM ===
+@mixin glassmorphism($opacity: 0.1, $blur: 20px) {
+  background: rgba(0, 255, 106, $opacity);
+  backdrop-filter: blur($blur) saturate(180%) contrast(120%);
+  -webkit-backdrop-filter: blur($blur) saturate(180%) contrast(120%);
+}
+
+@mixin glow($color: $calendar-primary, $intensity: 0.6) {
+  box-shadow: 0 0 25px rgba(0, 255, 106, $intensity);
+  text-shadow: 0 0 10px rgba(0, 255, 106, $intensity);
+}
+
+@mixin border-glow($width: 2px, $opacity: 0.5) {
+  border: $width solid rgba(0, 255, 106, $opacity);
+}
+
+@mixin transition-smooth($duration: 0.3s) {
+  transition: all $duration cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@mixin hover-scale($scale: 1.1) {
+  &:hover {
+    transform: scale($scale) translateY(-2px);
+    @include glow($calendar-primary, 0.8);
+  }
+}
+
+// === FORZAR TEMA OSCURO GLOBAL ===
+html, body, * {
+  color-scheme: dark !important;
+  accent-color: $calendar-primary !important;
+}
+
+// === ESTILOS DEL INPUT DATE ===
+input[type="date"] {
+  color-scheme: dark !important;
+  accent-color: $calendar-primary !important;
+  
+  // ICONO DEL CALENDARIO
+  &::-webkit-calendar-picker-indicator {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ff6a' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E") !important;
+    filter: drop-shadow(0 0 15px rgba(0, 255, 106, 1)) brightness(1.8) !important;
+    transform: scale(1.4) !important;
+    opacity: 1 !important;
+    @include transition-smooth(0.2s);
+    
+    &:hover {
+      transform: scale(1.6) rotate(10deg) !important;
+      filter: drop-shadow(0 0 20px rgba(0, 255, 106, 1)) brightness(2) !important;
+    }
+  }
+  
+  // ELEMENTOS DE EDICIÓN DE FECHA
+  &::-webkit-datetime-edit,
+  &::-webkit-datetime-edit-fields-wrapper,
+  &::-webkit-datetime-edit-text,
+  &::-webkit-datetime-edit-month-field,
+  &::-webkit-datetime-edit-day-field,
+  &::-webkit-datetime-edit-year-field {
+    color: $calendar-text !important;
+    @include glassmorphism(0.15, 8px);
+    @include border-glow(1px, 0.3);
+    border-radius: 6px !important;
+    padding: 3px 6px !important;
+    margin: 0 2px !important;
+    font-weight: 700 !important;
+    @include transition-smooth();
+    
+    &:focus {
+      @include glassmorphism(0.25, 12px);
+      @include border-glow(2px, 0.6);
+      color: $calendar-primary !important;
+      @include glow($calendar-primary, 0.4);
+    }
+  }
+}
+
+// === POPUP PRINCIPAL DEL CALENDARIO ===
+input[type="date"]::-webkit-calendar-picker {
+  background: $calendar-bg-dark !important;
+  @include glassmorphism(0.05, 50px);
+  @include border-glow(6px, 0.8);
+  border-radius: 35px !important;
+  box-shadow: 
+    0 50px 150px $calendar-shadow,
+    0 0 0 4px rgba(0, 255, 106, 0.7),
+    inset 0 3px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.3) !important;
+  padding: 40px !important;
+  color: $calendar-text !important;
+  font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  min-width: 420px !important;
+  font-weight: 700 !important;
+  position: relative !important;
+  z-index: 99999 !important;
+}
+
+/* === CABECERA DEL CALENDARIO ===
+input[type="date"]::-webkit-calendar-picker-header {
+  background: linear-gradient(150deg, 
+    rgba(0, 255, 106, 0.5) 0%, 
+    rgba(0, 255, 106, 0.2) 50%, 
+    rgba(0, 255, 106, 0.1) 100%) !important;
+  color: $calendar-text !important;
+  @include border-glow(4px, 0.7);
+  border-radius: 22px !important;
+  padding: 25px !important;
+  margin-bottom: 35px !important;
+  font-weight: 900 !important;
+  font-size: 26px !important;
+  text-align: center !important;
+  @include glassmorphism(0.1, 25px);
+  @include glow($calendar-primary, 0.8);
+  letter-spacing: 2px !important;
+  text-transform: uppercase !important;
+}
+
+// === BOTONES DE NAVEGACIÓN ===
+input[type="date"]::-webkit-calendar-picker-navigation-button {
+  background: linear-gradient(150deg, 
+    rgba(0, 255, 106, 0.6) 0%, 
+    rgba(0, 255, 106, 0.4) 100%) !important;
+  color: $calendar-text !important;
+  @include border-glow(5px, 0.8);
+  border-radius: 18px !important;
+  width: 55px !important;
+  height: 50px !important;
+  font-weight: 900 !important;
+  font-size: 24px !important;
+  @include glassmorphism(0.2, 20px);
+  @include glow($calendar-primary, 1);
+  cursor: pointer !important;
+  @include transition-smooth(0.4s);
+  
+  &:hover {
+    background: linear-gradient(150deg, 
+      rgba(0, 255, 106, 0.8) 0%, 
+      rgba(0, 255, 106, 0.6) 100%) !important;
+    transform: scale(1.2) rotate(12deg) !important;
+    @include glow($calendar-primary, 1.2);
+    @include border-glow(6px, 1);
+  }
+  
+  &:active {
+    transform: scale(1.1) rotate(8deg) !important;
+  }
+}
+
+// === TABLA DEL CALENDARIO ===
+input[type="date"]::-webkit-calendar-picker-table {
+  background: rgba(0, 0, 0, 0.4) !important;
+  border-radius: 22px !important;
+  padding: 25px !important;
+  @include glassmorphism(0.05, 20px);
+  @include border-glow(3px, 0.2);
+}
+
+/* ENCABEZADOS DE DÍAS DE LA SEMANA */
+input[type="date"]::-webkit-calendar-picker-week-header {
+  background: linear-gradient(150deg, 
+    rgba(0, 255, 106, 0.35) 0%, 
+    rgba(0, 255, 106, 0.2) 100%) !important;
+  color: rgba(0, 255, 106, 1) !important;
+  @include border-glow(4px, 0.6);
+  border-radius: 12px !important;
+  padding: 15px !important;
+  margin: 5px !important;
+  font-weight: 900 !important;
+  font-size: 16px !important;
+  text-transform: uppercase !important;
+  @include glow($calendar-primary, 0.9);
+  @include glassmorphism(0.1, 15px);
+  letter-spacing: 2px !important;
+}
+
+// === CELDAS DE LOS DÍAS ===
+input[type="date"]::-webkit-calendar-picker-day-cell {
+  background: linear-gradient(150deg, 
+    rgba(255, 255, 255, 0.25) 0%, 
+    rgba(255, 255, 255, 0.08) 100%) !important;
+  color: $calendar-text !important;
+  @include border-glow(4px, 0.3);
+  border-radius: 18px !important;
+  margin: 6px !important;
+  padding: 18px !important;
+  font-weight: 800 !important;
+  min-width: 55px !important;
+  min-height: 55px !important;
+  @include glassmorphism(0.1, 15px);
+  @include transition-smooth(0.5s);
+  cursor: pointer !important;
+  text-align: center !important;
+  font-size: 16px !important;
+  
+  // HOVER NORMAL
+  &:hover {
+    background: linear-gradient(150deg, 
+      rgba(0, 255, 106, 0.6) 0%, 
+      rgba(0, 255, 106, 0.3) 100%) !important;
+    color: $calendar-primary !important;
+    @include border-glow(5px, 0.9);
+    transform: scale(1.15) translateY(-4px) rotate(2deg) !important;
+    @include glow($calendar-primary, 0.8);
+    z-index: 10 !important;
+  }
+  
+  // DÍA ACTUAL
+  &:current-day {
+    background: linear-gradient(150deg, 
+      rgba(0, 255, 106, 0.7) 0%, 
+      rgba(0, 255, 106, 0.5) 100%) !important;
+    color: $calendar-text !important;
+    @include border-glow(5px, 1);
+    font-weight: 900 !important;
+    @include glow($calendar-primary, 1);
+    animation: current-day-mega-pulse 4s ease-in-out infinite alternate !important;
+    position: relative !important;
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      border: 2px solid rgba(0, 255, 106, 0.6);
+      border-radius: 25px;
+      animation: current-day-ring 3s ease-in-out infinite;
+    }
+  }
+  
+  // DÍA SELECCIONADO
+  &:selected {
+    background: linear-gradient(150deg, $calendar-primary 0%, darken($calendar-primary, 10%) 100%) !important;
+    color: $calendar-text-dark !important;
+    @include border-glow(6px, 1);
+    font-weight: 900 !important;
+    transform: scale(1.25) rotate(5deg) !important;
+    box-shadow: 
+      0 0 50px rgba(0, 255, 106, 1),
+      0 20px 40px rgba(0, 0, 0, 0.5),
+      inset 0 3px 0 rgba(255, 255, 255, 0.5) !important;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8) !important;
+    z-index: 20 !important;
+    position: relative !important;
+    animation: selected-day-bounce 0.6s ease-out !important;
+  }
+  
+  // DÍAS INACTIVOS
+  &:inactive {
+    background: rgba(255, 255, 255, 0.02) !important;
+    color: rgba(255, 255, 255, 0.2) !important;
+    @include border-glow(2px, 0.1);
+    opacity: 0.25 !important;
+    
+    &:hover {
+      opacity: 0.5 !important;
+    }
+  }
+}
+
+/* === FOOTER DEL CALENDARIO ===
+input[type="date"]::-webkit-calendar-picker-footer {
+  background: linear-gradient(150deg, 
+    rgba(0, 255, 106, 0.25) 0%, 
+    rgba(0, 255, 106, 0.1) 100%) !important;
+  border-top: 5px solid rgba(0, 255, 106, 0.6) !important;
+  border-radius: 0 0 30px 30px !important;
+  padding: 30px !important;
+  margin-top: 30px !important;
+  @include glassmorphism(0.1, 20px);
+}
+
+/* === BOTONES DEL FOOTER ===
+input[type="date"]::-webkit-calendar-picker-footer button {
+  background: linear-gradient(150deg, 
+    rgba(0, 255, 106, 0.5) 0%, 
+    rgba(0, 255, 106, 0.25) 100%) !important;
+  color: $calendar-text !important;
+  @include border-glow(4px, 0.7);
+  border-radius: 15px !important;
+  padding: 18px 25px !important;
+  margin: 0 12px !important;
+  font-weight: 800 !important;
+  @include glassmorphism(0.1, 15px);
+  @include glow($calendar-primary, 0.6);
+  cursor: pointer !important;
+  @include transition-smooth(0.3s);
+  font-size: 15px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  
+  &:hover {
+    background: linear-gradient(150deg, 
+      rgba(0, 255, 106, 0.7) 0%, 
+      rgba(0, 255, 106, 0.45) 100%) !important;
+    color: $calendar-primary !important;
+    @include border-glow(5px, 1);
+    transform: scale(1.12) translateY(-4px) !important;
+    @include glow($calendar-primary, 1);
+  }
+  
+  &:active {
+    transform: scale(1.05) translateY(-2px) !important;
+  }
+}
+
+// === ANIMACIONES AVANZADAS ===
+@keyframes current-day-mega-pulse {
+  0% {
+    box-shadow: 
+      0 0 40px rgba(0, 255, 106, 0.8),
+      inset 0 3px 0 rgba(255, 255, 255, 0.3),
+      0 12px 30px rgba(0, 0, 0, 0.4);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: 
+      0 0 60px rgba(0, 255, 106, 1.2),
+      inset 0 3px 0 rgba(255, 255, 255, 0.5),
+      0 18px 45px rgba(0, 0, 0, 0.5);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes current-day-ring {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+@keyframes selected-day-bounce {
+  0% { transform: scale(1) rotate(0deg); }
+  50% { transform: scale(1.35) rotate(8deg); }
+  100% { transform: scale(1.25) rotate(5deg); }
+}
+
+// === HOVER GLOBAL PARA EL POPUP ===
+input[type="date"]::-webkit-calendar-picker {
+  &:hover {
+    box-shadow: 
+      0 60px 180px rgba(0, 0, 0, 0.95),
+      0 0 0 5px rgba(0, 255, 106, 0.9),
+      inset 0 4px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -4px 0 rgba(0, 0, 0, 0.4) !important;
+    transform: scale(1.02) !important;
+  }
+}
+
+// === RESPONSIVE DESIGN ===
+@media (max-width: 768px) {
+  input[type="date"]::-webkit-calendar-picker {
+    min-width: 320px !important;
+    padding: 25px !important;
+  }
+  
+  input[type="date"]::-webkit-calendar-picker-day-cell {
+    min-width: 40px !important;
+    min-height: 40px !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+}
+
+// === OVERRIDE PARA MÁXIMA COMPATIBILIDAD ===
+input[type="date"] {
+  color-scheme: dark !important;
+  accent-color: $calendar-primary !important;
+  
+  // Asegurar que todos los pseudo-elementos usen las variables
+  * {
+    color-scheme: dark !important;
+  }
+}
