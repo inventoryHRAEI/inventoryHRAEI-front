@@ -7,8 +7,11 @@
                     <div class="panel-header-simple">
                         <div class="header-info">
                             <h1>Historial del Equipo</h1>
-                            <p v-if="item">{{ item['No DE INVENTARIO'] }}</p>
-                            <p v-if="item">{{ item['EQUIPO MEDICO'] }}</p>
+                            <p v-if="item" class="header-subtitle">
+                                <span class="header-inv">{{ getVal('inventario') }}</span>
+                                <span class="header-divider">|</span>
+                                <span class="header-eq">{{ getVal('equipo') }}</span>
+                            </p>
                         </div>
                         <div class="header-actions">
                             <button 
@@ -119,18 +122,6 @@
                             <InformationCircleIcon class="tab-icon" />
                             INFORMACIÓN
                         </button>
-                        <button @click="activeTab = 'history'" :class="{ active: activeTab === 'history' }">
-                            <ClockIcon class="tab-icon" />
-                            HISTORIAL
-                        </button>
-                        <button @click="activeTab = 'maintenance'" :class="{ active: activeTab === 'maintenance' }">
-                            <WrenchIcon class="tab-icon" />
-                            MANTENIMIENTOS
-                        </button>
-                        <button @click="activeTab = 'states'" :class="{ active: activeTab === 'states' }">
-                            <ListBulletIcon class="tab-icon" />
-                            ESTADOS
-                        </button>
                         <button @click="activeTab = 'images'" :class="{ active: activeTab === 'images' }">
                             <PhotoIcon class="tab-icon" />
                             IMÁGENES
@@ -140,106 +131,122 @@
                     <!-- CONTENT -->
                     <div class="panel-content">
                         <!-- Info Tab -->
-                        <div v-show="activeTab === 'info'" class="tab-content">
-                            <div v-if="item" class="info-grid" :class="{ 'edit-mode': isEditMode }">
-                                <div class="info-item">
-                                    <label>Inventario:</label>
-                                    <span v-if="!isEditMode">{{ item['No DE INVENTARIO'] }}</span>
-                                    <input v-else v-model="editedItem['No DE INVENTARIO']" type="text" class="edit-input" />
-                                </div>
-                                <div class="info-item">
-                                    <label>Equipo:</label>
-                                    <span v-if="!isEditMode">{{ item['EQUIPO MEDICO'] }}</span>
-                                    <input v-else v-model="editedItem['EQUIPO MEDICO']" type="text" class="edit-input" />
-                                </div>
-                                <div class="info-item">
-                                    <label>Marca:</label>
-                                    <span v-if="!isEditMode">{{ item['MARCA'] || '—' }}</span>
-                                    <input v-else v-model="editedItem['MARCA']" type="text" class="edit-input" />
-                                </div>
-                                <div class="info-item">
-                                    <label>Modelo:</label>
-                                    <span v-if="!isEditMode">{{ item['MODELO'] || '—' }}</span>
-                                    <input v-else v-model="editedItem['MODELO']" type="text" class="edit-input" />
-                                </div>
-                                <div class="info-item">
-                                    <label>Serie:</label>
-                                    <span v-if="!isEditMode">{{ item['NUMERO DE SERIE'] || item['SERIE'] || 'N/A' }}</span>
-                                    <input v-else v-model="editedItem['NUMERO DE SERIE']" type="text" class="edit-input" />
-                                </div>
-                                <div class="info-item">
-                                    <label>Ubicación:</label>
-                                    <span v-if="!isEditMode">{{ item['UBICACION ESPECIFICA'] || 'N/A' }}</span>
-                                    <input v-else v-model="editedItem['UBICACION ESPECIFICA']" type="text" class="edit-input" />
-                                </div>
-                                <div class="info-item">
-                                    <label>Especialidad:</label>
-                                    <span v-if="!isEditMode">{{ item['ESPECIALIDAD AREA DEL HOSPITAL'] || 'N/A' }}</span>
-                                    <input v-else v-model="editedItem['ESPECIALIDAD AREA DEL HOSPITAL']" type="text" class="edit-input" />
-                                </div>
-                                <div class="info-item">
-                                    <label>Condición:</label>
-                                    <span v-if="!isEditMode">{{ item['CONDICIONES DEL EQUIPO'] || item['ESTATUS'] || 'N/A' }}</span>
-                                    <input v-else v-model="editedItem['CONDICIONES DEL EQUIPO']" type="text" class="edit-input" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- History Tab -->
-                        <div v-show="activeTab === 'history'" class="tab-content">
-                            <div v-if="loading" class="loading">Cargando historial...</div>
-                            <div v-else-if="history && history.length > 0" class="history-list">
-                                <div v-for="(entry, idx) in history" :key="idx" class="history-item">
-                                    <div class="history-date">{{ formatDate(entry['ULTIMO MP DD MM AAAA']) }}</div>
-                                    <div class="history-type">
-                                        <template v-if="entry['TIPO DE MANTENIMIENTO']"><ClockIcon class="history-icon" /></template><template v-else><DocumentIcon class="history-icon" /></template>
-                                         {{ entry['TIPO DE MANTENIMIENTO'] || 'Registro' }}
-                                     </div>
-                                    <div v-if="entry['OBSERVACIONES']" class="history-note">{{ entry['OBSERVACIONES'] }}</div>
-                                    <div v-if="entry.images && entry.images.length" class="history-images">
-                                        <img v-for="(img, idx2) in entry.images" :key="idx+'-img-'+idx2" :src="img" class="history-image" />
+                        <div v-show="activeTab === 'info'" class="tab-content info-tab-content">
+                            <div v-if="item" class="info-layout">
+                                <!-- Main Info Grid (Hardcoded Highlights) -->
+                                <div class="info-grid highlight-grid" :class="{ 'edit-mode': isEditMode }">
+                                    <div class="info-item">
+                                        <label>Inventario:</label>
+                                        <span v-if="!isEditMode">{{ getVal('inventario') }}</span>
+                                        <input v-else v-model="editedItem['No DE INVENTARIO']" type="text" class="edit-input" />
                                     </div>
+                                    <div class="info-item">
+                                        <label>Equipo:</label>
+                                        <span v-if="!isEditMode">{{ getVal('equipo') }}</span>
+                                        <input v-else v-model="editedItem['EQUIPO MEDICO']" type="text" class="edit-input" />
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Marca:</label>
+                                        <span v-if="!isEditMode">{{ getVal('marca') }}</span>
+                                        <input v-else v-model="editedItem['MARCA']" type="text" class="edit-input" />
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Modelo:</label>
+                                        <span v-if="!isEditMode">{{ getVal('modelo') }}</span>
+                                        <input v-else v-model="editedItem['MODELO']" type="text" class="edit-input" />
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Serie:</label>
+                                        <span v-if="!isEditMode">{{ getVal('serie') }}</span>
+                                        <input v-else v-model="editedItem['NUMERO DE SERIE']" type="text" class="edit-input" />
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Ubicación:</label>
+                                        <span v-if="!isEditMode">{{ getVal('ubicacion') }}</span>
+                                        <input v-else v-model="editedItem['UBICACION ESPECIFICA']" type="text" class="edit-input" />
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Especialidad:</label>
+                                        <span v-if="!isEditMode">{{ getVal('especialidad') }}</span>
+                                        <input v-else v-model="editedItem['ESPECIALIDAD AREA DEL HOSPITAL']" type="text" class="edit-input" />
+                                    </div>
+                                    <div class="info-item">
+                                        <label>Condición:</label>
+                                        <span v-if="!isEditMode">{{ getVal('condicion') }}</span>
+                                        <input v-else v-model="editedItem['CONDICIONES DEL EQUIPO']" type="text" class="edit-input" />
+                                    </div>
+                                </div>
 
-                                    <!-- dynamic fields rendered as grouped card rows with collapsible categories -->
-                                    <div class="history-fields">
-                                        <template v-for="(group, category) in getGroupedFields(entry)" :key="category">
-                                            <div class="field-category">
-                                                <div class="category-header" @click="toggleCategory(category)" :style="{ borderLeftColor: categoryColor(category) }">
-                                                    <span class="category-title">{{ category }}</span>
-                                                    <span class="category-toggle">
-                                                        <svg v-if="openCategories.has(category)" xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                          <path fill-rule="evenodd" d="M1.646 9.646a.5.5 0 0 1 .708 0L8 15.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
-                                                        </svg>
-                                                        <svg v-else xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
-                                                          <path fill-rule="evenodd" d="M1.646 6.646a.5.5 0 0 1 .708-.708L8 11.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6z"/>
-                                                        </svg>
-                                                    </span>
-                                                </div>
-                                                <div v-show="openCategories.has(category)" class="category-rows">
-                                                    <div v-for="field in group" :key="field.column" class="field-row">
-                                                        <span class="field-label">{{ field.label }}</span>
-                                                        <span class="field-value">{{ field.value }}</span>
+                                <!-- Detailed Info (Grouped by Category) -->
+                                <div class="detailed-info-sections">
+                                    <div v-for="(fields, category) in groupedEquipmentInfo" :key="category" class="info-category-group">
+                                        <h3 class="category-title" :style="{ borderLeftColor: categoryColor(category) }">
+                                            {{ category }}
+                                        </h3>
+                                        <div class="category-fields-grid">
+                                            <div v-for="field in fields" :key="field.label" class="detail-field" :class="{ 'editing': isEditMode }">
+                                                <span class="field-label">{{ field.label }}:</span>
+                                                <span v-if="!isEditMode" class="field-value">{{ field.value || '—' }}</span>
+                                                <input v-else v-model="editedItem[field.label]" type="text" class="edit-input-small" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Integrated Sections: History and Maintenance -->
+                                <div class="detailed-info-sections integrated-sections">
+                                    <div class="info-category-group">
+                                        <h3 class="category-title">Registros de Mantenimiento y Seguimiento</h3>
+                                        <div class="maintenance-details" style="padding-top: 10px;">
+                                            <div v-if="history && history.length > 0" class="maintenance-list">
+                                                <div v-for="maint in history" :key="maint.id" class="maintenance-item">
+                                                    <div class="item-header">
+                                                        <span class="item-date">{{ formatDateTime(maint.started_at) }}</span>
+                                                        <span class="badge" :class="maint.maintenance_type === 'MP' ? 'preventive' : 'corrective'">
+                                                            {{ maint.maintenance_type === 'MP' ? 'Preventivo' : 'Correctivo' }}
+                                                        </span>
+                                                        <span v-if="maint.status === 'completed'" class="badge functional">Completado</span>
+                                                        <span v-else class="badge warning">En Progreso</span>
+                                                    </div>
+                                                    <div class="item-details">
+                                                        <div class="detail-row">
+                                                            <span class="detail-label">Técnico:</span>
+                                                            <span class="detail-value">{{ maint.finished_by || maint.started_by || 'N/A' }}</span>
+                                                        </div>
+                                                        <div v-if="maint.finished_at" class="detail-row">
+                                                            <span class="detail-label">Finalizado:</span>
+                                                            <span class="detail-value">{{ formatDateTime(maint.finished_at) }}</span>
+                                                        </div>
+                                                        <div v-if="maint.observaciones" class="detail-row">
+                                                            <span class="detail-label">Notas:</span>
+                                                            <span class="detail-value">{{ maint.observaciones }}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </template>
+                                            <div v-else class="empty-small">No hay registros de mantenimiento recientes</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div v-if="historyMovimientos && historyMovimientos.length > 0" class="info-category-group">
+                                        <h3 class="category-title">Historial de Movimientos</h3>
+                                        <div class="history-list-compact">
+                                            <div v-for="(entry, idx) in historyMovimientos" :key="idx" class="history-entry-small">
+                                                <div class="entry-dot"></div>
+                                                <div class="entry-content">
+                                                    <div class="entry-header">
+                                                        <span class="entry-date">{{ entry['FECHA'] || entry['ULTIMO MP DD MM AAAA'] || 'S/F' }}</span>
+                                                        <span class="entry-type">{{ entry['TIPO DE MANTENIMIENTO'] || 'MOVIMIENTO' }}</span>
+                                                    </div>
+                                                    <div class="entry-desc">{{ entry['OBSERVACIONES'] || 'Sin observaciones' }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div v-else class="empty">No hay historial</div>
                         </div>
 
-                        <!-- States Tab -->
-                        <div v-show="activeTab === 'states'" class="tab-content">
-                            <div v-if="statusesLoading" class="loading">Cargando estados...</div>
-                            <div v-else-if="statuses && statuses.length > 0" class="states-grid">
-                                <div v-for="(status, idx) in statuses.slice(0, 20)" :key="idx" class="state-item">
-                                    <span class="state-date">{{ formatDate(status['FECHA'] || status['ULTIMO MP DD MM AAAA']) }}</span>
-                                    <span class="state-type">{{ status['TIPO DE MANTENIMIENTO'] || 'Estado' }}</span>
-                                </div>
-                            </div>
-                            <div v-else class="empty">No hay estados</div>
-                        </div>
 
                         <!-- Images Tab -->
                         <div v-show="activeTab === 'images'" class="tab-content">
@@ -526,7 +533,8 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
+import Swal from 'sweetalert2';
 import VueIcon from '@kalimahapps/vue-icons/VueIcon';
 // Icons from Heroicons
 import { WrenchIcon, CheckIcon, ClockIcon, BuildingLibraryIcon, CalendarIcon, MapPinIcon, UserCircleIcon, InformationCircleIcon, ListBulletIcon, EyeIcon, ArrowDownTrayIcon, XMarkIcon, DocumentIcon, CheckCircleIcon, ExclamationCircleIcon, PhotoIcon } from '@heroicons/vue/24/outline';
@@ -603,6 +611,134 @@ const maintenanceFlow = ref({
     last_completed: null,
     history: []
 });
+
+/**
+ * Obtiene un valor del item de forma resiliente, probando múltiples variantes de nombres de columnas.
+ */
+function getVal(key) {
+    if (!props.item) return '—'
+    
+    // 1. Intento exacto
+    if (props.item[key] !== undefined && props.item[key] !== null && String(props.item[key]).trim() !== '' && String(props.item[key]).toUpperCase() !== 'N/A') {
+        return props.item[key]
+    }
+
+    // 2. Mapeo de variantes comunes para campos críticos
+    const variants = {
+        'inventario': ['No DE INVENTARIO', 'No. DE INVENTARIO', 'N_DE_INVENTARIO', 'noInventario', 'inventario', 'CODIGO'],
+        'equipo': ['EQUIPO MÉDICO', 'EQUIPO MEDICO', 'EQUIPO_MEDICO', 'nombre', 'equipo'],
+        'serie': ['NÚMERO DE SERIE', 'NUMERO DE SERIE', 'SERIE', 'Serie', 'serie'],
+        'marca': ['MARCA', 'Brand', 'marca'],
+        'modelo': ['MODELO', 'Model', 'modelo'],
+        'ubicacion': ['UBICACIÓN ESPECÍFICA', 'UBICACION ESPECIFICA', 'UBICACION', 'UBICACIÓN', 'ubicacion'],
+        'especialidad': ['ESPECIALIDAD AREA DEL HOSPITAL', 'ESPECIALIDAD', 'especialidad'],
+        'condicion': ['CONDICIONES DEL EQUIPO', 'ESTATUS', 'estado', 'condicion']
+    }
+
+    const lowerKey = key.toLowerCase()
+    const searchList = variants[lowerKey] || [key]
+
+    for (const variant of searchList) {
+        if (props.item[variant] !== undefined && props.item[variant] !== null && String(props.item[variant]).trim() !== '' && String(props.item[variant]).toUpperCase() !== 'N/A') {
+            return props.item[variant]
+        }
+    }
+
+    // 3. Normalización agresiva de todas las llaves disponibles
+    const targetNorm = key.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    for (const k of Object.keys(props.item)) {
+        const knorm = k.toUpperCase().replace(/[^A-Z0-9]/g, '')
+        if (knorm === targetNorm) {
+            const v = props.item[k]
+            if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).toUpperCase() !== 'N/A') return v
+        }
+    }
+
+    return '—'
+}
+
+const groupedEquipmentInfo = computed(() => {
+    if (!props.item) return {}
+
+    const excludePatterns = [
+        /^MP\s/i, /OBSERVACIONES_/i, /^ESTATUS_/i, /LEVANTAMIENTO/i, /ETIQUETA/i, /_ID$/i, /images/i, /semaforizacion/i, /__hasRealData/i
+    ]
+
+    // Lista de alias conocidos que genera el backend por compatibilidad
+    const ALIAS_KEYS = new Set([
+        'nombre', 'marca', 'modelo', 'serie', 'ubicacion', 'estado', 'noInventario', 
+        'claveHRAEI', 'claveCNIS', 'clues', 'unidadMedica', 'especialidadArea', 
+        'categoria', 'observaciones', 'condicionesEquipo', 'tipoMantenimiento', 
+        'funcional', 'causaNoFuncionamiento', 'garantia', 'finGarantia', 
+        'ultimoMantenimientoPreventivo', 'fechaInstalacion', 'anioFabricacion', 
+        'origenBien', 'lote', 'referencia', 'proveedorServicio', 'cartaObsolescencia',
+        'UNIDAD_MEDICA', 'EQUIPO_MEDICO', 'N_DE_INVENTARIO', 'TIPO_MANTENIMIENTO',
+        'No DE INVENTARIO', 'No. DE INVENTARIO', 'NUMERO DE SERIE', 'NÚMERO DE SERIE', 'SERIE'
+    ]);
+
+    const getCategory = key => {
+        const f = key.toUpperCase();
+        if (/INVENTARIO|SERIE|MODELO|EQUIPO|CODIGO/.test(f)) return 'Identificación';
+        if (/MARCA|FABRICANTE|TECNOLOGIA|VOLTAJE|POTENCIA|CARACTERISTICAS/.test(f)) return 'Especificaciones';
+        if (/UBICACION|SERVICIO|AREA|DEPARTAMENTO|PISO/.test(f)) return 'Ubicación';
+        if (/COSTO|PRECIO|VALOR|PROVEEDOR|COMPRA/.test(f)) return 'Financiera';
+        if (/FECHA|GARANTIA|ADQUISICION|CADUCIDAD/.test(f)) return 'Fechas';
+        if (/ESTADO|STATUS|CONDICION|ESTATUS/.test(f)) return 'Estado';
+        return 'Otros Detalles';
+    };
+
+    const keys = Object.keys(props.item);
+    const groups = {};
+    
+    // Función para normalizar y comparar llaves
+    const normalize = k => k.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    keys.forEach(k => {
+        // 1. Excluir patrones técnicos
+        if (excludePatterns.some(p => p.test(k))) return;
+        
+        // 2. Excluir alias conocidos explícitamente
+        if (ALIAS_KEYS.has(k)) return;
+
+        // 3. Heurística para detectar alias dinámicos: 
+        // Si existe una versión de la llave con espacios o tildes que normalice igual,
+        // y esta llave actual es "limpia" (solo A-Z y _), probablemente sea un alias.
+        const knorm = normalize(k);
+        const isLikelyAlias = keys.some(otherK => {
+            if (otherK === k) return false;
+            if (normalize(otherK) !== knorm) return false;
+            
+            // Si otherK tiene caracteres especiales o espacios, es la original
+            const hasSpecial = /[^A-Z0-9_]/.test(otherK.toUpperCase());
+            const otherIsAllUpper = otherK === otherK.toUpperCase();
+            
+            // Si la actual es camelCase y la otra es UPPER, la actual es alias
+            if (k !== k.toUpperCase() && otherIsAllUpper) return true;
+            
+            return hasSpecial;
+        });
+
+        if (isLikelyAlias) return;
+
+        const cat = getCategory(k)
+        if (!groups[cat]) groups[cat] = []
+        groups[cat].push({ label: k, value: props.item[k] })
+    });
+
+    // Sort categories
+    const order = ['Identificación', 'Especificaciones', 'Ubicación', 'Estado', 'Fechas', 'Financiera', 'Otros Detalles']
+    const sortedGroups = {}
+    order.forEach(cat => {
+        if (groups[cat] && groups[cat].length > 0) sortedGroups[cat] = groups[cat]
+    })
+    
+    // Add any remaining categories
+    Object.keys(groups).forEach(cat => {
+        if (!sortedGroups[cat]) sortedGroups[cat] = groups[cat]
+    })
+
+    return sortedGroups
+})
 
 // Functions
 function closePanel() {
@@ -743,11 +879,28 @@ async function saveChanges() {
             source: 'history-panel'
         });
         
+        // Show success notification
+        Swal.fire({
+            title: '¡Guardado!',
+            text: 'La información del equipo se ha actualizado correctamente.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            background: '#1e293b',
+            color: '#fff'
+        });
+        
         isEditMode.value = false;
         uploadedImages.value = [];
     } catch (error) {
         console.error('Error saving changes:', error);
-        alert('Error al guardar: ' + error.message);
+        Swal.fire({
+            title: 'Error',
+            text: 'No se pudo guardar la información: ' + error.message,
+            icon: 'error',
+            background: '#1e293b',
+            color: '#fff'
+        });
     } finally {
         isSaving.value = false;
     }
@@ -1908,34 +2061,44 @@ async function previewPdf() {
     pdfPreviewVisible.value = true;
     pdfDataUrl.value = null;
     try {
-        // Usar el endpoint del backend para generar el PDF
-        const inventoryNo = props.item?.['No DE INVENTARIO'];
-        if (!inventoryNo) {
-            throw new Error('No hay número de inventario');
+        const inventoryNo = getVal('inventario') !== '—' ? getVal('inventario') : getVal('serie');
+        
+        if (inventoryNo === '—') {
+            const pdfService = await import('../services/pdfService.js');
+            pdfService.generateSimplePDF({
+                ...props.item,
+                inventoryNo: 'S/N',
+                name: getVal('equipo')
+            });
+            pdfPreviewVisible.value = false;
+            return;
         }
-        const result = await generateEquipmentPDF(inventoryNo);
+
+        const result = await generateEquipmentPDF(props.item);
         if (result && result.pdfUrl) {
             pdfDataUrl.value = result.pdfUrl;
         } else {
-            throw new Error('No se recibió URL del PDF');
+            const pdfService = await import('../services/pdfService.js');
+            pdfService.generateSimplePDF(props.item);
+            pdfPreviewVisible.value = false;
         }
     } catch (e) {
         console.error('[EquipmentHistoryPanel] error generating PDF preview', e);
         pdfPreviewVisible.value = false;
-        alert('No se pudo generar la vista previa del PDF. Error: ' + e.message);
+        Swal.fire({ title: 'Error', text: 'No se pudo generar la vista previa: ' + e.message, icon: 'error', background: '#1e293b', color: '#fff' });
     }
 }
 
 async function downloadPdf() {
     try {
-        // Usar el endpoint del backend para generar y descargar el PDF
-        const inventoryNo = props.item?.['No DE INVENTARIO'];
-        if (!inventoryNo) {
-            throw new Error('No hay número de inventario');
+        const inventoryNo = getVal('inventario') !== '—' ? getVal('inventario') : getVal('serie');
+        if (inventoryNo === '—') {
+            const pdfService = await import('../services/pdfService.js');
+            pdfService.generateSimplePDF({ ...props.item, inventoryNo: 'S/N', name: getVal('equipo') });
+            return;
         }
-        const result = await generateEquipmentPDF(inventoryNo);
+        const result = await generateEquipmentPDF(props.item);
         if (result && result.pdfUrl) {
-            // Descargar el PDF desde la URL
             const link = document.createElement('a');
             link.href = result.pdfUrl;
             link.download = `expediente-${inventoryNo}.pdf`;
@@ -1943,11 +2106,11 @@ async function downloadPdf() {
             link.click();
             document.body.removeChild(link);
         } else {
-            throw new Error('No se recibió URL del PDF');
+            const pdfService = await import('../services/pdfService.js');
+            pdfService.generateSimplePDF(props.item);
         }
-    } catch (e) {
-        console.error('[EquipmentHistoryPanel] error downloading PDF', e);
-        alert('No se pudo descargar el PDF. Error: ' + e.message);
+    } catch (error) {
+        console.error('Error downloading PDF:', error);
     }
 }
 
@@ -3122,6 +3285,125 @@ watch(() => props.visible, async (newVal) => {
     background: rgba(139, 92, 246, 0.5);
 }
 
+/* Improved Info Tab Styles */
+.info-tab-content {
+    padding: 0 !important;
+}
+
+.info-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.highlight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    padding: 24px;
+    background: rgba(139, 92, 246, 0.05);
+    border-radius: 12px;
+}
+
+.detailed-info-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 0 24px 40px;
+}
+
+.info-category-group {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.category-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: #e2e8f0;
+    margin: 0;
+    padding-left: 12px;
+    border-left: 4px solid #8b5cf6;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.category-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+}
+
+.detail-field {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.detail-field .field-label {
+    color: #94a3b8;
+    font-weight: 600;
+    margin-right: 12px;
+}
+
+.detail-field .field-value {
+    color: #f8fafc;
+    font-weight: 500;
+    text-align: right;
+    word-break: break-word;
+}
+
+.detail-field.editing {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.3);
+}
+
+.edit-input-small {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(139, 92, 246, 0.4);
+    border-radius: 4px;
+    color: #fff;
+    padding: 6px 10px;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.edit-input-small:focus {
+    border-color: #8b5cf6;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.header-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+    font-weight: 600;
+}
+
+.header-inv {
+    color: #a78bfa;
+}
+
+.header-eq {
+    color: #cbd5e1;
+}
+
+.header-divider {
+    color: rgba(255, 255, 255, 0.2);
+}
+
 /* Maintenance Tab Styles */
 .maintenance-details {
     display: flex;
@@ -3357,5 +3639,73 @@ watch(() => props.visible, async (newVal) => {
 
 .detail-value {
     color: #cbd5e1;
+}
+
+/* Integrated Sections Styling */
+.integrated-sections {
+    margin-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 20px;
+}
+
+.history-list-compact {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: 10px 0;
+}
+
+.history-entry-small {
+    display: flex;
+    gap: 12px;
+    position: relative;
+}
+
+.entry-dot {
+    width: 8px;
+    height: 8px;
+    background: #8b5cf6;
+    border-radius: 50%;
+    margin-top: 6px;
+    flex-shrink: 0;
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+}
+
+.entry-content {
+    flex: 1;
+}
+
+.entry-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 4px;
+}
+
+.entry-date {
+    font-size: 11px;
+    font-weight: 700;
+    color: #a0aec0;
+}
+
+.entry-type {
+    font-size: 10px;
+    font-weight: 600;
+    color: #8b5cf6;
+    text-transform: uppercase;
+}
+
+.entry-desc {
+    font-size: 12px;
+    color: #cbd5e1;
+}
+
+.empty-small {
+    padding: 20px;
+    text-align: center;
+    color: #64748b;
+    font-size: 13px;
+    font-style: italic;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
 }
 </style>

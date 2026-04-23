@@ -838,8 +838,20 @@
                                         </div>
 
                                         <Transition name="slide-fade">
-                                            <ModernInput v-if="sig.nameKnown" v-model="sig.name"
-                                                placeholder="Nombre completo" size="small" class="sig-name-input" />
+                                            <div v-if="sig.nameKnown" class="sig-name-input-wrapper">
+                                                <select v-if="sig.key === 'ingeniero'"
+                                                    v-model="sig.name"
+                                                    class="engineer-select"
+                                                    :disabled="isReadOnly"
+                                                >
+                                                    <option value="" disabled>Selecciona un ingeniero...</option>
+                                                    <option v-for="u in engineerSuggestions" :key="u.id" :value="u.nombre">
+                                                        {{ u.nombre }}
+                                                    </option>
+                                                </select>
+                                                <ModernInput v-else v-model="sig.name"
+                                                    placeholder="Nombre completo" size="small" class="sig-name-input" />
+                                            </div>
                                         </Transition>
                                     </div>
                                 </div>
@@ -976,8 +988,9 @@ import { useInventorySuggestions } from '@/composables/useInventorySuggestions.j
 import { useOrderItemValidation } from '@/composables/useOrderItemValidation.js'
 import { getEquipmentStatus } from '@/composables/useEquipmentWarnings.js'
 import { useCloseConfirmation } from '@/composables/useCloseConfirmation.js'
-import { useWizardStore } from '@/stores/wizardStore.js'
+import { useWizardDraft } from '@/composables/useWizardDraft.js'
 import { peekSessionState, clearSessionState } from '@/utils/sessionRestore'
+import { useUserSuggestions } from '@/composables/useUserSuggestions.js'
 
 // Props
 const props = defineProps({
@@ -1089,7 +1102,7 @@ onMounted(() => {
         isAdmin.value = ['admin', 'sub_admin'].includes(user.role)
     } catch { isAdmin.value = false }
     loadFormSchema()
-    
+    fetchUsers() // Pre-fetch users for signatures
 })
 
 const motivoSalidaOptionsComputed = computed(() => {
@@ -1135,6 +1148,22 @@ const {
     tipo: seccionActual,
     onSelect: (item) => agregarItemALaOrden(item, seccionActual.value),
     noDedupeOnSearch: true
+})
+
+// User suggestions for signers
+const DEFAULT_INGENIEROS_FIRMANTES = [
+    'Ing. Ana Karen Soto Avilés',
+    'Ing. Nayeth Palma Espinosa',
+    'Lic. Carlos Alberto Rosales Millán',
+]
+const EXCLUDED_ENGINEERS = ['administrador', 'luis eduardo corona martinez']
+const { fetchUsers, getSuggestionsForRole } = useUserSuggestions()
+const engineerSuggestions = computed(() => {
+    const fromDB = getSuggestionsForRole('privileged')
+        .map(u => u.nombre)
+        .filter(name => !EXCLUDED_ENGINEERS.includes(String(name || '').toLowerCase().trim()))
+    const combined = [...new Set([...DEFAULT_INGENIEROS_FIRMANTES, ...fromDB])]
+    return combined.sort().map(name => ({ id: name, nombre: name }))
 })
 
 // Order Item Warnings
@@ -2373,6 +2402,7 @@ async function ensureInventorySuggestionsForCurrentType(tipo) {
 
 // Lifecycle
 onMounted(async () => {
+    fetchUsers() // Pre-fetch users for suggestions
 
     // Attempt to restore draft: don't rely solely on sessionState
     // Some drafts may be saved without sessionState (direct saves)
@@ -2441,6 +2471,7 @@ onMounted(async () => {
 
     // Re-intentar aplicar borrador si se dispara el evento global (por ejemplo, tras navegación/restore)
     const handleRestoreApplyDrafts = async () => {
+        if (!draftEnabled.value) return
         try {
             const draft = loadDraft()
             if (draft && draft.form) {
@@ -2535,6 +2566,28 @@ async function loadOrden() {
                 console.log('[Wizard] FORM RESET DETECTED', new Error().stack)
                 Object.assign(form, mappedOrden)
                 form.motivoSalida = resolveMotivoFromSource(data.orden, mappedOrden)
+
+                // Re-poblar firmas desde columnas planas si existen
+                const sigs = JSON.parse(JSON.stringify(DEFAULT_SIGNATURES))
+                for (const s of sigs) {
+                    const colName = `firma_${s.key}_name`
+                    const fixedCol = `firma_${s.key}_fixed`
+                    const rawName = data.orden[colName]
+                    const hasRealName = rawName && rawName !== 'PENDING'
+
+                    // Siempre mostrar el bloque de firma (nameKnown=true),
+                    // solo rellenar el nombre si hay uno real (distinto de PENDING).
+                    s.nameKnown = true
+                    s.name = hasRealName ? rawName : ''
+
+                    // En modo edición, permitimos reasignar firmantes (fixed = false)
+                    if (props.modo === 'editar') {
+                        s.fixed = false
+                    } else if (data.orden[fixedCol] !== undefined) {
+                        s.fixed = !!data.orden[fixedCol]
+                    }
+                }
+                form.signatures = sigs
             }
             if (data && Array.isArray(data.items)) {
                 console.log('[Wizard] FORM RESET DETECTED', new Error().stack)
@@ -4162,5 +4215,34 @@ function resolveMotivoFromSource(...sources) {
 
 .toggle-notice svg {
     flex-shrink: 0;
+}
+
+.engineer-select {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #e2e8f0;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 18px;
+}
+
+.engineer-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.engineer-select option {
+    background: #1e293b;
+    color: #fff;
+    padding: 10px;
 }
 </style>

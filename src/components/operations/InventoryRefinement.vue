@@ -67,6 +67,8 @@
             <small>{{ item.lote || '-' }} / {{ item.referencia || '-' }} / {{ item.serie || '-' }}</small>
           </div>
           <div class="result-data">
+            <div class="field-row"><span class="field-label">Marca:</span> <span>{{ item.marca || 'N/A' }}</span></div>
+            <div class="field-row"><span class="field-label">Modelo:</span> <span>{{ item.modelo || 'N/A' }}</span></div>
             <div class="field-row"><span class="field-label">Lote:</span> <span>{{ item.lote || 'N/A' }}</span></div>
             <div class="field-row"><span class="field-label">Serie:</span> <span>{{ item.serie || 'N/A' }}</span></div>
             <div class="field-row"><span class="field-label">Referencia:</span> <span>{{ item.referencia || 'N/A' }}</span></div>
@@ -76,19 +78,27 @@
             <label>
               Cantidad
               <div class="qty-control">
-                <button type="button" @click="refinementQuantity = Math.max(1, refinementQuantity - 1)">-</button>
-                <span>{{ refinementQuantity }}</span>
-                <button type="button" @click="refinementQuantity++">+</button>
+                <button type="button" @click="localItemState[item._itemKey].cantidad = Math.max(1, localItemState[item._itemKey].cantidad - 1)">-</button>
+                <span>{{ localItemState[item._itemKey]?.cantidad || 1 }}</span>
+                <button type="button" @click="localItemState[item._itemKey].cantidad++">+</button>
               </div>
             </label>
             <label v-if="newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
               Estado
-              <select v-model="refinementConsumibleState">
+              <select v-model="localItemState[item._itemKey].estado">
                 <option value="nuevo">Nuevo</option>
                 <option value="usado">Usado</option>
               </select>
             </label>
-            <div class="descuento-info" v-if="(newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion') && refinementConsumibleState === 'nuevo'">Descuento: Sí</div>
+            <label>
+              Ubicación
+              <input type="text" v-model="localItemState[item._itemKey].ubicacion" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 120px;" placeholder="Ej. UCIA" />
+            </label>
+            <label v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
+              Equipo Asociado
+              <input type="text" list="datalist-equipos-refinement" v-model="localItemState[item._itemKey].equipoAsociado" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 140px;" placeholder="Ej. Monitor SN123" />
+            </label>
+            <div class="descuento-info" v-if="(newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion') && localItemState[item._itemKey]?.estado === 'nuevo'">Descuento: Sí</div>
             <div class="descuento-info" v-else-if="newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">Descuento: No</div>
           </div>
           <button type="button" class="btn-select-item" @click="selectInventoryRefinedItem(item)">Agregar este item</button>
@@ -100,6 +110,13 @@
       </div>
       <div v-else-if="refinedInventory.length === 0" class="no-results">No hay resultados que coincidan</div>
     </div>
+
+    <!-- Datalist para equipos asociados (Autocompletado nativo y ligero) -->
+    <datalist id="datalist-equipos-refinement">
+      <option v-for="eq in equipoMedicoList" :key="eq.id || eq.serie" :value="eq.nombre || eq.label">
+        {{ eq.serie ? `Serie: ${eq.serie}` : (eq.noInventario ? `Inv: ${eq.noInventario}` : '') }}
+      </option>
+    </datalist>
   </div>
 </template>
 
@@ -132,8 +149,8 @@ const refinements = ref([])
 const refinementField = ref(props.onlyInventario ? 'noInventario' : 'serie')
 const refinementValue = ref('')
 const refinementDropdownOpen = ref(false)
-const refinementQuantity = ref(1)
-const refinementConsumibleState = ref('nuevo')
+
+const localItemState = ref({})
 
 let refinementDebounceTimer = null
 let refinementBlurTimer = null
@@ -189,6 +206,21 @@ const refinedInventory = computed(() => {
       return fieldValue.includes(q)
     })
   })
+
+  // Initialize local item state for the filtered items
+  list.forEach(item => {
+    const key = item.id || item._id || item.serie || item.noInventario || item.nombre || Math.random().toString()
+    item._itemKey = key
+    if (!localItemState.value[key]) {
+      localItemState.value[key] = {
+        cantidad: 1,
+        estado: 'nuevo',
+        ubicacion: item.ubicacion || '',
+        equipoAsociado: item.equipoAsociado || ''
+      }
+    }
+  })
+
   return list
 })
 
@@ -224,8 +256,6 @@ function clearAllRefinementFilters() {
   refinements.value = []
   refinementValue.value = ''
   refinementDropdownOpen.value = false
-  refinementQuantity.value = 1
-  refinementConsumibleState.value = 'nuevo'
   dispatchClearSearchableFilters()
 }
 
@@ -241,6 +271,8 @@ function applyRefinementSuggestion(suggestion) { refinementValue.value = suggest
 function selectInventoryRefinedItem(item) {
   const selectedTipo = props.newItem?.tipo || item.tipo || (props.newItem && (props.newItem.tipo === 'equipo-medico' ? 'equipo-medico' : 'accesorio'))
   const isConsumibleLike = ['consumible','accesorio','refaccion'].includes(selectedTipo)
+  const state = localItemState.value[item._itemKey] || {}
+
   const chosenItem = {
     ...item,
     tipo: selectedTipo,
@@ -251,12 +283,13 @@ function selectInventoryRefinedItem(item) {
     lote: item.lote || '',
     serie: item.serie || '',
     referencia: item.referencia || '',
-    ubicacion: item.ubicacion || '',
+    ubicacion: state.ubicacion?.trim() || item.ubicacion || '',
+    equipoAsociado: state.equipoAsociado?.trim() || item.equipoAsociado || '',
     claveHRAEI: item.claveHRAEI || '',
     noInventario: item.noInventario || item.no_inventario || '',
-    cantidad: Number(refinementQuantity.value) || 1,
-    consumibleEstado: isConsumibleLike ? (refinementConsumibleState.value || 'nuevo') : null,
-    descuento: isConsumibleLike ? ((refinementConsumibleState.value || 'nuevo') === 'nuevo') : false
+    cantidad: Number(state.cantidad) || 1,
+    consumibleEstado: isConsumibleLike ? (state.estado || 'nuevo') : null,
+    descuento: isConsumibleLike ? ((state.estado || 'nuevo') === 'nuevo') : false
   }
   emit('select-item', chosenItem)
 }

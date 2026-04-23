@@ -832,6 +832,10 @@ async function confirmAndResetFolios(orderType = 'entrada') {
     }
 }
 
+function closeArchiveMenu() {
+    try { if (archiveMenuRef.value) archiveMenuRef.value.open = false } catch (e) {}
+}
+
 function openArchivedPanel(orderType = 'entrada') {
     closeArchiveMenu()
     archivedPanelType.value = orderType ? String(orderType) : ''

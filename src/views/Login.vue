@@ -295,11 +295,16 @@ const login = async () => {
       }
     } catch (e) {}
 
-    if (restoreEnabled && (restoreState || wizardState || panelState || hasDrafts || draftRoute)) {
+    // Solo mostrar el prompt de restauración si hay algo significativo que restaurar
+    // Si la última ruta fue el dashboard y NO hay borradores de wizards, omitimos el prompt
+    const lastRouteName = wizardState?.routeName || panelState?.routeName || draftRoute?.routeName || (restoreState?.fullPath ? String(router.resolve(restoreState.fullPath)?.name || '') : '')
+    const isDashboardOnly = lastRouteName === 'dashboard' && !hasDrafts && !wizardState && (!panelState || panelState.panel !== 'archived-folios')
+
+    if (restoreEnabled && (restoreState || wizardState || panelState || hasDrafts || draftRoute) && !isDashboardOnly) {
        const label = getRestoreLabel(restoreState, wizardState, panelState, draftRoute)
       const result = await showAlert({
-          title: '¿Deseas continuar con la orden donde la dejaste?',
-          text: label ? `Detectamos que estabas en ${label}. ¿Deseas continuar con la orden donde la dejaste?` : 'Detectamos una sesión anterior. ¿Deseas continuar con la orden donde la dejaste?',
+          title: '¿Deseas continuar donde te quedaste?',
+          text: label ? `Detectamos que estabas en ${label}. ¿Deseas continuar con tu progreso?` : 'Detectamos una sesión anterior. ¿Deseas continuar con tu progreso?',
           icon: 'question',
           showCancelButton: true,
           confirmButtonText: 'Sí, continuar',

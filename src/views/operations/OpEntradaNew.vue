@@ -406,6 +406,8 @@
                                         <small>{{ item.lote || '-' }} / {{ item.referencia || '-' }} / {{ item.serie || '-' }}</small>
                                     </div>
                                     <div class="result-data">
+                                        <div class="field-row"><span class="field-label">Marca:</span> <span>{{ item.marca || 'N/A' }}</span></div>
+                                        <div class="field-row"><span class="field-label">Modelo:</span> <span>{{ item.modelo || 'N/A' }}</span></div>
                                         <div class="field-row"><span class="field-label">Lote:</span> <span>{{ item.lote || 'N/A' }}</span></div>
                                         <div class="field-row"><span class="field-label">Serie:</span> <span>{{ item.serie || 'N/A' }}</span></div>
                                         <div class="field-row"><span class="field-label">Referencia:</span> <span>{{ item.referencia || 'N/A' }}</span></div>
@@ -415,19 +417,27 @@
                                         <label>
                                             Cantidad
                                             <div class="qty-control">
-                                                <button type="button" @click="refinementQuantity = Math.max(1, refinementQuantity - 1)">-</button>
-                                                <span>{{ refinementQuantity }}</span>
-                                                <button type="button" @click="refinementQuantity++">+</button>
+                                                <button type="button" @click="localItemState[item._itemKey].cantidad = Math.max(1, localItemState[item._itemKey].cantidad - 1)">-</button>
+                                                <span>{{ localItemState[item._itemKey]?.cantidad || 1 }}</span>
+                                                <button type="button" @click="localItemState[item._itemKey].cantidad++">+</button>
                                             </div>
                                         </label>
                                         <label v-if="newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
                                             Estado
-                                            <select v-model="refinementConsumibleState">
+                                            <select v-model="localItemState[item._itemKey].estado">
                                                 <option value="nuevo">Nuevo</option>
                                                 <option value="usado">Usado</option>
                                             </select>
                                         </label>
-                                        <div class="descuento-info" v-if="(newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion') && refinementConsumibleState === 'nuevo'">
+                                        <label>
+                                            Ubicación
+                                            <input type="text" v-model="localItemState[item._itemKey].ubicacion" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 120px;" placeholder="Ej. UCIA" />
+                                        </label>
+                                        <label v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
+                                            Equipo Asociado
+                                            <input type="text" list="datalist-equipos-entrada" v-model="localItemState[item._itemKey].equipoAsociado" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 140px;" placeholder="Ej. Monitor SN123" />
+                                        </label>
+                                        <div class="descuento-info" v-if="(newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion') && localItemState[item._itemKey]?.estado === 'nuevo'">
                                             Descuento: Sí
                                         </div>
                                         <div class="descuento-info" v-else-if="newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
@@ -442,6 +452,13 @@
                                 </div>
                                 <div v-else-if="refinedInventory.length === 0" class="no-results">No hay resultados que coincidan</div>
                             </div>
+                            
+                            <!-- Datalist para equipos asociados (Autocompletado nativo y ligero) -->
+                            <datalist id="datalist-equipos-entrada">
+                                <option v-for="eq in equipoMedicoList" :key="eq.id || eq.serie" :value="eq.nombre || eq.label">
+                                    {{ eq.serie ? `Serie: ${eq.serie}` : (eq.noInventario ? `Inv: ${eq.noInventario}` : '') }}
+                                </option>
+                            </datalist>
                         </div>
 
                         <!-- Equipment Form (conditionally shown) -->
@@ -854,8 +871,20 @@
                                     </div>
 
                                     <Transition name="slide-fade">
-                                        <ModernInput v-if="sig.nameKnown" v-model="sig.name"
-                                            placeholder="Nombre completo" size="small" class="sig-name-input" />
+                                        <div v-if="sig.nameKnown" class="sig-name-input-wrapper">
+                                            <select v-if="sig.key === 'ingeniero'"
+                                                v-model="sig.name"
+                                                class="engineer-select"
+                                                :disabled="isReadOnly"
+                                            >
+                                                <option value="" disabled>Selecciona un ingeniero...</option>
+                                                <option v-for="u in engineerSuggestions" :key="u.id" :value="u.nombre">
+                                                    {{ u.nombre }}
+                                                </option>
+                                            </select>
+                                            <ModernInput v-else v-model="sig.name"
+                                                placeholder="Nombre completo" size="small" class="sig-name-input" />
+                                        </div>
                                     </Transition>
                                 </div>
                             </div>
@@ -974,6 +1003,7 @@ import { useEquipmentWarnings, getEquipmentStatus, validateItemForOrder } from '
 import { useCloseConfirmation } from '@/composables/useCloseConfirmation.js'
 import { useWizardDraft } from '@/composables/useWizardDraft.js'
 import { peekSessionState, clearSessionState } from '@/utils/sessionRestore'
+import { useUserSuggestions } from '@/composables/useUserSuggestions.js'
 
 // Props
 const props = defineProps({
@@ -1046,6 +1076,22 @@ const {
     tipo: seccionActual,
     onSelect: (item) => agregarItemALaOrden(item, seccionActual.value),
     noDedupeOnSearch: true
+})
+
+// User suggestions for signers
+const DEFAULT_INGENIEROS_FIRMANTES = [
+    'Ing. Ana Karen Soto Avilés',
+    'Ing. Nayeth Palma Espinosa',
+    'Lic. Carlos Alberto Rosales Millán',
+]
+const EXCLUDED_ENGINEERS = ['administrador', 'luis eduardo corona martinez']
+const { fetchUsers, getSuggestionsForRole } = useUserSuggestions()
+const engineerSuggestions = computed(() => {
+    const fromDB = getSuggestionsForRole('privileged')
+        .map(u => u.nombre)
+        .filter(name => !EXCLUDED_ENGINEERS.includes(String(name || '').toLowerCase().trim()))
+    const combined = [...new Set([...DEFAULT_INGENIEROS_FIRMANTES, ...fromDB])]
+    return combined.sort().map(name => ({ id: name, nombre: name }))
 })
 
 // Refinamiento incremental para selección de items inventario
@@ -1125,17 +1171,40 @@ function getRefinementFieldValue(item, key) {
 }
 
 const refinedInventory = computed(() => {
-    let list = Array.isArray(inventoryBase.value) ? inventoryBase.value.slice() : []
-    refinements.value.forEach(r => {
-        const q = String(r.value || '').trim().toLowerCase()
-        if (!q) return
+    const list = Array.isArray(inventoryBase.value) ? inventoryBase.value.slice() : []
+    const filtered = []
 
-        list = list.filter(item => {
+    list.forEach(item => {
+        let match = true
+        for (const r of refinements.value) {
+            const q = String(r.value || '').trim().toLowerCase()
+            if (!q) continue
             const fieldValue = getRefinementFieldValue(item, r.key)
-            return fieldValue.includes(q)
-        })
+            if (!fieldValue.includes(q)) {
+                match = false
+                break
+            }
+        }
+        if (match) {
+            filtered.push(item)
+        }
     })
-    return list
+
+    // Initialize local item state for the filtered items
+    filtered.forEach(item => {
+        const key = item.id || item._id || item.serie || item.noInventario || item.nombre || Math.random().toString()
+        item._itemKey = key
+        if (!localItemState.value[key]) {
+            localItemState.value[key] = {
+                cantidad: 1,
+                estado: 'nuevo',
+                ubicacion: item.ubicacion || '',
+                equipoAsociado: item.equipoAsociado || ''
+            }
+        }
+    })
+
+    return filtered
 })
 
 const refinementSuggestions = computed(() => {
@@ -1177,8 +1246,7 @@ function dispatchClearSearchableFilters() {
     }
 }
 
-const refinementQuantity = ref(1)
-const refinementConsumibleState = ref('nuevo')
+const localItemState = ref({})
 
 const refinementBlurTimer = ref(null)
 
@@ -1226,8 +1294,6 @@ function clearRefinements() {
     refinements.value = []
     refinementValue.value = ''
     refinementDropdownOpen.value = false
-    refinementQuantity.value = 1
-    refinementConsumibleState.value = 'nuevo'
     dispatchClearSearchableFilters()
 }
 
@@ -1240,6 +1306,8 @@ function applyRefinementSuggestion(suggestion) {
 function selectInventoryRefinedItem(item) {
     const selectedTipo = newItem.tipo || item.tipo || (seccionActual.value === 'equipo' ? 'equipo-medico' : 'accesorio')
     const isConsumibleLike = selectedTipo === 'consumible' || selectedTipo === 'accesorio' || selectedTipo === 'refaccion'
+    const state = localItemState.value[item._itemKey] || {}
+
     const chosenItem = {
         ...item,
         tipo: selectedTipo,
@@ -1249,12 +1317,13 @@ function selectInventoryRefinedItem(item) {
         lote: item.lote || item.LOTE || '',
         serie: item.serie || item['No. de Serie'] || item['No de Serie'] || item['NUMERO DE SERIE'] || item['NÚMERO DE SERIE'] || '',
         referencia: item.referencia || item.REFERENCIA || item['Codigo Ref'] || item['Código Ref'] || '',
-        ubicacion: item.ubicacion || item.UBICACION || item['UBICACION ESPECIFICA'] || item['Ubicación específica'] || item.AREA || item.ÁREA || '',
+        ubicacion: state.ubicacion?.trim() || item.ubicacion || item.UBICACION || item['UBICACION ESPECIFICA'] || item['Ubicación específica'] || item.AREA || item.ÁREA || '',
+        equipoAsociado: state.equipoAsociado?.trim() || item.equipoAsociado || '',
         claveHRAEI: item.claveHRAEI || item['Clave  HRAEI'] || item['CLAVE HRAEI'] || item.claveCNIS || '',
         noInventario: item.noInventario || item.no_inventario || item['No. Inventario'] || item['No Inventario'] || item['NUMERO INVENTARIO'] || '',
-        cantidad: Number(refinementQuantity.value) || 1,
-        consumibleEstado: isConsumibleLike ? (refinementConsumibleState.value || 'nuevo') : null,
-        descuento: isConsumibleLike ? ((refinementConsumibleState.value || 'nuevo') === 'nuevo') : false
+        cantidad: Number(state.cantidad) || 1,
+        consumibleEstado: isConsumibleLike ? (state.estado || 'nuevo') : null,
+        descuento: isConsumibleLike ? ((state.estado || 'nuevo') === 'nuevo') : false
     }
 
     if (!newItem.tipo && selectedTipo) {
@@ -1496,30 +1565,6 @@ const canProceedToNext = computed(() => {
         case 2: return validateStep2()
         default: return true
     }
-
-    // Re-intentar aplicar borrador si se dispara el evento global (por ejemplo, tras navegación/restore)
-    const handleRestoreApplyDrafts = async () => {
-        try {
-            const draft = loadDraft()
-            if (draft && draft.form) {
-                if (!draftLoaded) {
-                    if (applyDraft(draft)) {
-                        draftLoaded = true
-                        console.log('[OpEntradaNew] Draft restored via restore:applyDrafts')
-                        try { window.dispatchEvent(new CustomEvent('wizard:draft:applied', { detail: { storageKey } })) } catch (e) {}
-                        await nextTick()
-                        try { wizardRef.value?.goToStep(currentStep.value) } catch (e) {}
-                        try { clearSessionState() } catch (e) {}
-                    }
-                }
-            }
-        } catch (e) {
-            console.warn('[OpEntradaNew] restore:applyDrafts handler failed', e)
-        }
-    }
-    try { window.addEventListener('restore:applyDrafts', handleRestoreApplyDrafts) } catch {}
-    window.__opEntrada_restoreHandler = handleRestoreApplyDrafts
-    try { handleRestoreApplyDrafts() } catch (e) { console.warn('[OpEntradaNew] initial restore attempt failed', e) }
 })
 
 const canAddItem = computed(() => {
@@ -2201,6 +2246,7 @@ async function ensureInventorySuggestionsForCurrentType(tipo) {
 
 // Lifecycle
 onMounted(async () => {
+    fetchUsers() // Pre-fetch users for suggestions
     let draftLoaded = false
 
     // Attempt to restore draft: don't rely solely on sessionState
@@ -2269,6 +2315,7 @@ onMounted(async () => {
 
     // Re-intentar aplicar borrador si se dispara el evento global (por ejemplo, tras navegación/restore)
     const handleRestoreApplyDrafts = async () => {
+        if (!draftEnabled.value) return
         try {
             const draft = loadDraft()
             if (draft && draft.form) {
@@ -2346,6 +2393,30 @@ async function loadOrden() {
                 // Mapear campos de snake_case a camelCase para compatibilidad con el formulario
                 const mappedOrden = mapSnakeToCamel(data.orden)
                 Object.assign(form, mappedOrden)
+
+                // Re-poblar firmas desde columnas planas si existen
+                const sigs = JSON.parse(JSON.stringify(DEFAULT_SIGNATURES))
+                for (const s of sigs) {
+                    const colName = `firma_${s.key}_name`
+                    const fixedCol = `firma_${s.key}_fixed`
+                    const rawName = data.orden[colName]
+                    const hasRealName = rawName && rawName !== 'PENDING'
+
+                    // Siempre mostrar el bloque de firma (nameKnown=true),
+                    // solo rellenar el nombre si hay uno real (distinto de PENDING).
+                    // Esto asegura que el espacio en blanco para firmar a mano
+                    // siempre aparezca en el PDF.
+                    s.nameKnown = true
+                    s.name = hasRealName ? rawName : ''
+
+                    // En modo edición, permitimos reasignar firmantes (fixed = false)
+                    if (props.modo === 'editar') {
+                        s.fixed = false
+                    } else if (data.orden[fixedCol] !== undefined) {
+                        s.fixed = !!data.orden[fixedCol]
+                    }
+                }
+                form.signatures = sigs
             }
             if (data && Array.isArray(data.items)) {
                 // Mapear cada item también de snake_case a camelCase
@@ -4558,6 +4629,35 @@ function mapSnakeToCamel(obj) {
 
 .form-input::placeholder {
     color: rgba(255, 255, 255, 0.3);
+}
+
+.engineer-select {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    color: #e2e8f0;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    background-size: 18px;
+}
+
+.engineer-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.engineer-select option {
+    background: #1e293b;
+    color: #fff;
+    padding: 10px;
 }
 
 /* PDF Preview Modal */

@@ -9,6 +9,7 @@ const DRAFT_KEYS = [
   'wizardDraft:resguardo',
   'wizardDraft:servicio'
 ]
+const SESSION_TTL_MS = 24 * 60 * 60 * 1000 // 24 horas de validez para estados de sesión
 
 const DRAFT_ROUTE_MAP = {
   entrada: 'order-management',
@@ -72,7 +73,13 @@ export function saveSessionState(reason = 'manual', extra = {}) {
 }
 
 export function peekSessionState() {
-  return readState(SESSION_KEY)
+  const state = readState(SESSION_KEY)
+  if (state && state.timestamp && (Date.now() - state.timestamp > SESSION_TTL_MS)) {
+    console.debug('[sessionRestore] Session state expired', state.timestamp)
+    clearSessionState()
+    return null
+  }
+  return state
 }
 
 export function clearSessionState() {
@@ -87,7 +94,13 @@ export function saveWizardState(state) {
 }
 
 export function peekWizardState() {
-  return readState(WIZARD_KEY)
+  const state = readState(WIZARD_KEY)
+  if (state && state.updatedAt && (Date.now() - state.updatedAt > SESSION_TTL_MS)) {
+    console.debug('[sessionRestore] Wizard state expired', state.updatedAt)
+    clearWizardState()
+    return null
+  }
+  return state
 }
 
 export function clearWizardState() {
@@ -114,7 +127,13 @@ export function savePanelState(state) {
 }
 
 export function peekPanelState() {
-  return readState(PANEL_KEY)
+  const state = readState(PANEL_KEY)
+  if (state && state.updatedAt && (Date.now() - state.updatedAt > SESSION_TTL_MS)) {
+    console.debug('[sessionRestore] Panel state expired', state.updatedAt)
+    clearPanelState()
+    return null
+  }
+  return state
 }
 
 export function clearPanelState() {
@@ -124,10 +143,15 @@ export function clearPanelState() {
 export function hasWizardDrafts() {
   try {
     return DRAFT_KEYS.some((key) => {
-      const rawLocal = localStorage.getItem(key)
-      if (rawLocal) return true
-      const rawSession = sessionStorage.getItem(key)
-      return !!rawSession
+      const raw = localStorage.getItem(key) || sessionStorage.getItem(key)
+      if (!raw) return false
+      try {
+        const parsed = JSON.parse(raw)
+        const updatedAt = Number(parsed?.updatedAt || 0)
+        // Si el borrador tiene más de 24h, lo consideramos expirado para restaurar
+        if (updatedAt && (Date.now() - updatedAt > SESSION_TTL_MS)) return false
+        return true
+      } catch { return false }
     })
   } catch {
     return false
@@ -141,9 +165,13 @@ export function peekDraftRoute() {
         const raw = localStorage.getItem(storageKey) || sessionStorage.getItem(storageKey)
         if (!raw) return null
         const parsed = JSON.parse(raw)
+        const updatedAt = Number(parsed?.updatedAt || 0)
+        if (updatedAt && (Date.now() - updatedAt > SESSION_TTL_MS)) {
+          return null
+        }
         return {
           key: String(storageKey).replace('wizardDraft:', ''),
-          updatedAt: Number(parsed?.updatedAt || 0)
+          updatedAt
         }
       } catch {
         return null

@@ -304,11 +304,12 @@
                   <template v-if="col.field === 'ESTATUS'">
                     <span 
                       class="status-badge" 
-                      :class="getStatusColorClass(item[col.field])"
+                      :class="getCalculatedStatusClass(item)"
                       :style="getDualColorStyle(item)"
+                      :title="getEquipmentStatus(item).label"
                     >
-                      <i :class="getStatusIcon(item[col.field])"></i>
-                      {{ item[col.field] || '-' }}
+                      <i :class="getEquipmentStatus(item).icon"></i>
+                      {{ getEquipmentStatus(item).label }}
                     </span>
                   </template>
                   
@@ -1119,8 +1120,79 @@ function getDualColorStyle(item) {
 }
 
 function getRowStatusClass(item) {
+  const s = getEquipmentStatus(item)
+  const badge = s.badge || 'unknown'
+  
+  const rowStatusMap = {
+    'available': 'row-available',
+    'operational': 'row-available',
+    'regular': 'row-maintenance',
+    'partial': 'row-maintenance',
+    'attention': 'row-maintenance',
+    'maintenance': 'row-maintenance',
+    'unavailable': 'row-unavailable',
+    'unknown': 'row-unavailable',
+    'critical': 'row-unavailable',
+    'non-functional': 'row-unavailable'
+  };
+  
+  const rowClass = rowStatusMap[badge] || `row-${normalizeStatus(item.ESTATUS)}`;
+  return { [rowClass]: true, [`status-${badge}`]: true }
+}
+
+function getCalculatedStatusClass(item) {
+  const s = getEquipmentStatus(item)
+  return `status-${s.badge || 'unknown'}`
+}
+
+// Obtiene status visual del equipo desde el backend o calculado reactivamente
+function getEquipmentStatus(item) {
+  if (!item) return { badge: 'unknown', label: '-', icon: 'pi-question-circle' }
+
+  const iconByBadge = {
+    maintenance: 'pi pi-wrench',
+    critical: 'pi pi-times-circle',
+    attention: 'pi pi-exclamation-circle',
+    partial: 'pi pi-exclamation-triangle',
+    warning: 'pi pi-exclamation-triangle',
+    operational: 'pi pi-check-circle',
+    unknown: 'pi pi-question-circle'
+  }
+
+  const labelByBadge = {
+    maintenance: 'En mantenimiento',
+    critical: 'No funcional',
+    attention: 'Requiere atención',
+    partial: 'Condiciones regulares',
+    warning: 'Condiciones regulares',
+    operational: 'Funcional'
+  }
+
+  // Si el backend envió la semaforización calculada, usarla
+  if (item.semaforizacion) {
+    const s = item.semaforizacion
+    let badge = s.badge || 'unknown'
+    // Normalizar badge para CSS
+    if (badge === 'non_functional') badge = 'critical'
+    if (badge === 'regular-condition') badge = 'partial'
+    
+    return {
+      badge,
+      color: s.color,
+      label: s.label || labelByBadge[badge] || (item.ESTATUS || '-'),
+      icon: s.icon ? (s.icon.startsWith('pi') ? s.icon : `pi ${s.icon}`) : iconByBadge[badge],
+      animate: !!s.animate
+    }
+  }
+
+  // Fallback a lógica local si no hay semaforización del backend
   const status = normalizeStatus(item.ESTATUS)
-  return { [`row-${status}`]: true }
+  return {
+    badge: status,
+    label: item.ESTATUS || labelByBadge[status] || '-',
+    icon: iconByBadge[status] || iconByBadge.unknown,
+    animate: status === 'maintenance'
+  }
 }
 
 function getCellClass(field, value) {

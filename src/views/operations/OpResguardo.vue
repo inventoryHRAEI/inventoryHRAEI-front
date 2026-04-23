@@ -809,7 +809,16 @@
                                                                  <transition name="fade-in">
                                                                      <div v-if="s.nameKnown" style="margin-top:8px; position:relative;">
                                                                          <div style="font-size:0.85rem; color:rgba(0,0,0,0.6); margin-bottom:4px">Nombre completo:</div>
-                                                                         <input class="control" v-model.trim="s.name" :disabled="isReadOnly" placeholder="Nombre completo de la persona" />
+                                                                          <SearchableInput
+                                                                              v-if="s.key === 'ingeniero'"
+                                                                              v-model="s.name"
+                                                                              :suggestions="engineerSuggestions"
+                                                                              :disabled="isReadOnly"
+                                                                              placeholder="Nombre completo de la persona"
+                                                                              :min-chars="0"
+                                                                              @select="(u) => s.name = u.nombre"
+                                                                          />
+                                                                          <input v-else class="control" v-model.trim="s.name" :disabled="isReadOnly" placeholder="Nombre completo de la persona" />
                                                                      </div>
                                                                  </transition>
                                </div>
@@ -993,6 +1002,7 @@ import { getDefaultSchema } from '@/data/defaultFormSchemas.js'
 import { fetchFormSchema, saveFormSchema } from '@/services/formSchemaService.js'
 import SearchableInput from '@/components/SearchableInput.vue'
 import { useInventorySuggestions } from '@/composables/useInventorySuggestions.js'
+import { useUserSuggestions } from '@/composables/useUserSuggestions.js'
 
 const LOCAL_KEY = 'op-resguardo'
 const ORDERS_LIST_KEY = 'orders_list'
@@ -1079,6 +1089,11 @@ const {
   tipo: seccionActual,
   onSelect: (item) => agregarItemALaOrden(item, seccionActual.value)
 })
+
+// User suggestions for signatures
+const { fetchUsers, getSuggestionsForRole } = useUserSuggestions()
+const engineerSuggestions = computed(() => getSuggestionsForRole('privileged'))
+
 
 // Admin state
 const isAdmin = ref(false)
@@ -1402,7 +1417,7 @@ function applySnapshotToForm(snapshot) {
                 role: it.role || it.cargo || it.role || '',
                 nameKnown: !!(it.nameKnown === true || it.name_known === true || (it.name && String(it.name).trim())),
                 name: it.name || it.nombre || '',
-                fixed: !!it.fixed
+                fixed: props.modo === 'editar' ? false : !!it.fixed
             }))
         } else {
             form.signatures = JSON.parse(JSON.stringify(DEFAULT_SIGNATURES))
@@ -4233,7 +4248,7 @@ const loadOrderData = async () => {
     try {
         const ordenIdStr = String(props.ordenId)
         // Evitar caché: forzar refresh real
-        const res = await fetch(`/api/ops/entrada/${encodeURIComponent(ordenIdStr)}?t=${Date.now()}`, { cache: 'no-store' })
+        const res = await fetch(`/api/ops/resguardo/${encodeURIComponent(ordenIdStr)}?t=${Date.now()}`, { cache: 'no-store' })
 
         if (res.status === 404) {
             console.warn(`Orden no encontrada (404): ${ordenIdStr}`)
@@ -4274,6 +4289,23 @@ const loadOrderData = async () => {
             }
         } catch {
             form.extraFields = {}
+        }
+
+        // Firmas: cargar desde la orden y desbloquear si estamos editando
+        try {
+            let s = data.signatures || data.firmas || null
+            if (s && typeof s === 'string') s = JSON.parse(s)
+            if (Array.isArray(s) && s.length) {
+                form.signatures = s.map(it => ({
+                    key: it.key || (it.role || '').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/_+$/,''),
+                    role: it.role || it.cargo || it.role || '',
+                    nameKnown: !!(it.nameKnown === true || it.name_known === true || (it.name && String(it.name).trim())),
+                    name: it.name || it.nombre || '',
+                    fixed: props.modo === 'editar' ? false : !!it.fixed
+                }))
+            }
+        } catch (e) {
+            console.warn('[OpResguardo] Error cargando firmas:', e)
         }
 
         // Procesar items que vienen de la BD
@@ -4502,6 +4534,9 @@ onMounted(async () => {
     await initSuggestions().catch(err => {
         console.warn('[OpResguardo] Error initializing suggestions:', err)
     })
+    
+    // Fetch users for signatures
+    fetchUsers()
     
     // Limpiar observacionesImg del localStorage para evitar caching de imágenes antiguas
     try {

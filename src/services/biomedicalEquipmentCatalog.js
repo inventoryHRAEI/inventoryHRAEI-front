@@ -41,7 +41,7 @@ async function hydrateFromCache() {
 }
 
 async function fetchPage({ limit, skip, signal }) {
-  const url = `${ENDPOINT}?withTotal=1&limit=${encodeURIComponent(String(limit))}&skip=${encodeURIComponent(String(skip))}`
+  const url = `${ENDPOINT}?withTotal=1&sort=none&limit=${encodeURIComponent(String(limit))}&skip=${encodeURIComponent(String(skip))}`
   const res = await authedFetch(url, { signal })
   if (!res.ok) {
     const err = new Error(`HTTP ${res.status}`)

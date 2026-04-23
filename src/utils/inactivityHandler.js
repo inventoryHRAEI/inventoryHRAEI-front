@@ -647,6 +647,7 @@ class InactivityHandlerNew {
   _saveSessionState(reason = 'unknown') {
     try {
       saveSessionState(reason)
+      localStorage.setItem('inactivityRestoreSession', 'true')
     } catch {}
   }
 

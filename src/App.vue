@@ -102,7 +102,8 @@ import NotificationBell from '@/components/NotificationBell.vue'
 import InactivityWarning from '@/components/InactivityWarning.vue'
 import inactivityHandler from '@/utils/inactivityHandler'
 import { logout } from '@/utils/auth'
-import { saveSessionState, peekSessionState, peekWizardState, peekPanelState, clearSessionState, backupWizardDrafts } from '@/utils/sessionRestore'
+import { saveSessionState, peekSessionState, peekWizardState, peekPanelState, clearSessionState, clearWizardState, clearPanelState, clearWizardDrafts, clearRemoteWizardDrafts, backupWizardDrafts, hasWizardDrafts } from '@/utils/sessionRestore'
+import { showAlert } from '@/utils/sweetAlertConfig'
 import { warmupBiomedicalEquipmentCatalog } from '@/services/biomedicalEquipmentCatalog.js'
 import logoImg from './images/HRAEI.jpg'
 
@@ -250,32 +251,68 @@ function handleBodyClick(e) {
 
 async function handleLogout() {
   closeUserMenu()
-  // Pedir a los wizards activos que hagan persistencia inmediata antes de cerrar sesión
-  try { window.dispatchEvent(new Event('wizard:draft:flush')) } catch (e) {}
-  // Give active wizards a short moment to persist drafts synchronously
-  try { await new Promise(resolve => setTimeout(resolve, 80)) } catch (e) {}
-  // Force-call any registered draft save handlers (synchronous fallback)
-  try {
-    const handlers = (window.__wizardDraftSaveHandlers || {})
-    Object.keys(handlers).forEach((k) => {
-      try { handlers[k]() } catch (err) { console.warn('[App] wizardDraftSaveHandler failed for', k, err) }
+  
+  // Excluir el dashboard de ser guardado como estado de restauración si es el actual
+  const isAtDashboard = route?.name === 'dashboard'
+  const hasDrafts = hasWizardDrafts()
+  const wizardState = peekWizardState()
+  const panelState = peekPanelState()
+
+  // Solo preguntar si hay algo significativo que guardar (no estamos en dashboard O tenemos borradores/estados)
+  const isWorthSaving = !isAtDashboard || hasDrafts || !!wizardState || (!!panelState && panelState.panel === 'archived-folios')
+  
+  let shouldSave = false
+
+  if (isWorthSaving) {
+    // Preguntar al usuario si desea guardar su sesión para después
+    const result = await showAlert({
+      title: '¿Guardar sesión para después?',
+      text: 'Si guardas la sesión, la próxima vez que entres podrás continuar exactamente donde te quedaste.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'No, cerrar todo',
+      confirmButtonColor: '#22c55e',
+      cancelButtonColor: 'rgba(255, 255, 255, 0.08)'
     })
-  } catch (e) { console.warn('[App] Error invoking global draft handlers', e) }
-  // Best-effort remote sync before token is cleared
-  try {
-    const syncHandlers = (window.__wizardDraftSyncHandlers || {})
-    const tasks = Object.keys(syncHandlers).map((k) => {
-      try { return Promise.resolve(syncHandlers[k]()) } catch (err) { console.warn('[App] wizardDraftSyncHandler failed for', k, err); return null }
-    }).filter(Boolean)
-    if (tasks.length) {
-      await Promise.race([
-        Promise.allSettled(tasks),
-        new Promise(resolve => setTimeout(resolve, 800))
-      ])
+    shouldSave = !!(result && result.isConfirmed)
+  } else {
+    // Si no hay nada que guardar, simplemente cerramos todo
+    shouldSave = false
+  }
+
+  if (shouldSave) {
+    // Pedir a los wizards activos que hagan persistencia inmediata antes de cerrar sesión
+    try { window.dispatchEvent(new Event('wizard:draft:flush')) } catch (e) {}
+    // Give active wizards a short moment to persist drafts synchronously
+    try { await new Promise(resolve => setTimeout(resolve, 80)) } catch (e) {}
+    // Force-call any registered draft save handlers (synchronous fallback)
+    try {
+      const handlers = (window.__wizardDraftSaveHandlers || {})
+      Object.keys(handlers).forEach((k) => {
+        try { handlers[k]() } catch (err) { console.warn('[App] wizardDraftSaveHandler failed for', k, err) }
+      })
+    } catch (e) { console.warn('[App] Error invoking global draft handlers', e) }
+    
+    // Solo guardar el estado si no estamos en el dashboard
+    if (!isAtDashboard) {
+      try { saveSessionState('manual', { routeName: route?.name || null, fullPath: route?.fullPath || '' }) } catch (e) {}
+    } else {
+      clearSessionState()
     }
-  } catch (e) { console.warn('[App] Error invoking remote draft handlers', e) }
-  try { saveSessionState('manual', { routeName: route?.name || null, fullPath: route?.fullPath || '' }) } catch (e) {}
-  try { backupWizardDrafts() } catch (e) { console.warn('[App] backupWizardDrafts failed', e) }
+    
+    try { backupWizardDrafts() } catch (e) { console.warn('[App] backupWizardDrafts failed', e) }
+    localStorage.setItem('inactivityRestoreSession', 'true')
+  } else {
+    // Limpiar todo si el usuario no quiere guardar
+    clearSessionState()
+    clearWizardState()
+    clearPanelState()
+    clearWizardDrafts()
+    try { await clearRemoteWizardDrafts() } catch (e) {}
+    localStorage.setItem('inactivityRestoreSession', 'false')
+  }
+
   await logout()
   syncUserFromStorage()
   router.replace({ name: 'login' })
@@ -353,6 +390,10 @@ function validateComponentRender() {
 }
 
 function handleBeforeUnload() {
+  const isAtDashboard = route?.name === 'dashboard'
+  const hasDrafts = hasWizardDrafts()
+  if (isAtDashboard && !hasDrafts) return // No guardar si solo estamos en el dashboard sin progreso
+
   try {
     saveSessionState('beforeunload', { routeName: route?.name || null, fullPath: route?.fullPath || '' })
   } catch (e) {

@@ -279,23 +279,30 @@ function normalizeText(value) {
 }
 
 function getBindingValue(key) {
-  const binding = props.filters.fieldBindings && props.filters.fieldBindings[key]
-  if (!binding) return ''
-  if (typeof binding === 'object' && 'value' in binding) return binding.value
-  return binding
+  if (!props.filters.fieldBindings) return ''
+  const bindings = unref(props.filters.fieldBindings)
+  const val = bindings[key]
+  if (val === undefined || val === null) return ''
+  if (typeof val === 'object' && val !== null && 'value' in val) return val.value
+  return val
+}
+
+function setBindingValue(key, value) {
+  if (!props.filters.fieldBindings) return
+  
+  const target = unref(props.filters.fieldBindings)
+  // Si es un objeto con .value (ref o similar)
+  if (target[key] && typeof target[key] === 'object' && target[key] !== null && 'value' in target[key]) {
+    target[key].value = value
+  } else {
+    // Asignación directa
+    target[key] = value
+  }
 }
 
 function unwrapMaybeRef(value) {
   if (value && typeof value === 'object' && 'value' in value) return value.value
   return value
-}
-
-function setBindingValue(key, value) {
-  const binding = props.filters.fieldBindings && props.filters.fieldBindings[key]
-  if (!binding) return
-  if (typeof binding === 'object' && 'value' in binding) {
-    binding.value = value
-  }
 }
 
 function normalizeDraftValue(field, value) {
@@ -320,6 +327,7 @@ function addFilter() {
   const value = field.key === 'folio' ? normalizeFolioLike(draftValue.value) : normalizeDraftValue(field, draftValue.value)
   if (value === '' || value === null) return
 
+  console.log('[OrderFilterBar] Adding filter:', field.key, value)
   if (typeof props.filters.activateFilter === 'function' && field.activates) {
     props.filters.activateFilter(field.key)
   }

@@ -646,6 +646,7 @@
               v-for="(item, idx) of renderedData" 
               :key="getItemKey(item, idx)"
               class="data-row"
+              ref="tableRowsRef"
               :class="{ 
                 selected: selectedRows && selectedRows.includes(idx),
                 'context-open': contextMenuIdx && contextMenuIdx.value === idx,
@@ -795,6 +796,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import gsap from 'gsap'
 import AddEquipmentWizard from './AddEquipmentWizard.vue'
 import OrderFilterBar from './OrderFilterBar.vue'
 import { useSemaforoRuleEngine } from '@/composables/useSemaforoRuleEngine.js'
@@ -828,6 +830,66 @@ const { getEquipmentColors, getColorSync, clearCache } = useSemaforoRuleEngine()
 // romper flujos legacy; pero en la tabla sólo debemos mostrar las columnas reales
 // de la tabla principal. El usuario validó que el corte esperado es OBSERVACIONES1/2.
 const DISPLAY_CUTOFF_KEYS = ['OBSERVACIONES2', 'observaciones2', 'OBSERVACIONES1', 'observaciones1']
+
+const tableRowsRef = ref([])
+
+function animateRowsWithGsap() {
+  if (!tableRowsRef.value || tableRowsRef.value.length === 0) return;
+  
+  gsap.killTweensOf(tableRowsRef.value);
+  
+  tableRowsRef.value.forEach((row) => {
+    if (!row) return;
+    
+    gsap.set(row, { clearProps: "all" });
+
+    let glowColor = '';
+    let bgColor = '';
+
+    // Rojo: Crítico / Fuera de servicio
+    if (row.classList.contains('status-critical') || row.classList.contains('status-unavailable')) {
+      glowColor = 'rgba(239, 68, 68, 0.15)'; 
+      bgColor = 'rgba(239, 68, 68, 0.02)';
+    } 
+    // Naranja/Amarillo: Mantenimiento / Parcial
+    else if (row.classList.contains('status-maintenance') || row.classList.contains('status-partial')) {
+      glowColor = 'rgba(245, 158, 11, 0.15)'; 
+      bgColor = 'rgba(245, 158, 11, 0.02)';
+    } 
+    // Verde: Disponible
+    else if (row.classList.contains('status-available') || row.classList.contains('status-operational')) {
+      glowColor = 'rgba(34, 197, 94, 0.1)'; 
+      bgColor = 'rgba(34, 197, 94, 0.01)';
+    }
+
+    if (glowColor) {
+      // Efecto "Sweep Glassmorphism": un gradiente sutil que barre la fila de lado a lado
+      gsap.set(row, {
+        background: `linear-gradient(90deg, ${bgColor} 0%, ${glowColor} 50%, ${bgColor} 100%)`,
+        backgroundSize: "300% 100%",
+        backgroundPosition: "100% 0%",
+        backdropFilter: "blur(4px)" // El blur que pedías
+      });
+
+      gsap.to(row, {
+        backgroundPosition: "0% 0%",
+        duration: 4 + Math.random() * 2, // Movimiento lento y majestuoso
+        repeat: -1,
+        yoyo: true,
+        ease: "sine.inOut"
+      });
+      
+      // Añadimos un sutil resplandor en los bordes superior/inferior
+      gsap.to(row, {
+        boxShadow: `inset 0 1px 0 ${glowColor}, inset 0 -1px 0 ${glowColor}`,
+        duration: 2 + Math.random() * 1,
+        repeat: -1,
+        yoyo: true,
+        ease: "power1.inOut"
+      });
+    }
+  });
+}
 
 const HIDDEN_COMPAT_KEYS = new Set([
   // aliases legacy/compat que no deben verse como columnas
@@ -1381,6 +1443,17 @@ const startIndex = computed(() => 0)
 const endIndex = computed(() => currentPage.value * internalPageSize.value)
 
 const renderedData = computed(() => displayedFiltered.value.slice(startIndex.value, endIndex.value))
+
+// Ejecutar animación GSAP cuando cambian los datos renderizados
+watch(() => renderedData.value, () => {
+  nextTick(() => {
+    setTimeout(() => {
+      if (typeof animateRowsWithGsap === 'function') {
+        animateRowsWithGsap();
+      }
+    }, 100);
+  });
+}, { deep: true, immediate: true });
 const renderedStatuses = computed(() => renderedData.value.map(item => getEquipmentStatus(item)))
 watch(renderedData, (val) => {
   try {
@@ -2174,11 +2247,13 @@ const containerThemeClass = computed(() => {
 function normalizeStatus(status) {
   if (!status) return 'unknown'
   const s = String(status).toLowerCase().trim()
-  if (s.includes('disponible') || s.includes('activo') || s.includes('bueno')) return 'available'
-  if (s.includes('manten') || s.includes('reparac')) return 'maintenance'
+  if (s.includes('disponible') || s.includes('activo') || s.includes('bueno') || s.includes('operativo')) return 'available'
+  if (s.includes('regular') || s.includes('condicional') || s.includes('parcial') || s.includes('atención')) return 'partial'
+  if (s.includes('malo') || s.includes('critico') || s.includes('crítico') || s.includes('no funcional') || s.includes('pésimo')) return 'critical'
+  if (s.includes('manten') || s.includes('reparac') || s.includes('preventivo') || s.includes('correctivo')) return 'maintenance'
   if (s.includes('baja') || s.includes('fuera') || s.includes('inactivo')) return 'unavailable'
   if (s.includes('obsoleto') || s.includes('desecho')) return 'retired'
-  return 'available'
+  return 'unknown'
 }
 
 function getStatusColorClass(status) {
@@ -2192,7 +2267,9 @@ function getStatusIcon(status) {
     maintenance: 'pi pi-wrench',
     unavailable: 'pi pi-times-circle',
     retired: 'pi pi-ban',
-    unknown: 'pi pi-question-circle'
+    unknown: 'pi pi-question-circle',
+    partial: 'pi pi-exclamation-triangle',
+    critical: 'pi pi-exclamation-circle'
   }
   return icons[normalized] || icons.unknown
 }
@@ -2202,7 +2279,7 @@ function getDualColorStyle(item) {
   if (!item) return {}
   
   // Si es CONDICIONAL o "Condiciones Regulares", aplicar gradient
-  if (item['ESTATUS'] === 'CONDICIONAL' || item['ESTATUS'] === 'Condiciones Regulares' || item._dualColor === true) {
+  if (false) {
     return {
       background: 'linear-gradient(90deg, #22c55e 50%, #f59e0b 50%) !important',
       backgroundClip: 'padding-box',
@@ -4412,314 +4489,63 @@ watch(currentPage, (val) => {
   filter: drop-shadow(0 0 4px rgba(59, 130, 246, 0.5));
 }
 
+/* ESTILOS DE SEMÁFORO MINIMALISTAS (GSAP HACE LA ANIMACIÓN) */
 .status-semaphore-col {
   position: sticky;
   left: 44px;
   z-index: 14;
-  width: 70px;
-  min-width: 70px;
-  padding: 14px 8px;
+  width: 40px;
+  min-width: 40px;
+  padding: 10px 4px;
   text-align: center;
-  background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
-  backdrop-filter: blur(12px);
-  border-right: 2px solid rgba(59, 130, 246, 0.25);
-  box-shadow: 
-    2px 0 8px rgba(0, 0, 0, 0.3),
-    inset -1px 0 0 rgba(59, 130, 246, 0.15);
+  background: inherit;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .semaphore-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  border: 3px solid transparent;
-  box-shadow: 
-    0 0 20px rgba(0, 0, 0, 0.5),
-    inset 0 2px 4px rgba(255, 255, 255, 0.15),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.25);
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  cursor: help;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
   position: relative;
-  overflow: hidden;
 }
 
-.semaphore-badge::before {
-  content: '';
-  position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    45deg,
-    transparent 30%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 70%
-  );
-  transform: rotate(45deg);
-  animation: shine 3s infinite;
+/* 🟢 Operativo */
+.semaphore-operational, .semaphore-available {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
 }
 
-@keyframes shine {
-  0%, 100% { transform: translateX(-100%) rotate(45deg); }
-  50% { transform: translateX(100%) rotate(45deg); }
+/* 🟠 Mantenimiento Preventivo / Partial */
+.semaphore-in-progress, .semaphore-partial, .semaphore-maintenance, .semaphore-warning, .semaphore-fair-condition, .semaphore-regular {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
 }
 
-.semaphore-badge:hover {
-  transform: scale(1.3) translateY(-3px) rotate(5deg);
-  filter: brightness(1.3) saturate(1.2);
-  box-shadow: 
-    0 4px 25px rgba(0, 0, 0, 0.6),
-    0 0 40px currentColor,
-    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+/* 🔴 Crítico / No Funcional / Offline */
+.semaphore-critical, .semaphore-offline, .semaphore-non-functional, .semaphore-poor-condition, .semaphore-unavailable {
+  background: #ef4444;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
 }
 
-/* 🟢 Estado: Operativo */
-.semaphore-operational {
-  background: radial-gradient(circle at 30% 30%, #22c55e, #16a34a, #15803d);
-  border-color: #22c55e;
-  color: #22c55e;
-  box-shadow: 
-    0 0 25px rgba(34, 197, 94, 0.6),
-    0 4px 15px rgba(34, 197, 94, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* 🟠 Estado: Mantenimiento Preventivo */
-.semaphore-in-progress {
-  background: radial-gradient(circle at 30% 30%, #f59e0b, #d97706, #b45309);
-  border-color: #f59e0b;
-  color: #f59e0b;
-  box-shadow: 
-    0 0 30px rgba(245, 158, 11, 0.7),
-    0 4px 15px rgba(245, 158, 11, 0.5),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* 🔴 Estado: Mantenimiento Correctivo CRÍTICO */
-.semaphore-critical {
-  background: radial-gradient(circle at 30% 30%, #ff2400, #e11d48, #be123c);
-  border-color: #ff2400;
-  color: #ff2400;
-  box-shadow: 
-    0 0 38px rgba(255, 36, 0, 0.85),
-    0 4px 18px rgba(255, 36, 0, 0.65),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* 🔵 Estado: En Calibración */
+/* 🔵 Calibración */
 .semaphore-calibration {
-  background: radial-gradient(circle at 30% 30%, #3b82f6, #2563eb, #1d4ed8);
-  border-color: #3b82f6;
-  color: #3b82f6;
-  box-shadow: 
-    0 0 30px rgba(59, 130, 246, 0.7),
-    0 4px 15px rgba(59, 130, 246, 0.5),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
+  background: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.6);
 }
 
-/* 🟣 Estado: En Tránsito/Préstamo */
-.semaphore-in-transit {
-  background: radial-gradient(circle at 30% 30%, #8b5cf6, #7c3aed, #6d28d9);
-  border-color: #8b5cf6;
-  color: #8b5cf6;
-  box-shadow: 
-    0 0 28px rgba(139, 92, 246, 0.7),
-    0 4px 15px rgba(139, 92, 246, 0.5),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* 🟡 Estado: Necesita Atención */
-.semaphore-warning {
-  background: radial-gradient(circle at 30% 30%, #eab308, #ca8a04, #a16207);
-  border-color: #eab308;
-  color: #eab308;
-  box-shadow: 
-    0 0 28px rgba(234, 179, 8, 0.7),
-    0 4px 15px rgba(234, 179, 8, 0.5),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* 🩷🟡 Estado: Parcialmente funcional / Condiciones regulares */
-.semaphore-partial {
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.22), transparent 38%),
-    linear-gradient(135deg, #ec4899 0%, #f472b6 45%, #f59e0b 100%);
-  border-color: #f472b6;
-  color: #f472b6;
-  box-shadow:
-    0 0 30px rgba(236, 72, 153, 0.65),
-    0 0 18px rgba(245, 158, 11, 0.45),
-    inset 0 2px 4px rgba(255, 255, 255, 0.22);
-}
-
-/* 🟣 Estado: En Mantenimiento (activo) */
-.semaphore-maintenance {
-  background: radial-gradient(circle at 30% 30%, #8b5cf6, #7c3aed, #6d28d9);
-  border-color: #8b5cf6;
-  color: #8b5cf6;
-  box-shadow:
-    0 0 35px rgba(139, 92, 246, 0.85),
-    0 4px 18px rgba(139, 92, 246, 0.6),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* ⚫ Estado: Fuera de Servicio */
-.semaphore-offline {
-  background: radial-gradient(circle at 30% 30%, #64748b, #475569, #334155);
-  border-color: #64748b;
-  color: #64748b;
-  box-shadow: 
-    0 0 18px rgba(100, 116, 139, 0.5),
-    0 4px 12px rgba(100, 116, 139, 0.3),
-    inset 0 2px 4px rgba(255, 255, 255, 0.15);
-}
-
-/* 🔴 Estado: No Funcional (Crítico) */
-.semaphore-non-functional {
-  background: radial-gradient(circle at 30% 30%, #dc2626, #b91c1c, #991b1b);
-  border-color: #dc2626;
-  color: #dc2626;
-  box-shadow: 
-    0 0 40px rgba(220, 38, 38, 0.9),
-    0 4px 20px rgba(220, 38, 38, 0.7),
-    inset 0 2px 4px rgba(255, 255, 255, 0.2);
-}
-
-/* 🟠 Estado: Condiciones Deficientes */
-.semaphore-poor-condition {
-  background: radial-gradient(circle at 30% 30%, #f97316, #ea580c, #c2410c);
-  border-color: #f97316;
-  color: #f97316;
-  box-shadow: 
-    0 0 35px rgba(249, 115, 22, 0.8),
-    0 4px 18px rgba(249, 115, 22, 0.6),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* 🟡 Estado: Calibración Vencida */
-.semaphore-calibration-expired {
-  background: radial-gradient(circle at 30% 30%, #f59e0b, #d97706, #b45309);
-  border-color: #f59e0b;
-  color: #f59e0b;
-  box-shadow: 
-    0 0 32px rgba(245, 158, 11, 0.8),
-    0 4px 16px rgba(245, 158, 11, 0.6),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-  animation: pulse-attention 2s ease-in-out infinite;
-}
-
-/* 🟡 Estado: Condiciones Regulares */
-.semaphore-fair-condition {
-  background: radial-gradient(circle at 30% 30%, #eab308, #ca8a04, #a16207);
-  border-color: #eab308;
-  color: #eab308;
-  box-shadow: 
-    0 0 28px rgba(234, 179, 8, 0.7),
-    0 4px 15px rgba(234, 179, 8, 0.5),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* ⚪ Estado: Desconocido */
+/* ⚪ Desconocido */
 .semaphore-unknown {
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.22), transparent 38%),
-    linear-gradient(135deg, #ec4899 0%, #f472b6 45%, #f59e0b 100%);
-  border-color: #f472b6;
-  color: #f472b6;
-  box-shadow: 
-    0 0 26px rgba(236, 72, 153, 0.55),
-    0 0 16px rgba(245, 158, 11, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.2);
+  background: #94a3b8;
+  box-shadow: 0 0 8px rgba(148, 163, 184, 0.4);
 }
 
-/* 🟣 Estado: Mantenimiento Correctivo - MORADO */
-.semaphore-corrective {
-  background: radial-gradient(circle at 30% 30%, #8b5cf6, #7c3aed, #6d28d9);
-  border-color: #8b5cf6;
-  color: #8b5cf6;
-  box-shadow: 
-    0 0 35px rgba(139, 92, 246, 0.8),
-    0 4px 18px rgba(139, 92, 246, 0.6),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* 🟪 Estado: Mantenimiento Preventivo - LILA */
-.semaphore-preventive {
-  background: radial-gradient(circle at 30% 30%, #a78bfa, #9333ea, #7e22ce);
-  border-color: #a78bfa;
-  color: #a78bfa;
-  box-shadow: 
-    0 0 30px rgba(167, 139, 250, 0.7),
-    0 4px 15px rgba(167, 139, 250, 0.5),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* 🟠 Estado: Condiciones Regulares - NARANJA */
-.semaphore-regular {
-  background: radial-gradient(circle at 30% 30%, #fb923c, #f97316, #ea580c);
-  border-color: #fb923c;
-  color: #fb923c;
-  box-shadow: 
-    0 0 28px rgba(251, 146, 60, 0.7),
-    0 4px 15px rgba(251, 146, 60, 0.5),
-    inset 0 2px 4px rgba(255, 255, 255, 0.25);
-}
-
-/* Animación ULTRA LLAMATIVA para equipos en mantenimiento */
-.semaphore-animate {
-  animation: 
-    pulse-semaphore 1.5s ease-in-out infinite,
-    glow-pulse 1.5s ease-in-out infinite;
-}
-
-/* Animación de atención para calibración vencida */
-@keyframes pulse-attention {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.15);
-    opacity: 0.8;
-  }
-}
-
-@keyframes pulse-semaphore {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.2);
-  }
-}
-
-@keyframes glow-pulse {
-  0%, 100% {
-    filter: brightness(1) drop-shadow(0 0 8px currentColor);
-    opacity: 1;
-  }
-  50% {
-    filter: brightness(1.5) drop-shadow(0 0 20px currentColor);
-    opacity: 0.85;
-  }
-}
-
-/* Icono del semáforo - Ultra Brillante */
 .semaphore-icon {
-  font-size: 20px;
-  color: white;
-  text-shadow: 
-    0 1px 4px rgba(0, 0, 0, 0.7),
-    0 0 12px rgba(255, 255, 255, 0.5),
-    0 0 20px currentColor;
-  font-weight: bold;
-  position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.3));
+  display: none;
 }
 
 .data-row {

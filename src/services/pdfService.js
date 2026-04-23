@@ -4,13 +4,13 @@
  * @returns {Promise<{pdfUrl: string}|null>} - URL del PDF para preview o null si falla
  */
 
-export async function generateEquipmentPDF(inventoryNo) {
+export async function generateEquipmentPDF(equipment) {
     try {
         // Normalizar el parámetro - puede ser string o objeto
-        const invNo = typeof inventoryNo === 'string' ? inventoryNo : (inventoryNo?.inventoryNo || inventoryNo?.['No DE INVENTARIO']);
+        const invNo = typeof equipment === 'string' ? equipment : (equipment?.inventoryNo || equipment?.['No DE INVENTARIO'] || equipment?.['NUMERO DE SERIE']);
         
-        if (!invNo) {
-            console.error('No inventory number provided');
+        if (!invNo && !equipment) {
+            console.error('No equipment info provided');
             return null;
         }
 
@@ -18,7 +18,10 @@ export async function generateEquipmentPDF(inventoryNo) {
         const response = await fetch('/api/pdf/equipment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ inventoryNo: invNo })
+            body: JSON.stringify({ 
+                inventoryNo: invNo,
+                equipment: typeof equipment === 'object' ? equipment : null
+            })
         })
 
         if (!response.ok) throw new Error('Error generating PDF')
@@ -39,29 +42,32 @@ export async function generateEquipmentPDF(inventoryNo) {
 /**
  * Descarga el PDF directamente (para el botón descargar)
  */
-export async function downloadEquipmentPDF(inventoryNo) {
+export async function downloadEquipmentPDF(equipment) {
     try {
-        const invNo = typeof inventoryNo === 'string' ? inventoryNo : (inventoryNo?.inventoryNo || inventoryNo?.['No DE INVENTARIO']);
+        const invNo = typeof equipment === 'string' ? equipment : (equipment?.inventoryNo || equipment?.['No DE INVENTARIO'] || equipment?.['NUMERO DE SERIE']);
         
-        if (!invNo) {
-            console.error('No inventory number provided');
+        if (!invNo && !equipment) {
+            console.error('No equipment info provided');
             return;
         }
 
         const response = await fetch('/api/pdf/equipment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ inventoryNo: invNo })
+            body: JSON.stringify({ 
+                inventoryNo: invNo,
+                equipment: typeof equipment === 'object' ? equipment : null
+            })
         })
 
         if (!response.ok) throw new Error('Error generating PDF')
 
         const blob = await response.blob()
-        downloadBlob(blob, `equipo-${invNo}.pdf`)
+        downloadBlob(blob, `equipo-${invNo || 'detalle'}.pdf`)
     } catch (error) {
         console.error('PDF download error:', error)
         // Fallback
-        generateSimplePDF(inventoryNo)
+        generateSimplePDF(equipment)
     }
 }
 

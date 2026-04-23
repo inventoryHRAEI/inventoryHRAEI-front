@@ -153,6 +153,7 @@ export function useBiomedicalSearch() {
   async function fetchPage(baseQueryParams, { limit, skip, signal }) {
     const qp = new URLSearchParams(baseQueryParams.toString())
     qp.set('withTotal', '1')
+    qp.set('sort', 'none')
     qp.set('limit', String(limit))
     qp.set('skip', String(skip))
     const url = `${EQUIPMENT_ENDPOINT}${qp.toString() ? '?' + qp.toString() : ''}`

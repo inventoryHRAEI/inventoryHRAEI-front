@@ -138,9 +138,11 @@
                             <div class="legend-item"><span class="legend-dot green"></span> <b>Verde</b> - Operativo y
                                 funcional
                             </div>
-                            <div class="legend-item"><span class="legend-dot orange"></span> <b>Naranja</b> -
+                            <div class="legend-item"><span class="legend-dot yellow"></span> <b>Amarillo</b> -
                                 Condiciones
                                 regulares</div>
+                            <div class="legend-item"><span class="legend-dot orange"></span> <b>Naranja</b> -
+                                Requiere atención / Falla</div>
                             <div class="legend-item"><span class="legend-dot lilac"></span> <b>Lila</b> - Mantenimiento
                                 Preventivo</div>
                             <div class="legend-item"><span class="legend-dot purple"></span> <b>Morado</b> -
@@ -263,9 +265,10 @@ const statusFilter = ref('') // Filtro de semaforización (color del semáforo)
 // Opciones de estado para el filtro de semaforización
 const statusOptions = [
     { value: '', emoji: '🚦', label: 'Todos' },
-    { value: '🟢', emoji: '🟢', label: 'Operativo' },
-    { value: '🟠', emoji: '🟠', label: 'Regular/Mantenimiento' },
-    { value: '🔴', emoji: '🔴', label: 'Crítico' }
+    { value: 'operational', emoji: '🟢', label: 'Funcional' },
+    { value: 'partial', emoji: '🟡', label: 'Regulares' },
+    { value: 'attention', emoji: '🟠', label: 'Atención' },
+    { value: 'critical', emoji: '🔴', label: 'Crítico' }
 ]
 
 // Leyenda de colores para semaforización
@@ -350,7 +353,7 @@ const statusStats = computed(() => {
 async function loadData() {
     loading.value = true
     try {
-        const response = await fetch('/api/ops/items?limit=999999')
+        const response = await fetch('/api/ops/items?sort=none&limit=999999')
         if (!response.ok) throw new Error('API Error')
 
         const json = await response.json()
@@ -470,12 +473,18 @@ watch(items, (newItems) => {
 const filteredItems = computed(() => {
     let result = items.value
 
-    // Filtro de semaforización por emoji
+    // Filtro de semaforización por badge
     if (statusFilter.value) {
         result = result.filter(item => {
-            // Busca el emoji en el badge/ESTATUS del item
-            const status = item['ESTATUS'] || item.semaforizacion?.badge || ''
-            return String(status).includes(statusFilter.value)
+            const badge = String(item.semaforizacion?.badge || '').toLowerCase()
+            const status = String(item['ESTATUS'] || '').toLowerCase()
+            
+            // Mapeo de búsqueda inteligente
+            if (statusFilter.value === 'operational') return badge === 'operational' || status.includes('disponible') || status.includes('bueno') || status.includes('activo')
+            if (statusFilter.value === 'partial') return badge === 'partial' || status.includes('regular')
+            if (statusFilter.value === 'attention') return badge === 'attention' || status.includes('atencion') || status.includes('falla')
+            if (statusFilter.value === 'critical') return badge === 'critical' || status.includes('fuera') || status.includes('baja')
+            return true
         })
     }
 
@@ -547,16 +556,19 @@ function getStatusClass(item) {
     if (item.semaforizacion && item.semaforizacion.badge) {
         const badge = String(item.semaforizacion.badge).toLowerCase()
 
-        if (badge.includes('critical') || badge.includes('red') || badge.includes('fuera')) {
+        if (badge.includes('critical') || badge.includes('red') || badge.includes('non_functional') || badge.includes('fuera')) {
             return 'status-red'
         }
-        if (badge.includes('maintenance') || badge.includes('orange') || badge.includes('partial')) {
+        if (badge.includes('attention')) {
             return 'status-orange'
         }
-        if (badge.includes('warning') || badge.includes('yellow')) {
+        if (badge.includes('maintenance')) {
+            return 'status-purple'
+        }
+        if (badge.includes('partial') || badge.includes('warning') || badge.includes('yellow') || badge.includes('regular')) {
             return 'status-yellow'
         }
-        if (badge.includes('operational') || badge.includes('green')) {
+        if (badge.includes('operational') || badge.includes('green') || badge.includes('functional')) {
             return 'status-green'
         }
     }
@@ -564,20 +576,20 @@ function getStatusClass(item) {
     // ❌ FALLBACK: Si no hay semaforizacion válida, usar ESTATUS como fuente de verdad
     const status = String(item['ESTATUS'] || '').toLowerCase()
 
-    // Crítico / Fuera de servicio
-    if (status.includes('fuera') || status.includes('baja') || status.includes('danado') || status.includes('roto')) {
+    // Crítico / Fuera de servicio / Malo
+    if (status.includes('fuera') || status.includes('baja') || status.includes('danado') || status.includes('roto') || status.includes('malo') || status.includes('critico') || status.includes('crítico')) {
         return 'status-red'
     }
     // Mantenimiento
     if (status.includes('mantenimiento') || status.includes('mantto') || status.includes('servicio')) {
         return 'status-orange'
     }
-    // Advertencia - por vencer garantía o requiere revisión
-    if (status.includes('advertencia') || status.includes('revisión') || status.includes('revision') || status.includes('vencer')) {
+    // Advertencia - por vencer garantía o requiere revisión o condiciones regulares
+    if (status.includes('advertencia') || status.includes('revisión') || status.includes('revision') || status.includes('vencer') || status.includes('regular') || status.includes('condicional') || status.includes('parcial')) {
         return 'status-yellow'
     }
-    // Operativo / Disponible
-    if (status.includes('operativo') || status.includes('disponible') || status.includes('activo')) {
+    // Operativo / Disponible / Bueno
+    if (status.includes('operativo') || status.includes('disponible') || status.includes('activo') || status.includes('bueno')) {
         return 'status-green'
     }
     return 'status-gray'
@@ -588,18 +600,18 @@ function getRowClass(item) {
     if (item.semaforizacion && item.semaforizacion.badge) {
         const badge = String(item.semaforizacion.badge).toLowerCase()
 
-        if (badge.includes('critical') || badge.includes('red') || badge.includes('fuera')) return 'row-offline'
-        if (badge.includes('maintenance') || badge.includes('orange') || badge.includes('partial')) return 'row-offline-orange'
-        if (badge.includes('warning') || badge.includes('yellow')) return 'row-warning'
-        if (badge.includes('operational') || badge.includes('green')) return 'row-available'
+        if (badge.includes('critical') || badge.includes('red') || badge.includes('non_functional') || badge.includes('fuera')) return 'row-offline'
+        if (badge.includes('attention')) return 'row-offline-orange'
+        if (badge.includes('maintenance') || badge.includes('partial') || badge.includes('warning') || badge.includes('yellow') || badge.includes('regular')) return 'row-warning'
+        if (badge.includes('operational') || badge.includes('green') || badge.includes('functional')) return 'row-available'
     }
 
     // ❌ FALLBACK: Si no hay semaforizacion, usar ESTATUS
     const status = String(item['ESTATUS'] || '').toLowerCase()
-    if (status.includes('fuera') || status.includes('baja') || status.includes('danado') || status.includes('roto')) return 'row-offline'
+    if (status.includes('fuera') || status.includes('baja') || status.includes('danado') || status.includes('roto') || status.includes('malo') || status.includes('critico') || status.includes('crítico')) return 'row-offline'
     if (status.includes('mantenimiento') || status.includes('mantto') || status.includes('servicio')) return 'row-offline-orange'
-    if (status.includes('advertencia') || status.includes('revisión') || status.includes('revision') || status.includes('vencer')) return 'row-warning'
-    if (status.includes('operativo') || status.includes('disponible') || status.includes('activo')) return 'row-available'
+    if (status.includes('advertencia') || status.includes('revisión') || status.includes('revision') || status.includes('vencer') || status.includes('regular') || status.includes('condicional') || status.includes('parcial')) return 'row-warning'
+    if (status.includes('operativo') || status.includes('disponible') || status.includes('activo') || status.includes('bueno')) return 'row-available'
     return ''
 }
 
@@ -1010,39 +1022,62 @@ watch([searchQuery, pageSize], () => {
 }
 
 .status-badge {
-    padding: 4px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 500;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.status-badge::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .status-badge.status-green {
-    background: #fef9c3;
-    /* Amarillo */
-    color: #854d0e;
+    color: #16a34a;
+}
+.status-badge.status-green::before {
+    background: #22c55e;
 }
 
 .status-badge.status-yellow {
-    background: #f3e8ff;
-    /* Morado */
-    color: #7e22ce;
+    color: #b45309;
 }
-
-.status-badge.status-red {
-    background: #fee2e2;
-    color: #991b1b;
+.status-badge.status-yellow::before {
+    background: #f59e0b;
 }
 
 .status-badge.status-orange {
-    background: #f3e8ff;
-    /* Morado */
+    color: #c2410c;
+}
+.status-badge.status-orange::before {
+    background: #f97316;
+}
+
+.status-badge.status-red {
+    color: #b91c1c;
+}
+.status-badge.status-red::before {
+    background: #ef4444;
+}
+
+.status-badge.status-purple {
     color: #7e22ce;
+}
+.status-badge.status-purple::before {
+    background: #a855f7;
 }
 
 .status-badge.status-gray {
-    background: #f3f4f6;
-    color: #4b5563;
+    color: #64748b;
+}
+.status-badge.status-gray::before {
+    background: #94a3b8;
 }
 
 .card-body {
@@ -1231,30 +1266,23 @@ watch([searchQuery, pageSize], () => {
 }
 
 .data-table tr.row-available {
-    border-left: 3px solid #eab308;
-    /* Amarillo */
+    border-left: 2px solid rgba(34, 197, 94, 0.3);
 }
 
 .data-table tr.row-maintenance {
-    border-left: 3px solid #f59e0b;
-    background: rgba(245, 158, 11, 0.03);
+    border-left: 2px solid rgba(245, 158, 11, 0.3);
 }
 
 .data-table tr.row-offline {
-    border-left: 3px solid #ef4444;
-    background: rgba(239, 68, 68, 0.03);
+    border-left: 2px solid rgba(239, 68, 68, 0.3);
 }
 
 .data-table tr.row-warning {
-    border-left: 3px solid #a855f7;
-    /* Morado */
-    background: rgba(168, 85, 247, 0.05);
+    border-left: 2px solid rgba(245, 158, 11, 0.3);
 }
 
 .data-table tr.row-offline-orange {
-    border-left: 3px solid #a855f7;
-    /* Morado */
-    background: rgba(168, 85, 247, 0.05);
+    border-left: 2px solid rgba(168, 85, 247, 0.3);
 }
 
 .mono {
