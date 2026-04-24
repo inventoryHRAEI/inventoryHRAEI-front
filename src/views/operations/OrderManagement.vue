@@ -412,7 +412,7 @@
                         </div>
                         <div class="doc-actions-group">
                             <button class="btn-doc-action refresh-btn" :class="{ 'is-loading': isLoadingOrders }"
-                                @click="fetchDocVersionsFor(docTitle)" :disabled="isLoadingOrders"
+                                @click="fetchDocVersionsFor(docTitle, currentDocOrderType)" :disabled="isLoadingOrders"
                                 title="Recargar versiones">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -976,6 +976,7 @@ const selectedPdfId = ref(null)
 const downloadingId = ref(null)
 const isLoadingOrders = ref(false)
 const activeDocTab = ref('generadas') // 'generadas' o 'firmadas'
+const currentDocOrderType = ref('entrada')
 
 // Estado y helpers para modal de upload
 const showUploadModal = ref(false)
@@ -1017,25 +1018,53 @@ function resetUploadState() {
 }
 
 
+// Helper: detectar tipo de orden basado en folio (E-, S-, R-, O-)
+function detectTypeFromFolio(folio) {
+    if (!folio) return 'entrada'
+    const prefix = String(folio).trim().substring(0, 1).toUpperCase()
+    if (prefix === 'S') return 'salida'
+    if (prefix === 'R') return 'resguardo'
+    if (prefix === 'O') return 'servicio'
+    return 'entrada'
+}
+
+// Resolver tipo de orden con prioridad absoluta en folio.
+function resolveOrderType(folio, hintedType = '') {
+    const folioType = detectTypeFromFolio(folio)
+    if (folioType) return folioType
+
+    const baseType = String(hintedType || '').toLowerCase()
+    if (baseType.includes('salida')) return 'salida'
+    if (baseType.includes('resguardo')) return 'resguardo'
+    if (baseType.includes('servicio')) return 'servicio'
+    return 'entrada'
+}
+
 async function openDocumentModal(order) {
     console.log('[ORDER_MANAGEMENT] openDocumentModal called:', order)
+    console.log('[ORDER_MANAGEMENT] order.orderType:', order?.orderType)
+    console.log('[ORDER_MANAGEMENT] order.folio:', order?.folio)
+    
     const docId = order?.folio ?? order?.id ?? null
     if (!docId) {
         console.warn('[ORDER_MANAGEMENT] openDocumentModal: docId inválido')
         return
     }
 
-    const type = (order?.orderType || order?.type || order?.tipo || 'entrada').toString().toLowerCase()
-    const baseType = type.includes('salida') ? 'salida' : type.includes('resguardo') ? 'resguardo' : type.includes('servicio') ? 'servicio' : 'entrada'
+    // ✅ Prioridad 1: usar orderType que ya viene en la orden
+    // ✅ Prioridad 2: detectar desde folio (la verdad absoluta)
+    const resolvedType = resolveOrderType(order?.folio || docId, order?.orderType)
+    console.log('[ORDER_MANAGEMENT] DETERMINED resolvedType:', resolvedType, '| from orderType:', order?.orderType, '| from folio:', order?.folio)
 
     docTitle.value = String(docId)
+    currentDocOrderType.value = resolvedType
     showDocModal.value = true
     activeDocTab.value = 'generadas' // Reset to first tab
 
     // Auto-reload al abrir la modal
     await Promise.all([
-        fetchDocVersionsFor(docId, baseType),
-        fetchSignedDocuments(docId, baseType)
+        fetchDocVersionsFor(docId, resolvedType),
+        fetchSignedDocuments(docId, resolvedType)
     ])
 }
 
@@ -1050,8 +1079,10 @@ async function fetchDocVersionsFor(folio, orderType = 'entrada') {
     const minDuration = 1200 // Duración mínima para que se vea la animación (1 vuelta completa)
 
     try {
-        const endpointPrefix = orderType || 'entrada'
+        const endpointPrefix = resolveOrderType(folio, orderType)
+        console.log('[ORDER_MANAGEMENT] fetchDocVersionsFor - folio:', folio, '| orderType:', orderType, '| endpointPrefix:', endpointPrefix)
         const res = await fetch(`/api/ops/${endpointPrefix}/${encodeURIComponent(folio)}/pdfs`)
+        console.log('[ORDER_MANAGEMENT] fetchDocVersionsFor - response status:', res.status)
 
         // Map PDF listing response into docVersions (if present)
         if (res && res.ok) {
@@ -1091,7 +1122,7 @@ async function fetchDocVersionsFor(folio, orderType = 'entrada') {
                     const createdAt = v.created_at || v.createdAt || null
                     return {
                         id: `ver-${ver}`,
-                        name: `entrada ${folio} v${ver}.pdf`,
+                        name: `${endpointPrefix} ${folio} v${ver}.pdf`,
                         version: ver,
                         type: 'version',
                         createdAt: createdAt ? new Date(createdAt).toISOString() : null,
@@ -1100,8 +1131,8 @@ async function fetchDocVersionsFor(folio, orderType = 'entrada') {
                         downloadUrl: `/api/ops/${endpointPrefix}/${encodeURIComponent(folio)}/versions/${encodeURIComponent(ver)}/download`
                     }
                 })
-                // prepend versions (most recent first)
-                docVersions.value = [...versItems, ...docVersions.value]
+                // Mostrar primero el documento generado actual y luego snapshots/versiones históricas.
+                docVersions.value = [...docVersions.value, ...versItems]
             }
         } catch (e) {
             console.warn('No se pudieron cargar versiones snapshots', e)
@@ -1172,7 +1203,7 @@ async function generateAllVersions() {
 
 async function fetchSignedDocuments(folio, orderType = 'entrada') {
     // Try fetching signed documents; if 404, attempt common folio variants
-    const endpointPrefix = orderType || 'entrada'
+    const endpointPrefix = resolveOrderType(folio, orderType)
     try {
         const tryFetch = async (f) => {
             const r = await fetch(`/api/ops/${endpointPrefix}/${encodeURIComponent(f)}/signed-documents`)
@@ -1262,6 +1293,7 @@ function closeDocumentModal() {
     signedDocuments.value = []
     currentPreviewUrl.value = ''
     docTitle.value = ''
+    currentDocOrderType.value = 'entrada'
     activeDocTab.value = 'generadas'
 }
 
@@ -2583,9 +2615,14 @@ async function reloadOrdersFromServer() {
                     belongsToHospital: item?.belongsToHospital ?? null
                 }
             })
+            // ✅ Detectar tipo basado en folio (E-, S-, R-, O-)
+            const orderType = detectTypeFromFolio(orden.folio)
+            console.log('[ORDER_MANAGEMENT] reloadOrdersFromServer - Adding order:', orden.folio, '| detected type:', orderType)
+            
             return {
                 id: orden.folio || orden.id,
                 folio: orden.folio || 'N/A',
+                orderType: orderType, // ✅ AGREGAR TIPO PARA QUE ESTÉ DISPONIBLE CUANDO SE ABRE DOCUMENTO
                 nombreSolicitante: orden.nombre_solicitante || 'N/A',
                 servicio: orden.servicio || 'N/A',
                 especialidad: orden.especialidad || 'N/A',
@@ -2660,9 +2697,13 @@ async function loadMoreOrders() {
                     belongsToHospital: item?.belongsToHospital ?? null
                 }
             })
+            // ✅ Detectar tipo basado en folio (E-, S-, R-, O-)
+            const orderType = detectTypeFromFolio(orden.folio)
+            
             return {
                 id: orden.folio || orden.id,
                 folio: orden.folio || 'N/A',
+                orderType: orderType, // ✅ AGREGAR TIPO PARA CONSISTENCIA
                 nombreSolicitante: orden.nombre_solicitante || 'N/A',
                 servicio: orden.servicio || 'N/A',
                 especialidad: orden.especialidad || 'N/A',
@@ -2753,100 +2794,43 @@ function downloadExcelWithData(order) {
 }
 
 async function deleteOrder(orderId) {
-    // Verificar permisos antes de permitir cancelación
-    if (!canDeleteOrder.value) {
-        Swal.fire({
-            title: 'Acceso denegado',
-            text: 'No tienes permisos para cancelar órdenes.',
-            icon: 'warning',
-            confirmButtonText: 'Aceptar'
-        })
-        return
-    }
-
     const result = await confirmCancel('¿Estás seguro de que deseas cancelar esta orden? Esta acción no se puede deshacer.')
 
-                if (!delRes.ok) {
-        // Find order to get folio for server-side deletion
+    if (result.isConfirmed) {
+        // Buscar la orden en memoria para obtener su folio real
         const order = allOrders.value.find(o => o.id === orderId)
         const folio = (order && (order.folio || (order.orden && order.orden.folio))) ? (order.folio || order.orden.folio) : null
 
+        if (folio) {
+            try {
+                const token = localStorage.getItem('token')
+                const headers = token ? { 'Authorization': `Bearer ${token}` } : {}
+                const delRes = await fetch(`/api/ops/entrada/${encodeURIComponent(folio)}`, { method: 'DELETE', headers })
+                if (!delRes.ok) {
+                    let body = null
+                    try { body = await delRes.json() } catch (_) { body = await delRes.text().catch(() => '') }
+                    const msgText = (body && (body.msg || body.error)) ? (body.msg || body.error) : ''
                     if (String(msgText).toLowerCase().includes('cancel')) {
-                        try {
-                            await reloadOrdersFromServer()
-                        } catch (e) {
+                        try { await reloadOrdersFromServer() } catch (e) {
                             const localOrder = allOrders.value.find(o => o.id === orderId)
                             if (localOrder) localOrder.status = 'cancelled'
-                            try {
-                                const raw = localStorage.getItem('orders_list')
-                                if (raw) {
-                                    const arr = JSON.parse(raw)
-                                    const idx = arr.findIndex(o => String(o.id) === String(orderId))
-                                    if (idx !== -1) {
-                                        arr[idx].status = 'cancelled'
-                                        localStorage.setItem('orders_list', JSON.stringify(arr))
-                                    }
-                                }
-                            } catch (e) { /* ignore localStorage errors */ }
+                            try { const raw = localStorage.getItem('orders_list'); if (raw) { const arr = JSON.parse(raw); const idx = arr.findIndex(o => String(o.id) === String(orderId)); if (idx !== -1) { arr[idx].status = 'cancelled'; localStorage.setItem('orders_list', JSON.stringify(arr)) } } } catch (e) {}
                         }
                         await showAlert({ title: 'Atención', text: 'Orden ya está cancelada', icon: 'info' })
                         return
                     }
                     showError('Error servidor', `No se pudo cancelar la orden en el servidor: ${delRes.status} ${JSON.stringify(body)}`)
                     return
-                                const idx = arr.findIndex(o => String(o.id) === String(orderId))
-                                if (idx !== -1) {
-                console.warn('Error contacting server for cancel, proceeding to mark local order as cancelled:', e)
+                }
+            } catch (e) {
+                console.warn('Error contacting server for cancel, marking locally as cancelled:', e)
                 await showAlert({ title: 'Atención', text: 'No fue posible contactar al servidor para confirmar la cancelación. La orden se marcará como cancelada localmente.', icon: 'warning' })
-                // mark locally as cancelled
                 const localOrder = allOrders.value.find(o => o.id === orderId)
                 if (localOrder) localOrder.status = 'cancelled'
-                try {
-                    const raw = localStorage.getItem('orders_list')
-                    if (raw) {
-                        const arr = JSON.parse(raw)
-                        const idx = arr.findIndex(o => String(o.id) === String(orderId))
-                        if (idx !== -1) {
-                            arr[idx].status = 'cancelled'
-                            localStorage.setItem('orders_list', JSON.stringify(arr))
-                        }
-                    }
-                } catch (e) { /* ignore */ }
-                            }
-        // After successful delete/cancel we prefer to refresh from server so the UI shows current status
-        try {
-            await reloadOrdersFromServer()
-            showSuccess('Cancelada', 'La orden ha sido cancelada correctamente.')
-        } catch (e) {
-            // If reload fails, ensure local order is marked cancelled
-            const localOrder = allOrders.value.find(o => o.id === orderId)
-            if (localOrder) localOrder.status = 'cancelled'
-            try {
-                const raw = localStorage.getItem('orders_list')
-                if (raw) {
-                    const arr = JSON.parse(raw)
-                    const idx = arr.findIndex(o => String(o.id) === String(orderId))
-                    if (idx !== -1) {
-                        arr[idx].status = 'cancelled'
-                        localStorage.setItem('orders_list', JSON.stringify(arr))
-                    }
-                }
-            } catch (e) {}
-            showSuccess('Cancelada', 'La orden ha sido cancelada (marcada localmente).')
-        }
-
-        // Remove from local state and localStorage
-        allOrders.value = allOrders.value.filter(o => o.id !== orderId)
-        try {
-            const raw = localStorage.getItem('orders_list')
-            if (raw) {
-                const arr = JSON.parse(raw)
-                const updated = arr.filter(o => String(o.id) !== String(orderId))
-                localStorage.setItem('orders_list', JSON.stringify(updated))
+                try { const raw = localStorage.getItem('orders_list'); if (raw) { const arr = JSON.parse(raw); const idx = arr.findIndex(o => String(o.id) === String(orderId)); if (idx !== -1) { arr[idx].status = 'cancelled'; localStorage.setItem('orders_list', JSON.stringify(arr)) } } } catch (e) {}
             }
-        } catch (e) { }
-
-        showSuccess('Eliminado', 'La orden ha sido eliminada correctamente.')
+        }
+        try { await reloadOrdersFromServer(); showSuccess('Cancelada', 'La orden ha sido cancelada correctamente.') } catch (e) { const localOrder = allOrders.value.find(o => o.id === orderId); if (localOrder) localOrder.status = 'cancelled'; try { const raw = localStorage.getItem('orders_list'); if (raw) { const arr = JSON.parse(raw); const idx = arr.findIndex(o => String(o.id) === String(orderId)); if (idx !== -1) { arr[idx].status = 'cancelled'; localStorage.setItem('orders_list', JSON.stringify(arr)) } } } catch (e) {} showSuccess('Cancelada', 'La orden ha sido cancelada (marcada localmente).') }
     }
 }
 

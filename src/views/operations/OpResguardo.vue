@@ -2932,7 +2932,7 @@ async function generarExcelEntrada(payloadParam) {
                     // Restaurar texto del encabezado según la sección
                     const titleTexts = {
                         'equipos': 'DESCRIPCIÓN DEL EQUIPO MÉDICO Y/O MOBILIARIO MÉDICO.',
-                        'accesorios': 'DESCRIPCIÓN DE ACCESORIOS QUE SE INGRESA CON EL EQUIPO MÉDICO.',
+                        'accesorios': 'ACCESORIOS',
                         'consumibles': 'DESCRIPCIÓN DE CONSUMIBLES QUE SE INGRESA CON EL EQUIPO MÉDICO.',
                         'refacciones': 'DESCRIPCIÓN DE REFACCIONES QUE SE INGRESA CON EL EQUIPO MÉDICO.'
                     }

@@ -982,6 +982,7 @@ import { SALIDA_SYSTEM_FIELDS } from '@/data/systemFields.js'
 import { getDefaultSchema } from '@/data/defaultFormSchemas.js'
 import { fetchFormSchema, saveFormSchema } from '@/services/formSchemaService.js'
 import notificationStore from '@/stores/notificationStore'
+import { useWizardStore } from '@/stores/wizardStore.js'
 
 // Composables
 import { useInventorySuggestions } from '@/composables/useInventorySuggestions.js'
