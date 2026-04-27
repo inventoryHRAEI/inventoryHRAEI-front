@@ -25,7 +25,7 @@
 
                         <div class="fields-grid">
                             <ModernInput v-if="isFieldVisible('nombreSolicitante')" v-model="form.nombreSolicitante"
-                                label="Nombre del Solicitante" placeholder="Nombre completo de quien solicita" required
+                                label="Nombre del Solicitante" placeholder="Nombre completo de quien solicita"
                                 :error-message="getFieldError('nombreSolicitante')">
                                 <template #prefix>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -82,28 +82,45 @@
                                 <ModernInput v-model="form.folioAsociado" placeholder="Folio relacionado (opcional)" />
                             </div>
 
-                            <div class="field-wrapper span-1" v-if="isFieldVisible('fecha')">
-                                <label class="field-label">
-                                    Fecha
-                                    <button type="button" class="info-popover-btn" @mouseenter="showDateInfo = true"
-                                        @mouseleave="showDateInfo = false" aria-haspopup="true"
-                                        aria-expanded="showDateInfo">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                            stroke="currentColor" stroke-width="2">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-                                            <line x1="12" y1="17" x2="12.01" y2="17" />
-                                        </svg>
-                                    </button>
-                                    <Transition name="popover-fade">
-                                        <div v-if="showDateInfo" class="info-popover" @mouseenter="showDateInfo = true"
-                                            @mouseleave="showDateInfo = false">
-                                            La fecha se asigna automáticamente al momento de crear la orden.
+                            <div class="field-wrapper" style="grid-column: span 2 !important; display: flex; flex-direction: column; gap: 8px;">
+                                <label class="field-label" style="color: #94a3b8; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Fecha de Operación</label>
+                                <div class="premium-date-container" :class="fechaAutomatica ? 'mode-auto' : 'mode-manual'">
+                                    <!-- Sección de Control -->
+                                    <div class="control-section">
+                                        <span class="pill-label">AUTO</span>
+                                        <label class="simple-switch" @click.stop>
+                                            <input type="checkbox" v-model="fechaAutomatica" @change="onFechaAutoChange" />
+                                            <span class="simple-slider"></span>
+                                        </label>
+                                    </div>
+
+                                    <!-- Sección de Valor -->
+                                    <div class="value-section" @click="!fechaAutomatica && $refs.dateInputRef.showPicker()">
+                                        <div class="pill-content">
+                                            <div class="pill-icon">
+                                                <svg v-if="fechaAutomatica" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                                </svg>
+                                                <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                                                </svg>
+                                            </div>
+                                            <div class="pill-text">
+                                                <span class="date-text">{{ fechaAutomatica ? (form.fecha || '--/--/----') : formatDisplayDate(form.fechaISO) }}</span>
+                                            </div>
                                         </div>
-                                    </Transition>
-                                </label>
-                                <div class="auto-field-display">
-                                    <span class="auto-value">{{ form.fecha || '--/--/----' }}</span>
+
+
+
+                                        <input 
+                                            v-if="!fechaAutomatica"
+                                            ref="dateInputRef"
+                                            type="date" 
+                                            class="hidden-picker"
+                                            :value="form.fechaISO"
+                                            @input="onFechaManualInput"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
@@ -364,7 +381,63 @@
                                 </div>
                                 <span class="type-label">Item en Blanco</span>
                              </button>
+
+                            <!-- Botón especial Acc/Cons/Ref para Equipo Médico -->
+                            <button type="button" class="type-card type-card-acr"
+                                :class="{ 'is-selected': showAcrModal }"
+                                @click="abrirModalAcr">
+                                <div class="type-icon" style="--type-color: #06b6d4">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </div>
+                                <span class="type-label">Acc/Cons/Ref<br><small>para Equipo Médico</small></span>
+                            </button>
                         </div>
+
+                        <!-- Modal selector de categoría ACR -->
+                        <Transition name="modal-fade">
+                            <div v-if="showAcrModal" class="acr-modal-overlay" @click.self="cerrarModalAcr">
+                                <div class="acr-modal acr-modal-compact">
+                                    <div class="acr-modal-header">
+                                        <div class="acr-modal-title">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3"/>
+                                                <circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                            <span>¿Qué vas a agregar al equipo médico?</span>
+                                        </div>
+                                        <button type="button" class="acr-modal-close" @click="cerrarModalAcr">
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                        </button>
+                                    </div>
+                                    <div class="acr-modal-body">
+                                        <p class="acr-hint">Selecciona la categoría. Luego podrás buscar el bien en el inventario o ingresarlo manualmente.</p>
+                                        <div class="acr-category-grid">
+                                            <button type="button" class="acr-cat-btn" @click="seleccionarCategoriaAcr('accesorio')">
+                                                <div class="acr-cat-icon" style="--cat-color:#8b5cf6">
+                                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
+                                                </div>
+                                                <span>Accesorio</span>
+                                            </button>
+                                            <button type="button" class="acr-cat-btn" @click="seleccionarCategoriaAcr('consumible')">
+                                                <div class="acr-cat-icon" style="--cat-color:#f59e0b">
+                                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3l1 9h4l1-9"/><path d="M6 21h12l-2-9H8z"/></svg>
+                                                </div>
+                                                <span>Consumible</span>
+                                            </button>
+                                            <button type="button" class="acr-cat-btn" @click="seleccionarCategoriaAcr('refaccion')">
+                                                <div class="acr-cat-icon" style="--cat-color:#ef4444">
+                                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                                                </div>
+                                                <span>Refacción</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Transition>
 
                                                 <!-- Refinamiento inteligente reutilizable -->
                                                 <InventoryRefinement
@@ -373,6 +446,7 @@
                                                     :suggestions="suggestions"
                                                     :equipoMedicoList="equipoMedicoList"
                                                     @select-item="(item) => agregarItemALaOrden(item, seccionActual.value)"
+                                                    @refresh-inventory="forceRefreshInventory"
                                                 />
 
                                                 <!-- Modal para seleccionar tipo de item en blanco -->
@@ -424,10 +498,129 @@
 
                         <!-- Equipment Form (solo para items externos) -->
                         <Transition name="slide-up">
-                            <div v-if="newItem.tipo && belongsToHospital === false" class="equipment-form">
+                            <div v-if="newItem.tipo && (belongsToHospital === false || isEditingItem)" class="equipment-form">
                                 <div class="form-header">
-                                    <h4>{{ getSelectedTypeLabel() }}</h4>
-                                    <div class="quantity-control">
+                                    <h4 v-if="belongsToHospital === false">{{ getSelectedTypeLabel() }}</h4>
+                                    <!-- Si es interno y estamos editando, mostramos la tarjeta compacta -->
+                                    <div v-if="belongsToHospital === true && isEditingItem" class="internal-edit-card premium-card" :class="{ 'is-success': cardSuccessState }">
+                                        <div class="card-glow"></div>
+                                        
+                                        <!-- Success Overlay -->
+                                        <Transition name="fade">
+                                            <div v-if="cardSuccessState" class="success-overlay">
+                                                <div class="success-content">
+                                                    <div class="success-icon-wrap">
+                                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                                                        </svg>
+                                                    </div>
+                                                    <span>{{ editingItemIndex !== -1 ? '¡Actualizado!' : '¡Agregado!' }}</span>
+                                                </div>
+                                            </div>
+                                        </Transition>
+
+                                        <div class="internal-card-header">
+                                            <div class="header-main">
+                                                <div class="edit-context-banner" :style="getBannerStyle(newItem)">
+                                                    <div class="edit-icon-box" :style="{ background: getBannerStyle(newItem).color }">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                    </div>
+                                                    <span class="edit-text">
+                                                        EDITANDO {{ getBannerText(newItem) }}
+                                                    </span>
+                                                </div>
+                                                <h3 class="asset-name">{{ newItem.unidades[0]?.nombre || 'Sin nombre' }}</h3>
+                                                
+                                                <div class="technical-info-grid">
+                                                    <div class="info-item">
+                                                        <span class="info-label">MARCA</span>
+                                                        <span class="info-value">{{ newItem.unidades[0]?.marca || '-' }}</span>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <span class="info-label">MODELO</span>
+                                                        <span class="info-value">{{ newItem.unidades[0]?.modelo || '-' }}</span>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <span class="info-label">SERIE</span>
+                                                        <span class="info-value">{{ newItem.unidades[0]?.serie || '-' }}</span>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <span class="info-label">CLAVE</span>
+                                                        <span class="info-value">{{ newItem.unidades[0]?.claveHRAEI || '-' }}</span>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <span class="info-label">LOTE</span>
+                                                        <span class="info-value">{{ newItem.unidades[0]?.lote || '-' }}</span>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <span class="info-label">REF</span>
+                                                        <span class="info-value">{{ newItem.unidades[0]?.referencia || '-' }}</span>
+                                                    </div>
+                                                    <div class="info-item">
+                                                        <span class="info-label">INV</span>
+                                                        <span class="info-value">{{ newItem.unidades[0]?.noInventario || '-' }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="internal-edit-grid">
+                                            <div class="edit-field-group">
+                                                <label class="field-label">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V21H3V8"/><path d="M1 3H23V8H1V3ZM10 12H14"/></svg>
+                                                    Cantidad a retirar
+                                                </label>
+                                                <div class="stepper-control">
+                                                    <button type="button" @click="newItem.unidades[0].cantidad = Math.max(1, newItem.unidades[0].cantidad - 1)" :disabled="newItem.unidades[0].cantidad <= 1" class="step-btn">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                    </button>
+                                                    <input type="number" v-model.number="newItem.unidades[0].cantidad" min="1" class="step-input" />
+                                                    <button type="button" @click="newItem.unidades[0].cantidad++" class="step-btn">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="edit-field-group">
+                                                <label class="field-label">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                                    Ubicación actual
+                                                </label>
+                                                <div class="input-with-icon">
+                                                    <SearchableInput v-model="newItem.unidades[0].ubicacion"
+                                                        :suggestions="currentSuggestions" field-name="ubicacion"
+                                                        placeholder="Ubicación donde se encuentra el bien..."
+                                                        @select="(s) => handleSuggestionSelect(s, newItem.unidades[0], 'ubicacion')" />
+                                                </div>
+                                            </div>
+                                            
+                                            <div v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'" class="edit-field-group full-width">
+                                                <label class="field-label">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                                                    Equipo Médico Vinculado
+                                                </label>
+                                                <SearchableInput v-model="newItem.unidades[0].equipoAsociado"
+                                                    :suggestions="suggestions" tipo="equipo-medico"
+                                                    field-name="nombre" placeholder="Buscar equipo principal..."
+                                                    @select="(s) => newItem.unidades[0].equipoAsociado = (s.nombre || s.label || '')" />
+                                            </div>
+                                        </div>
+
+                                        <!-- Premium Card Actions -->
+                                        <div class="premium-card-actions">
+                                            <button type="button" class="btn-premium-clear" @click="resetNewItem">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                                                Limpiar
+                                            </button>
+                                            <button type="button" class="btn-premium-add" @click="agregarItem" :disabled="!canAddItem || isVerifyingStatus || cardSuccessState" :class="{ 'is-loading': isVerifyingStatus }">
+                                                <span v-if="!isVerifyingStatus">
+                                                    {{ editingItemIndex !== -1 ? 'Actualizar Cambios' : 'Confirmar Salida' }}
+                                                </span>
+                                                <span v-else class="loading-spinner-small"></span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div v-else class="quantity-control">
                                         <button type="button" @click="decNew" :disabled="newItem.cantidad <= 1">
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
                                                 stroke="currentColor" stroke-width="3">
@@ -453,7 +646,7 @@
                                 </div>
 
                                 <!-- Equipment Units Grid -->
-                                <div class="units-list">
+                                <div v-if="belongsToHospital === false" class="units-list">
                                     <TransitionGroup name="unit-list">
                                         <div v-for="(unidad, idx) in newItem.unidades" :key="idx" class="unit-card">
                                             <div class="unit-header">
@@ -478,8 +671,7 @@
                                                     <SearchableInput v-model="unidad.nombre"
                                                         :suggestions="currentSuggestions" field-name="nombre"
                                                         :placeholder="getNombrePlaceholder()"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
+                                                        :disabled="belongsToHospital === true"
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'nombre')" />
                                                 </div>
 
@@ -488,8 +680,7 @@
                                                     <SearchableInput v-model="unidad.marca"
                                                         :suggestions="currentSuggestions" field-name="marca"
                                                         placeholder="Ej. Philips"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
+                                                        :disabled="belongsToHospital === true"
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'marca')" />
                                                 </div>
 
@@ -498,8 +689,7 @@
                                                     <SearchableInput v-model="unidad.modelo"
                                                         :suggestions="currentSuggestions" field-name="modelo"
                                                         placeholder="Ej. MX40"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
+                                                        :disabled="belongsToHospital === true"
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'modelo')" />
                                                 </div>
 
@@ -508,8 +698,7 @@
                                                     <SearchableInput v-model="unidad.lote"
                                                         :suggestions="currentSuggestions" field-name="lote"
                                                         placeholder="Ej. LT-2026"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
+                                                        :disabled="belongsToHospital === true"
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'lote')" />
                                                 </div>
 
@@ -518,29 +707,8 @@
                                                     <SearchableInput v-model="unidad.serie"
                                                         :suggestions="currentSuggestions" field-name="serie"
                                                         placeholder="Ej. SN123456"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
+                                                        :disabled="belongsToHospital === true"
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'serie')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Referencia del Bien</label>
-                                                    <SearchableInput v-model="unidad.referencia"
-                                                        :suggestions="currentSuggestions" field-name="referencia"
-                                                        placeholder="Ej. REF-001"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'referencia')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Referencia del Equipo</label>
-                                                    <SearchableInput v-model="unidad.referenciaEquipo"
-                                                        :suggestions="currentSuggestions" field-name="referenciaEquipo"
-                                                        placeholder="Ej. EQP-0001"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'referenciaEquipo')" />
                                                 </div>
 
                                                 <div class="searchable-field">
@@ -548,25 +716,21 @@
                                                     <SearchableInput v-model="unidad.ubicacion"
                                                         :suggestions="currentSuggestions" field-name="ubicacion"
                                                         placeholder="Ej. UCIA"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'ubicacion')" />
                                                 </div>
 
                                                 <!-- Equipos Asociados (Solo para accesorios y refacciones) -->
-                                                <div v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'"
+                                                <div v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'"
                                                     class="searchable-field">
                                                     <label class="mini-label">Equipo Asociado</label>
                                                     <SearchableInput v-model="unidad.equipoAsociado"
-                                                        :suggestions="equipoAssociatedSuggestions" tipo="equipo-medico"
+                                                        :suggestions="belongsToHospital === true ? suggestions : []" tipo="equipo-medico"
                                                         field-name="nombre" placeholder="Buscar equipo asociado..."
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
                                                         @select="(s) => unidad.equipoAsociado = (s.nombre || s.label || '')" />
                                                 </div>
 
                                                 <!-- Número de Serie del Equipo Asociado (Solo si hay equipo asociado) -->
-                                                <div v-if="(newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion') && unidad.equipoAsociado"
+                                                <div v-if="(newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible') && unidad.equipoAsociado"
                                                     class="searchable-field">
                                                     <label class="mini-label">Número de Serie del Equipo
                                                         Asociado</label>
@@ -575,12 +739,20 @@
                                                 </div>
 
                                                 <div class="searchable-field">
+                                                    <label class="mini-label">Referencia del Bien</label>
+                                                    <SearchableInput v-model="unidad.referencia"
+                                                        :suggestions="currentSuggestions" field-name="referencia"
+                                                        placeholder="Ej. REF-123456"
+                                                        :disabled="belongsToHospital === true"
+                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'referencia')" />
+                                                </div>
+
+                                                <div class="searchable-field">
                                                     <label class="mini-label">Clave HRAEI</label>
                                                     <SearchableInput v-model="unidad.claveHRAEI"
                                                         :suggestions="currentSuggestions" field-name="claveHRAEI"
                                                         placeholder="Ej. COMODATO"
-                                                        :show-detail-chips="false"
-                                                        :disabled="!(belongsToHospital !== null && newItem.tipo)"
+                                                        :disabled="belongsToHospital === true"
                                                         @select="(s) => handleSuggestionSelect(s, unidad, 'claveHRAEI')" />
                                                 </div>
 
@@ -612,25 +784,13 @@
                                     </TransitionGroup>
                                 </div>
 
-                                <div class="equipment-buttons-group">
-                                    <button type="button" class="btn-add-equipment" @click="agregarItem"
-                                        :disabled="!canAddItem">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="2.5">
-                                            <line x1="12" y1="5" x2="12" y2="19" />
-                                            <line x1="5" y1="12" x2="19" y2="12" />
-                                        </svg>
-                                        {{ isEditingItem ? 'Actualizar' : 'Agregar' }} {{ getSelectedTypeLabel() }}
-                                    </button>
-                                    <button type="button" class="btn-clear-equipment" @click="resetNewItem"
-                                        v-if="newItem.tipo" title="Limpiar formulario y empezar de nuevo">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                            stroke-width="2.5">
-                                            <polyline points="3 6 5 4 21 4 19 6"></polyline>
-                                            <line x1="19" y1="6" x2="5" y2="6"></line>
-                                            <path d="M6 9l.967 12.158A2 2 0 0 0 9.001 23h6.018a2 2 0 0 0 1.964-1.856L18 9M9 5V3h6v2M9 13v6M15 13v6"></path>
-                                        </svg>
+                                <div class="form-actions" v-if="!(belongsToHospital === true && isEditingItem)">
+                                    <button type="button" class="btn-clear" @click="resetNewItem" v-if="isEditingItem || newItem.tipo">
                                         Limpiar
+                                    </button>
+                                    <button type="button" class="btn-add" @click="agregarItem" :disabled="!canAddItem" :class="{ 'is-loading': isVerifyingStatus }">
+                                        <span v-if="!isVerifyingStatus">{{ isEditingItem ? 'Actualizar' : 'Agregar' }}</span>
+                                        <span v-else class="loading-spinner"></span>
                                     </button>
                                 </div>
                             </div>
@@ -701,8 +861,7 @@
                                     <button type="button" class="item-edit"
                                         :class="{ 'is-editing': editingItemIndex === index }"
                                         @click="editarItem(index)"
-                                        v-if="item.isExternal || item.is_external"
-                                        :title="editingItemIndex === index ? 'Cancelar edición' : 'Editar item externo'">
+                                        :title="editingItemIndex === index ? 'Cancelar edición' : 'Editar item'">
                                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                             <path d="M12 20h9" />
                                             <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
@@ -992,6 +1151,7 @@ import { useCloseConfirmation } from '@/composables/useCloseConfirmation.js'
 import { useWizardDraft } from '@/composables/useWizardDraft.js'
 import { peekSessionState, clearSessionState } from '@/utils/sessionRestore'
 import { useUserSuggestions } from '@/composables/useUserSuggestions.js'
+import { refreshBiomedicalEquipmentCatalog } from '@/services/biomedicalEquipmentCatalog.js'
 
 // Props
 const props = defineProps({
@@ -1127,9 +1287,11 @@ function agregarItemALaOrden(item, seccion) {
         tipo: item.tipo || (seccion === 'equipo' ? 'equipo-medico' : 'accesorio'),
         cantidad: item.cantidad || 1,
         descripcion: item.descripcion || item.nombre || item.label || '',
-        isExternal: item.isExternal ?? item.is_external ?? isCurrentItemExternal.value
+        isExternal: item.isExternal ?? item.is_external ?? isCurrentItemExternal.value,
+        paraEquipoMedico: acrFlowActive.value ? true : (item.paraEquipoMedico || false)
     }
     form.equiposSalida.push(mapped)
+    acrFlowActive.value = false
 }
 
 const {
@@ -1144,7 +1306,8 @@ const {
     fillUnitFromSuggestion,
     equipoMedicoList,
     allInventoryList,
-    filterSuggestions
+    filterSuggestions,
+    syncSuggestions
 } = useInventorySuggestions({
     tipo: seccionActual,
     onSelect: (item) => agregarItemALaOrden(item, seccionActual.value),
@@ -1191,10 +1354,13 @@ const showWarningModal = ref(false)
 const pendingEquipment = ref(null)
 const equipmentWarnings = ref([])
 const belongsToHospital = ref(null) // Para la pregunta: ¿Pertenece al Hospital?
+const cardSuccessState = ref(false)
 const isCurrentItemExternal = computed(() => belongsToHospital.value === false)
+const isVerifyingStatus = ref(false)
 
 // Info popover states
 const showDateInfo = ref(false)
+const fechaAutomatica = ref(true)
 const showHoraTerminoInfo = ref(false)
 
 // Sugerencias específicas para 'Equipo Asociado' (asegurar que use lista de equipos)
@@ -1394,6 +1560,17 @@ const tipoSalidaOptions = [
     { value: 'refaccion', label: 'Refacciones', icon: WrenchIcon, color: '#ef4444' }
 ]
 
+// ===== Modal ACR para Equipo Médico (selector de categoría) =====
+const showAcrModal = ref(false)
+const acrFlowActive = ref(false)
+function abrirModalAcr() { showAcrModal.value = true }
+function cerrarModalAcr() { showAcrModal.value = false }
+function seleccionarCategoriaAcr(categoria) {
+    cerrarModalAcr()
+    acrFlowActive.value = true
+    selectEquipmentType(categoria)
+}
+
 // Wizard steps configuration
 const wizardSteps = [
     { label: 'Solicitante', validate: () => validateStep0() },
@@ -1468,14 +1645,14 @@ const canProceedToNext = computed(() => {
 })
 
 const canAddItem = computed(() => {
+    if (isVerifyingStatus.value) return false
     if (!newItem.tipo) return false
     if (!newItem.unidades.length) return false
-    return true
+    return newItem.unidades.some(u => u.nombre?.trim())
 })
 
 const isValid = computed(() => {
-    return form.nombreSolicitante.trim() &&
-        form.motivoSalida &&
+    return form.motivoSalida &&
         form.equiposSalida.length > 0
 })
 
@@ -1489,10 +1666,7 @@ const currentSuggestions = computed(() => {
     // Para bienes externos NO se usa ningún tipo de sugerencia de inventario
     if (belongsToHospital.value === false) return []
     if (!newItem.tipo) return []
-    if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-        return suggestions.value || []
-    }
-    return []
+    return suggestions.value || []
 })
 
 const summaryItems = computed(() => [
@@ -1518,6 +1692,14 @@ const summaryItems = computed(() => [
         status: form.folio ? 'complete' : 'pending'
     },
     {
+        key: 'folioAsociado',
+        label: 'Folio Asociado',
+        value: form.folioAsociado,
+        step: 3,
+        status: 'complete',
+        hidden: !form.folioAsociado
+    },
+    {
         key: 'motivo',
         label: 'Motivo',
         value: form.motivoSalida,
@@ -1535,7 +1717,7 @@ const summaryItems = computed(() => [
 
 // Validation functions
 function validateStep0() {
-    return form.nombreSolicitante?.trim()?.length > 0
+    return true // Solicitante opcional
 }
 
 function validateStep1() {
@@ -1675,134 +1857,17 @@ function removeUnit(idx) {
     }
 }
 
-// Add equipment - UN ITEM POR CADA UNIDAD CON SU PROPIA CANTIDAD
-async function agregarItem() {
-    if (!canAddItem.value) {
-        notifier.error('Selecciona el tipo de bien y agrega al menos una unidad')
-        return
-    }
-
-    // CRUCIAL: Por cada unidad, crear un item INDEPENDIENTE con SU PROPIA CANTIDAD
-    let itemsAgregados = 0
-
-    // Verificar estado del primer equipo con clave HRAEI o serie válida
-    const firstUnitWithKey = newItem.unidades.find(u => {
-        const inv = u.claveHRAEI || u.serie
-        return inv && inv.toUpperCase() !== 'N/A' && inv.trim() !== ''
-    })
-    
-    // Construir lista de términos de búsqueda (serie, claveHRAEI, nombre, marca, modelo)
-    const searchTerms = []
-    
-    if (firstUnitWithKey) {
-        // 1. Número de serie primero (más específico)
-        if (firstUnitWithKey.serie && firstUnitWithKey.serie.toUpperCase() !== 'N/A' && firstUnitWithKey.serie.trim() !== '') {
-            searchTerms.push(firstUnitWithKey.serie.trim())
-        }
-        
-        // 2. Clave HRAEI
-        if (firstUnitWithKey.claveHRAEI && firstUnitWithKey.claveHRAEI.toUpperCase() !== 'N/A' && firstUnitWithKey.claveHRAEI.trim() !== '') {
-            searchTerms.push(firstUnitWithKey.claveHRAEI.trim())
-        }
-        
-        // 3. Nombre del equipo
-        if (firstUnitWithKey.nombre && firstUnitWithKey.nombre.trim() !== '') {
-            searchTerms.push(firstUnitWithKey.nombre.trim())
-        }
-        
-        // 4. Marca
-        if (firstUnitWithKey.marca && firstUnitWithKey.marca.toUpperCase() !== 'N/A' && firstUnitWithKey.marca.trim() !== '') {
-            searchTerms.push(firstUnitWithKey.marca.trim())
-        }
-        
-        // 5. Modelo
-        if (firstUnitWithKey.modelo && firstUnitWithKey.modelo.toUpperCase() !== 'N/A' && firstUnitWithKey.modelo.trim() !== '') {
-            searchTerms.push(firstUnitWithKey.modelo.trim())
-        }
-    }
-    
-    console.log('[OpSalidaNew] Términos de búsqueda:', searchTerms)
-    
-    const isValidInventory = searchTerms.length > 0
-    
-    if (firstUnitWithKey && newItem.tipo === 'equipo-medico' && isValidInventory) {
-        try {
-            // Enviar todos los términos de búsqueda al backend
-            const statusData = await getEquipmentStatus(searchTerms)
-            console.log('[OpSalidaNew] Estado recibido:', statusData)
-            console.log('[OpSalidaNew] SearchTerms:', searchTerms, 'StatusData keys:', Object.keys(statusData))
-            
-            // Buscar el primer término que tenga un estado válido
-            let equipmentStatus = null
-            let matchedTerm = null
-            
-            for (const term of searchTerms) {
-                console.log(`[OpSalidaNew] Checking term "${term}":`, statusData[term])
-                if (statusData[term] && statusData[term].status && statusData[term].status !== 'unknown') {
-                    equipmentStatus = statusData[term]
-                    matchedTerm = term
-                    console.log(`[OpSalidaNew] Found valid status for term "${term}"`)
-                    break
-                }
-            }
-            
-            if (equipmentStatus) {
-                console.log('[OpSalidaNew] Equipo encontrado con término:', matchedTerm, 'Estado:', equipmentStatus)
-                const { analyzeEquipmentStatus } = await import('@/composables/useEquipmentWarnings.js')
-                const warnings = analyzeEquipmentStatus(equipmentStatus, matchedTerm)
-                console.log('[OpSalidaNew] Warnings generadas:', warnings)
-                const highSeverityWarnings = warnings.filter(w => w.severity === 'high' && w.allowOverride)
-                
-                if (highSeverityWarnings.length > 0) {
-                    console.log('[OpSalidaNew] Showing warning modal with', highSeverityWarnings.length, 'high-severity warnings')
-                    // Preparar los items para añadir después de confirmación
-                    const itemsToAdd = newItem.unidades
-                        .map(u => {
-                            const descripcionFinal = (u.nombre || '').trim() || `Bien sin descripción (${getTipoLabel(newItem.tipo)})`
-                            return {
-                                tipo: newItem.tipo,
-                                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-                                cantidad: Math.max(1, u.cantidad || 1),
-                                descripcion: descripcionFinal,
-                                marca: u.marca,
-                                modelo: u.modelo,
-                            lote: u.lote,
-                            serie: u.serie,
-                            referencia: u.referencia,
-                            ubicacion: u.ubicacion,
-                            equipoAsociado: u.equipoAsociado || '',
-                            serieEquipoAsociado: u.serieEquipoAsociado || '',
-                            claveHRAEI: u.claveHRAEI,
-                            isExternal: isCurrentItemExternal.value
-                            }
-                        })
-                    
-                    pendingEquipment.value = { items: itemsToAdd, isMultiple: true }
-                    equipmentWarnings.value = warnings
-                    showWarningModal.value = true
-                    return
-                } else {
-                    console.log('[OpSalidaNew] No high-severity warnings found, proceeding without modal')
-                }
-            } else {
-                console.log('[OpSalidaNew] No equipment status found for any search term')
-            }
-        } catch (error) {
-            console.warn('[OpSalidaNew] Error verificando estado del equipo:', error)
-        }
-    }
-
+function agregarItemsSinWarning() {
     const generatedItems = []
 
     for (const unidad of newItem.unidades) {
         const descripcionFinal = (unidad.nombre || '').trim() || `Bien sin descripción (${getTipoLabel(newItem.tipo)})`
-
         const cantidadDeEstaUnidad = Math.max(1, unidad.cantidad || 1)
 
         generatedItems.push({
             tipo: newItem.tipo,
             consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-            cantidad: cantidadDeEstaUnidad,  // LA CANTIDAD QUE EL USUARIO PUSO EN ESTA UNIDAD
+            cantidad: cantidadDeEstaUnidad,
             isExternal: isCurrentItemExternal.value,
             descripcion: descripcionFinal,
             marca: unidad.marca,
@@ -1815,14 +1880,6 @@ async function agregarItem() {
             serieEquipoAsociado: unidad.serieEquipoAsociado || '',
             claveHRAEI: unidad.claveHRAEI
         })
-
-        console.log('✓ Item guardado:', {
-            tipo: newItem.tipo,
-            cantidad: cantidadDeEstaUnidad,
-            descripcion: descripcionFinal
-        })
-
-        itemsAgregados++
     }
 
     if (generatedItems.length > 0) {
@@ -1833,13 +1890,150 @@ async function agregarItem() {
             for (const equipmentItem of generatedItems) {
                 form.equiposSalida.push(equipmentItem)
             }
-            notifier.success(`${itemsAgregados} equipo(s) agregado(s)`)
+            notifier.success(`${generatedItems.length} equipo(s) agregado(s)`)
         }
-        resetNewItem()
+
+        // Si es un bien interno, mostramos feedback en la card antes de resetear
+        if (belongsToHospital.value === true) {
+            cardSuccessState.value = true
+            setTimeout(() => {
+                cardSuccessState.value = false
+                resetNewItem()
+            }, 1500)
+        } else {
+            resetNewItem()
+        }
     } else {
         notifier.error('Completa al menos un equipo')
     }
 }
+
+// Add equipment - UN ITEM POR CADA UNIDAD CON SU PROPIA CANTIDAD
+const getBannerStyle = (item) => {
+    const isLinked = !!item.unidades[0]?.equipoAsociado;
+    const type = item.tipo;
+    
+    const themes = {
+        'equipo': { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.2)' },
+        'mobiliario': { color: '#10b981', bg: 'rgba(16, 185, 129, 0.2)' },
+        'accesorio': isLinked ? { color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.2)' } : { color: '#6366f1', bg: 'rgba(99, 102, 241, 0.2)' },
+        'consumible': isLinked ? { color: '#fb923c', bg: 'rgba(251, 146, 60, 0.2)' } : { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.2)' },
+        'refaccion': isLinked ? { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.2)' } : { color: '#f43f5e', bg: 'rgba(244, 63, 94, 0.2)' }
+    };
+    
+    const theme = themes[type] || { color: '#fbbf24', bg: 'rgba(245, 158, 11, 0.2)' };
+    return {
+        color: theme.color,
+        background: `linear-gradient(90deg, ${theme.bg} 0%, rgba(15, 23, 42, 0) 100%)`,
+        borderColor: `${theme.color}66`
+    };
+};
+
+const getBannerText = (item) => {
+    const isLinked = !!item.unidades[0]?.equipoAsociado;
+    const type = item.tipo;
+    
+    if (type === 'equipo') return 'EQUIPO MÉDICO';
+    if (type === 'mobiliario') return 'MOBILIARIO';
+    
+    let base = '';
+    if (type === 'accesorio') base = 'ACCESORIO';
+    else if (type === 'consumible') base = 'CONSUMIBLE';
+    else if (type === 'refaccion') base = 'REFACCIÓN';
+    else base = (type || 'ACTIVO').toUpperCase();
+    
+    return isLinked ? `${base} PARA EQUIPO MÉDICO` : base;
+};
+
+async function agregarItem() {
+    if (!canAddItem.value) {
+        notifier.error('Completa al menos el nombre del bien')
+        return
+    }
+
+    const firstUnitWithKey = newItem.unidades.find(u => {
+        const inv = u.claveHRAEI || u.serie
+        return inv && inv.toUpperCase() !== 'N/A' && inv.trim() !== ''
+    })
+    
+    const searchTerms = []
+    
+    if (firstUnitWithKey) {
+        if (firstUnitWithKey.serie && firstUnitWithKey.serie.toUpperCase() !== 'N/A' && firstUnitWithKey.serie.trim() !== '') {
+            searchTerms.push(firstUnitWithKey.serie.trim())
+        }
+        if (firstUnitWithKey.claveHRAEI && firstUnitWithKey.claveHRAEI.toUpperCase() !== 'N/A' && firstUnitWithKey.claveHRAEI.trim() !== '') {
+            searchTerms.push(firstUnitWithKey.claveHRAEI.trim())
+        }
+        if (firstUnitWithKey.nombre && firstUnitWithKey.nombre.trim() !== '') {
+            searchTerms.push(firstUnitWithKey.nombre.trim())
+        }
+        if (firstUnitWithKey.marca && firstUnitWithKey.marca.toUpperCase() !== 'N/A' && firstUnitWithKey.marca.trim() !== '') {
+            searchTerms.push(firstUnitWithKey.marca.trim())
+        }
+        if (firstUnitWithKey.modelo && firstUnitWithKey.modelo.toUpperCase() !== 'N/A' && firstUnitWithKey.modelo.trim() !== '') {
+            searchTerms.push(firstUnitWithKey.modelo.trim())
+        }
+    }
+    
+    const isValidInventory = searchTerms.length > 0
+    
+    if (firstUnitWithKey && newItem.tipo === 'equipo-medico' && isValidInventory) {
+        isVerifyingStatus.value = true
+        getEquipmentStatus(searchTerms).then(async (statusData) => {
+            let equipmentStatus = null
+            let matchedTerm = null
+            
+            for (const term of searchTerms) {
+                if (statusData[term] && statusData[term].status && statusData[term].status !== 'unknown') {
+                    equipmentStatus = statusData[term]
+                    matchedTerm = term
+                    break
+                }
+            }
+            
+            if (equipmentStatus) {
+                const { analyzeEquipmentStatus } = await import('@/composables/useEquipmentWarnings.js')
+                const warnings = analyzeEquipmentStatus(equipmentStatus, matchedTerm)
+                const highSeverityWarnings = warnings.filter(w => w.severity === 'high' && w.allowOverride)
+                
+                if (highSeverityWarnings.length > 0) {
+                    const itemsToAdd = newItem.unidades
+                        .filter(u => u.nombre?.trim())
+                        .map(u => ({
+                            tipo: newItem.tipo,
+                            consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                            lote: u.lote,
+                            serie: u.serie,
+                            referencia: u.referencia,
+                            ubicacion: u.ubicacion,
+                            equipoAsociado: u.equipoAsociado || '',
+                            serieEquipoAsociado: u.serieEquipoAsociado || '',
+                            claveHRAEI: u.claveHRAEI,
+                            isExternal: isCurrentItemExternal.value
+                        }))
+                    
+                    pendingEquipment.value = { items: itemsToAdd, isMultiple: true }
+                    equipmentWarnings.value = warnings
+                    showWarningModal.value = true
+                    return
+                }
+            }
+            
+            agregarItemsSinWarning()
+        }).catch(err => {
+            console.warn('[OpSalidaNew] Error verificando estado:', err)
+            agregarItemsSinWarning()
+        }).finally(() => {
+            isVerifyingStatus.value = false
+        })
+    } else {
+        agregarItemsSinWarning()
+    }
+}
+
+
+
 
 // Confirmar añadir equipo con advertencias
 function confirmAddWithWarnings() {
@@ -1889,6 +2083,8 @@ function resetNewItem() {
     newItem.ubicacion = ''
     newItem.claveHRAEI = ''
     newItem.unidades = []
+    belongsToHospital.value = null
+    isVerifyingStatus.value = false
 }
 
 // Agregar item en blanco con valores N/A
@@ -2105,10 +2301,6 @@ function onStepChange(step) {
 
 // Preview PDF - Opens in modal with iframe
 async function onPreviewPDF() {
-    if (!form.nombreSolicitante?.trim()) {
-        notifier.error('Completa al menos el nombre del solicitante')
-        return
-    }
 
     loadingPreview.value = true
 
@@ -2304,14 +2496,24 @@ async function onSubmit() {
                     throw new Error('No se pudo descargar el PDF generado')
                 }
                 const blob = await pdfRes.blob()
-                const url = window.URL.createObjectURL(blob)
+                // Asegurar que el blob tenga el tipo MIME correcto
+                const pdfBlob = new Blob([blob], { type: 'application/pdf' })
+                const url = window.URL.createObjectURL(pdfBlob)
+                
                 const link = document.createElement('a')
                 link.href = url
-                link.setAttribute('download', `salida_${folioGuardado}.pdf`)
+                link.download = `salida_${folioGuardado || 'sin_folio'}.pdf`
+                link.style.display = 'none'
+                
                 document.body.appendChild(link)
                 link.click()
-                link.remove()
-                window.URL.revokeObjectURL(url)
+                
+                // Pequeño retraso antes de limpiar para asegurar que el navegador inicie la descarga
+                setTimeout(() => {
+                    document.body.removeChild(link)
+                    window.URL.revokeObjectURL(url)
+                }, 500)
+                
                 notifier.success('PDF descargado exitosamente')
             } catch (pdfErr) {
                 console.warn('Error descargando PDF:', pdfErr)
@@ -2346,20 +2548,40 @@ function checkMobileView() {
     isMobileView.value = window.innerWidth < 1200
 }
 
-// Auto-assign date only (hora inicio is manual, hora termino is live timer)
 function initializeDateAndTime() {
-    const now = new Date()
+    if (fechaAutomatica.value) {
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const day = String(now.getDate()).padStart(2, '0')
+        form.fechaISO = `${year}-${month}-${day}`
+        form.fecha = `${day}/${month}/${year}`
+    }
+}
 
-    // Set current date in both formats
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
-    form.fechaISO = `${year}-${month}-${day}`
-    form.fecha = `${day}/${month}/${year}`
+function onFechaAutoChange() {
+    if (fechaAutomatica.value) {
+        const now = new Date()
+        const year = now.getFullYear()
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const day = String(now.getDate()).padStart(2, '0')
+        form.fechaISO = `${year}-${month}-${day}`
+        form.fecha = `${day}/${month}/${year}`
+    }
+}
 
-    // horaInicio is NOT auto-assigned - user must enter it
-    // horaTermino will be set by the live timer
-    try { console.log('[OpSalidaNew] initializeDateAndTime applied', { fecha: form.fecha, fechaISO: form.fechaISO }) } catch (e) {}
+function onFechaManualInput(e) {
+    const iso = e.target.value
+    if (!iso) return
+    form.fechaISO = iso
+    const [y, m, d] = iso.split('-')
+    form.fecha = `${d}/${m}/${y}`
+}
+
+function formatDisplayDate(iso) {
+    if (!iso) return '--/--/----'
+    const [y, m, d] = iso.split('-')
+    return `${d}/${m}/${y}`
 }
 
 // Auto-generate folio for new orders
@@ -2399,6 +2621,26 @@ async function ensureInventorySuggestionsForCurrentType(tipo) {
 
     await fetchAllInventorySuggestions()
     await fetchInsumosRefaccionesSuggestions()
+}
+
+const forceRefreshInventory = async () => {
+    try {
+        if (loadingInventory.value) return
+        notifier.info('Sincronizando inventario...')
+        
+        if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
+            await refreshBiomedicalEquipmentCatalog()
+            await fetchEquipoMedicoSuggestions()
+        } else {
+            await fetchAllInventorySuggestions()
+            await fetchInsumosRefaccionesSuggestions()
+        }
+        
+        notifier.success('Inventario actualizado correctamente')
+    } catch (err) {
+        notifier.error('Error al sincronizar inventario')
+        console.error(err)
+    }
 }
 
 // Lifecycle
@@ -2515,6 +2757,8 @@ watch(() => belongsToHospital.value, async (isHospitalItem) => {
     }
     try {
         await ensureInventorySuggestionsForCurrentType(newItem.tipo)
+        // Forzar sincronización de sugerencias ahora que el limitante "externo" se ha removido
+        syncSuggestions()
     } catch (err) {
         console.error('[OpSalidaNew] Error loading inventory suggestions after ownership change:', err)
     }
@@ -2683,6 +2927,10 @@ function resolveMotivoFromSource(...sources) {
 
 .fields-grid .span-1 {
     grid-column: span 1;
+}
+
+.fields-grid .span-2 {
+    grid-column: span 2;
 }
 
 /* Motivo Custom Select Support */
@@ -4245,5 +4493,775 @@ function resolveMotivoFromSource(...sources) {
     background: #1e293b;
     color: #fff;
     padding: 10px;
+}
+
+/* ACR Modal */
+.type-card-acr { border-color: rgba(6,182,212,0.3) !important; }
+.type-card-acr:hover { border-color: rgba(6,182,212,0.6) !important; }
+.type-card-acr.is-selected { border-color: rgba(6,182,212,0.8) !important; background: rgba(6,182,212,0.12) !important; }
+.acr-modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.72);backdrop-filter:blur(8px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px; }
+.acr-modal { background:linear-gradient(135deg,rgba(20,24,40,0.98),rgba(15,20,35,0.98));border:1px solid rgba(6,182,212,0.25);border-radius:20px;width:100%;max-width:420px;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6); }
+.acr-modal-header { display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid rgba(255,255,255,0.07); }
+.acr-modal-title { display:flex;align-items:center;gap:10px;color:rgba(6,182,212,0.9); }
+.acr-modal-title span { font-size:0.95rem;font-weight:600;color:rgba(230,235,245,0.92); }
+.acr-modal-close { background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:rgba(255,255,255,0.6);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.2s; }
+.acr-modal-close:hover { background:rgba(239,68,68,0.2);color:#ef4444; }
+.acr-modal-body { padding:20px; }
+.acr-hint { font-size:0.79rem;color:rgba(255,255,255,0.4);margin:0 0 14px;text-align:center;line-height:1.5; }
+.acr-category-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
+.acr-cat-btn { display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:rgba(230,235,245,0.85);font-size:0.85rem;font-weight:600;cursor:pointer;transition:all 0.2s; }
+.acr-cat-btn:hover { background:rgba(255,255,255,0.08);border-color:rgba(255,255,255,0.2);transform:translateY(-2px); }
+.acr-cat-icon { width:50px;height:50px;border-radius:12px;border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;color:var(--cat-color);background:color-mix(in srgb, var(--cat-color) 15%, transparent); }
+
+/* NUEVA SECCIÓN DE FECHA PREMIUM - EVITA RECORTE Y MEJORA ESTILO */
+/* SECCIÓN DE FECHA COMPACTA - SOLUCIÓN FINAL A RECORTES */
+.date-compact-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(15, 23, 42, 0.4);
+    padding: 6px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    height: 42px;
+    width: fit-content;
+    min-width: 260px;
+    overflow: visible !important;
+}
+
+.date-toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    padding-right: 10px;
+}
+
+.date-toggle-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.date-value-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding-left: 4px;
+    overflow: visible !important;
+}
+
+.date-simple-text {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.date-simple-input {
+    background: transparent !important;
+    border: none !important;
+    color: #3b82f6 !important;
+    font-size: 0.95rem !important;
+    font-weight: 700 !important;
+    padding: 0 !important;
+    width: 160px !important;
+    outline: none !important;
+    cursor: pointer;
+}
+
+/* Switch Simple y Elegante */
+.simple-switch {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+}
+
+.simple-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.simple-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #334155;
+    transition: .3s;
+    border-radius: 18px;
+}
+
+.simple-slider:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .3s;
+    border-radius: 50%;
+}
+
+input:checked + .simple-slider {
+    background-color: #3b82f6;
+}
+
+input:checked + .simple-slider:before {
+    transform: translateX(14px);
+}
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.btn-add {
+    position: relative;
+    padding: 12px 28px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    min-width: 140px;
+}
+
+.btn-add:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+.btn-add:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #475569;
+    box-shadow: none;
+}
+
+.btn-clear {
+    padding: 12px 24px;
+    background: rgba(148, 163, 184, 0.1);
+    color: #cbd5e1;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-clear:hover {
+    background: rgba(148, 163, 184, 0.2);
+    color: #fff;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.btn-add.is-loading {
+    color: transparent;
+}
+
+.btn-add .loading-spinner {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+}
+
+/* Premium Internal Edit Card */
+.internal-edit-card.premium-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 32px;
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.95) 100%);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    overflow: hidden;
+    animation: premiumFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes premiumFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card-glow {
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.internal-card-header {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.edit-context-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    padding: 6px 16px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+}
+
+.edit-icon-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    color: #000;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.edit-text {
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.asset-name {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #f8fafc;
+    line-height: 1.2;
+    margin: 0;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.technical-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(15, 23, 42, 0.4);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    overflow: hidden;
+}
+
+.info-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    color: #64748b;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.info-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #f1f5f9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.asset-name {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #fff;
+    margin: 12px 0 0 0;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    word-break: break-word;
+}
+
+.internal-edit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.edit-field-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.edit-field-group.full-width {
+    grid-column: span 2;
+}
+
+.field-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #60a5fa;
+}
+
+.stepper-control {
+    display: flex;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.5);
+    border: 2px solid rgba(59, 130, 246, 0.2);
+    border-radius: 16px;
+    padding: 8px;
+    width: fit-content;
+    transition: all 0.3s ease;
+}
+
+.stepper-control:focus-within {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+}
+
+.step-btn {
+    width: 42px;
+    height: 42px;
+    background: rgba(59, 130, 246, 0.1);
+    border: none;
+    border-radius: 12px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.step-btn:hover:not(:disabled) {
+    background: #3b82f6;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.step-btn:active:not(:disabled) {
+    transform: scale(0.95);
+}
+
+.step-btn:disabled {
+    opacity: 0.2;
+    cursor: not-allowed;
+}
+
+.step-input {
+    width: 60px;
+    background: transparent;
+    border: none;
+    color: #fff;
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 800;
+    outline: none;
+}
+
+/* Chrome, Safari, Edge, Opera */
+.step-input::-webkit-outer-spin-button,
+.step-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.input-with-icon {
+    position: relative;
+    width: 100%;
+}
+
+/* Success Overlay & Premium Card Actions */
+.success-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.9);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 24px;
+}
+
+.success-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    color: #10b981;
+    font-weight: 800;
+    font-size: 1.25rem;
+    animation: successPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes successPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.success-icon-wrap {
+    width: 80px;
+    height: 80px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 2px solid #10b981;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.premium-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin-top: 8px;
+}
+
+.btn-premium-clear {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 14px;
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-premium-clear:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+}
+
+.btn-premium-add {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 180px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    border-radius: 14px;
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-premium-add:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 25px -5px rgba(37, 99, 235, 0.4);
+}
+
+.btn-premium-add:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.btn-premium-add:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #475569;
+}
+
+.loading-spinner-small {
+    width: 18px;
+    height: 18px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.fade-enter-active, .fade-leave-active {
+    transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+    opacity: 0;
+}
+
+.qty-control {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgba(15, 23, 42, 0.6);
+    height: 42px;
+}
+
+.qty-control button {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    width: 36px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s;
+}
+
+.qty-control button:hover {
+    background: rgba(59, 130, 246, 0.2);
+    color: #fff;
+}
+.qty-control span {
+    min-width: 40px;
+    text-align: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+/* ==========================================================================
+   PREMIUM UNIFIED DATE SELECTOR (MONOLITHIC CAPSULE)
+   ========================================================================== */
+.premium-date-container {
+    display: flex;
+    align-items: center;
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 24px;
+    height: 48px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-sizing: border-box;
+}
+
+/* Estado Activo Global */
+.premium-date-container.mode-auto {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.05);
+    background: rgba(30, 41, 59, 0.5);
+}
+
+.premium-date-container.mode-manual {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(30, 41, 59, 0.6);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Sección de Control (Izquierda) */
+.control-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 20px;
+    height: 100%;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+    min-width: 140px;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.mode-auto .control-section {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.pill-label {
+    font-size: 0.75rem;
+    font-weight: 900;
+    color: #475569;
+    letter-spacing: 0.12em;
+    transition: all 0.3s ease;
+}
+
+.mode-auto .pill-label {
+    color: #3b82f6;
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
+/* Sección de Valor (Derecha) */
+.value-section {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    height: 100%;
+    position: relative;
+    cursor: not-allowed;
+    transition: all 0.3s ease;
+}
+
+.mode-manual .value-section {
+    cursor: pointer;
+}
+
+.mode-manual .value-section:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.pill-content {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: 100%;
+}
+
+.pill-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: #475569;
+    background: rgba(255, 255, 255, 0.03);
+    transition: all 0.3s ease;
+}
+
+.mode-auto .pill-icon,
+.mode-manual .pill-icon {
+    color: #3b82f6;
+    background: rgba(59, 130, 246, 0.1);
+}
+
+.pill-text {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.date-text {
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 48px;
+    color: #64748b;
+    margin: 0;
+    letter-spacing: 0.02em;
+    transition: all 0.3s ease;
+}
+
+.mode-manual .date-text {
+    color: #fff;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+
+
+/* Date Picker Invisible */
+.hidden-picker {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0 !important;
+    cursor: pointer;
+    z-index: 10;
+}
+
+/* Switch Estilizado */
+.simple-switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+}
+
+.simple-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.simple-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: rgba(71, 85, 105, 0.4);
+    transition: .4s;
+    border-radius: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.simple-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 4px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input:checked + .simple-slider {
+    background-color: #3b82f6;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+}
+
+input:checked + .simple-slider:before {
+    transform: translateX(18px);
 }
 </style>

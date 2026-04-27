@@ -44,6 +44,9 @@
           <span class="btn-icon-left">+</span> Agregar filtro
         </button>
         <button type="button" class="btn-secondary" @click="clearAllRefinementFilters" :disabled="refinements.length === 0 && !refinementValue">Limpiar</button>
+        <button type="button" class="btn-secondary btn-with-icon" @click="$emit('refresh-inventory')" title="Forzar recarga de sugerencias de inventario">
+          <span class="btn-icon-left">🔄</span> Refrescar
+        </button>
       </div>
     </div>
 
@@ -94,7 +97,7 @@
               Ubicación
               <input type="text" v-model="localItemState[item._itemKey].ubicacion" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 120px;" placeholder="Ej. UCIA" />
             </label>
-            <label v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
+            <label v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'">
               Equipo Asociado
               <input type="text" list="datalist-equipos-refinement" v-model="localItemState[item._itemKey].equipoAsociado" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 140px;" placeholder="Ej. Monitor SN123" />
             </label>

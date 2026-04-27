@@ -184,9 +184,8 @@ const progressClass = computed(() => {
   font-size: 0.9rem;
   font-weight: 500;
   color: #e2e8f0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .item-placeholder {

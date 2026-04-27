@@ -66,15 +66,25 @@
           </label>
         </aside>
         <div class="ik-items">
+          <OrderFilterBar
+            title="Búsqueda de bienes para resurtido"
+            subtitle="Ubica bienes por clave, serie, marca, modelo, referencia o lote. Escribe para ver sugerencias."
+            :filters="itemSearchFilters"
+            :count-label="`Bienes encontrados: ${filteredRefillItems.length}`"
+            :suggestions-by-field="itemSearchFilters.suggestionsByField"
+            :field-options="ITEM_FIELD_OPTIONS"
+          />
           <ItemListVirtual
-            :items="items"
+            :items="filteredRefillItems"
             :quantities="quantities"
             :loading="loadingItems"
-            placeholder="Buscar por varios términos: referencia marca lote…"
+            placeholder="Resultados filtrados..."
+            :showSimpleSearch="false"
             :search-scopes="['all', 'clave', 'descripcion', 'marca', 'modelo', 'referencia', 'lote', 'n']"
             :stock-filters="['all', 'with-stock', 'zero-stock']"
             :allow-fast-step="true"
             :fast-amount="5"
+            :max-per-item="Infinity"
             @update:quantities="quantities = $event"
           />
         </div>
@@ -312,9 +322,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, reactive } from 'vue';
 import WizardShell from './WizardShell.vue';
 import ItemListVirtual from './ItemListVirtual.vue';
+import OrderFilterBar from '@/components/OrderFilterBar.vue';
 
 const props = defineProps({ open: Boolean });
 const emit = defineEmits(['close', 'success']);
@@ -326,6 +337,293 @@ const quantities = ref({});
 const loadingItems = ref(false);
 const submitting = ref(false);
 const submitError = ref('');
+
+// --- Advanced Filter Refs ---
+const filterClave = ref('')
+const filterDescripcion = ref('')
+const filterMarca = ref('')
+const filterModelo = ref('')
+const filterReferencia = ref('')
+const filterLote = ref('')
+const filterN = ref('')
+const filterNoInventario = ref('')
+const filterUbicacion = ref('')
+const filterStockMin = ref(null)
+const filterStockMax = ref(null)
+
+const activeFilterKeys = ref(new Set())
+
+const ITEM_FIELD_OPTIONS = [
+  { key: 'clave', label: 'Clave HRAEI', placeholder: 'Ej. COMODATO', type: 'text' },
+  { key: 'descripcion', label: 'Descripción', placeholder: 'Nombre, modelo, serie...', type: 'text' },
+  { key: 'marca', label: 'Marca', placeholder: 'Ej. Philips', type: 'text' },
+  { key: 'modelo', label: 'Modelo', placeholder: 'Ej. MX40', type: 'text' },
+  { key: 'referencia', label: 'Referencia', placeholder: 'Referencia interna', type: 'text' },
+  { key: 'lote', label: 'Lote', placeholder: 'Ej. L123', type: 'text' },
+  { key: 'n', label: 'N / Serie', placeholder: 'Número de serie', type: 'text' },
+  { key: 'noInventario', label: 'No. inventario', placeholder: 'Ej. 12345', type: 'text' },
+  { key: 'ubicacion', label: 'Ubicación', placeholder: 'Ej. UCIA', type: 'text' },
+  { key: 'stockMin', label: 'Stock mínimo', placeholder: 'Mínimo', type: 'number' },
+  { key: 'stockMax', label: 'Stock máximo', placeholder: 'Máximo', type: 'number' }
+]
+
+const activeFiltersList = computed(() => {
+  const list = []
+  const pushIf = (key, label, binding) => {
+    const val = binding && typeof binding === 'object' && 'value' in binding ? binding.value : binding
+    if (activeFilterKeys.value.has(key) || (val !== null && val !== undefined && String(val).trim() !== '')) {
+      list.push({ key, label, bindings: { modelValue: binding } })
+    }
+  }
+  pushIf('clave', 'Clave HRAEI', filterClave)
+  pushIf('descripcion', 'Descripción', filterDescripcion)
+  pushIf('marca', 'Marca', filterMarca)
+  pushIf('modelo', 'Modelo', filterModelo)
+  pushIf('referencia', 'Referencia', filterReferencia)
+  pushIf('lote', 'Lote', filterLote)
+  pushIf('n', 'N / Serie', filterN)
+  pushIf('noInventario', 'No. inventario', filterNoInventario)
+  pushIf('ubicacion', 'Ubicación', filterUbicacion)
+  pushIf('stockMin', 'Stock mínimo', filterStockMin)
+  pushIf('stockMax', 'Stock máximo', filterStockMax)
+  return list
+})
+
+const chipsList = computed(() => {
+  const chips = []
+  if (filterClave.value) chips.push({ key: 'clave', label: 'Clave HRAEI', value: filterClave.value, bindings: { modelValue: filterClave } })
+  if (filterDescripcion.value) chips.push({ key: 'descripcion', label: 'Descripción', value: filterDescripcion.value, bindings: { modelValue: filterDescripcion } })
+  if (filterMarca.value) chips.push({ key: 'marca', label: 'Marca', value: filterMarca.value, bindings: { modelValue: filterMarca } })
+  if (filterModelo.value) chips.push({ key: 'modelo', label: 'Modelo', value: filterModelo.value, bindings: { modelValue: filterModelo } })
+  if (filterReferencia.value) chips.push({ key: 'referencia', label: 'Referencia', value: filterReferencia.value, bindings: { modelValue: filterReferencia } })
+  if (filterLote.value) chips.push({ key: 'lote', label: 'Lote', value: filterLote.value, bindings: { modelValue: filterLote } })
+  if (filterN.value) chips.push({ key: 'n', label: 'N / Serie', value: filterN.value, bindings: { modelValue: filterN } })
+  if (filterNoInventario.value) chips.push({ key: 'noInventario', label: 'No. inventario', value: filterNoInventario.value, bindings: { modelValue: filterNoInventario } })
+  if (filterUbicacion.value) chips.push({ key: 'ubicacion', label: 'Ubicación', value: filterUbicacion.value, bindings: { modelValue: filterUbicacion } })
+  if (filterStockMin.value !== null && filterStockMin.value !== undefined) chips.push({ key: 'stockMin', label: 'Stock mínimo', value: filterStockMin.value, bindings: { modelValue: filterStockMin } })
+  if (filterStockMax.value !== null && filterStockMax.value !== undefined) chips.push({ key: 'stockMax', label: 'Stock máximo', value: filterStockMax.value, bindings: { modelValue: filterStockMax } })
+  return chips
+})
+
+const hasActiveFilters = computed(() => activeFiltersList.value.length > 0 || chipsList.value.length > 0)
+
+function activateFilter(key) {
+  activeFilterKeys.value.add(key)
+}
+
+function removeFilter(key) {
+  activeFilterKeys.value.delete(key)
+  if (key === 'clave') filterClave.value = ''
+  else if (key === 'descripcion') filterDescripcion.value = ''
+  else if (key === 'marca') filterMarca.value = ''
+  else if (key === 'modelo') filterModelo.value = ''
+  else if (key === 'referencia') filterReferencia.value = ''
+  else if (key === 'lote') filterLote.value = ''
+  else if (key === 'n') filterN.value = ''
+  else if (key === 'noInventario') filterNoInventario.value = ''
+  else if (key === 'ubicacion') filterUbicacion.value = ''
+  else if (key === 'stockMin') filterStockMin.value = null
+  else if (key === 'stockMax') filterStockMax.value = null
+}
+
+function clearAllFilters() {
+  activeFilterKeys.value.clear()
+  filterClave.value = ''
+  filterDescripcion.value = ''
+  filterMarca.value = ''
+  filterModelo.value = ''
+  filterReferencia.value = ''
+  filterLote.value = ''
+  filterN.value = ''
+  filterNoInventario.value = ''
+  filterUbicacion.value = ''
+  filterStockMin.value = null
+  filterStockMax.value = null
+}
+
+const pickValue = (item, aliases = [], fallback = '') => {
+  if (!item || typeof item !== 'object') return fallback;
+  const normalizeKey = (key) => String(key || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const normalizedLookup = new Map();
+  Object.keys(item).forEach((k) => {
+    const normalized = normalizeKey(k);
+    if (normalized && !normalizedLookup.has(normalized)) normalizedLookup.set(normalized, k);
+  });
+  for (const alias of aliases) {
+    if (Object.prototype.hasOwnProperty.call(item, alias) && item[alias] !== null && item[alias] !== undefined && item[alias] !== '') return item[alias];
+    const found = normalizedLookup.get(normalizeKey(alias));
+    if (found && item[found] !== null && item[found] !== undefined && item[found] !== '') return item[found];
+  }
+  return fallback;
+};
+
+const getItemId = (item) => {
+  const clave = pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], 'SIN_CLAVE');
+  const serie = pickValue(item, ['N', 'Número de serie', 'Numero de serie', 'id'], '');
+  const modelo = pickValue(item, ['MODELO', 'Modelo', 'modelo'], '');
+  const marca = pickValue(item, ['MARCA', 'Marca', 'marca'], '');
+  return `${clave}|${serie}|${modelo}|${marca}`;
+};
+
+const getItemClave = (item) => String(pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], '') || '').trim();
+const getItemName = (item) => String(pickValue(item, ['Descripción del bien', 'Descripcion del bien', 'DESCRIPCIÓN ARTÍCULO', 'descripcion', 'NOMBRE'], '—') || '—');
+
+const normalizeText = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase();
+
+const getItemMarca = (item) => String(pickValue(item, ['MARCA', 'Marca', 'marca'], '') || '').trim();
+const getItemModelo = (item) => String(pickValue(item, ['MODELO', 'Modelo', 'modelo'], '') || '').trim();
+const getItemReferencia = (item) => String(pickValue(item, ['REFERENCIA', 'Referencia', 'referencia'], '') || '').trim();
+const getItemLote = (item) => String(pickValue(item, ['LOTE', 'Lote', 'lote'], '') || '').trim();
+const getItemSerie = (item) => String(pickValue(item, ['N', 'n', 'Número de serie', 'Numero de serie', 'id'], '') || '').trim();
+const getItemNoInventario = (item) => String(pickValue(item, ['No DE INVENTARIO', 'No. Inventario', 'NO INVENTARIO', 'no_inventario', 'numero_inventario'], '') || '').trim();
+const getItemUbicacion = (item) => String(pickValue(item, ['UBICACION ESPECIFICA', 'Ubicacion especifica', 'Ubicación específica', 'UBICACION', 'ubicacion'], '') || '').trim();
+const getItemOrigen = (item) => String(pickValue(item, ['ORIGEN DEL BIEN', 'Origen del bien', 'origen', 'origen_bien'], '') || '').trim();
+const getItemStock = (item) => {
+  const raw = pickValue(item, ['TOTAL EXISTENCIAS', 'Total Excistencias', 'total_existencias', 'totalExistencias', 'Cantidad_Stock', 'CANTIDAD', 'Cantidad', 'cantidad'], 0);
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const buildItemDescriptor = (item) => {
+  const parts = [
+    getItemName(item),
+    getItemClave(item) ? `Clave: ${getItemClave(item)}` : '',
+    getItemNoInventario(item) ? `Inventario: ${getItemNoInventario(item)}` : '',
+    getItemUbicacion(item) ? `Ubicación: ${getItemUbicacion(item)}` : '',
+    getItemMarca(item) ? `Marca: ${getItemMarca(item)}` : '',
+    getItemModelo(item) ? `Modelo: ${getItemModelo(item)}` : '',
+    getItemReferencia(item) ? `Ref: ${getItemReferencia(item)}` : '',
+    getItemLote(item) ? `Lote: ${getItemLote(item)}` : '',
+    getItemSerie(item) ? `Serie: ${getItemSerie(item)}` : ''
+  ].filter(Boolean)
+  return parts.join(' · ')
+}
+
+const buildItemSearchText = (item) => {
+  return normalizeText([
+    getItemName(item),
+    getItemClave(item),
+    getItemMarca(item),
+    getItemModelo(item),
+    getItemReferencia(item),
+    getItemLote(item),
+    getItemSerie(item),
+    getItemNoInventario(item),
+    getItemUbicacion(item),
+    getItemOrigen(item)
+  ].join(' '))
+}
+
+/* itemSearchFilters moved after suggestionsByField */
+
+const filteredRefillItems = computed(() => {
+  let r = Array.isArray(items.value) ? items.value.slice() : []
+  
+  if (filterClave.value) {
+    const s = normalizeText(filterClave.value)
+    r = r.filter(it => normalizeText(getItemClave(it)).includes(s))
+  }
+  if (filterDescripcion.value) {
+    const s = normalizeText(filterDescripcion.value)
+    r = r.filter(it => {
+      const descriptor = normalizeText(buildItemDescriptor(it))
+      const searchable = buildItemSearchText(it)
+      return descriptor.includes(s) || searchable.includes(s)
+    })
+  }
+  if (filterMarca.value) {
+    const s = normalizeText(filterMarca.value)
+    r = r.filter(it => normalizeText(getItemMarca(it)).includes(s))
+  }
+  if (filterModelo.value) {
+    const s = normalizeText(filterModelo.value)
+    r = r.filter(it => normalizeText(getItemModelo(it)).includes(s))
+  }
+  if (filterReferencia.value) {
+    const s = normalizeText(filterReferencia.value)
+    r = r.filter(it => normalizeText(getItemReferencia(it)).includes(s))
+  }
+  if (filterLote.value) {
+    const s = normalizeText(filterLote.value)
+    r = r.filter(it => normalizeText(getItemLote(it)).includes(s))
+  }
+  if (filterN.value) {
+    const s = normalizeText(filterN.value)
+    r = r.filter(it => normalizeText(getItemSerie(it)).includes(s))
+  }
+  if (filterNoInventario.value) {
+    const s = normalizeText(filterNoInventario.value)
+    r = r.filter(it => normalizeText(getItemNoInventario(it)).includes(s))
+  }
+  if (filterUbicacion.value) {
+    const s = normalizeText(filterUbicacion.value)
+    r = r.filter(it => normalizeText(getItemUbicacion(it)).includes(s))
+  }
+  
+  const parseNumber = v => (v === null || v === undefined || v === '') ? null : Number(v)
+  const min = parseNumber(filterStockMin.value)
+  const max = parseNumber(filterStockMax.value)
+  
+  if (min !== null) r = r.filter(it => getItemStock(it) >= min)
+  if (max !== null) r = r.filter(it => getItemStock(it) <= max)
+  
+  return r
+});
+
+const suggestionsByField = computed(() => {
+  const buckets = {}
+  const list = Array.isArray(filteredRefillItems.value) ? filteredRefillItems.value : []
+  const addBucket = (key, values, limit = 5000) => {
+    const map = new Map()
+    for (const raw of values) {
+      const value = String(raw || '').trim()
+      if (!value) continue
+      const normalized = normalizeText(value)
+      if (!normalized) continue
+      const existing = map.get(normalized)
+      if (existing) existing.count += 1
+      else map.set(normalized, { value, label: value, count: 1 })
+    }
+    buckets[key] = Array.from(map.values()).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)).slice(0, limit)
+  }
+
+  addBucket('clave', list.map(i => getItemClave(i)))
+  addBucket('descripcion', list.map(i => buildItemDescriptor(i)))
+  addBucket('marca', list.map(i => getItemMarca(i)))
+  addBucket('modelo', list.map(i => getItemModelo(i)))
+  addBucket('referencia', list.map(i => getItemReferencia(i)))
+  addBucket('lote', list.map(i => getItemLote(i)))
+  addBucket('n', list.map(i => getItemSerie(i)))
+  addBucket('noInventario', list.map(i => getItemNoInventario(i)))
+  addBucket('ubicacion', list.map(i => getItemUbicacion(i)))
+  return buckets
+});
+
+const itemSearchFilters = reactive({
+  fieldBindings: {
+    clave: filterClave,
+    descripcion: filterDescripcion,
+    marca: filterMarca,
+    modelo: filterModelo,
+    referencia: filterReferencia,
+    lote: filterLote,
+    n: filterN,
+    noInventario: filterNoInventario,
+    ubicacion: filterUbicacion,
+    stockMin: filterStockMin,
+    stockMax: filterStockMax
+  },
+  activeFiltersList,
+  chipsList,
+  hasActiveFilters,
+  clearAllFilters,
+  removeFilter,
+  activateFilter,
+  suggestionsByField
+})
 
 const meta = ref({ responsable: '', proveedor: '', motivo: '', notas: '' });
 
@@ -428,45 +726,6 @@ function areNewItemsValid() {
   return newItems.value.length > 0 && newItems.value.every(isNewItemValid);
 }
 
-const pickValue = (item, aliases = [], fallback = '') => {
-  if (!item || typeof item !== 'object') return fallback;
-
-  const normalizeKey = (key) => String(key || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-zA-Z0-9]/g, '')
-    .toLowerCase();
-
-  const normalizedLookup = new Map();
-  Object.keys(item).forEach((k) => {
-    const normalized = normalizeKey(k);
-    if (normalized && !normalizedLookup.has(normalized)) normalizedLookup.set(normalized, k);
-  });
-
-  for (const alias of aliases) {
-    if (Object.prototype.hasOwnProperty.call(item, alias) && item[alias] !== null && item[alias] !== undefined && item[alias] !== '') {
-      return item[alias];
-    }
-    const found = normalizedLookup.get(normalizeKey(alias));
-    if (found && item[found] !== null && item[found] !== undefined && item[found] !== '') {
-      return item[found];
-    }
-  }
-
-  return fallback;
-};
-
-const getItemId = (item) => {
-  const clave = pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], 'SIN_CLAVE');
-  const serie = pickValue(item, ['N', 'Número de serie', 'Numero de serie', 'id'], '');
-  const modelo = pickValue(item, ['MODELO', 'Modelo', 'modelo'], '');
-  const marca = pickValue(item, ['MARCA', 'Marca', 'marca'], '');
-  return `${clave}|${serie}|${modelo}|${marca}`;
-};
-
-const getItemClave = (item) => String(pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], '') || '').trim();
-const getItemName = (item) => String(pickValue(item, ['Descripción del bien', 'Descripcion del bien', 'DESCRIPCIÓN ARTÍCULO', 'descripcion', 'NOMBRE'], '—') || '—');
-
 /* Step names */
 const stepLabels = computed(() => {
   if (intakeType.value === 'new') return ['Tipo', 'Nuevo Bien', 'Confirmación'];
@@ -554,6 +813,7 @@ const resetState = () => {
   quantities.value = {};
   submitting.value = false;
   submitError.value = '';
+  clearAllFilters();
   meta.value = { responsable: '', proveedor: '', motivo: '', notas: '' };
   newItems.value = [makeNewItem()]
 };

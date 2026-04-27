@@ -2529,7 +2529,7 @@ async function generarExcelEntrada(payloadParam) {
                     // Restaurar texto del encabezado según la sección
                     const titleTexts = {
                         'equipos': 'DESCRIPCIÓN DEL EQUIPO MÉDICO Y/O MOBILIARIO MÉDICO.',
-                        'accesorios': 'DESCRIPCIÓN DE ACCESORIOS QUE SE INGRESA CON EL EQUIPO MÉDICO.',
+                        'accesorios': 'ACCESORIOS',
                         'consumibles': 'DESCRIPCIÓN DE CONSUMIBLES QUE SE INGRESA CON EL EQUIPO MÉDICO.',
                         'refacciones': 'DESCRIPCIÓN DE REFACCIONES QUE SE INGRESA CON EL EQUIPO MÉDICO.'
                     }
@@ -3039,7 +3039,7 @@ async function generarExcelEntrada(payloadParam) {
         // ═══════════════════════════════════════════════════════════════
         // 💥 ARTILLERÍA MÁXIMA - FORMATO AGRESIVO A TODAS LAS FILAS DE DATOS 💥
         // ═══════════════════════════════════════════════════════════════
-        console.log('[FORMATO-MÁXIMO] 💥 ARTILLERÍA MÁXIMA - Aplicando formato a TODAS las filas de datos...')
+        console.log(' Aplicando formato a TODAS las filas de datos...')
 
         let formatRepairs = 0
         const standardBorder = {
@@ -3055,12 +3055,12 @@ async function generarExcelEntrada(payloadParam) {
         // APLICAR A TODAS LAS FILAS DE DATOS SIN EXCEPCIÓN
         sections.forEach(sec => {
             sec.actualDataRows.forEach(row => {
-                // ⚠️ Saltar fila del ingeniero para no cambiar su altura
+                //  Saltar fila del ingeniero para no cambiar su altura
                 if (row === FILA_INGENIERO) {
                     console.log(`[FORMATO-MÁXIMO] ⚠️ Saltando fila del ingeniero ${row}`)
                     return
                 }
-                console.log(`[FORMATO-MÁXIMO] 💥 FORZANDO formato fila ${row}`)
+                console.log(`[FORMATO-MÁXIMO]  FORZANDO formato fila ${row}`)
                 formatRepairs++
 
                 // BORRAR TODO EL FORMATO EXISTENTE Y APLICAR NUEVO
@@ -3089,12 +3089,12 @@ async function generarExcelEntrada(payloadParam) {
         })
 
         // SEGUNDA PASADA - VERIFICACIÓN Y REAPLICACIÓN
-        console.log('[FORMATO-MÁXIMO] 💥 SEGUNDA PASADA - Verificando formato aplicado...')
+        console.log('[FORMATO-MÁXIMO]  SEGUNDA PASADA - Verificando formato aplicado...')
         sections.forEach(sec => {
             sec.actualDataRows.forEach(row => {
                 // ⚠️ Saltar fila del ingeniero para no cambiar su altura
                 if (row === FILA_INGENIERO) {
-                    console.log(`[FORMATO-MÁXIMO] ⚠️ Saltando fila del ingeniero ${row} en segunda pasada`)
+                    console.log(`[FORMATO-MÁXIMO]  Saltando fila del ingeniero ${row} en segunda pasada`)
                     return
                 }
                 const excelRow = worksheet.getRow(row)
@@ -3299,8 +3299,8 @@ async function generarExcelEntrada(payloadParam) {
             }
         }
 
-        // 🔥 ULTRA FORZADO ESPECÍFICO PARA FILA 45 🔥
-        console.log('[ULTRA-FORZADO] 🔥 Aplicando ultra forzado específico a fila 45')
+        //  FORZADO ESPECÍFICO PARA FILA 45 
+        console.log('[ULTRA-FORZADO]  Aplicando ultra forzado específico a fila 45')
         try {
             // Método 1: Asignación directa
             const row45 = worksheet.getRow(45)
@@ -6786,10 +6786,12 @@ input[placeholder="0"] {
     max-width: 140px !important;
 }
 
-.fecha-field .control {
-     width: 180px !important;
+.fecha-field .control,
+.fecha-field :deep(.datepicker-input) {
+     width: 100% !important;
      min-width: 180px !important;
-     max-width: 180px !important;
+     max-width: 240px !important;
+     padding-right: 36px !important;
  }
 
 /* Transiciones para el componente de firmas */

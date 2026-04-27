@@ -1,4 +1,4 @@
-﻿import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 import { authedFetch } from '@/utils/api.js'
 import { ensureBiomedicalEquipmentCatalogLoaded, getBiomedicalEquipmentCatalogState } from '@/services/biomedicalEquipmentCatalog.js'
 
@@ -98,7 +98,7 @@ export function useInventorySuggestions(options = {}) {
       'Ubicación', 'UBICACION', 'Ubicacion', 'UBICACIÓN',
       'UBICACION ESPECIFICA', 'Ubicación específica', 'Ubicacion especifica',
       'AREA', 'ÁREA', 'Area', 'Área'
-    ]) || 'N/A'
+    ]) || ''
     const modelo = pickFirstValue(item, ['MODELO', 'Modelo', 'MODELO / VERSIÓN', 'Modelo / Versión', 'Modelo / Version'])
     const serie = pickFirstValue(item, ['No. de Serie', 'No de Serie', 'NUMERO DE SERIE', 'NÚMERO DE SERIE', 'SERIE', 'Serie'])
     const lote = pickFirstValue(item, ['Lote', 'LOTE'])
@@ -169,7 +169,7 @@ export function useInventorySuggestions(options = {}) {
           'UBICACION', 'UBICACIÓN', 'Ubicación', 'Ubicacion',
           'UBICACION ESPECIFICA', 'Ubicación específica', 'Ubicacion especifica',
           'AREA', 'ÁREA', 'Area', 'Área'
-        ]) || 'N/A'
+        ]) || ''
         const modelo = pickFirstValue(row, ['MODELO', 'Modelo', 'MODELO / VERSIÓN', 'Modelo / Versión', 'Modelo / Version'])
         const serie = pickFirstValue(row, ['NO. SERIE', 'No. de Serie', 'No de Serie', 'NUMERO DE SERIE', 'NÚMERO DE SERIE', 'SERIE', 'Serie'])
         const lote = pickFirstValue(row, ['LOTE', 'Lote'])
@@ -311,7 +311,7 @@ export function useInventorySuggestions(options = {}) {
       if (isValidFieldValue(valor)) {
         unidad[campo] = String(valor).trim()
       } else {
-        unidad[campo] = 'N/A'
+        unidad[campo] = ''
       }
     })
     return unidad
@@ -454,6 +454,56 @@ export function useInventorySuggestions(options = {}) {
     if (searchTerm.value?.trim()?.length >= 2) fetchSuggestions()
   })
 
+  const initSuggestions = async () => {
+    try {
+      await fetchEquipoMedicoSuggestions()
+      if (!allInventoryList.value || allInventoryList.value.length === 0) {
+        await fetchAllInventorySuggestions()
+      }
+      await fetchInsumosRefaccionesSuggestions()
+      syncSuggestionsWithLoadedLists()
+    } catch (e) {
+      console.warn('Error en initSuggestions:', e)
+    }
+  }
+
+  const handleGlobalRefresh = async () => {
+    try {
+      isLoading.value = true
+      // Limpiar listas para forzar recarga
+      allInventoryList.value = []
+      equipoMedicoList.value = []
+      insumosRefaccionesList.value = []
+      
+      const { invalidateBiomedicalEquipmentCatalog } = await import('@/services/biomedicalEquipmentCatalog.js')
+      await invalidateBiomedicalEquipmentCatalog()
+      
+      await initSuggestions()
+      
+      // Notificar a SearchableInput si es necesario
+      window.dispatchEvent(new CustomEvent('inventory:refresh-done'))
+    } catch (e) {
+      console.error('Error durante recarga global:', e)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Escuchar el evento global de recarga
+  if (typeof window !== 'undefined') {
+    window.addEventListener('inventory:refresh', handleGlobalRefresh)
+  }
+
+  // Limpiar listener al desmontar el componente (si estamos en contexto de setup)
+  // en su lugar usamos un weak ref o simplemente omitimos el onUnmounted si no esta disponible.
+  // Pero para evitar memory leak, no anidamos import aqui.
+  
+  try {
+    onUnmounted(() => {
+      window.removeEventListener('inventory:refresh', handleGlobalRefresh)
+    })
+  } catch (e) {}
+
   return {
     // Estado
     searchTerm,
@@ -469,6 +519,7 @@ export function useInventorySuggestions(options = {}) {
     // Búsqueda manual (útil para recargar)
     search: fetchSuggestions,
     // Métodos legacy / utilitarios
+    initSuggestions,
     fetchAllInventorySuggestions,
     fetchEquipoMedicoSuggestions,
     fetchInsumosRefaccionesSuggestions,
@@ -479,6 +530,7 @@ export function useInventorySuggestions(options = {}) {
     fillUnitFromSuggestion,
     getSuggestionAvailableFields,
     // Helpers expuestos
-    isValidFieldValue
+    isValidFieldValue,
+    syncSuggestions: syncSuggestionsWithLoadedLists
   }
 }

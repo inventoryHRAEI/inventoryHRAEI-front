@@ -209,9 +209,14 @@
                         <div v-if="query.length > 0 && groupedResults.length === 0" class="no-results">
                             <div class="no-results-icon">🔍</div>
                             <p>No se encontraron coincidencias para "<strong>{{ query }}</strong>"</p>
-                            <button type="button" class="add-custom-btn" @click="selectCustom">
-                                <span class="add-icon">+</span> Agregar "{{ query }}" manualmente
-                            </button>
+                            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                                <button type="button" class="add-custom-btn" @click="selectCustom">
+                                    <span class="add-icon">+</span> Agregar "{{ query }}" manualmente
+                                </button>
+                                <button type="button" class="add-custom-btn" @click="clearSuggestions" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(79, 70, 229, 0.06)); border-color: rgba(99, 102, 241, 0.2); color: #818cf8;">
+                                    <span class="add-icon">🔄</span> Forzar recarga de inventario
+                                </button>
+                            </div>
                         </div>
 
                         <!-- No hay sugerencias cargadas (modo inicial) -->
@@ -283,7 +288,7 @@ function closeAllDropdowns(exceptId = null, reason = 'global-close') {
 
 const props = defineProps({
     modelValue: { type: String, default: '' },
-    suggestions: { type: Array, default: () => [] },
+    suggestions: { type: [Array, Function], default: () => [] },
     placeholder: { type: String, default: 'Escriba para buscar...' },
     fieldName: { type: String, default: 'nombre' },
     tipo: { type: String, default: '' },
@@ -321,7 +326,14 @@ const handleVisibilityChange = () => {
 }
 
 // --- Fuse.js ---
-const suggestionsRef = computed(() => Array.isArray(props.suggestions) ? props.suggestions : [])
+const suggestionsRef = computed(() => {
+    if (Array.isArray(props.suggestions)) return props.suggestions
+    if (typeof props.suggestions === 'function') {
+        const result = props.suggestions(props.tipo, query.value, props.fieldName)
+        return Array.isArray(result) ? result : []
+    }
+    return []
+})
 const canShowSuggestions = computed(() => !props.disableSuggestions && suggestionsRef.value.length > 0)
 const { search, searchGrouped, searchGroupedFiltered, highlightField, isIndexReady, getInitialItems, getFilterOptions } = useFuseSearch(suggestionsRef)
 
@@ -749,6 +761,22 @@ function clearValue() {
             openDropdown()
         }
     })
+}
+
+function clearSuggestions() {
+    // Disparar evento global para recargar inventario y forzar UI
+    window.dispatchEvent(new CustomEvent('inventory:refresh'))
+    
+    // Si no hay query, asegurar que mostremos la interfaz inicial
+    showInitial.value = true
+    
+    // Feedback visual
+    const btn = dropdownRef.value?.querySelector('.add-custom-btn')
+    if (btn) {
+        const originalText = btn.innerHTML
+        btn.innerHTML = '<span class="add-icon">🔄</span> Cargando...'
+        setTimeout(() => { if (btn) btn.innerHTML = originalText }, 1500)
+    }
 }
 
 // ------- Keyboard navigation -------

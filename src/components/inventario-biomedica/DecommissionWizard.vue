@@ -59,89 +59,37 @@
     </div>
     <!-- ========== Step 1: Selección de artículos (checkbox) ========== -->
     <div v-if="step === 1" class="dc-step fade-in">
-      <!-- Search -->
-      <div class="dc-search" :class="{ focused: searchFocused }">
-        <svg class="dc-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-        </svg>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Buscar artículo a dar de baja…"
-          class="dc-search-input"
-          @focus="searchFocused = true"
-          @blur="searchFocused = false"
+      <!-- Advanced Search Bar -->
+      <div class="dc-search-container">
+        <OrderFilterBar
+          title="Búsqueda de bienes para baja"
+          subtitle="Ubica bienes por clave, serie, marca, modelo, referencia o lote. Selecciona parámetros para filtrar."
+          :filters="itemSearchFilters"
+          :count-label="`Bienes encontrados: ${filteredItems.length}`"
+          :suggestions-by-field="itemSearchFilters.suggestionsByField"
+          :field-options="ITEM_FIELD_OPTIONS"
         />
-        <button v-if="searchQuery" class="dc-search-clear" @click="searchQuery = ''">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
       </div>
 
       <!-- Stats -->
       <div class="dc-stats">
         <span><strong>{{ filteredItems.length }}</strong> encontrados</span>
         <span class="dc-stats-sep">·</span>
-        <span class="dc-stats-accent"><strong>{{ selectedClaves.size }}</strong> marcados para baja</span>
+        <span class="dc-stats-accent"><strong>{{ selectedCount }}</strong> marcados para baja</span>
       </div>
-
-      <div v-if="loadingItems" class="dc-loading">
-        <div class="dc-shimmer" v-for="i in 5" :key="i"></div>
-      </div>
-
-    
-      <div
-        v-else-if="visibleItems.length > 0"
-        ref="listRef"
-        class="dc-list"
-        @scroll.passive="onScroll"
-      >
-        <label
-           v-for="item in visibleItems"
-            :key="getItemId(item)"
-            class="dc-item"
-            :class="{ selected: selectedClaves.has(getItemId(item)) }"
-          >
-            <input
-              type="checkbox"
-              :checked="selectedClaves.has(getItemId(item))"
-              @change="toggleItem(item)"
-              class="dc-checkbox"
-            />
-            <div class="dc-item-info">
-              <span class="dc-item-name">{{ item['Descripción del bien'] }}</span>
-              <div class="dc-item-tags">
-                <span class="dc-item-code">{{ item['Clave  HRAEI'] }}</span>
-                <span class="dc-item-stock">Stock total: {{ item['TOTAL EXISTENCIAS'] }}</span>
-              </div>
-            </div>
-            <!-- Quantity stepper (visible when checked) -->
-            <div v-if="selectedClaves.has(getItemId(item))" class="dc-qty" @click.prevent.stop>
-              <button class="dc-qty-btn" @click="stepBajaQty(item, -1)">−</button>
-              <input
-                type="text"
-                inputmode="numeric"
-                class="dc-qty-input"
-                :value="bajaQuantities[getItemId(item)] ?? ''"
-                @input="onBajaInput(item, $event)"
-                @blur="clampBajaQty(item)"
-                @keydown.enter="$event.target.blur()"
-              />
-              <button class="dc-qty-btn" @click="stepBajaQty(item, 1)">+</button>
-              <span class="dc-qty-max">/ {{ item['TOTAL EXISTENCIAS'] }}</span>
-            </div>
-          </label>
-
-        <div v-if="visibleCount < filteredItems.length" class="dc-more">
-          Mostrando {{ visibleCount }} de {{ filteredItems.length }}…
-        </div>
-      </div>
-
-      <div v-else class="dc-empty">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" class="dc-empty-icon">
-          <path d="M21 8l-2-2H5L3 8"/><rect x="3" y="8" width="18" height="13" rx="2"/><line x1="12" y1="12" x2="12" y2="16"/>
-        </svg>
-        <p>{{ items.length > 0 ? 'Sin resultados para tu búsqueda' : 'Sin artículos con stock' }}</p>
-      </div>
+      <!-- Item List -->
+      <ItemListVirtual
+        :items="filteredItems"
+        :quantities="quantities"
+        :loading="loadingItems"
+        placeholder="Resultados filtrados..."
+        :showSimpleSearch="false"
+        :search-scopes="['all', 'clave', 'descripcion', 'marca', 'modelo', 'referencia', 'lote', 'n']"
+        :stock-filters="['all', 'with-stock', 'zero-stock']"
+        :allow-fast-step="true"
+        :fast-amount="5"
+        @update:quantities="quantities = $event"
+      />
     </div>
 
     <!-- ========== Step 2: Confirmación + Contraseña ========== -->
@@ -265,8 +213,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, reactive } from 'vue';
 import WizardShell from './WizardShell.vue';
+import OrderFilterBar from '@/components/OrderFilterBar.vue';
+import ItemListVirtual from './ItemListVirtual.vue';
 import { getStoredToken, saveToken, validateSession } from '@/utils/auth.js';
 
 const props = defineProps({ open: Boolean });
@@ -276,16 +226,196 @@ const stepLabels = ['Motivo', 'Artículos', 'Autorización'];
 
 const step         = ref(0);
 const items        = ref([]);
-const selectedClaves = ref(new Set());
-const bajaQuantities = ref({});   // { [clave]: cantidadADarDeBaja }
+const quantities   = ref({});   // Replaces bajaQuantities
 const loadingItems = ref(false);
 const submitting   = ref(false);
 const showPassword = ref(false);
 const authError    = ref('');
-const searchQuery  = ref('');
 const searchFocused = ref(false);
 const visibleCount = ref(40);
 const listRef      = ref(null);
+
+// --- Advanced Filter Refs ---
+const filterClave = ref('')
+const filterDescripcion = ref('')
+const filterMarca = ref('')
+const filterModelo = ref('')
+const filterReferencia = ref('')
+const filterLote = ref('')
+const filterN = ref('')
+const filterNoInventario = ref('')
+const filterUbicacion = ref('')
+const filterStockMin = ref(null)
+const filterStockMax = ref(null)
+
+const activeFilterKeys = ref(new Set())
+
+const ITEM_FIELD_OPTIONS = [
+  { key: 'clave', label: 'Clave HRAEI', placeholder: 'Ej. COMODATO', type: 'text' },
+  { key: 'descripcion', label: 'Descripción', placeholder: 'Nombre, modelo, serie...', type: 'text' },
+  { key: 'marca', label: 'Marca', placeholder: 'Ej. Philips', type: 'text' },
+  { key: 'modelo', label: 'Modelo', placeholder: 'Ej. MX40', type: 'text' },
+  { key: 'referencia', label: 'Referencia', placeholder: 'Referencia interna', type: 'text' },
+  { key: 'lote', label: 'Lote', placeholder: 'Ej. L123', type: 'text' },
+  { key: 'n', label: 'N / Serie', placeholder: 'Número de serie', type: 'text' },
+  { key: 'noInventario', label: 'No. inventario', placeholder: 'Ej. 12345', type: 'text' },
+  { key: 'ubicacion', label: 'Ubicación', placeholder: 'Ej. UCIA', type: 'text' },
+  { key: 'stockMin', label: 'Stock mínimo', placeholder: 'Mínimo', type: 'number' },
+  { key: 'stockMax', label: 'Stock máximo', placeholder: 'Máximo', type: 'number' }
+]
+
+const activeFiltersList = computed(() => {
+  const list = []
+  const pushIf = (key, label, binding) => {
+    const val = binding && typeof binding === 'object' && 'value' in binding ? binding.value : binding
+    if (activeFilterKeys.value.has(key) || (val !== null && val !== undefined && String(val).trim() !== '')) {
+      list.push({ key, label, bindings: { modelValue: binding } })
+    }
+  }
+  pushIf('clave', 'Clave HRAEI', filterClave)
+  pushIf('descripcion', 'Descripción', filterDescripcion)
+  pushIf('marca', 'Marca', filterMarca)
+  pushIf('modelo', 'Modelo', filterModelo)
+  pushIf('referencia', 'Referencia', filterReferencia)
+  pushIf('lote', 'Lote', filterLote)
+  pushIf('n', 'N / Serie', filterN)
+  pushIf('noInventario', 'No. inventario', filterNoInventario)
+  pushIf('ubicacion', 'Ubicación', filterUbicacion)
+  pushIf('stockMin', 'Stock mínimo', filterStockMin)
+  pushIf('stockMax', 'Stock máximo', filterStockMax)
+  return list
+})
+
+const chipsList = computed(() => {
+  const chips = []
+  if (filterClave.value) chips.push({ key: 'clave', label: 'Clave HRAEI', value: filterClave.value, bindings: { modelValue: filterClave } })
+  if (filterDescripcion.value) chips.push({ key: 'descripcion', label: 'Descripción', value: filterDescripcion.value, bindings: { modelValue: filterDescripcion } })
+  if (filterMarca.value) chips.push({ key: 'marca', label: 'Marca', value: filterMarca.value, bindings: { modelValue: filterMarca } })
+  if (filterModelo.value) chips.push({ key: 'modelo', label: 'Modelo', value: filterModelo.value, bindings: { modelValue: filterModelo } })
+  if (filterReferencia.value) chips.push({ key: 'referencia', label: 'Referencia', value: filterReferencia.value, bindings: { modelValue: filterReferencia } })
+  if (filterLote.value) chips.push({ key: 'lote', label: 'Lote', value: filterLote.value, bindings: { modelValue: filterLote } })
+  if (filterN.value) chips.push({ key: 'n', label: 'N / Serie', value: filterN.value, bindings: { modelValue: filterN } })
+  if (filterNoInventario.value) chips.push({ key: 'noInventario', label: 'No. inventario', value: filterNoInventario.value, bindings: { modelValue: filterNoInventario } })
+  if (filterUbicacion.value) chips.push({ key: 'ubicacion', label: 'Ubicación', value: filterUbicacion.value, bindings: { modelValue: filterUbicacion } })
+  if (filterStockMin.value !== null && filterStockMin.value !== undefined) chips.push({ key: 'stockMin', label: 'Stock mínimo', value: filterStockMin.value, bindings: { modelValue: filterStockMin } })
+  if (filterStockMax.value !== null && filterStockMax.value !== undefined) chips.push({ key: 'stockMax', label: 'Stock máximo', value: filterStockMax.value, bindings: { modelValue: filterStockMax } })
+  return chips
+})
+
+const hasActiveFilters = computed(() => activeFiltersList.value.length > 0 || chipsList.value.length > 0)
+
+function activateFilter(key) {
+  activeFilterKeys.value.add(key)
+}
+
+function removeFilter(key) {
+  activeFilterKeys.value.delete(key)
+  if (key === 'clave') filterClave.value = ''
+  else if (key === 'descripcion') filterDescripcion.value = ''
+  else if (key === 'marca') filterMarca.value = ''
+  else if (key === 'modelo') filterModelo.value = ''
+  else if (key === 'referencia') filterReferencia.value = ''
+  else if (key === 'lote') filterLote.value = ''
+  else if (key === 'n') filterN.value = ''
+  else if (key === 'noInventario') filterNoInventario.value = ''
+  else if (key === 'ubicacion') filterUbicacion.value = ''
+  else if (key === 'stockMin') filterStockMin.value = null
+  else if (key === 'stockMax') filterStockMax.value = null
+}
+
+function clearAllFilters() {
+  activeFilterKeys.value.clear()
+  filterClave.value = ''
+  filterDescripcion.value = ''
+  filterMarca.value = ''
+  filterModelo.value = ''
+  filterReferencia.value = ''
+  filterLote.value = ''
+  filterN.value = ''
+  filterNoInventario.value = ''
+  filterUbicacion.value = ''
+  filterStockMin.value = null
+  filterStockMax.value = null
+}
+
+const normalizeText = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase();
+
+const pickValue = (item, aliases = [], fallback = '') => {
+  if (!item || typeof item !== 'object') return fallback;
+  const normalizeKey = (key) => String(key || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  const normalizedLookup = new Map();
+  Object.keys(item).forEach((k) => {
+    const normalized = normalizeKey(k);
+    if (normalized && !normalizedLookup.has(normalized)) normalizedLookup.set(normalized, k);
+  });
+  for (const alias of aliases) {
+    if (Object.prototype.hasOwnProperty.call(item, alias) && item[alias] !== null && item[alias] !== undefined && item[alias] !== '') return item[alias];
+    const found = normalizedLookup.get(normalizeKey(alias));
+    if (found && item[found] !== null && item[found] !== undefined && item[found] !== '') return item[found];
+  }
+  return fallback;
+};
+
+const getItemId = (item) => {
+  const clave = pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], 'SIN_CLAVE');
+  const serie = pickValue(item, ['N', 'Número de serie', 'Numero de serie', 'id'], '');
+  const modelo = pickValue(item, ['MODELO', 'Modelo', 'modelo'], '');
+  const marca = pickValue(item, ['MARCA', 'Marca', 'marca'], '');
+  return `${clave}|${serie}|${modelo}|${marca}`;
+};
+
+const getItemClave = (item) => String(pickValue(item, ['Clave  HRAEI', 'Clave HRAEI', 'clave_hraei', 'clave'], '') || '').trim();
+const getItemName = (item) => String(pickValue(item, ['Descripción del bien', 'Descripcion del bien', 'DESCRIPCIÓN ARTÍCULO', 'descripcion', 'NOMBRE'], '—') || '—');
+const getItemMarca = (item) => String(pickValue(item, ['MARCA', 'Marca', 'marca'], '') || '').trim();
+const getItemModelo = (item) => String(pickValue(item, ['MODELO', 'Modelo', 'modelo'], '') || '').trim();
+const getItemReferencia = (item) => String(pickValue(item, ['REFERENCIA', 'Referencia', 'referencia'], '') || '').trim();
+const getItemLote = (item) => String(pickValue(item, ['LOTE', 'Lote', 'lote'], '') || '').trim();
+const getItemSerie = (item) => String(pickValue(item, ['N', 'n', 'Número de serie', 'Numero de serie', 'id'], '') || '').trim();
+const getItemNoInventario = (item) => String(pickValue(item, ['No DE INVENTARIO', 'No. Inventario', 'NO INVENTARIO', 'no_inventario', 'numero_inventario'], '') || '').trim();
+const getItemUbicacion = (item) => String(pickValue(item, ['UBICACION ESPECIFICA', 'Ubicacion especifica', 'Ubicación específica', 'UBICACION', 'ubicacion'], '') || '').trim();
+const getItemOrigen = (item) => String(pickValue(item, ['ORIGEN DEL BIEN', 'Origen del bien', 'origen', 'origen_bien'], '') || '').trim();
+const getItemStock = (item) => {
+  const raw = pickValue(item, ['TOTAL EXISTENCIAS', 'Total Excistencias', 'total_existencias', 'totalExistencias', 'Cantidad_Stock', 'CANTIDAD', 'Cantidad', 'cantidad'], 0);
+  const parsed = parseInt(raw, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const buildItemDescriptor = (item) => {
+  const parts = [
+    getItemName(item),
+    getItemClave(item) ? `Clave: ${getItemClave(item)}` : '',
+    getItemNoInventario(item) ? `Inventario: ${getItemNoInventario(item)}` : '',
+    getItemUbicacion(item) ? `Ubicación: ${getItemUbicacion(item)}` : '',
+    getItemMarca(item) ? `Marca: ${getItemMarca(item)}` : '',
+    getItemModelo(item) ? `Modelo: ${getItemModelo(item)}` : '',
+    getItemReferencia(item) ? `Ref: ${getItemReferencia(item)}` : '',
+    getItemLote(item) ? `Lote: ${getItemLote(item)}` : '',
+    getItemSerie(item) ? `Serie: ${getItemSerie(item)}` : ''
+  ].filter(Boolean)
+  return parts.join(' · ')
+}
+
+const buildItemSearchText = (item) => {
+  return normalizeText([
+    getItemName(item),
+    getItemClave(item),
+    getItemMarca(item),
+    getItemModelo(item),
+    getItemReferencia(item),
+    getItemLote(item),
+    getItemSerie(item),
+    getItemNoInventario(item),
+    getItemUbicacion(item),
+    getItemOrigen(item)
+  ].join(' '))
+}
+
+/* suggestionsByField moved after filteredItems to enable context-aware refinement */
+
+/* itemSearchFilters moved after suggestionsByField */
 
 /* Admin session state */
 const adminSession = ref(null);     // { id, email, role, nombre } or null
@@ -362,97 +492,130 @@ const tryAdminLogin = async () => {
   }
 };
 
-/* Debounced search */
-const debouncedQuery = ref('');
-let _timer = null;
-watch(searchQuery, (v) => {
-  clearTimeout(_timer);
-  _timer = setTimeout(() => {
-    debouncedQuery.value = v.trim().toLowerCase();
-    visibleCount.value = 40;
-    nextTick(() => { if (listRef.value) listRef.value.scrollTop = 0; });
-  }, 180);
+// Debounced search logic removed, now using direct computed filtering from OrderFilterBar
+watch([filterClave, filterDescripcion, filterMarca, filterModelo, filterReferencia, filterLote, filterN, filterNoInventario, filterUbicacion, filterStockMin, filterStockMax], () => {
+  visibleCount.value = 40;
+  nextTick(() => { if (listRef.value) listRef.value.scrollTop = 0; });
 });
 
 /* Filtered items */
 const filteredItems = computed(() => {
-  let r = items.value;
-  const q = debouncedQuery.value;
-  if (q) {
-    r = r.filter(i => {
-      const n = (i['Descripción del bien'] || '').toLowerCase();
-      const c = (i['Clave  HRAEI'] || '').toLowerCase();
-      return n.includes(q) || c.includes(q);
-    });
+  let r = Array.isArray(items.value) ? items.value.slice() : []
+  
+  if (filterClave.value) {
+    const s = normalizeText(filterClave.value)
+    r = r.filter(it => normalizeText(getItemClave(it)).includes(s))
   }
-  return r;
+  if (filterDescripcion.value) {
+    const s = normalizeText(filterDescripcion.value)
+    r = r.filter(it => {
+      const descriptor = normalizeText(buildItemDescriptor(it))
+      const searchable = buildItemSearchText(it)
+      return descriptor.includes(s) || searchable.includes(s)
+    })
+  }
+  if (filterMarca.value) {
+    const s = normalizeText(filterMarca.value)
+    r = r.filter(it => normalizeText(getItemMarca(it)).includes(s))
+  }
+  if (filterModelo.value) {
+    const s = normalizeText(filterModelo.value)
+    r = r.filter(it => normalizeText(getItemModelo(it)).includes(s))
+  }
+  if (filterReferencia.value) {
+    const s = normalizeText(filterReferencia.value)
+    r = r.filter(it => normalizeText(getItemReferencia(it)).includes(s))
+  }
+  if (filterLote.value) {
+    const s = normalizeText(filterLote.value)
+    r = r.filter(it => normalizeText(getItemLote(it)).includes(s))
+  }
+  if (filterN.value) {
+    const s = normalizeText(filterN.value)
+    r = r.filter(it => normalizeText(getItemSerie(it)).includes(s))
+  }
+  if (filterNoInventario.value) {
+    const s = normalizeText(filterNoInventario.value)
+    r = r.filter(it => normalizeText(getItemNoInventario(it)).includes(s))
+  }
+  if (filterUbicacion.value) {
+    const s = normalizeText(filterUbicacion.value)
+    r = r.filter(it => normalizeText(getItemUbicacion(it)).includes(s))
+  }
+  
+  const parseNumber = v => (v === null || v === undefined || v === '') ? null : Number(v)
+  const min = parseNumber(filterStockMin.value)
+  const max = parseNumber(filterStockMax.value)
+  
+  if (min !== null) r = r.filter(it => getItemStock(it) >= min)
+  if (max !== null) r = r.filter(it => getItemStock(it) <= max)
+  
+  return r
 });
+
+const suggestionsByField = computed(() => {
+  const buckets = {}
+  const list = Array.isArray(filteredItems.value) ? filteredItems.value : []
+  const addBucket = (key, values, limit = 5000) => {
+    const map = new Map()
+    for (const raw of values) {
+      const value = String(raw || '').trim()
+      if (!value) continue
+      const normalized = normalizeText(value)
+      if (!normalized) continue
+      const existing = map.get(normalized)
+      if (existing) existing.count += 1
+      else map.set(normalized, { value, label: value, count: 1 })
+    }
+    buckets[key] = Array.from(map.values()).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)).slice(0, limit)
+  }
+
+  addBucket('clave', list.map(i => getItemClave(i)))
+  addBucket('descripcion', list.map(i => buildItemDescriptor(i)))
+  addBucket('marca', list.map(i => getItemMarca(i)))
+  addBucket('modelo', list.map(i => getItemModelo(i)))
+  addBucket('referencia', list.map(i => getItemReferencia(i)))
+  addBucket('lote', list.map(i => getItemLote(i)))
+  addBucket('n', list.map(i => getItemSerie(i)))
+  addBucket('noInventario', list.map(i => getItemNoInventario(i)))
+  addBucket('ubicacion', list.map(i => getItemUbicacion(i)))
+  return buckets
+});
+
+const itemSearchFilters = reactive({
+  fieldBindings: {
+    clave: filterClave,
+    descripcion: filterDescripcion,
+    marca: filterMarca,
+    modelo: filterModelo,
+    referencia: filterReferencia,
+    lote: filterLote,
+    n: filterN,
+    noInventario: filterNoInventario,
+    ubicacion: filterUbicacion,
+    stockMin: filterStockMin,
+    stockMax: filterStockMax
+  },
+  activeFiltersList,
+  chipsList,
+  hasActiveFilters,
+  clearAllFilters,
+  removeFilter,
+  activateFilter,
+  suggestionsByField
+})
 
 const visibleItems = computed(() => filteredItems.value.slice(0, visibleCount.value));
 
-/* Helper to create unique ID for each item (prevents grouping by clave alone) */
-const getItemId = (item) => {
-  // Create unique ID using clave + serie + modelo + marca
-  // This prevents items without a key from grouping incorrectly
-  const clave = item['Clave  HRAEI'] || 'SIN_CLAVE';
-  const serie = item['N'] || item['Número de serie'] || '';
-  const modelo = item['MODELO'] || '';
-  const marca = item['MARCA'] || '';
-  return `${clave}|${serie}|${modelo}|${marca}`;
-};
+/* Selection helpers */
+const selectedCount = computed(() =>
+  Object.values(quantities.value).filter(q => Number(q) > 0).length
+);
+const totalUnits = computed(() =>
+  Object.values(quantities.value).reduce((s, q) => s + (Number(q) || 0), 0)
+);
 
-/* Toggle checkbox */
-const toggleItem = (item) => {
-  const itemId = getItemId(item);
-  const next = new Set(selectedClaves.value);
-  if (next.has(itemId)) {
-    next.delete(itemId);
-    const q = { ...bajaQuantities.value };
-    delete q[itemId];
-    bajaQuantities.value = q;
-  } else {
-    next.add(itemId);
-    const total = parseInt(item['TOTAL EXISTENCIAS'] || 0);
-    bajaQuantities.value = { ...bajaQuantities.value, [itemId]: total };
-  }
-  selectedClaves.value = next;
-};
-
-/* Free-type: accept any digits while typing, only strip non-numeric */
-const onBajaInput = (item, e) => {
-  const itemId = getItemId(item);
-  const raw = e.target.value.replace(/[^0-9]/g, '');
-  e.target.value = raw;                        // keep DOM clean
-  bajaQuantities.value = { ...bajaQuantities.value, [itemId]: raw === '' ? '' : parseInt(raw) };
-};
-
-/* Clamp on blur: ensure 1 ≤ val ≤ max */
-const clampBajaQty = (item) => {
-  const itemId = getItemId(item);
-  const max = parseInt(item['TOTAL EXISTENCIAS'] || 0) || 1;
-  const cur = parseInt(bajaQuantities.value[itemId]) || 0;
-  const clamped = Math.max(1, Math.min(max, cur));
-  bajaQuantities.value = { ...bajaQuantities.value, [itemId]: clamped };
-};
-
-/* Step via +/- buttons (always clamped) */
-const stepBajaQty = (item, delta) => {
-  const itemId = getItemId(item);
-  const max = parseInt(item['TOTAL EXISTENCIAS'] || 0) || 1;
-  const cur = parseInt(bajaQuantities.value[itemId]) || 0;
-  const clamped = Math.max(1, Math.min(max, cur + delta));
-  bajaQuantities.value = { ...bajaQuantities.value, [itemId]: clamped };
-};
-
-/* Infinite scroll */
-const onScroll = (e) => {
-  const el = e.target;
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-    if (visibleCount.value < filteredItems.value.length) {
-      visibleCount.value += 40;
-    }
-  }
-};
+/* Infinite scroll logic removed, handled by ItemListVirtual */
 
 /* Computed titles */
 const title = computed(() => {
@@ -471,30 +634,23 @@ const displayMotivo = computed(() => {
   return meta.value.motivo || '—';
 });
 
-const totalStockToRemove = computed(() => {
-  let total = 0;
-  for (const clave of selectedClaves.value) {
-    total += (bajaQuantities.value[clave] || 0);
-  }
-  return total;
-});
+const totalStockToRemove = computed(() => totalUnits.value);
 
 const selectedList = computed(() => {
-  return [...selectedClaves.value].map(itemId => {
-    // Parse the composite ID to reconstruct search hint
-    const [clave] = itemId.split('|');
-    // Find the item that matches this ID
-    const item = items.value.find(i => getItemId(i) === itemId);
-    const stock = parseInt(item?.['TOTAL EXISTENCIAS'] || 0);
-    const qty = bajaQuantities.value[itemId] || stock;
-    return {
-      clave: clave || itemId,
-      nombre: item?.['Descripción del bien'] || clave,
-      stock,
-      bajaQty: qty,
-      isTotal: qty >= stock,
-    };
-  });
+  return Object.entries(quantities.value)
+    .filter(([, q]) => Number(q) > 0)
+    .map(([itemId, qty]) => {
+      const item = items.value.find(i => getItemId(i) === itemId);
+      const [clave] = itemId.split('|');
+      const stock = parseInt(item?.['TOTAL EXISTENCIAS'] || 0);
+      return {
+        clave: clave || itemId,
+        nombre: item ? getItemName(item) : itemId,
+        stock,
+        bajaQty: qty,
+        isTotal: qty >= stock,
+      };
+    });
 });
 
 /* Validación de step 0 */
@@ -508,11 +664,11 @@ const metaValid = computed(() => {
 /* Navigation guards */
 const canNext = computed(() => {
   if (step.value === 0) return metaValid.value;
-  if (step.value === 1) return selectedClaves.value.size > 0;
+  if (step.value === 1) return selectedCount.value > 0;
   return true;
 });
 const canFinish = computed(() =>
-  selectedClaves.value.size > 0 && metaValid.value && !!adminSession.value
+  selectedCount.value > 0 && metaValid.value && !!adminSession.value
 );
 
 /* Load items */
@@ -523,7 +679,7 @@ const loadItems = async () => {
     if (res.ok) {
       const data = await res.json();
       const raw = Array.isArray(data) ? data : (data.data || []);
-      items.value = raw.filter(i => parseInt(i['TOTAL EXISTENCIAS'] || 0) > 0);
+      items.value = raw.filter(i => getItemStock(i) > 0);
     } else {
       items.value = [];
     }
@@ -550,14 +706,13 @@ const goBack = () => {
 const resetState = () => {
   step.value = 0;
   items.value = [];
-  selectedClaves.value = new Set();
-  bajaQuantities.value = {};
+  quantities.value = {};
   submitting.value = false;
   showPassword.value = false;
   authError.value = '';
-  searchQuery.value = '';
-  debouncedQuery.value = '';
+  searchFocused.value = false;
   visibleCount.value = 40;
+  clearAllFilters();
   loginEmail.value = '';
   loginPassword.value = '';
   adminSession.value = null;
@@ -573,7 +728,7 @@ const submit = async () => {
   authError.value = '';
   submitting.value = true;
   try {
-    if (!selectedClaves.value.size) throw new Error('Selecciona artículos');
+    if (!selectedCount.value) throw new Error('Selecciona artículos');
     if (!adminSession.value || !adminToken.value) throw new Error('Debes iniciar sesión como administrador');
 
     const motivo = meta.value.motivo === 'Otro' ? meta.value.motivoOtro : meta.value.motivo;
@@ -581,20 +736,19 @@ const submit = async () => {
     // Convert composite IDs back to individual items with their details
     // Format: "clave|serie|modelo|marca"
     const body = {
-      items: [...selectedClaves.value].map(itemId => {
-        const [clave, serie, modelo, marca] = itemId.split('|');
-        // Find the original item to get complete data if needed
-        const originalItem = items.value.find(i => getItemId(i) === itemId);
-        return {
-          claveHRAEI: clave,
-          serie: serie || undefined,
-          modelo: modelo || undefined,
-          marca: marca || undefined,
-          cantidad: bajaQuantities.value[itemId] || undefined,
-          // Include itemId for potential backend tracking (optional)
-          itemId: itemId,
-        };
-      }),
+      items: Object.entries(quantities.value)
+        .filter(([, q]) => q > 0)
+        .map(([itemId, qty]) => {
+          const [clave, serie, modelo, marca] = itemId.split('|');
+          return {
+            claveHRAEI: clave,
+            serie: serie || undefined,
+            modelo: modelo || undefined,
+            marca: marca || undefined,
+            cantidad: qty,
+            itemId: itemId,
+          };
+        }),
       motivo,
       responsable: meta.value.responsable,
       notas: meta.value.notas,
@@ -624,7 +778,7 @@ const submit = async () => {
 
     // Build a summary notification
     const d = data.data || {};
-    const countItems = d.totalOperaciones || selectedClaves.value.size;
+    const countItems = d.totalOperaciones || selectedCount.value;
     const countUnits = d.totalUnidadesBaja || totalStockToRemove.value;
     const adminEmail = adminSession.value?.email || '';
     const successMsg = `Baja completada: ${countItems} artículo(s), ${countUnits} unidad(es) eliminadas. Autorizado por ${adminEmail}`;
@@ -699,34 +853,11 @@ select.dc-input option {
 }
 
 /* --- Step 1: Search + Checkbox List --- */
-.dc-search {
-  display: flex; align-items: center; gap: 10px;
-  background: rgba(0,0,0,.35);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 12px;
-  padding: 0 14px;
-  height: 42px;
-  transition: border-color .25s, box-shadow .25s;
+.dc-search-container {
+  margin-bottom: 12px;
   flex-shrink: 0;
 }
-.dc-search.focused {
-  border-color: #f87171;
-  box-shadow: 0 0 0 3px rgba(239,68,68,.12);
-}
-.dc-search-icon { width: 18px; height: 18px; color: rgba(255,255,255,.3); flex-shrink: 0; }
-.dc-search.focused .dc-search-icon { color: #f87171; }
-.dc-search-input {
-  flex: 1; background: none; border: none; outline: none;
-  color: #fff; font-size: 14px; font-family: inherit;
-}
-.dc-search-input::placeholder { color: rgba(255,255,255,.22); }
-.dc-search-clear {
-  width: 22px; height: 22px; border: none; background: rgba(255,255,255,.08);
-  border-radius: 6px; color: rgba(255,255,255,.4); cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-}
-.dc-search-clear:hover { background: rgba(255,255,255,.15); }
-.dc-search-clear svg { width: 14px; height: 14px; }
+/* Estilo heredado del componente OrderFilterBar */
 
 .dc-stats {
   display: flex; align-items: center; gap: 8px;
