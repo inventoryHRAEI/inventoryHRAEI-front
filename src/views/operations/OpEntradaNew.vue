@@ -357,6 +357,19 @@
                                 <span class="type-label">{{ tipo.label }}</span>
                             </button>
 
+                            <!-- Item en blanco solo para bienes internos -->
+                            <button v-if="belongsToHospital === true" type="button" class="type-card type-card-blank" @click="showBlankItemModal = true">
+                                <div class="type-icon" style="--type-color: #64748b">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                        <line x1="12" y1="8" x2="12" y2="16" />
+                                        <line x1="8" y1="12" x2="16" y2="12" />
+                                    </svg>
+                                </div>
+                                <span class="type-label">Item en Blanco</span>
+                            </button>
+
                             <!-- Botón especial para Acc/Cons/Ref para Equipo Médico -->
                             <button type="button" class="type-card type-card-acr"
                                 :class="{ 'is-selected': showAcrModal }"
@@ -542,355 +555,529 @@
                             </datalist>
                         </div>
 
-                        <!-- Equipment Form (conditionally shown) -->
-                        <!-- Only show when item does NOT belong to hospital (belongsToHospital === false) or is being edited -->
+                        <!-- Modal para seleccionar tipo de item en blanco -->
+                        <Transition name="modal-fade">
+                            <div v-if="showBlankItemModal" class="blank-item-modal-overlay"
+                                @click.self="showBlankItemModal = false">
+                                <div class="blank-item-modal">
+                                    <div class="modal-header">
+                                        <h3>Selecciona el tipo de item en blanco</h3>
+                                        <button type="button" class="modal-close" @click="showBlankItemModal = false">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="blank-type-grid">
+                                            <button v-for="tipo in tipoEntradaOptions" :key="tipo.value" type="button"
+                                                class="blank-type-btn" @click="agregarItemBlancoConTipo(tipo.value)">
+                                                <div class="blank-type-icon" :style="{ '--type-color': tipo.color }">
+                                                    <component :is="tipo.icon" />
+                                                </div>
+                                                <span>{{ tipo.label }}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </Transition>
+
+                        <!-- Botón rápido de item en blanco para internos -->
                         <Transition name="slide-up">
-                            <div v-if="newItem.tipo && (belongsToHospital === false || isEditingItem)" class="equipment-form">
-                                <div class="form-header">
-                                    <h4 v-if="belongsToHospital === false" style="display:flex; align-items:center; gap:12px; width:100%;">
-                                        {{ getSelectedTypeLabel() }}
-                                        <button v-if="isEditingItem" type="button" @click="openChangeCategoryModal" style="margin-left:auto; padding:6px 10px; font-size:0.75rem; border:1px solid rgba(255,255,255,0.2); border-radius:4px; background:rgba(255,255,255,0.05); color:white; cursor:pointer; display:flex; align-items:center; gap:6px;">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
-                                            Cambiar categoría
-                                        </button>
-                                    </h4>
-                                    <!-- Si es interno y estamos editando, mostramos la tarjeta compacta -->
-                                    <div v-if="belongsToHospital === true && isEditingItem" class="internal-edit-card premium-card" :class="{ 'is-success': cardSuccessState }">
-                                        <div class="card-glow"></div>
-                                        
-                                        <!-- Success Overlay -->
-                                        <Transition name="fade">
-                                            <div v-if="cardSuccessState" class="success-overlay">
-                                                <div class="success-content">
-                                                    <div class="success-icon-wrap">
-                                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                                                            <polyline points="20 6 9 17 4 12"></polyline>
+                            <div v-if="newItem.tipo && belongsToHospital === true" class="quick-add-blank">
+                                <button type="button" class="btn-add-blank-quick" @click="agregarItemBlanco"
+                                    title="Agregar item en blanco para editar">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5">
+                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                    </svg>
+                                    Agregar {{ getSelectedTypeLabel() }} en Blanco (Interno)
+                                </button>
+                                <span class="quick-add-hint">Se abrirán los campos internos requeridos para capturar la información del bien.</span>
+                            </div>
+                        </Transition>
+
+                        <!-- 
+                            Wrapper para los 3 flujos de entrada de equipos.
+                            Usa v-if/v-else-if/v-else para asegurar que solo uno se renderice a la vez,
+                            envueltos en un único componente Transition para animaciones correctas.
+                        -->
+                        <Transition name="slide-up" mode="out-in">
+                            <!-- FLUJO 1: EDITAR BIEN INTERNO EXISTENTE (desde sugerencia) -->
+                            <div v-if="belongsToHospital === true && isEditingItem" class="equipment-form-wrapper" key="editing-internal">
+                                <div class="equipment-form internal-edit-form">
+                                    <div class="form-header">
+                                        <div class="internal-edit-card premium-card" :class="{ 'is-success': cardSuccessState }">
+                                            <div class="card-glow"></div>
+                                            
+                                            <Transition name="fade">
+                                                <div v-if="cardSuccessState" class="success-overlay">
+                                                    <div class="success-content">
+                                                        <div class="success-icon-wrap">
+                                                            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                                                <polyline points="20 6 9 17 4 12"></polyline>
+                                                            </svg>
+                                                        </div>
+                                                        <span>{{ editingItemIndex !== -1 ? '¡Actualizado!' : '¡Agregado!' }}</span>
+                                                    </div>
+                                                </div>
+                                            </Transition>
+
+                                            <div class="internal-card-header">
+                                                <div class="header-main">
+                                                    <div class="edit-context-banner" :style="getBannerStyle(newItem)">
+                                                        <div class="edit-icon-box" :style="{ background: getBannerStyle(newItem).color }">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                        </div>
+                                                        <span class="edit-text">EDITANDO {{ getBannerText(newItem) }}</span>
+                                                        <button type="button" @click="openChangeCategoryModal" style="margin-left: auto; padding: 2px 6px; font-size: 0.65rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(0,0,0,0.2); color: white; cursor: pointer; display:flex; align-items:center; gap:4px;">
+                                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
+                                                            CAMBIAR
+                                                        </button>
+                                                    </div>
+                                                    <h3 class="asset-name">{{ newItem.unidades[0]?.nombre || 'Sin nombre' }}</h3>
+                                                    <div class="technical-info-grid">
+                                                        <div class="info-item">
+                                                            <span class="info-label">MARCA</span>
+                                                            <span class="info-value">{{ newItem.unidades[0]?.marca || '-' }}</span>
+                                                        </div>
+                                                        <div class="info-item">
+                                                            <span class="info-label">MODELO</span>
+                                                            <span class="info-value">{{ newItem.unidades[0]?.modelo || '-' }}</span>
+                                                        </div>
+                                                        <div class="info-item">
+                                                            <span class="info-label">SERIE</span>
+                                                            <span class="info-value">{{ newItem.unidades[0]?.serie || '-' }}</span>
+                                                        </div>
+                                                        <div class="info-item">
+                                                            <span class="info-label">CLAVE</span>
+                                                            <span class="info-value">{{ newItem.unidades[0]?.claveHRAEI || '-' }}</span>
+                                                        </div>
+                                                        <div class="info-item">
+                                                            <span class="info-label">LOTE</span>
+                                                            <span class="info-value">{{ newItem.unidades[0]?.lote || '-' }}</span>
+                                                        </div>
+                                                        <div class="info-item">
+                                                            <span class="info-label">REF</span>
+                                                            <span class="info-value">{{ newItem.unidades[0]?.referencia || '-' }}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="internal-edit-grid">
+                                                <div class="edit-field-group">
+                                                    <label class="field-label">Cantidad a ingresar</label>
+                                                    <div class="stepper-control">
+                                                        <button type="button" @click="newItem.unidades[0].cantidad = Math.max(1, newItem.unidades[0].cantidad - 1)" :disabled="newItem.unidades[0].cantidad <= 1" class="step-btn">−</button>
+                                                        <input type="number" v-model.number="newItem.unidades[0].cantidad" min="1" class="step-input" />
+                                                        <button type="button" @click="newItem.unidades[0].cantidad++" class="step-btn">+</button>
+                                                    </div>
+                                                </div>
+                                                <div class="edit-field-group">
+                                                    <label class="field-label">Ubicación específica</label>
+                                                    <SearchableInput v-model="newItem.unidades[0].ubicacion" :suggestions="currentSuggestions" field-name="ubicacion" placeholder="Donde se almacenará..." @select="(s) => handleSuggestionSelect(s, newItem.unidades[0], 'ubicacion')" />
+                                                </div>
+                                            </div>
+
+                                            <div class="premium-card-actions">
+                                                <button type="button" class="btn-premium-clear" @click="resetNewItem">Limpiar</button>
+                                                <button type="button" class="btn-premium-add" @click="agregarItem" :disabled="!canAddItem || isVerifyingStatus || cardSuccessState" :class="{ 'is-loading': isVerifyingStatus }">
+                                                    {{ editingItemIndex !== -1 ? 'Actualizar' : 'Confirmar' }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FLUJO 2: AGREGAR BIEN EN BLANCO INTERNO -->
+                            <div v-else-if="belongsToHospital === true && !isEditingItem && newItem.tipo" class="equipment-form-wrapper" key="adding-blank-internal">
+                                <div class="equipment-form blank-item-form">
+                                    <div class="blank-form-header">
+                                        <div class="blank-form-banner">
+                                            <div class="blank-form-icon">
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                                    <line x1="12" y1="8" x2="12" y2="16" />
+                                                    <line x1="8" y1="12" x2="16" y2="12" />
+                                                </svg>
+                                            </div>
+                                            <div class="blank-form-title">
+                                                <h3>Capturar Información del Bien</h3>
+                                                <p>El bien será registrado como comprobante. Solo administradores pueden agregarlo al inventario.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="units-list">
+                                        <TransitionGroup name="unit-list">
+                                            <div v-for="(unidad, idx) in newItem.unidades" :key="idx" class="unit-card">
+                                                <div class="unit-header">
+                                                    <span class="unit-badge">#{{ idx + 1 }}</span>
+                                                    <button type="button" class="unit-remove" @click="removeUnit(idx)"
+                                                        v-if="newItem.unidades.length > 1">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                            stroke="currentColor" stroke-width="2">
+                                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                                            <line x1="6" y1="6" x2="18" y2="18" />
                                                         </svg>
-                                                    </div>
-                                                    <span>{{ editingItemIndex !== -1 ? '¡Actualizado!' : '¡Agregado!' }}</span>
+                                                    </button>
+                                                    <button type="button" class="unit-kardex" @click="openKardex(unidad)"
+                                                        v-if="unidad.claveHRAEI" title="Ver kardex">
+                                                        <VueIcon name="ic:baseline-description" size="16" />
+                                                    </button>
                                                 </div>
-                                            </div>
-                                        </Transition>
 
-                                        <div class="internal-card-header">
-                                            <div class="header-main">
-                                                <div class="edit-context-banner" :style="getBannerStyle(newItem)">
-                                                    <div class="edit-icon-box" :style="{ background: getBannerStyle(newItem).color }">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                                    </div>
-                                                    <span class="edit-text">
-                                                        EDITANDO {{ getBannerText(newItem) }}
-                                                    </span>
-                                                    <button type="button" @click="openChangeCategoryModal" style="margin-left: auto; padding: 2px 6px; font-size: 0.65rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(0,0,0,0.2); color: white; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; display:flex; align-items:center; gap:4px;">
-                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
-                                                        CAMBIAR
-                                                    </button>
-                                                </div>
-                                                <h3 class="asset-name">{{ newItem.unidades[0]?.nombre || 'Sin nombre' }}</h3>
-                                                
-                                                <div class="technical-info-grid">
-                                                    <div class="info-item">
-                                                        <span class="info-label">MARCA</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.marca || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">MODELO</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.modelo || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">SERIE</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.serie || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">CLAVE</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.claveHRAEI || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">LOTE</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.lote || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">REF</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.referencia || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">INV</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.noInventario || '-' }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="internal-edit-grid">
-                                            <div class="edit-field-group">
-                                                <label class="field-label">
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V21H3V8"/><path d="M1 3H23V8H1V3ZM10 12H14"/></svg>
-                                                    Cantidad a ingresar
-                                                </label>
-                                                <div class="stepper-control">
-                                                    <button type="button" @click="newItem.unidades[0].cantidad = Math.max(1, newItem.unidades[0].cantidad - 1)" :disabled="newItem.unidades[0].cantidad <= 1" class="step-btn">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                                    </button>
-                                                    <input type="number" v-model.number="newItem.unidades[0].cantidad" min="1" class="step-input" />
-                                                    <button type="button" @click="newItem.unidades[0].cantidad++" class="step-btn">
-                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="edit-field-group">
-                                                <label class="field-label">
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-                                                    Ubicación específica
-                                                </label>
-                                                <div class="input-with-icon">
-                                                    <SearchableInput v-model="newItem.unidades[0].ubicacion"
-                                                        :suggestions="currentSuggestions" field-name="ubicacion"
-                                                        placeholder="Donde se almacenará..."
-                                                        @select="(s) => handleSuggestionSelect(s, newItem.unidades[0], 'ubicacion')" />
-                                                </div>
-                                            </div>
-                                            
-                                            <div v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'" class="edit-field-group full-width">
-                                                <label class="field-label">
-                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                                                    Equipo Médico Vinculado
-                                                </label>
-                                                <SearchableInput v-model="newItem.unidades[0].equipoAsociado"
-                                                    :suggestions="suggestions" tipo="equipo-medico"
-                                                    field-name="nombre" placeholder="Buscar equipo principal..."
-                                                    @select="(s) => newItem.unidades[0].equipoAsociado = (s.nombre || s.label || '')" />
-                                            </div>
-                                        </div>
+                                                <div class="unit-fields">
+                                                    <template v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'consumible' || newItem.tipo === 'refaccion'">
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Nombre / Descripción</label>
+                                                            <input v-model.trim="unidad.nombre" type="text" class="form-input"
+                                                                :placeholder="getNombrePlaceholder()" autocomplete="off"
+                                                                autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                        </div>
 
-                                        <!-- Premium Card Actions -->
-                                        <div class="premium-card-actions">
-                                            <button type="button" class="btn-premium-clear" @click="resetNewItem">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
-                                                Limpiar
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Marca</label>
+                                                            <input v-model.trim="unidad.marca" type="text" class="form-input"
+                                                                placeholder="Ej. Philips" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Modelo</label>
+                                                            <input v-model.trim="unidad.modelo" type="text" class="form-input"
+                                                                placeholder="Ej. MX40" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Lote</label>
+                                                            <input v-model.trim="unidad.lote" type="text" class="form-input"
+                                                                placeholder="Ej. LT-2026" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">No. Serie (opcional)</label>
+                                                            <input v-model.trim="unidad.serie" type="text" class="form-input"
+                                                                placeholder="Ej. SN123456" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Referencia del Accesorio / Consumible / Refacción</label>
+                                                            <input v-model.trim="unidad.referencia" type="text" class="form-input"
+                                                                placeholder="Ej. REF-001" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Ubicación</label>
+                                                            <input v-model.trim="unidad.ubicacion" type="text" class="form-input"
+                                                                placeholder="Ej. UCIA" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Equipo Asociado</label>
+                                                            <input v-model.trim="unidad.equipoAsociado" type="text" class="form-input"
+                                                                placeholder="Equipo al que pertenece..." autocomplete="off"
+                                                                autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Clave HRAEI</label>
+                                                            <input v-model.trim="unidad.claveHRAEI" type="text" class="form-input"
+                                                                placeholder="Ej. HRAEI-12345" autocomplete="off"
+                                                                autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Origen del Bien</label>
+                                                            <input v-model.trim="unidad.origenBien" type="text" class="form-input"
+                                                                placeholder="Compra, donación, comodato..." autocomplete="off"
+                                                                autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="quantity-field">
+                                                            <label class="mini-label">Cantidad de esta unidad</label>
+                                                            <div class="quantity-input-wrapper">
+                                                                <button type="button" class="qty-btn"
+                                                                    @click="unidad.cantidad > 1 ? unidad.cantidad-- : null"
+                                                                    :disabled="unidad.cantidad <= 1">
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                        stroke="currentColor" stroke-width="3">
+                                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                                    </svg>
+                                                                </button>
+                                                                <input type="number" v-model.number="unidad.cantidad" min="1"
+                                                                    class="qty-input" placeholder="1" />
+                                                                <button type="button" class="qty-btn"
+                                                                    @click="unidad.cantidad++">
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                        stroke="currentColor" stroke-width="3">
+                                                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                    <template v-else-if="newItem.tipo === 'equipo-medico'">
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Nombre / Descripción</label>
+                                                            <input v-model.trim="unidad.nombre" type="text" class="form-input"
+                                                                :placeholder="getNombrePlaceholder()" autocomplete="off"
+                                                                autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Marca</label>
+                                                            <input v-model.trim="unidad.marca" type="text" class="form-input"
+                                                                placeholder="Ej. Philips" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Modelo</label>
+                                                            <input v-model.trim="unidad.modelo" type="text" class="form-input"
+                                                                placeholder="Ej. MX40" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">No. Serie</label>
+                                                            <input v-model.trim="unidad.serie" type="text" class="form-input"
+                                                                placeholder="Ej. SN123456" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Ubicación</label>
+                                                            <input v-model.trim="unidad.ubicacion" type="text" class="form-input"
+                                                                placeholder="Ej. UCIA" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">No. de Inventario</label>
+                                                            <input v-model.trim="unidad.noInventario" type="text" class="form-input"
+                                                                placeholder="Ej. INV-123456" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Referencia de Equipo</label>
+                                                            <input v-model.trim="unidad.referenciaEquipo" type="text" class="form-input"
+                                                                placeholder="Ej. REF-EQ-001" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="quantity-field">
+                                                            <label class="mini-label">Cantidad de esta unidad</label>
+                                                            <div class="quantity-input-wrapper">
+                                                                <button type="button" class="qty-btn"
+                                                                    @click="unidad.cantidad > 1 ? unidad.cantidad-- : null"
+                                                                    :disabled="unidad.cantidad <= 1">
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                        stroke="currentColor" stroke-width="3">
+                                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                                    </svg>
+                                                                </button>
+                                                                <input type="number" v-model.number="unidad.cantidad" min="1"
+                                                                    class="qty-input" placeholder="1" />
+                                                                <button type="button" class="qty-btn"
+                                                                    @click="unidad.cantidad++">
+                                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                        stroke="currentColor" stroke-width="3">
+                                                                        <line x1="12" y1="5" x2="12" y2="19" />
+                                                                        <line x1="5" y1="12" x2="19" y2="12" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </TransitionGroup>
+                                    </div>
+
+                                    <div class="form-actions">
+                                        <button type="button" class="btn-clear" @click="resetNewItem">
+                                            Cancelar
+                                        </button>
+                                        <button type="button" class="btn-add" @click="agregarItem" :disabled="!canAddItem || isVerifyingStatus" :class="{ 'is-loading': isVerifyingStatus }">
+                                            <span v-if="!isVerifyingStatus">Registrar como Comprobante</span>
+                                            <span v-else class="loading-spinner"></span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- FLUJO 3: AGREGAR BIEN EXTERNO -->
+                            <div v-else-if="belongsToHospital === false && newItem.tipo" class="equipment-form-wrapper" key="adding-external">
+                                <div class="equipment-form external-item-form">
+                                    <div class="form-header">
+                                        <h4 style="display:flex; align-items:center; gap:12px; width:100%;">
+                                            {{ getSelectedTypeLabel() }}
+                                            <button type="button" @click="openChangeCategoryModal" style="margin-left:auto; padding:6px 10px; font-size:0.75rem; border:1px solid rgba(255,255,255,0.2); border-radius:4px; background:rgba(255,255,255,0.05); color:white; cursor:pointer; display:flex; align-items:center; gap:6px;">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
+                                                Cambiar categoría
                                             </button>
-                                            <button type="button" class="btn-premium-add" @click="agregarItem" :disabled="!canAddItem || isVerifyingStatus || cardSuccessState" :class="{ 'is-loading': isVerifyingStatus }">
-                                                <span v-if="!isVerifyingStatus">
-                                                    {{ editingItemIndex !== -1 ? 'Actualizar Cambios' : 'Confirmar Ingreso' }}
-                                                </span>
-                                                <span v-else class="loading-spinner-small"></span>
+                                        </h4>
+                                    </div>
+
+                                    <div v-if="newItem.tipo === 'consumible'" class="consumible-state-selector">
+                                        <span class="consumible-state-label">Estado del consumible</span>
+                                        <div class="consumible-state-options">
+                                            <button type="button" class="consumible-state-option"
+                                                :class="{ active: newItem.consumibleEstado === 'nuevo' }"
+                                                @click="newItem.consumibleEstado = 'nuevo'">
+                                                Nuevo
+                                            </button>
+                                            <button type="button" class="consumible-state-option"
+                                                :class="{ active: newItem.consumibleEstado === 'usado' }"
+                                                @click="newItem.consumibleEstado = 'usado'">
+                                                Usado
                                             </button>
                                         </div>
                                     </div>
-                                    <div v-else class="quantity-control">
-                                        <button type="button" @click="decNew" :disabled="newItem.cantidad <= 1">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="3">
-                                                <line x1="5" y1="12" x2="19" y2="12" />
-                                            </svg>
-                                        </button>
-                                        <span class="quantity-value">{{ newItem.cantidad }}</span>
-                                        <button type="button" @click="incNew">
-                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                stroke="currentColor" stroke-width="3">
-                                                <line x1="12" y1="5" x2="12" y2="19" />
-                                                <line x1="5" y1="12" x2="19" y2="12" />
-                                            </svg>
+
+                                    <div class="accessory-note">
+                                        <small><strong>Requeridos para bienes externos:</strong> Nombre/Descripción, Marca,
+                                            Modelo, Lote, No. Serie (opcional),
+                                            Referencia del bien, Ubicación, Equipo asociado, Origen del bien.</small>
+                                    </div>
+
+                                    <div class="units-actions">
+                                        <button type="button" class="btn-clear-all-searchable-filters" @click="clearRefinements">
+                                            Limpiar todos los filtros
                                         </button>
                                     </div>
-                                </div>
 
+                                    <div class="units-list">
+                                        <TransitionGroup name="unit-list">
+                                            <div v-for="(unidad, idx) in newItem.unidades" :key="idx" class="unit-card">
+                                                <div class="unit-header">
+                                                    <span class="unit-badge">#{{ idx + 1 }}</span>
+                                                    <button type="button" class="unit-remove" @click="removeUnit(idx)"
+                                                        v-if="newItem.unidades.length > 1">
+                                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                            stroke="currentColor" stroke-width="2">
+                                                            <line x1="18" y1="6" x2="6" y2="18" />
+                                                            <line x1="6" y1="6" x2="18" y2="18" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                <div class="unit-fields">
+                                                    <template v-if="isExternalGoods">
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Nombre / Descripción</label>
+                                                            <input v-model.trim="unidad.nombre" type="text" class="form-input"
+                                                                :placeholder="getNombrePlaceholder()" autocomplete="off"
+                                                                autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                        </div>
 
-                                <!-- Equipment Units Grid -->
-                                <div v-if="belongsToHospital === false && newItem.tipo === 'consumible'" class="consumible-state-selector">
-                                    <span class="consumible-state-label">Estado del consumible</span>
-                                    <div class="consumible-state-options">
-                                        <button type="button" class="consumible-state-option"
-                                            :class="{ active: newItem.consumibleEstado === 'nuevo' }"
-                                            @click="newItem.consumibleEstado = 'nuevo'">
-                                            Nuevo
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Marca</label>
+                                                            <input v-model.trim="unidad.marca" type="text" class="form-input"
+                                                                placeholder="Ej. Philips" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Modelo</label>
+                                                            <input v-model.trim="unidad.modelo" type="text" class="form-input"
+                                                                placeholder="Ej. MX40" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Lote</label>
+                                                            <input v-model.trim="unidad.lote" type="text" class="form-input"
+                                                                placeholder="Ej. LT-2026" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">No. Serie (opcional)</label>
+                                                            <input v-model.trim="unidad.serie" type="text" class="form-input"
+                                                                placeholder="Ej. SN123456" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Referencia del Bien</label>
+                                                            <input v-model.trim="unidad.referencia" type="text" class="form-input"
+                                                                placeholder="Ej. REF-001" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Ubicación</label>
+                                                            <input v-model.trim="unidad.ubicacion" type="text" class="form-input"
+                                                                placeholder="Ej. UCIA" autocomplete="off" autocorrect="off"
+                                                                autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Equipo Asociado</label>
+                                                            <input v-model.trim="unidad.equipoAsociado" type="text" class="form-input"
+                                                                placeholder="Equipo al que pertenece..." autocomplete="off"
+                                                                autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="searchable-field">
+                                                            <label class="mini-label">Origen del Bien</label>
+                                                            <input v-model.trim="unidad.origenBien" type="text" class="form-input"
+                                                                placeholder="Compra, donación, comodato..." autocomplete="off"
+                                                                autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                        </div>
+
+                                                        <div class="quantity-field">
+                                                            <label class="mini-label">Cantidad de esta unidad</label>
+                                                            <div class="quantity-input-wrapper">
+                                                            <button type="button" class="qty-btn"
+                                                                @click="unidad.cantidad > 1 ? unidad.cantidad-- : null"
+                                                                :disabled="unidad.cantidad <= 1">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                    stroke="currentColor" stroke-width="3">
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
+                                                            <input type="number" v-model.number="unidad.cantidad" min="1"
+                                                                class="qty-input" placeholder="1" />
+                                                            <button type="button" class="qty-btn"
+                                                                @click="unidad.cantidad++">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                    stroke="currentColor" stroke-width="3">
+                                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                        </div>
+                                                    </template>
+                                                </div>
+                                            </div>
+                                        </TransitionGroup>
+                                    </div>
+
+                                    <div class="form-actions">
+                                        <button type="button" class="btn-clear" @click="resetNewItem">
+                                            Cancelar
                                         </button>
-                                        <button type="button" class="consumible-state-option"
-                                            :class="{ active: newItem.consumibleEstado === 'usado' }"
-                                            @click="newItem.consumibleEstado = 'usado'">
-                                            Usado
+                                        <button type="button" class="btn-add" @click="agregarItem" :disabled="!canAddItem || isVerifyingStatus" :class="{ 'is-loading': isVerifyingStatus }">
+                                            <span v-if="!isVerifyingStatus">Agregar Bien Externo</span>
+                                            <span v-else class="loading-spinner"></span>
                                         </button>
                                     </div>
-                                </div>
-
-                                <div v-if="belongsToHospital === false && newItem.tipo === 'accesorio'" class="accessory-note">
-                                    <small><strong>Requeridos para accesorios:</strong> Nombre/Descripción, Marca,
-                                        Modelo, Lote, No. Serie,
-                                        Referencia, Ubicación, Equipo Asociado, Clave HRAEI.</small>
-                                </div>
-
-                                <!-- Equipment Units Grid -->
-                                <div v-if="belongsToHospital === false" class="units-actions">
-                                    <button type="button" class="btn-clear-all-searchable-filters" @click="clearRefinements">
-                                        Limpiar todos los filtros
-                                    </button>
-                                </div>
-
-                                <div v-if="belongsToHospital === false" class="units-list">
-                                    <TransitionGroup name="unit-list">
-                                        <div v-for="(unidad, idx) in newItem.unidades" :key="idx" class="unit-card">
-                                            <div class="unit-header">
-                                                <span class="unit-badge">#{{ idx + 1 }}</span>
-                                                <button type="button" class="unit-remove" @click="removeUnit(idx)"
-                                                    v-if="newItem.unidades.length > 1">
-                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                                        stroke="currentColor" stroke-width="2">
-                                                        <line x1="18" y1="6" x2="6" y2="18" />
-                                                        <line x1="6" y1="6" x2="18" y2="18" />
-                                                    </svg>
-                                                </button>
-                                                <button type="button" class="unit-kardex" @click="openKardex(unidad)"
-                                                    v-if="unidad.claveHRAEI" title="Ver kardex">
-                                                    <VueIcon name="ic:baseline-description" size="16" />
-                                                </button>
-                                            </div>
-
-                                            <div class="unit-fields">
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Nombre / Descripción</label>
-                                                    <SearchableInput v-model="unidad.nombre"
-                                                        :suggestions="currentSuggestions" field-name="nombre"
-                                                        :placeholder="getNombrePlaceholder()"
-                                                        :show-detail-chips="false"
-                                                        :disabled="belongsToHospital === true && !isEditingItem"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'nombre')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Marca</label>
-                                                    <SearchableInput v-model="unidad.marca"
-                                                        :suggestions="currentSuggestions" field-name="marca"
-                                                        placeholder="Ej. Philips"
-                                                        :show-detail-chips="false"
-                                                        :disabled="belongsToHospital === true && !isEditingItem"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'marca')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Modelo</label>
-                                                    <SearchableInput v-model="unidad.modelo"
-                                                        :suggestions="currentSuggestions" field-name="modelo"
-                                                        placeholder="Ej. MX40"
-                                                        :show-detail-chips="false"
-                                                        :disabled="belongsToHospital === true && !isEditingItem"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'modelo')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Lote</label>
-                                                    <SearchableInput v-model="unidad.lote"
-                                                        :suggestions="currentSuggestions" field-name="lote"
-                                                        placeholder="Ej. LT-2026"
-                                                        :show-detail-chips="false"
-                                                        :disabled="belongsToHospital === true && !isEditingItem"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'lote')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">No. Serie</label>
-                                                    <SearchableInput v-model="unidad.serie"
-                                                        :suggestions="currentSuggestions" field-name="serie"
-                                                        placeholder="Ej. SN123456"
-                                                        :show-detail-chips="false"
-                                                        :disabled="belongsToHospital === true && !isEditingItem"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'serie')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Referencia del Bien</label>
-                                                    <SearchableInput v-model="unidad.referencia"
-                                                        :suggestions="currentSuggestions" field-name="referencia"
-                                                        placeholder="Ej. REF-001"
-                                                        :show-detail-chips="false"
-                                                        :disabled="belongsToHospital === true && !isEditingItem"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'referencia')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Referencia del Equipo</label>
-                                                    <SearchableInput v-model="unidad.referenciaEquipo"
-                                                        :suggestions="currentSuggestions" field-name="referenciaEquipo"
-                                                        placeholder="Ej. EQP-0001"
-                                                        :show-detail-chips="false"
-                                                        :disabled="belongsToHospital === true && !isEditingItem"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'referenciaEquipo')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Ubicación</label>
-                                                    <SearchableInput v-model="unidad.ubicacion"
-                                                        :suggestions="currentSuggestions" field-name="ubicacion"
-                                                        placeholder="Ej. UCIA"
-                                                        :show-detail-chips="false"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'ubicacion')" />
-                                                </div>
-
-                                                <!-- Equipos Asociados (Solo para accesorios y refacciones) -->
-                                                <div v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'"
-                                                    class="searchable-field">
-                                                    <label class="mini-label">Equipo Asociado</label>
-                                                    <SearchableInput v-model="unidad.equipoAsociado"
-                                                        :suggestions="(belongsToHospital === true || isEditingItem) ? suggestions : []" tipo="equipo-medico"
-                                                        field-name="nombre" placeholder="Buscar equipo asociado..."
-                                                        :show-detail-chips="false"
-                                                        @select="(s) => unidad.equipoAsociado = (s.nombre || s.label || '')" />
-                                                </div>
-
-                                                <!-- Número de Serie del Equipo Asociado (Solo si hay equipo asociado) -->
-                                                <div v-if="(newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible') && unidad.equipoAsociado"
-                                                    class="searchable-field">
-                                                    <label class="mini-label">Número de Serie del Equipo
-                                                        Asociado</label>
-                                                    <input v-model="unidad.serieEquipoAsociado" type="text"
-                                                        class="form-input" placeholder="Ej. SN-EQUIPO-001" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Clave HRAEI</label>
-                                                    <SearchableInput v-model="unidad.claveHRAEI"
-                                                        :suggestions="currentSuggestions" field-name="claveHRAEI"
-                                                        placeholder="Ej. COMODATO"
-                                                        :show-detail-chips="false"
-                                                        :disabled="belongsToHospital === true && !isEditingItem"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'claveHRAEI')" />
-                                                </div>
-
-                                                <div class="quantity-field">
-                                                    <label class="mini-label">Cantidad de esta unidad</label>
-                                                    <div class="quantity-input-wrapper">
-                                                        <button type="button" class="qty-btn"
-                                                            @click="unidad.cantidad > 1 ? unidad.cantidad-- : null"
-                                                            :disabled="unidad.cantidad <= 1">
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                                stroke="currentColor" stroke-width="3">
-                                                                <line x1="5" y1="12" x2="19" y2="12" />
-                                                            </svg>
-                                                        </button>
-                                                        <input type="number" v-model.number="unidad.cantidad" min="1"
-                                                            class="qty-input" placeholder="1" />
-                                                        <button type="button" class="qty-btn"
-                                                            @click="unidad.cantidad++">
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                                stroke="currentColor" stroke-width="3">
-                                                                <line x1="12" y1="5" x2="12" y2="19" />
-                                                                <line x1="5" y1="12" x2="19" y2="12" />
-                                                            </svg>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </TransitionGroup>
-                                </div>
-
-                                <div class="form-actions" v-if="!(belongsToHospital === true && isEditingItem)">
-                                    <button type="button" class="btn-clear" @click="resetNewItem" v-if="isEditingItem || newItem.tipo">
-                                        Limpiar
-                                    </button>
-                                    <button type="button" class="btn-add" @click="agregarItem" :disabled="!canAddItem || isVerifyingStatus" :class="{ 'is-loading': isVerifyingStatus }">
-                                        <span v-if="!isVerifyingStatus">{{ isEditingItem ? 'Actualizar' : 'Agregar' }}</span>
-                                        <span v-else class="loading-spinner"></span>
-                                    </button>
                                 </div>
                             </div>
                         </Transition>
@@ -1795,6 +1982,7 @@ const newItem = reactive({
     serie: '',
     ubicacion: '',
     claveHRAEI: '',
+    noInventario: '',
     unidades: []
 })
 
@@ -1834,6 +2022,7 @@ const tipoEntradaOptions = [
 const showAcrModal = ref(false)
 /** Cuando está en true, el próximo item agregado se marca con paraEquipoMedico:true */
 const acrFlowActive = ref(false)
+const showBlankItemModal = ref(false)
 
 function abrirModalAcr() {
     showAcrModal.value = true
@@ -1923,11 +2112,49 @@ const canProceedToNext = computed(() => {
     }
 })
 
+function hasText(value) {
+    return String(value || '').trim().length > 0
+}
+
+function isInternalAcrType(tipo) {
+    return belongsToHospital.value === true && ['accesorio', 'consumible', 'refaccion'].includes(tipo)
+}
+
+function isInternalMedicalEquipmentType(tipo) {
+    return belongsToHospital.value === true && tipo === 'equipo-medico'
+}
+
+function isUnitValidForCurrentContext(unit = {}) {
+    if (!hasText(unit.nombre)) return false
+
+    if (isInternalAcrType(newItem.tipo)) {
+        return hasText(unit.marca) &&
+            hasText(unit.modelo) &&
+            hasText(unit.lote) &&
+            hasText(unit.referencia) &&
+            hasText(unit.ubicacion) &&
+            hasText(unit.equipoAsociado) &&
+            hasText(unit.claveHRAEI) &&
+            hasText(unit.origenBien)
+    }
+
+    if (isInternalMedicalEquipmentType(newItem.tipo)) {
+        return hasText(unit.marca) &&
+            hasText(unit.modelo) &&
+            hasText(unit.serie) &&
+            hasText(unit.ubicacion) &&
+            hasText(unit.noInventario) &&
+            (hasText(unit.referenciaEquipo) || hasText(unit.referencia))
+    }
+
+    return true
+}
+
 const canAddItem = computed(() => {
     if (isVerifyingStatus.value) return false
     if (!newItem.tipo) return false
     if (!newItem.unidades.length) return false
-    return newItem.unidades.some(u => u.nombre?.trim())
+    return newItem.unidades.every((u) => isUnitValidForCurrentContext(u))
 })
 
 const isValid = computed(() => {
@@ -1949,6 +2176,10 @@ const currentSuggestions = computed(() => {
     // Retornamos suggestions.value que ya viene filtrado/sincronizado por el composable useInventorySuggestions
     return suggestions.value || []
 })
+
+const isExternalGoods = computed(() =>
+    belongsToHospital.value === false && isConsumibleLikeType(newItem.tipo)
+)
 
 const summaryItems = computed(() => [
     {
@@ -2063,8 +2294,11 @@ function createEmptyUnit() {
         serie: '',
         referencia: '',
         referenciaEquipo: '',
+        noInventario: '',
         ubicacion: '',
         equipoAsociado: '',
+        serieEquipoAsociado: '',
+        origenBien: '',
         claveHRAEI: '',
         cantidad: 1
     }
@@ -2127,7 +2361,9 @@ function agregarItemsSinWarning() {
         serie: firstUnit.serie || '',
         lote: firstUnit.lote || '',
         referencia: firstUnit.referencia || '',
+        referenciaEquipo: firstUnit.referenciaEquipo || '',
         ubicacion: firstUnit.ubicacion || '',
+        origenBien: firstUnit.origenBien || '',
         claveHRAEI: firstUnit.claveHRAEI || firstUnit.claveHraei || '',
         noInventario: firstUnit.noInventario || ''
     }
@@ -2201,10 +2437,13 @@ async function agregarItem() {
                             lote: u.lote,
                             serie: u.serie,
                             referencia: u.referencia,
+                            referenciaEquipo: u.referenciaEquipo || '',
                             ubicacion: u.ubicacion,
                             equipoAsociado: u.equipoAsociado || '',
                             serieEquipoAsociado: u.serieEquipoAsociado || '',
+                            origenBien: u.origenBien || '',
                             claveHRAEI: u.claveHRAEI || u.claveHraei || '',
+                            noInventario: u.noInventario || '',
                             isExternal: isCurrentItemExternal.value
                         }))
                     
@@ -2272,9 +2511,69 @@ function resetNewItem() {
     newItem.serie = ''
     newItem.ubicacion = ''
     newItem.claveHRAEI = ''
+    newItem.noInventario = ''
     newItem.unidades = []
     belongsToHospital.value = null
     isVerifyingStatus.value = false
+}
+
+function buildBlankItemForType(tipo) {
+    const blankUnit = createEmptyUnit()
+    return {
+        tipo,
+        isBlank: true,
+        consumibleEstado: isConsumibleLikeType(tipo) ? 'nuevo' : null,
+        cantidad: 1,
+        isExternal: isCurrentItemExternal.value,
+        descripcion: '',
+        marca: '',
+        modelo: '',
+        lote: '',
+        serie: '',
+        referencia: '',
+        referenciaEquipo: '',
+        noInventario: '',
+        ubicacion: '',
+        equipoAsociado: '',
+        serieEquipoAsociado: '',
+        origenBien: '',
+        claveHRAEI: '',
+        unidades: [blankUnit]
+    }
+}
+
+// Agregar item en blanco editable
+function agregarItemBlanco() {
+    if (belongsToHospital.value !== true) {
+        notifier.error('El item en blanco solo aplica para bienes internos del hospital')
+        return
+    }
+
+    if (!newItem.tipo) {
+        notifier.error('Selecciona primero un tipo de item')
+        return
+    }
+
+    const blankItem = buildBlankItemForType(newItem.tipo)
+    form.equiposEntrada.push(blankItem)
+    const newIndex = form.equiposEntrada.length - 1
+    notifier.info('Item en blanco listo para editar')
+    editarItem(newIndex)
+}
+
+// Agregar item en blanco con tipo específico (desde el modal)
+function agregarItemBlancoConTipo(tipo) {
+    if (belongsToHospital.value !== true) {
+        notifier.error('El item en blanco solo aplica para bienes internos del hospital')
+        return
+    }
+
+    const blankItem = buildBlankItemForType(tipo)
+    form.equiposEntrada.push(blankItem)
+    showBlankItemModal.value = false
+    const newIndex = form.equiposEntrada.length - 1
+    notifier.info('Item en blanco listo para editar')
+    editarItem(newIndex)
 }
 
 // Observaciones image helper (copied from other operation views)
@@ -4388,6 +4687,135 @@ function mapSnakeToCamel(obj) {
     white-space: nowrap;
 }
 
+.quick-add-blank {
+    margin: 16px 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-add-blank-quick {
+    background: rgba(100, 116, 139, 0.15);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    color: #e2e8f0;
+    padding: 10px 14px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-add-blank-quick:hover {
+    background: rgba(100, 116, 139, 0.25);
+    border-color: rgba(148, 163, 184, 0.5);
+    transform: translateY(-1px);
+}
+
+.quick-add-hint {
+    color: rgba(226, 232, 240, 0.7);
+    font-size: 0.85rem;
+}
+
+.type-card-blank {
+    background: rgba(100, 116, 139, 0.1);
+    border: 1px dashed rgba(148, 163, 184, 0.4);
+}
+
+.type-card-blank:hover {
+    background: rgba(100, 116, 139, 0.2);
+    border-color: rgba(148, 163, 184, 0.7);
+}
+
+.blank-item-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.blank-item-modal {
+    background: #0f172a;
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 16px;
+    width: min(520px, 92vw);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
+
+.blank-item-modal .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.blank-item-modal .modal-header h3 {
+    font-size: 1rem;
+    color: #e2e8f0;
+}
+
+.blank-item-modal .modal-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.blank-item-modal .modal-body {
+    padding: 16px 18px 20px;
+}
+
+.blank-type-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.blank-type-btn {
+    background: rgba(30, 41, 59, 0.6);
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.blank-type-btn:hover {
+    border-color: rgba(148, 163, 184, 0.5);
+    background: rgba(30, 41, 59, 0.8);
+}
+
+.blank-type-icon {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--type-color) 20%, transparent);
+    color: var(--type-color);
+}
+
+.modal-fade-enter-active .blank-item-modal,
+.modal-fade-leave-active .blank-item-modal {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.modal-fade-enter-from .blank-item-modal,
+.modal-fade-leave-to .blank-item-modal {
+    transform: translateY(10px) scale(0.98);
+    opacity: 0;
+}
 .refinement-title-wrap {
     display: flex;
     align-items: center;
@@ -6406,4 +6834,91 @@ input:checked + .simple-slider {
 input:checked + .simple-slider:before {
     transform: translateX(18px);
 }
+
+/* ========== BLANK ITEM FORM - Agregación de Bien en Blanco ========== */
+.blank-item-form {
+    padding: 24px;
+    background: linear-gradient(165deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.8) 100%);
+    border: 2px dashed rgba(139, 92, 246, 0.3);
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+}
+
+.blank-form-header {
+    margin-bottom: 28px;
+}
+
+.blank-form-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(99, 102, 241, 0.08) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: 16px;
+    border-left: 4px solid #8b5cf6;
+}
+
+.blank-form-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: rgba(139, 92, 246, 0.15);
+    border-radius: 12px;
+    color: #a78bfa;
+    flex-shrink: 0;
+}
+
+.blank-form-title {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.blank-form-title h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e0e7ff;
+    letter-spacing: -0.01em;
+}
+
+.blank-form-title p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: #a78bfa;
+    line-height: 1.4;
+}
+
+/* ========== INTERNAL EDIT FORM - Edición de Bien Existente ========== */
+.internal-edit-form {
+    padding: 0;
+}
+
+/* ========== EXTERNAL ITEM FORM - Agregación de Bien Externo ========== */
+.external-item-form {
+    padding: 24px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+}
+
+/* Transiciones mejoradas entre formularios */
+.slide-up-enter-active,
+.slide-up-leave-active {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-up-enter-from {
+    opacity: 0;
+    transform: translateY(20px);
+}
+
+.slide-up-leave-to {
+    opacity: 0;
+    transform: translateY(-20px);
+}
+
 </style>

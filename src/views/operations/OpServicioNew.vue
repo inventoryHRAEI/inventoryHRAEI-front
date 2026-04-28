@@ -423,13 +423,13 @@
                         <Transition name="slide-up">
                             <div v-if="newItem.tipo && belongsToHospital === false" class="quick-add-blank">
                                 <button type="button" class="btn-add-blank-quick" @click="agregarItemBlanco"
-                                    title="Agregar item con todos los campos en N/A">
+                                    title="Agregar item en blanco para editar">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5">
                                         <line x1="12" y1="5" x2="12" y2="19" />
                                         <line x1="5" y1="12" x2="19" y2="12" />
                                     </svg>
-                                    Agregar {{ getSelectedTypeLabel() }} en Blanco (N/A)
+                                    Agregar {{ getSelectedTypeLabel() }} en Blanco
                                 </button>
                                 <span class="quick-add-hint">O completa los campos abajo para agregar con información
                                     específica</span>
@@ -594,128 +594,161 @@
                                             </div>
 
                                             <div class="unit-fields">
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Nombre / Descripción</label>
-                                                    <SearchableInput v-model="unidad.nombre"
-                                                        :suggestions="currentSuggestions" field-name="nombre"
-                                                        :placeholder="getNombrePlaceholder()"
-                                                        :disabled="belongsToHospital === true"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'nombre')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Marca</label>
-                                                    <SearchableInput v-model="unidad.marca"
-                                                        :suggestions="currentSuggestions" field-name="marca"
-                                                        placeholder="Ej. Philips"
-                                                        :disabled="belongsToHospital === true"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'marca')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Modelo</label>
-                                                    <SearchableInput v-model="unidad.modelo"
-                                                        :suggestions="currentSuggestions" field-name="modelo"
-                                                        placeholder="Ej. MX40"
-                                                        :disabled="belongsToHospital === true"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'modelo')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Lote</label>
-                                                    <SearchableInput v-model="unidad.lote"
-                                                        :suggestions="currentSuggestions" field-name="lote"
-                                                        placeholder="Ej. LT-2026"
-                                                        :disabled="belongsToHospital === true"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'lote')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">No. Serie</label>
-                                                    <SearchableInput v-model="unidad.serie"
-                                                        :suggestions="currentSuggestions" field-name="serie"
-                                                        placeholder="Ej. SN123456"
-                                                        :disabled="belongsToHospital === true"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'serie')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Ubicación</label>
-                                                    <SearchableInput v-model="unidad.ubicacion"
-                                                        :suggestions="currentSuggestions" field-name="ubicacion"
-                                                        placeholder="Ej. UCIA"
-                                                        :disabled="belongsToHospital === true"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'ubicacion')" />
-                                                </div>
-
-                                                <!-- Equipos Asociados (Solo para accesorios y refacciones) -->
-                                                <div v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'"
-                                                    class="searchable-field">
-                                                    <label class="mini-label">Equipo Asociado</label>
-                                                    <SearchableInput v-model="unidad.equipoAsociado"
-                                                        :suggestions="belongsToHospital === true ? suggestions : []" tipo="equipo-medico"
-                                                        field-name="nombre" placeholder="Buscar equipo asociado..."
-                                                        @select="(s) => unidad.equipoAsociado = (s.nombre || s.label || '')" />
-                                                </div>
-
-                                                <!-- Número de Serie del Equipo Asociado (Solo si hay equipo asociado) -->
-                                                <div v-if="(newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible') && unidad.equipoAsociado"
-                                                    class="searchable-field">
-                                                    <label class="mini-label">Número de Serie del Equipo
-                                                        Asociado</label>
-                                                    <input v-model="unidad.serieEquipoAsociado" type="text"
-                                                        class="form-input" placeholder="Ej. SN-EQUIPO-001" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Referencia del Bien</label>
-                                                    <SearchableInput v-model="unidad.referencia"
-                                                        :suggestions="currentSuggestions" field-name="referencia"
-                                                        placeholder="Ej. REF-123456"
-                                                        :disabled="belongsToHospital === true"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'referencia')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Referencia del Equipo</label>
-                                                    <SearchableInput v-model="unidad.referenciaEquipo"
-                                                        :suggestions="currentSuggestions" field-name="referenciaEquipo"
-                                                        placeholder="Ej. EQP-123456"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'referenciaEquipo')" />
-                                                </div>
-
-                                                <div class="searchable-field">
-                                                    <label class="mini-label">Clave HRAEI</label>
-                                                    <SearchableInput v-model="unidad.claveHRAEI"
-                                                        :suggestions="currentSuggestions" field-name="claveHRAEI"
-                                                        placeholder="Ej. COMODATO"
-                                                        :disabled="belongsToHospital === true"
-                                                        @select="(s) => handleSuggestionSelect(s, unidad, 'claveHRAEI')" />
-                                                </div>
-
-                                                <div class="quantity-field">
-                                                    <label class="mini-label">Cantidad</label>
-                                                    <div class="quantity-input-wrapper">
-                                                        <button type="button" class="qty-btn"
-                                                            @click="unidad.cantidad > 1 ? unidad.cantidad-- : null"
-                                                            :disabled="unidad.cantidad <= 1">
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                                stroke="currentColor" stroke-width="3">
-                                                                <line x1="5" y1="12" x2="19" y2="12" />
-                                                            </svg>
-                                                        </button>
-                                                        <input type="number" v-model.number="unidad.cantidad" min="1"
-                                                            class="qty-input" placeholder="1" />
-                                                        <button type="button" class="qty-btn"
-                                                            @click="unidad.cantidad++">
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                                                                stroke="currentColor" stroke-width="3">
-                                                                <line x1="12" y1="5" x2="12" y2="19" />
-                                                                <line x1="5" y1="12" x2="19" y2="12" />
-                                                            </svg>
-                                                        </button>
+                                                <template v-if="isExternalGoods">
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Nombre / Descripción</label>
+                                                        <input v-model.trim="unidad.nombre" type="text" class="form-input"
+                                                            :placeholder="getNombrePlaceholder()" autocomplete="off"
+                                                            autocorrect="off" autocapitalize="off" spellcheck="false" />
                                                     </div>
-                                                </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Marca</label>
+                                                        <input v-model.trim="unidad.marca" type="text" class="form-input"
+                                                            placeholder="Ej. Philips" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Modelo</label>
+                                                        <input v-model.trim="unidad.modelo" type="text" class="form-input"
+                                                            placeholder="Ej. MX40" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Lote</label>
+                                                        <input v-model.trim="unidad.lote" type="text" class="form-input"
+                                                            placeholder="Ej. LT-2026" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">No. Serie (opcional)</label>
+                                                        <input v-model.trim="unidad.serie" type="text" class="form-input"
+                                                            placeholder="Ej. SN123456" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Referencia del Bien</label>
+                                                        <input v-model.trim="unidad.referencia" type="text" class="form-input"
+                                                            placeholder="Ej. REF-123456" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Ubicación</label>
+                                                        <input v-model.trim="unidad.ubicacion" type="text" class="form-input"
+                                                            placeholder="Ej. UCIA" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Equipo Asociado</label>
+                                                        <input v-model.trim="unidad.equipoAsociado" type="text" class="form-input"
+                                                            placeholder="Equipo al que pertenece..." autocomplete="off"
+                                                            autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Origen del Bien</label>
+                                                        <input v-model.trim="unidad.origenBien" type="text" class="form-input"
+                                                            placeholder="Compra, donación, comodato..." autocomplete="off"
+                                                            autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="quantity-field">
+                                                        <label class="mini-label">Cantidad</label>
+                                                        <div class="quantity-input-wrapper">
+                                                            <button type="button" class="qty-btn"
+                                                                @click="unidad.cantidad > 1 ? unidad.cantidad-- : null"
+                                                                :disabled="unidad.cantidad <= 1">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                    stroke="currentColor" stroke-width="3">
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
+                                                            <input type="number" v-model.number="unidad.cantidad" min="1"
+                                                                class="qty-input" placeholder="1" />
+                                                            <button type="button" class="qty-btn"
+                                                                @click="unidad.cantidad++">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                    stroke="currentColor" stroke-width="3">
+                                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                                <template v-else>
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Nombre / Descripción</label>
+                                                        <input v-model.trim="unidad.nombre" type="text" class="form-input"
+                                                            :placeholder="getNombrePlaceholder()" autocomplete="off"
+                                                            autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Marca</label>
+                                                        <input v-model.trim="unidad.marca" type="text" class="form-input"
+                                                            placeholder="Ej. Philips" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Modelo</label>
+                                                        <input v-model.trim="unidad.modelo" type="text" class="form-input"
+                                                            placeholder="Ej. MX40" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">No. Serie</label>
+                                                        <input v-model.trim="unidad.serie" type="text" class="form-input"
+                                                            placeholder="Ej. SN123456" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Referencia del Equipo</label>
+                                                        <input v-model.trim="unidad.referencia" type="text" class="form-input"
+                                                            placeholder="Ej. REF-123456" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="searchable-field">
+                                                        <label class="mini-label">Ubicación</label>
+                                                        <input v-model.trim="unidad.ubicacion" type="text" class="form-input"
+                                                            placeholder="Ej. UCIA" autocomplete="off" autocorrect="off"
+                                                            autocapitalize="off" spellcheck="false" />
+                                                    </div>
+
+                                                    <div class="quantity-field">
+                                                        <label class="mini-label">Cantidad</label>
+                                                        <div class="quantity-input-wrapper">
+                                                            <button type="button" class="qty-btn"
+                                                                @click="unidad.cantidad > 1 ? unidad.cantidad-- : null"
+                                                                :disabled="unidad.cantidad <= 1">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                    stroke="currentColor" stroke-width="3">
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
+                                                            <input type="number" v-model.number="unidad.cantidad" min="1"
+                                                                class="qty-input" placeholder="1" />
+                                                            <button type="button" class="qty-btn"
+                                                                @click="unidad.cantidad++">
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                                    stroke="currentColor" stroke-width="3">
+                                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </template>
                                             </div>
                                         </div>
                                     </TransitionGroup>
@@ -1421,6 +1454,10 @@ const currentSuggestions = computed(() => {
     return suggestions.value || []
 })
 
+const isExternalGoods = computed(() =>
+    belongsToHospital.value === false && isConsumibleLikeType(newItem.tipo)
+)
+
 const summaryItems = computed(() => [
     { key: 'solicitante', label: 'Solicitante', value: form.nombreSolicitante, step: 1, status: form.nombreSolicitante?.trim() ? 'complete' : 'pending' },
     { key: 'servicio', label: 'Servicio', value: form.servicio, step: 1, status: form.servicio?.trim() ? 'complete' : 'pending' }, // Same step 1
@@ -1490,6 +1527,9 @@ function createEmptyUnit() {
         referencia: '',
         referenciaEquipo: '',
         ubicacion: '',
+        equipoAsociado: '',
+        serieEquipoAsociado: '',
+        origenBien: '',
         claveHRAEI: '',
         cantidad: 1
     }
@@ -1522,6 +1562,7 @@ function editarItem(index) {
             ubicacion: item.ubicacion || '',
             equipoAsociado: item.equipoAsociado || '',
             serieEquipoAsociado: item.serieEquipoAsociado || '',
+            origenBien: item.origenBien || item.origen_bien || '',
             claveHRAEI: item.claveHRAEI || '',
             cantidad: Math.max(1, item.cantidad || 1)
         }]
@@ -1538,6 +1579,7 @@ function editarItem(index) {
         ubicacion: u.ubicacion || '',
         equipoAsociado: u.equipoAsociado || '',
         serieEquipoAsociado: u.serieEquipoAsociado || '',
+        origenBien: u.origenBien || u.origen_bien || '',
         claveHRAEI: u.claveHRAEI || '',
         cantidad: Math.max(1, u.cantidad || 1)
     }))
@@ -1602,6 +1644,7 @@ function agregarItemsSinWarning() {
         ubicacion: firstUnit.ubicacion,
         equipoAsociado: firstUnit.equipoAsociado || '',
         serieEquipoAsociado: firstUnit.serieEquipoAsociado || '',
+        origenBien: firstUnit.origenBien || '',
         claveHRAEI: firstUnit.claveHRAEI,
         unidades: newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 }))
     }
@@ -1690,6 +1733,7 @@ function agregarItem() {
                             ubicacion: u.ubicacion,
                             equipoAsociado: u.equipoAsociado || '',
                             serieEquipoAsociado: u.serieEquipoAsociado || '',
+                            origenBien: u.origenBien || '',
                             claveHRAEI: u.claveHRAEI,
                             isExternal: isCurrentItemExternal.value
                         }))
@@ -1750,75 +1794,51 @@ function resetNewItem() {
     isVerifyingStatus.value = false
 }
 
-// Agregar item en blanco con valores N/A
+function buildBlankItemForType(tipo) {
+    const blankUnit = createEmptyUnit()
+    return {
+        tipo,
+        consumibleEstado: isConsumibleLikeType(tipo) ? 'nuevo' : null,
+        cantidad: 1,
+        isExternal: belongsToHospital.value === false,
+        descripcion: '',
+        marca: '',
+        modelo: '',
+        lote: '',
+        serie: '',
+        referencia: '',
+        referenciaEquipo: '',
+        ubicacion: '',
+        equipoAsociado: '',
+        serieEquipoAsociado: '',
+        origenBien: '',
+        claveHRAEI: '',
+        unidades: [blankUnit]
+    }
+}
+
+// Agregar item en blanco editable
 function agregarItemBlanco() {
     if (!newItem.tipo) {
         notifier.error('Selecciona primero un tipo de item')
         return
     }
 
-    form.equiposEntrada.push({
-        tipo: newItem.tipo,
-        consumibleEstado: newItem.tipo === 'consumible' ? newItem.consumibleEstado : null,
-        cantidad: 1,
-        isExternal: belongsToHospital.value === false,
-        descripcion: 'N/A',
-        marca: 'N/A',
-        modelo: 'N/A',
-        lote: 'N/A',
-        serie: 'N/A',
-        referencia: 'N/A',
-        ubicacion: 'N/A',
-        equipoAsociado: 'N/A',
-        claveHRAEI: 'N/A',
-        unidades: [{
-            nombre: 'N/A',
-            marca: 'N/A',
-            modelo: 'N/A',
-            lote: 'N/A',
-            serie: 'N/A',
-            referencia: 'N/A',
-            ubicacion: 'N/A',
-            claveHRAEI: 'N/A',
-            cantidad: 1
-        }]
-    })
-
-    notifier.success('Item en blanco agregado')
-    resetNewItem()
+    const blankItem = buildBlankItemForType(newItem.tipo)
+    form.equiposEntrada.push(blankItem)
+    const newIndex = form.equiposEntrada.length - 1
+    notifier.info('Item en blanco listo para editar')
+    editarItem(newIndex)
 }
 
 // Agregar item en blanco con tipo específico (desde el modal)
 function agregarItemBlancoConTipo(tipo) {
-    form.equiposEntrada.push({
-        tipo: tipo,
-        consumibleEstado: tipo === 'consumible' ? 'nuevo' : null,
-        cantidad: 1,
-        isExternal: belongsToHospital.value === false,
-        descripcion: 'N/A',
-        marca: 'N/A',
-        modelo: 'N/A',
-        lote: 'N/A',
-        serie: 'N/A',
-        referencia: 'N/A',
-        ubicacion: 'N/A',
-        equipoAsociado: 'N/A',
-        claveHRAEI: 'N/A',
-        unidades: [{
-            nombre: 'N/A',
-            marca: 'N/A',
-            modelo: 'N/A',
-            lote: 'N/A',
-            serie: 'N/A',
-            referencia: 'N/A',
-            ubicacion: 'N/A',
-            claveHRAEI: 'N/A',
-            cantidad: 1
-        }]
-    })
-
+    const blankItem = buildBlankItemForType(tipo)
+    form.equiposEntrada.push(blankItem)
     showBlankItemModal.value = false
-    notifier.success('Item en blanco agregado')
+    const newIndex = form.equiposEntrada.length - 1
+    notifier.info('Item en blanco listo para editar')
+    editarItem(newIndex)
 }
 
 function eliminarItem(item) {
