@@ -1,0 +1,7 @@
+/* Import Flowbite and Flowbite Datepicker CSS to be processed by Tailwind pipeline (requires Tailwind installed) */
+@import 'flowbite/dist/flowbite.css';
+@import './vendor/flowbite-datepicker.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

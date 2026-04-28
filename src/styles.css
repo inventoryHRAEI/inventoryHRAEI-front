@@ -1,0 +1,2922 @@
+:root {
+  --bg-1: #0b1220;
+  --bg-2: #0f1724;
+  --card-bg: rgba(255, 255, 255, 0.04);
+  --card-border: rgba(255, 255, 255, 0.06);
+  /* Dashboard embed specific variables (slightly darker to make them stand out) */
+  --dashboard-card-bg: rgba(19, 31, 52, 0.46);
+  --dashboard-card-border: rgba(255,255,255,0.12);
+  --dashboard-topbar-glass: linear-gradient(90deg, rgba(9,94,155,0.64), rgba(8,65,128,0.5));
+  --dashboard-topbar-border: rgba(255,255,255,0.08);
+  --accent: #2edd5a;
+  --accent-2: #299deb;
+  --text: #000000;
+  --muted: rgb(0, 0, 0);
+  --btn-green: #0bb828;
+  --link-green-light: #0ccf6a;
+  --btn-text-dark: #0b6b4a;
+  --bg-img-brightness: 0.6;
+  /* Métricas del topbar para posicionar correctamente el dropdown fijo */
+  --topbar-top: 12px;
+  --topbar-height: 60px;
+  /* Padding superior dinámico para evitar traslape con el topbar fijo; en pantallas muy pequeñas puede reducirse */
+  --container-toppad: calc(var(--topbar-top) + var(--topbar-height) + 12px);
+}
+
+* {
+  box-sizing: border-box
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  font-family: 'Source Sans 3', 'Segoe UI', Roboto, Arial, sans-serif;
+  color: var(--text);
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  /* FORZAR TEMA OSCURO ULTRA AGRESIVO */
+  color-scheme: dark !important;
+  accent-color: #00ff6a !important;
+}
+
+/* FORZAR TEMA OSCURO EN TODOS LOS ELEMENTOS */
+* {
+  color-scheme: dark !important;
+}
+
+/* CONFIGURATION ESPECIAL PARA DATE INPUTS */
+input[type="date"] {
+  color-scheme: dark !important;
+  accent-color: #00ff6a !important;
+}
+
+/* El fondo (imagen/video) se mantiene como elemento en App.vue */
+.bg-media {
+  position: fixed;
+  inset: 0;
+  z-index: 0
+}
+
+.bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.02);
+}
+
+.bg-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.05) contrast(1.02) brightness(var(--bg-img-brightness));
+}
+
+/* Make the global topbar fixed and above operation wizards so logout remains reachable
+   The app computes --container-toppad dynamically in main.js, so fixing the topbar
+   won't overlap content when --container-toppad is honored. */
+.topbar {
+  position: fixed;
+  top: var(--topbar-top);
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 20000 !important; /* above archived panels (<=12500) but below global notifications (~99999) */
+  display: block;
+  pointer-events: auto;
+}
+
+.topbar .container {
+  /* ensure inner container keeps the same centered width/padding */
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.container {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
+  width: 92%;
+  margin: 0 auto;
+  padding-top: var(--container-toppad);
+}
+
+.container {
+  transition: none
+}
+
+/* When route is an operation (op-...), make the embedded operation card use the dark glass
+   This only applies when App toggles the `op-embed-active` class on the main container.
+   We scope the rules precisely to avoid altering area selection cards or input sizes. */
+.op-embed-active .auth-card,
+.op-embed-active .action-panel,
+.op-embed-active .glass,
+.op-embed-active .modal-card,
+.op-embed-active .op-card,
+.op-embed-active .area-card.embedded {
+  background: var(--dashboard-card-bg) !important;
+  border: 1px solid var(--dashboard-card-border) !important;
+  box-shadow: 0 24px 52px rgba(5, 10, 18, 0.28) !important;
+  backdrop-filter: blur(18px) saturate(160%) !important;
+  border-radius: 22px !important;
+}
+
+/* Don't change control sizing — only colors/backgrounds for the embedded operation */
+.op-embed-active .auth-card .control,
+.op-embed-active .auth-card .input,
+.op-embed-active .auth-card input,
+.op-embed-active .auth-card textarea {
+  /* preserve existing paddings/heights; only adjust background/border colors */
+  background: rgba(255,255,255,0.12) !important;
+  border: 1px solid rgba(255,255,255,0.22) !important;
+  color: inherit !important;
+}
+
+/* Cuando el topbar crece (por ejemplo, en móvil con título en dos líneas), agregar más espacio superior */
+@media (max-width:560px) {
+  :root {
+    --container-toppad: calc(var(--topbar-top) + var(--topbar-height) + 18px)
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ARCHIVE ACTIONS MENU - Premium dropdown with Perfect UX
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.archive-menu {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.archive-summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  background: rgba(46, 221, 90, 0.12);
+  border: 1px solid rgba(46, 221, 90, 0.25);
+  color: #e2e8f0;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.archive-summary::-webkit-details-marker {
+  display: none;
+}
+
+.archive-summary svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.archive-summary:hover {
+  background: rgba(46, 221, 90, 0.18);
+  border-color: rgba(46, 221, 90, 0.35);
+  box-shadow: 0 4px 12px rgba(46, 221, 90, 0.15);
+  transform: translateY(-1px);
+}
+
+.archive-summary.viewing-archived {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.35);
+}
+
+.archive-summary.viewing-archived:hover {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.archive-menu[open] .archive-summary {
+  background: rgba(46, 221, 90, 0.22);
+  border-color: rgba(46, 221, 90, 0.45);
+  box-shadow: 0 4px 12px rgba(46, 221, 90, 0.2);
+}
+
+.archive-menu[open] .archive-summary.viewing-archived {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.45);
+}
+
+/* Popover dropdown menu */
+.archive-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 260px;
+  background: linear-gradient(135deg,
+    rgba(13, 20, 33, 0.96) 0%,
+    rgba(11, 17, 28, 0.96) 100%);
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 
+    0 0 30px rgba(46, 221, 90, 0.1),
+    0 20px 40px rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  z-index: 9999;
+  animation: popover-in 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.archive-action-item {
+  width: 100%;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 9px;
+  padding: 10px 12px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.archive-action-item:last-child {
+  margin-bottom: 0;
+}
+
+.archive-action-item:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
+}
+
+.archive-action-item:active:not(:disabled) {
+  transform: translateX(0);
+  box-shadow: 0 2px 6px rgba(255, 255, 255, 0.06);
+}
+
+.archive-action-item.secondary {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #dbeafe;
+}
+
+.archive-action-item.secondary:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.22);
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.archive-action-item:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Caret/chevron icon animation */
+.archive-caret {
+  margin-left: auto;
+  opacity: 0.7;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.archive-menu[open] .archive-caret {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+/* Global: Very small screens - ensure forms and controls keep readability and don't overflow */
+@media (max-width:420px) {
+  .control {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 0.95rem !important;
+    height: 44px !important;
+    padding: 8px 12px !important;
+  }
+
+  .input,
+  .btn,
+  .dropdown,
+  .user-btn {
+    min-width: 0 !important;
+  }
+
+  .ctr-btn {
+    min-width: 36px !important;
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .ctr-input {
+    min-width: 48px !important;
+    width: 56px !important;
+  }
+
+  .counter {
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .form-grid {
+    gap: 12px !important;
+  }
+
+  .glass {
+    padding: 10px !important;
+  }
+}
+
+/* Ultra small screens (<=360px) - squeeze but keep touch targets accessible */
+@media (max-width:360px) {
+  .control {
+    font-size: 0.92rem !important;
+    height: 42px !important;
+    padding: 6px 10px !important;
+  }
+
+  .ctr-btn {
+    min-width: 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.86rem !important;
+  }
+
+  .ctr-input {
+    min-width: 40px !important;
+    width: 44px !important;
+    font-size: 0.88rem !important;
+  }
+
+  .btn {
+    padding: 12px 14px !important;
+    font-size: 0.95rem !important;
+  }
+}
+
+/* Ensure SweetAlert2 modals always appear above wizards/overlays */
+.swal2-container {
+  z-index: 2147483647 !important;
+  pointer-events: auto !important;
+}
+
+.swal2-popup {
+  z-index: 2147483648 !important;
+  pointer-events: auto !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOPBAR PREMIUM - Glassmorphism + Animated Gradient Border + Glow Effects
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Animated gradient keyframes */
+@keyframes topbar-gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes topbar-glow-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 20px rgba(46, 221, 90, 0.15),
+                0 0 40px rgba(41, 157, 235, 0.1),
+                0 20px 60px rgba(2, 6, 23, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+  50% { 
+    box-shadow: 0 0 30px rgba(46, 221, 90, 0.25),
+                0 0 60px rgba(41, 157, 235, 0.15),
+                0 24px 70px rgba(2, 6, 23, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+@keyframes shimmer-effect {
+  0% { transform: translateX(-100%) rotate(45deg); }
+  100% { transform: translateX(200%) rotate(45deg); }
+}
+
+.topbar {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 1000px;
+  z-index: 220;
+  height: 68px;
+  display: flex;
+  align-items: center;
+  border-radius: 20px;
+  padding: 0 28px;
+  
+  /* Premium glass background */
+  background: linear-gradient(135deg, 
+    rgba(15, 25, 45, 0.75) 0%,
+    rgba(25, 40, 65, 0.65) 50%,
+    rgba(15, 30, 50, 0.70) 100%);
+  
+  /* Animated gradient border */
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  
+  /* Glow shadow with animation */
+  animation: topbar-glow-pulse 4s ease-in-out infinite;
+  
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+/* Animated gradient border effect */
+.topbar::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 22px;
+  padding: 2px;
+  background: linear-gradient(90deg, 
+    #2edd5a 0%,
+    #299deb 25%,
+    #9b59b6 50%,
+    #299deb 75%,
+    #2edd5a 100%);
+  background-size: 300% 100%;
+  animation: topbar-gradient-flow 6s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.topbar:hover {
+  transform: translateX(-50%) translateY(-2px);
+  
+  background: linear-gradient(135deg, 
+    rgba(20, 35, 60, 0.82) 0%,
+    rgba(30, 50, 80, 0.72) 50%,
+    rgba(20, 40, 65, 0.78) 100%);
+}
+
+.topbar:hover::before {
+  opacity: 1;
+  animation-duration: 3s;
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+  flex-wrap: nowrap;
+  position: relative; /* Enable absolute positioning for notification bell */
+}
+
+/* Control del overflow en el topbar: truncar hijos para evitar que aumente la altura */
+.topbar {
+  overflow: visible
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0
+}
+
+/* Make the main testing environment panel use the same dark "liquid glass" as the topbar
+   Targets the <section class="action-panel ... testing-environment-main"> -> .panel-surface inside it. */
+.testing-environment-main > .panel-surface,
+.testing-environment-main .panel-surface {
+  background: rgba(19, 31, 52, 0.50) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  backdrop-filter: blur(12px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+  box-shadow: 0 16px 48px rgba(2, 6, 23, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  background-clip: padding-box !important;
+  border-radius: 16px;
+}
+
+.brand-text {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden
+}
+
+.brand-title,
+.brand-sub {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+/* El título del sitio usa el espacio restante y se trunca cuando es necesario */
+.site-title {
+  flex: 1 1 40%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto
+}
+
+.top-action {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+/* El botón de usuario no debe crecer; limitar su tamaño y permitir truncar texto */
+.user-btn {
+  max-width: 220px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex: 0 0 auto
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ADMIN BUTTONS - Clear, Accessible, Premium Design
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Botón admin: Archive & Reset (replaces old reset-folios) */
+.btn-reset-folios {
+  background: linear-gradient(135deg, rgba(46, 221, 90, 0.9), rgba(34, 197, 94, 0.85));
+  color: #fff;
+  border: 1px solid rgba(46, 221, 90, 0.3);
+  padding: 7px 12px;
+  height: 36px;
+  min-width: 120px;
+  font-size: 0.9rem;
+  border-radius: 9px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(46, 221, 90, 0.16);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  align-self: center;
+}
+
+.btn-reset-folios svg { 
+  width: 16px; 
+  height: 16px; 
+  flex-shrink: 0;
+}
+
+.btn-reset-folios:hover { 
+  background: linear-gradient(135deg, rgba(46, 221, 90, 0.98), rgba(34, 197, 94, 0.95));
+  border-color: rgba(46, 221, 90, 0.5);
+  transform: translateY(-2px); 
+  box-shadow: 0 8px 20px rgba(46, 221, 90, 0.25);
+}
+
+.btn-reset-folios:active { 
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(46, 221, 90, 0.18);
+}
+
+.btn-reset-folios[disabled] { 
+  opacity: 0.5; 
+  cursor: not-allowed; 
+  transform: none; 
+  box-shadow: none;
+}
+
+@media (max-width: 720px) {
+  .btn-reset-folios { 
+    min-width: 100px; 
+    padding: 6px 8px; 
+    font-size: 0.85rem;
+    margin-left: 8px;
+  }
+}
+
+.user-btn .welcome-text {
+  display: inline-block;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.topbar:hover .brand {
+  gap: 14px;
+}
+
+.topbar-logo {
+  width: 46px;
+  height: 46px;
+  object-fit: cover;
+  border-radius: 12px;
+  /* Eliminamos el fondo rectangular con borde y sombra premium */
+  background: transparent;
+  border: 2px solid rgba(46, 221, 90, 0.4);
+  box-shadow: 
+    0 0 15px rgba(46, 221, 90, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  filter: drop-shadow(0 0 8px rgba(46, 221, 90, 0.3));
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topbar:hover .topbar-logo {
+  transform: scale(1.1) rotate(3deg);
+  border-color: rgba(46, 221, 90, 0.7);
+  box-shadow: 
+    0 0 25px rgba(46, 221, 90, 0.4),
+    0 8px 20px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column
+}
+
+.brand-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.5px;
+  /* Gradient text effect */
+  background: linear-gradient(135deg, #ffffff 0%, #2edd5a 50%, #299deb 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: topbar-gradient-flow 4s linear infinite;
+  text-shadow: none;
+  transition: all 0.3s ease;
+}
+
+.topbar:hover .brand-title {
+  letter-spacing: 1px;
+}
+
+.brand-sub {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: rgba(46, 221, 90, 0.85);
+  line-height: 1.2;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+}
+
+.topbar:hover .brand-sub {
+  color: rgba(46, 221, 90, 1);
+  text-shadow: 0 0 10px rgba(46, 221, 90, 0.4);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px
+}
+
+.site-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  margin-right: 8px;
+  /* Gradient text */
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(41, 157, 235, 0.9) 50%,
+    rgba(255, 255, 255, 0.95) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: topbar-gradient-flow 5s linear infinite;
+  text-transform: uppercase;
+  position: relative;
+}
+
+.site-title::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #2edd5a, #299deb);
+  border-radius: 2px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.topbar:hover .site-title::after {
+  width: 80%;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center
+}
+
+.top-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(46, 221, 90, 0.15), rgba(41, 157, 235, 0.1));
+  color: #2edd5a;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1.5px solid rgba(46, 221, 90, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.top-action::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(46, 221, 90, 0.2),
+    transparent);
+  transition: left 0.5s ease;
+}
+
+.top-action:hover {
+  background: linear-gradient(135deg, rgba(46, 221, 90, 0.25), rgba(41, 157, 235, 0.18));
+  border-color: rgba(46, 221, 90, 0.6);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    0 8px 25px rgba(46, 221, 90, 0.25),
+    0 0 15px rgba(46, 221, 90, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  color: #fff;
+  text-shadow: 0 0 10px rgba(46, 221, 90, 0.5);
+}
+
+.top-action:hover::before {
+  left: 100%;
+}
+
+.top-action:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* Asegurar que el .container dentro del topbar no agregue ancho/padding extra que provoque overflow.
+   El encabezado usa .container en otros lugares; por eso lo sobreescribimos sólo cuando es hijo directo de .topbar. */
+.topbar>.container {
+  width: 100%;
+  max-width: 1000px;
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box
+}
+
+.topbar-inner {
+  padding: 6px 12px;
+  box-sizing: border-box
+}
+
+/* Notification Bell */
+.notif-bell-action {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 240;
+  position: relative;
+}
+
+.topbar {
+  width: calc(100% - 32px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Evitar overflow en el área de acciones; truncar texto largo y mantener visibles las acciones */
+.topbar-actions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.topbar-actions .actions {
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  position: relative;
+}
+
+.topbar-actions .actions > * {
+  flex-shrink: 0;
+}
+
+.topbar-actions .actions > .notif-bell-integrated {
+  position: relative;
+  z-index: 200;
+  pointer-events: auto;
+  isolation: isolate;
+}
+
+.topbar-actions .actions > .user-menu {
+  position: relative;
+  z-index: 300;
+  isolation: isolate;
+}
+
+.topbar .top-action {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+/* Bloque de bienvenida dentro del topbar */
+.welcome {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 8px
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.avatar-enhanced {
+  background: linear-gradient(135deg, rgba(46, 221, 90, 0.15), rgba(25, 59, 8, 0.1));
+  border: 1.5px solid rgba(46, 221, 90, 0.4);
+  box-shadow: 0 0 8px rgba(46, 221, 90, 0.2), inset 0 1px 2px rgba(255, 255, 255, 0.1);
+}
+
+.avatar-admin {
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.15), rgba(50, 120, 200, 0.1)) !important;
+  border: 1.5px solid rgba(100, 200, 255, 0.5) !important;
+  box-shadow: 0 0 12px rgba(100, 200, 255, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.1) !important;
+}
+
+.avatar-status {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  background: #00ff6a;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(0, 255, 106, 0.6), inset 0 0 2px rgba(0, 255, 106, 0.8);
+  animation: pulse-status 2s ease-in-out infinite;
+}
+
+.avatar-status.status-admin {
+  background: #64c8ff;
+  box-shadow: 0 0 8px rgba(100, 200, 255, 0.8), inset 0 0 2px rgba(100, 200, 255, 1);
+}
+
+@keyframes pulse-status {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
+
+.welcome-text {
+  font-weight: 600
+}
+
+.top-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  25% {
+    transform: translateY(-10px);
+  }
+
+  50% {
+    transform: translateY(-25px);
+  }
+
+  75% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Transición para el botón de usuario */
+.btn-float-enter-active,
+.btn-float-leave-active {
+  transition: all 0.5s ease;
+}
+
+.btn-float-enter-from {
+  opacity: 0;
+  transform: translateY(10px) scale(0.9);
+}
+
+.btn-float-enter-to {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.btn-float-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.btn-float-leave-to {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.9);
+}
+
+/* Dropdown del menú de usuario - Premium Edition */
+.user-menu {
+  position: relative;
+  z-index: 300;
+  isolation: isolate;
+}
+
+.user-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, 
+    rgba(46, 221, 90, 0.18) 0%,
+    rgba(41, 157, 235, 0.12) 50%,
+    rgba(46, 221, 90, 0.15) 100%);
+  border: 1.5px solid rgba(46, 221, 90, 0.45);
+  padding: 8px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Shimmer effect on user button */
+.user-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent);
+  transition: left 0.5s ease;
+}
+
+.user-btn:hover::before {
+  left: 100%;
+}
+
+.user-btn-admin {
+  background: linear-gradient(135deg, 
+    rgba(100, 200, 255, 0.2) 0%,
+    rgba(155, 89, 182, 0.15) 50%,
+    rgba(100, 200, 255, 0.18) 100%) !important;
+  border: 1.5px solid rgba(100, 200, 255, 0.55) !important;
+}
+
+.user-btn-user {
+  background: linear-gradient(135deg, 
+    rgba(46, 221, 90, 0.18) 0%,
+    rgba(41, 157, 235, 0.12) 50%,
+    rgba(46, 221, 90, 0.15) 100%);
+  border: 1.5px solid rgba(46, 221, 90, 0.45);
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #64c8ff 0%, #9b59b6 100%);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  box-shadow: 
+    0 2px 10px rgba(100, 200, 255, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  animation: topbar-gradient-flow 3s linear infinite;
+  background-size: 200% auto;
+}
+
+.user-btn .avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  background: linear-gradient(135deg, rgba(46, 221, 90, 0.2), rgba(41, 157, 235, 0.15));
+  border: 1.5px solid rgba(46, 221, 90, 0.5);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(46, 221, 90, 0.2);
+  font-weight: 700;
+}
+
+.user-btn-admin .avatar {
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.2), rgba(155, 89, 182, 0.15)) !important;
+  border-color: rgba(100, 200, 255, 0.5) !important;
+  box-shadow: 0 0 12px rgba(100, 200, 255, 0.3) !important;
+}
+
+.user-btn {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.user-btn:hover {
+  transform: translateY(-3px) scale(1.02);
+  border-color: rgba(46, 221, 90, 0.7);
+  box-shadow: 
+    0 10px 30px rgba(46, 221, 90, 0.25),
+    0 0 20px rgba(46, 221, 90, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.user-btn-admin:hover {
+  border-color: rgba(100, 200, 255, 0.8) !important;
+  box-shadow: 
+    0 10px 35px rgba(100, 200, 255, 0.3),
+    0 0 25px rgba(100, 200, 255, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+.user-btn.open {
+  box-shadow: 
+    0 12px 35px rgba(46, 221, 90, 0.3),
+    0 0 25px rgba(46, 221, 90, 0.2);
+}
+
+.user-btn-admin.open {
+  box-shadow: 
+    0 14px 40px rgba(100, 200, 255, 0.35),
+    0 0 30px rgba(100, 200, 255, 0.25) !important;
+}
+
+.user-btn .chev {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+  transform: rotate(-45deg);
+  margin-left: 4px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.user-btn:hover .chev {
+  border-color: #2edd5a;
+}
+
+.user-btn-admin:hover .chev {
+  border-color: #64c8ff !important;
+}
+
+.user-btn.open .chev {
+  transform: rotate(45deg) translateY(-2px);
+  border-color: #2edd5a;
+}
+
+.user-btn-admin.open .chev {
+  border-color: #64c8ff !important;
+}
+
+/* Prevent user button from growing vertically when the name is long; truncate text with ellipsis */
+.user-btn {
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis
+}
+
+.user-btn .welcome-text {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+@media (max-width:560px) {
+  .user-btn {
+    max-width: 160px;
+    padding: 6px 8px
+  }
+
+  .user-btn .welcome-text {
+    max-width: 96px
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   DROPDOWN PREMIUM - Glassmorphism + Animated Effects
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+.dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 12px);
+  /* Premium glass background */
+  background: linear-gradient(145deg, 
+    rgba(20, 30, 50, 0.95) 0%,
+    rgba(25, 40, 65, 0.92) 50%,
+    rgba(15, 25, 45, 0.95) 100%);
+  /* Animated gradient border effect */
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+  padding: 14px;
+  border-radius: 18px;
+  min-width: 220px;
+  max-width: 420px;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(46, 221, 90, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  z-index: 9999;
+  overflow: hidden;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Animated border gradient */
+.dropdown::before {
+  content: '';
+  position: absolute;
+  inset: -1.5px;
+  border-radius: 19px;
+  padding: 1.5px;
+  background: linear-gradient(135deg, 
+    rgba(46, 221, 90, 0.6) 0%,
+    rgba(41, 157, 235, 0.5) 50%,
+    rgba(46, 221, 90, 0.6) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+.dropdown-admin {
+  background: linear-gradient(145deg, 
+    rgba(15, 30, 55, 0.96) 0%,
+    rgba(25, 45, 80, 0.94) 50%,
+    rgba(20, 35, 60, 0.96) 100%) !important;
+}
+
+.dropdown-admin::before {
+  background: linear-gradient(135deg, 
+    rgba(100, 200, 255, 0.7) 0%,
+    rgba(155, 89, 182, 0.6) 50%,
+    rgba(100, 200, 255, 0.7) 100%) !important;
+}
+
+.dropdown-header {
+  padding: 10px 14px 14px;
+  background: linear-gradient(135deg, 
+    rgba(46, 221, 90, 0.12) 0%,
+    rgba(41, 157, 235, 0.08) 100%);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(46, 221, 90, 0.2);
+}
+
+.dropdown-admin .dropdown-header {
+  background: linear-gradient(135deg, 
+    rgba(100, 200, 255, 0.15) 0%,
+    rgba(155, 89, 182, 0.1) 100%) !important;
+  border-color: rgba(100, 200, 255, 0.25) !important;
+}
+
+.dropdown-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropdown-user-role {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #2edd5a;
+  letter-spacing: 0.3px;
+}
+
+.dropdown-admin .dropdown-user-role {
+  background: linear-gradient(135deg, #64c8ff 0%, #9b59b6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dropdown-user-email {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.9);
+  cursor: pointer;
+  font-weight: 600;
+  border-radius: 10px;
+  font-size: 0.92rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover shimmer effect */
+.dropdown-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent);
+  transition: left 0.4s ease;
+}
+
+.dropdown-item:hover::before {
+  left: 100%;
+}
+
+.dropdown-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke: currentColor;
+  transition: all 0.3s ease;
+}
+
+.dropdown-item:hover {
+  background: linear-gradient(135deg, 
+    rgba(46, 221, 90, 0.25) 0%,
+    rgba(41, 157, 235, 0.2) 100%);
+  color: #fff;
+  transform: translateX(6px);
+  text-shadow: 0 0 10px rgba(46, 221, 90, 0.4);
+}
+
+.dropdown-item:hover .dropdown-icon {
+  filter: drop-shadow(0 0 6px rgba(46, 221, 90, 0.6));
+  transform: scale(1.1);
+}
+
+.dropdown-item.admin-item {
+  background: linear-gradient(135deg, 
+    rgba(100, 200, 255, 0.1) 0%,
+    rgba(155, 89, 182, 0.08) 100%);
+  border: 1px solid rgba(100, 200, 255, 0.25);
+  color: #64c8ff;
+}
+
+.dropdown-item.admin-item:hover {
+  background: linear-gradient(135deg, 
+    rgba(100, 200, 255, 0.25) 0%,
+    rgba(155, 89, 182, 0.2) 100%) !important;
+  border-color: rgba(100, 200, 255, 0.5) !important;
+  color: #fff !important;
+  text-shadow: 0 0 10px rgba(100, 200, 255, 0.5) !important;
+}
+
+.dropdown-item.logout-item {
+  color: #ff6b6b;
+  margin-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 14px;
+}
+
+.dropdown-item.logout-item:hover {
+  background: linear-gradient(135deg, 
+    rgba(255, 107, 107, 0.2) 0%,
+    rgba(255, 80, 80, 0.15) 100%) !important;
+  color: #fff !important;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.5) !important;
+}
+
+.dropdown-divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 100%);
+  margin: 8px 0;
+}
+
+.dropdown-item .badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(100, 200, 255, 0.8), rgba(50, 150, 255, 0.7));
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 20px;
+  box-shadow: 0 2px 6px rgba(100, 200, 255, 0.3);
+}
+
+/* Expanded dropdown style when pushing content */
+.dropdown.expanded {
+  min-width: 300px;
+  max-width: 380px;
+  padding: 12px 14px;
+  border-radius: 14px
+}
+
+.dropdown.expanded .dropdown-item {
+  font-size: 0.98rem;
+  padding: 12px 14px
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.1), transparent);
+  margin: 8px 0;
+  border: none;
+}
+
+.dropdown-admin .dropdown-divider {
+  background: linear-gradient(90deg, transparent, rgba(100, 200, 255, 0.2), transparent) !important;
+}
+
+/* Slide down transition - Premium Animation */
+.slide-down-enter-from {
+  transform: translateY(-16px) scale(0.95);
+  opacity: 0;
+  filter: blur(4px);
+}
+
+.slide-down-enter-active {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.slide-down-enter-to {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  filter: blur(0);
+}
+
+.slide-down-leave-from {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+  filter: blur(0);
+}
+
+.slide-down-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-down-leave-to {
+  transform: translateY(-12px) scale(0.96);
+  opacity: 0;
+  filter: blur(3px);
+}
+
+/* When menu is open, compress only the dashboard area slightly (no big slide of the whole container) */
+/* Suavizado general al abrir menú: nada debería moverse salvo la rejilla que reacomoda columnas */
+body.menu-open .dash-grid {
+  transition: grid-template-columns .22s ease, gap .18s ease
+}
+
+body.menu-open .dash-btn {
+  transition: padding .18s, font-size .18s
+}
+
+/* Ensure dropdown stays visible above content */
+body.menu-open .user-menu .dropdown {
+  z-index: 140
+}
+
+/* Grid behavior: when the user menu is open, switch from 3 cols to 2 cols on wider screens */
+.dash-grid {
+  transition: transform .22s cubic-bezier(.2, .9, .2, 1), gap .18s ease, margin-top .18s ease
+}
+
+@media (min-width: 861px) {
+  body.menu-open .dash-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px
+  }
+}
+
+@media (max-width: 860px) {
+
+  /* En pantallas medianas ya suele ser 2 columnas, mantenemos */
+  body.menu-open .dash-grid {
+    grid-template-columns: repeat(2, 1fr) !important
+  }
+}
+
+@media (max-width: 640px) {
+
+  /* En móviles, cuando se abre el menú, apilamos en 1 columna */
+  body.menu-open .dash-grid {
+    grid-template-columns: 1fr !important
+  }
+}
+
+/* Panel de acciones: layout fijo (no cambia por abrir el menú) */
+.reactive-panel {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px
+}
+
+@media (max-width: 960px) {
+  .reactive-panel {
+    grid-template-columns: repeat(2, 1fr)
+  }
+}
+
+@media (max-width: 560px) {
+  .reactive-panel {
+    grid-template-columns: 1fr
+  }
+}
+
+.dropdown-item.admin {
+  margin-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.04);
+  padding-top: 10px
+}
+
+/* Si hay muchos items, hacer scroll dentro del dropdown para no superponer toda la pantalla */
+.dropdown {
+  max-height: 320px;
+  overflow: auto
+}
+
+.dropdown::-webkit-scrollbar {
+  width: 8px;
+  height: 8px
+}
+
+.dropdown::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px
+}
+
+/* Ajustes visuales para items: más separación y subtítulos */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between
+}
+
+.dropdown-item .small {
+  font-weight: 600;
+  opacity: 0.8;
+  font-size: 0.86rem
+}
+
+
+.glass {
+  width: 100%;
+  background: rgba(19, 31, 52, 0.70);
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.40);
+  backdrop-filter: blur(15px) saturate(150%);
+  box-sizing: border-box;
+}
+
+.card {
+  background: transparent;
+  padding: 0
+}
+
+h2 {
+  margin: 0 0 12px 0;
+  font-size: 1.4rem;
+  font-family: 'Poppins', 'Source Sans 3', sans-serif
+}
+
+/* Headings use Poppins by default */
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: 'Poppins', 'Source Sans 3', sans-serif
+}
+
+.form-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  padding: 24px 8px;
+}
+
+.form-col {
+  width: 100%;
+  max-width: 1000px;
+}
+
+@media (min-width: 1024px) {
+  .form-wrap {
+    padding: 24px 0;
+    width: 100%;
+  }
+  
+  .form-col {
+    max-width: none;
+    width: 90%;
+  }
+}
+
+/* Mobile: avoid centering the whole form in viewport (causa panel enorme). Align to top and cap glass height */
+@media (max-width:560px) {
+  .form-wrap {
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: auto;
+    padding-top: calc(var(--container-toppad) + 8px);
+    padding-bottom: 20px
+  }
+
+  .glass {
+    width: calc(100% - 28px);
+    margin: 8px auto;
+    padding: 12px;
+    border-radius: 12px;
+    max-height: none;
+    overflow: visible
+  }
+
+  .form-col {
+    max-width: 680px
+  }
+}
+
+.input {
+  width: 100%;
+  padding: 14px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.527);
+  background: rgba(167, 165, 165, 0.473);
+  color: var(--text);
+  margin-bottom: 12px;
+  font-size: 1rem
+}
+
+.input:focus {
+  outline: none;
+  box-shadow: 0 6px 20px rgba(45, 140, 240, 0.08);
+  border-color: var(--accent)
+}
+
+/* Placeholder más oscuro para mejor lectura */
+.input::placeholder {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.input:-ms-input-placeholder {
+  color: rgba(0, 0, 0, 0.74);
+}
+
+.input::-ms-input-placeholder {
+  color: rgba(0, 0, 0, 0.849);
+}
+
+.input::-webkit-input-placeholder {
+  color: rgba(61, 61, 61, 0.89);
+}
+
+/* Disabled / readonly inputs: visually distinguish and show not-allowed cursor
+   This makes the email field (locked after step 1) clearly non-editable while
+   keeping the same shape/spacing as other inputs. */
+.input:disabled,
+.input[disabled],
+.input[readonly] {
+  background: rgba(255, 255, 255, 0.06);
+  /* slightly dimmer over the backdrop */
+  border: 1px dashed rgba(255, 255, 255, 0.32);
+  color: rgba(0, 0, 0, 0.58);
+  cursor: not-allowed;
+  opacity: 0.98;
+  box-shadow: none;
+}
+
+.input:disabled:focus,
+.input[disabled]:focus,
+.input[readonly]:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.32)
+}
+
+.input:disabled::placeholder,
+.input[disabled]::placeholder,
+.input[readonly]::placeholder {
+  color: rgba(0, 0, 0, 0.32)
+}
+
+/* Ensure inputs inside .glass forms keep the same consistent border style */
+.glass form .input {
+  border: 1px solid rgba(255, 255, 255, 0.527);
+  background: rgba(167, 165, 165, 0.473);
+}
+
+.btn {
+  display: inline-block;
+  padding: 12px 20px;
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--btn-green);
+  font-weight: 600;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .18s ease
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  background: #ffffff
+}
+
+/* Variant buttons: primary (green filled) and secondary (white with green text) */
+.btn.primary {
+  background: linear-gradient(180deg, var(--btn-green), #00be2c);
+  color: #fff;
+  border: none
+}
+
+.btn.primary:hover {
+  filter: brightness(0.98);
+  box-shadow: 0 8px 22px rgba(11, 172, 65, 0.14)
+}
+
+.btn.secondary {
+  background: #ffffff;
+  color: var(--btn-green);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+}
+
+.btn.secondary:hover {
+  box-shadow: 0 8px 20px rgba(11, 172, 65, 0.15);
+  transform: translateY(-1px);
+}
+
+.btn.primary {
+  box-shadow: 0 6px 18px rgba(11, 172, 65, 0.12);
+}
+
+.btn.primary:hover {
+  box-shadow: 0 12px 28px rgba(11, 172, 65, 0.18);
+  transform: translateY(-2px);
+}
+
+/* Backwards compatibility for .btn.resend used in some components */
+.btn.resend {
+  background: #ffffff;
+  color: var(--btn-green);
+  border: 1px solid rgba(0, 0, 0, 0.06)
+}
+
+.link-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px
+}
+
+.link-row a {
+  color: rgba(10, 10, 10, 0.78);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px
+}
+
+/* Also style links that appear inside forms (e.g., 'Volver a login') to be more visible but subtle */
+.glass form a {
+  color: rgba(10, 10, 10, 0.78);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px
+}
+
+.glass form a:hover {
+  color: var(--btn-green);
+  text-decoration-color: var(--btn-green)
+}
+
+/* Stronger highlighting for links inside cards to avoid blending with background imagery */
+.glass a {
+  display: inline-block;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--link-green-light);
+  text-decoration: none;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: color .12s ease, background .12s ease
+}
+
+.glass a:hover {
+  background: rgba(46, 221, 90, 0.08);
+  color: var(--accent-2);
+  text-decoration: underline;
+  text-decoration-color: var(--accent-2)
+}
+
+/* Utility helpers */
+.row {
+  display: flex;
+  gap: 12px;
+  align-items: center
+}
+
+.row.col {
+  flex-direction: column
+}
+
+.flex-1 {
+  flex: 1 1 auto
+}
+
+.mt-8 {
+  margin-top: 8px
+}
+
+.mt-10 {
+  margin-top: 10px
+}
+
+.mt-12 {
+  margin-top: 12px
+}
+
+.mt-14 {
+  margin-top: 14px
+}
+
+.mt-20 {
+  margin-top: 20px
+}
+
+.visually-hidden {
+  position: absolute !important;
+  left: -99999px !important
+}
+
+.small-info {
+  font-size: 12px;
+  color: #78FFF1
+}
+
+.user-btn--preview {
+  pointer-events: none;
+  display: inline-flex
+}
+
+/* Ensure topbar links which may also use .glass or .link-row are not overridden incorrectly */
+.topbar a,
+.topbar .top-action {
+  background: transparent;
+  color: var(--accent);
+}
+
+.topbar a:hover,
+.topbar .top-action:hover {
+  background: rgba(46, 221, 90, 0.06);
+  text-decoration: underline;
+  text-decoration-color: var(--accent);
+}
+
+.error {
+  color: #ff8b8b;
+  margin-top: 10px
+}
+
+.msg {
+  color: #9ef1a6;
+  margin-top: 10px
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center
+}
+
+
+@media (max-width:920px) {
+  .container {
+    margin: 48px auto
+  }
+
+  .topbar-logo {
+    width: 32px;
+    height: 32px
+  }
+
+  .brand-sub {
+    display: none
+  }
+
+  .site-title {
+    display: none
+  }
+}
+
+/* Desktop safeguard: cap widths to prevent children from pushing out of topbar */
+@media (min-width:921px) {
+  .brand-title {
+    max-width: 220px
+  }
+
+  .site-title {
+    max-width: 360px
+  }
+
+  .user-btn {
+    max-width: 260px
+  }
+}
+
+@media (max-width:560px) {
+  .topbar {
+    padding: 4px 8px
+  }
+
+  .topbar-logo {
+    width: 24px;
+    height: 24px
+  }
+
+  .top-action {
+    padding: 6px 8px;
+    font-size: 0.9rem
+  }
+}
+
+@media (max-width:720px) {
+
+  /* On narrow screens, ensure the dropdown fits within the topbar area */
+  .user-menu .dropdown {
+    right: 8px;
+    left: auto;
+    transform: none;
+    top: calc(100% + 6px);
+    min-width: 160px;
+    max-width: calc(100vw - 32px)
+  }
+}
+
+/* Password field with eye toggle */
+.password-field {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  height: 44px
+}
+
+.password-field .input {
+  padding-right: 52px;
+  height: 44px;
+  box-sizing: border-box;
+  padding-top: 8px;
+  padding-bottom: 8px
+}
+
+.password-field {
+  margin-bottom: 12px
+}
+
+/* Extra space when two password fields are stacked (registro) */
+.password-field+.password-field {
+  margin-top: 10px;
+  margin-bottom: 14px
+}
+
+.toggle-eye {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  background: transparent;
+  border: none;
+  color: rgb(25, 0, 255);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px
+}
+
+.toggle-eye svg {
+  width: 18px;
+  height: 18px;
+  color: inherit;
+  transform: none !important;
+  backface-visibility: hidden;
+  transform-style: preserve-3d
+}
+
+.toggle-eye:focus {
+  outline: none;
+  box-shadow: none
+}
+
+.toggle-eye[aria-pressed="true"] svg {
+  color: var(--accent-2);
+  transform: none !important;
+  transform-origin: center center
+}
+
+/* Ensure icon visibility and no movement: change color when active */
+.toggle-eye[aria-pressed="true"] {
+  color: var(--accent-2)
+}
+
+.toggle-eye {
+  transition: none
+}
+
+.eye-icon {
+  color: inherit;
+  opacity: 1
+}
+
+/* Forzar tamaño/visibilidad de icon components (Heroicons) */
+.eye-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  color: inherit
+}
+
+/* Transition for eye open/close: subtle scale + fade only */
+.eye-enter-active,
+.eye-leave-active {
+  transition: opacity .12s ease, transform .12s ease
+}
+
+.eye-enter-from,
+.eye-leave-to {
+  opacity: 0;
+  transform: scale(0.88)
+}
+
+.eye-enter-to,
+.eye-leave-from {
+  opacity: 1;
+  transform: scale(1)
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .btn,
+  .toggle-eye,
+  .eye-icon {
+    transition: none !important
+  }
+}
+
+.toggle-eye:hover .eye-icon {
+  transform: none
+}
+
+/* Center links and buttons inside form areas */
+.link-row {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px
+}
+
+.link-row a {
+  color: var(--accent-2);
+  text-decoration: none;
+  text-align: center
+}
+
+.glass form {
+  text-align: center
+}
+
+.glass form .btn {
+  display: block;
+  margin: 12px auto 0
+}
+
+/* Strong global overrides to enforce the Reset 'reenviar' button styles app-wide */
+.btn,
+button.btn,
+a.btn,
+.btn[role="button"] {
+  background: #ffffff !important;
+  color: var(--btn-text-dark) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: none !important;
+}
+
+.btn:hover,
+button.btn:hover,
+a.btn:hover {
+  background: #ffffff !important;
+  color: var(--btn-text-dark) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Primary variant remains filled green */
+.btn.primary,
+button.btn.primary,
+a.btn.primary {
+  background: linear-gradient(180deg, var(--btn-green), #00701a) !important;
+  color: #fff !important;
+  border: none !important;
+}
+
+/* Keep small/ghost variants intact if explicitly defined */
+.btn.ghost,
+button.btn.ghost,
+a.btn.ghost {
+  background: transparent !important;
+  color: var(--btn-text-dark) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important
+}
+
+/* Additional responsive fixes to avoid visual overlaps on mobile */
+@media (max-width:560px) {
+
+  /* Aumentar ligeramente el tamaño base en móviles para mejor legibilidad */
+  html {
+    font-size: 17px
+  }
+
+  /* Botones e inputs con altura táctil cómoda (>=44px) */
+  .btn {
+    font-size: 1rem;
+    padding: 14px 18px;
+    min-height: 44px
+  }
+
+  .btn.small {
+    font-size: 0.98rem;
+    padding: 12px 14px;
+    min-height: 42px
+  }
+
+  .input {
+    font-size: 1rem;
+    min-height: 44px
+  }
+
+  /* Titulares y textos en tarjetas un poco más grandes */
+  .area-card .card-title {
+    font-size: 1.05rem
+  }
+
+  .area-card .card-sub.small {
+    font-size: 0.95rem
+  }
+
+  /* Ítems del dropdown más legibles al tacto */
+  .dropdown-item {
+    font-size: 1rem;
+    padding: 12px 14px
+  }
+
+  /* keep a reasonable top padding for the main container (fallback while JS calculates) */
+  .container {
+    padding-top: calc(var(--topbar-height) + 20px)
+  }
+
+  .topbar {
+    padding: 6px 10px;
+    height: auto;
+    align-items: center;
+    max-height: 84px
+  }
+
+  /* dropdown fits within viewport and has higher stacking context */
+  .dropdown {
+    right: 12px;
+    left: 12px;
+    top: calc(var(--topbar-top) + var(--topbar-height) + 8px);
+    min-width: auto;
+    max-width: calc(100% - 36px);
+    z-index: 600
+  }
+
+  /* reduce card media height to avoid pushing content too far up */
+  .area-card .card-media {
+    height: 120px
+  }
+
+  /* ensure pending badges become inline (no absolute overlap) */
+  .area-card .pending-badge {
+    position: relative;
+    display: inline-block;
+    margin: 8px 12px 0 auto;
+    right: auto;
+    top: auto
+  }
+
+  /* Avoid centering the whole form in the viewport which creates a large modal-like box */
+  .form-wrap {
+    align-items: flex-start;
+    justify-content: flex-start;
+    min-height: auto;
+    padding-top: 12px;
+    padding-bottom: 20px
+  }
+
+  .form-col {
+    padding: 6px
+  }
+
+  /* Allow .glass panels to scroll rather than expand to full viewport */
+  .glass {
+    max-height: none;
+    overflow: visible
+  }
+
+  /* make sure titles inside topbar don't wrap into a second line */
+  .brand-text,
+  .site-title,
+  .user-btn .welcome-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+  }
+}
+
+/* Long titles in cards should wrap cleanly rather than overflow */
+.area-card .card-title {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 100%
+}
+
+/* Toast minimal y discreto (vue3-toastify) */
+.toast-minimal {
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #0b2540 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.14) !important;
+  padding: 5px 9px !important;
+  font-weight: 600 !important;
+  min-height: auto !important;
+}
+
+.toast-minimal .Toastify__toast-body {
+  margin: 0 !important;
+  font-size: 0.95rem !important;
+  line-height: 1.2 !important
+}
+
+.toast-minimal .Toastify__close-button {
+  display: none !important
+}
+
+/* Barra de progreso delgada como contador de ~1s */
+.toast-minimal .Toastify__progress-bar {
+  display: block !important;
+  height: 2px !important;
+  top: auto !important;
+  bottom: 0 !important;
+  background: linear-gradient(90deg, var(--btn-green), #00a5ff) !important;
+  opacity: 0.9 !important;
+}
+
+/* Afinar animaciones y separación para apilado suave */
+.Toastify__toast-container {
+  will-change: transform
+}
+
+.Toastify__toast {
+  margin-bottom: 1px !important;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+}
+
+/* Animaciones fade-only, entrada 80ms y salida 40ms */
+@keyframes toast-fade-in-bottom {
+  from {
+    opacity: 0;
+    transform: translateY(2px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+  }
+}
+
+@keyframes toast-fade-out-bottom {
+  from {
+    opacity: 1;
+    transform: translateY(0)
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(2px)
+  }
+}
+
+@keyframes toast-fade-in-top {
+  from {
+    opacity: 0;
+    transform: translateY(-2px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0)
+  }
+}
+
+@keyframes toast-fade-out-top {
+  from {
+    opacity: 1;
+    transform: translateY(0)
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-2px)
+  }
+}
+
+.Toastify__slide-enter--bottom-left,
+.Toastify__slide-enter--bottom-center,
+.Toastify__slide-enter--bottom-right {
+  animation-name: toast-fade-in-bottom !important;
+  animation-duration: .08s !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
+}
+
+.Toastify__slide-exit--bottom-left,
+.Toastify__slide-exit--bottom-center,
+.Toastify__slide-exit--bottom-right {
+  animation-name: toast-fade-out-bottom !important;
+  animation-duration: .04s !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
+}
+
+/* Cubrir posiciones top también */
+.Toastify__slide-enter--top-left,
+.Toastify__slide-enter--top-center,
+.Toastify__slide-enter--top-right {
+  animation-name: toast-fade-in-top !important;
+  animation-duration: .08s !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
+}
+
+.Toastify__slide-exit--top-left,
+.Toastify__slide-exit--top-center,
+.Toastify__slide-exit--top-right {
+  animation-name: toast-fade-out-top !important;
+  animation-duration: .04s !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
+}
+
+/* Forzar todas las variantes (bounce/zoom/flip/slide) a usar fade compacto */
+[class*="Toastify__bounce-enter"],
+[class*="Toastify__zoom-enter"],
+[class*="Toastify__flip-enter"],
+[class*="Toastify__slide-enter"] {
+  animation-name: toast-fade-in-bottom !important;
+  animation-duration: .08s !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
+}
+
+[class*="Toastify__bounce-exit"],
+[class*="Toastify__zoom-exit"],
+[class*="Toastify__flip-exit"],
+[class*="Toastify__slide-exit"] {
+  animation-name: toast-fade-out-bottom !important;
+  animation-duration: .04s !important;
+  animation-timing-function: cubic-bezier(.4, 0, .2, 1) !important;
+}
+
+/* Bajón instantáneo del stack: el que sale se posiciona absoluto y libera layout */
+/* Sin posicionamiento absoluto: mantenemos comportamiento estable anterior */
+
+/* Reducir duración genérica interna de Toastify para evitar sorpresas */
+/* Nota: no forzamos duración genérica para no sobreescribir enter/exit específicos */
+
+/* SweetAlert2: animaciones horizontales rápidas en modo toast */
+@keyframes swal-toast-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(-10px)
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0)
+  }
+}
+
+@keyframes swal-toast-fade-out {
+  from {
+    opacity: 1;
+    transform: translateX(0)
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-8px)
+  }
+}
+
+.swal2-toast-fade-in {
+  animation: swal-toast-fade-in .08s cubic-bezier(.4, 0, .2, 1) both !important;
+}
+
+.swal2-toast-fade-out {
+  animation: swal-toast-fade-out .04s cubic-bezier(.4, 0, .2, 1) both !important;
+}
+
+/* Accesibilidad: respeta reduced-motion */
+/* (Opcional) Si se requiere, podemos reactivar reduced-motion específico para toasts */
+
+/* Notivue: overrides para acercarlo al estilo minimalista */
+
+/* Indicador pequeño en la topbar que muestra estado del manejador de inactividad */
+.inactivity-chip {
+  display: inline-block;
+  margin-left: 12px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.04);
+  color: rgba(255,255,255,0.75);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(255,255,255,0.04);
+}
+.inactivity-chip.warning {
+  background: rgba(244,63,94,0.12);
+  color: #ffb4c1;
+  box-shadow: 0 6px 18px rgba(244,63,94,0.06);
+  border-color: rgba(244,63,94,0.18);
+}
+:root {
+  /* Gap entre notificaciones (1px como en Toastify) */
+  --nv-gap: 1px;
+  /* Prioridad del stream de Notivue */
+  --nv-z: 600;
+}
+
+/* Animaciones suaves para Notivue: entrada con leve translate+scale+fade, salida suave */
+/* Horizontal suave: entrada izquierda→derecha; salida derecha→izquierda */
+@keyframes nv-soft-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-14px) scale(0.98)
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1)
+  }
+}
+
+@keyframes nv-soft-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1)
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.99)
+  }
+}
+
+.nvSoftEnter {
+  animation: nv-soft-in .22s cubic-bezier(.2, .9, .2, 1) both
+}
+
+.nvSoftLeave {
+  animation: nv-soft-out .12s cubic-bezier(.4, 0, .2, 1) both
+}
+
+/* Suavidad adicional y rendimiento: avisar al motor de composición */
+.Notivue__notification {
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  transform-origin: center left
+}
+
+/* Stagger sutil sólo en la animación de entrada (máx. 3) */
+.nvSoftEnter:nth-child(2) {
+  animation-delay: .02s
+}
+
+.nvSoftEnter:nth-child(3) {
+  animation-delay: .035s
+}
+
+/* Hover polish sin interferir con transform del layout */
+.Notivue__notification {
+  transition: box-shadow .18s ease
+}
+
+.Notivue__notification:hover {
+  box-shadow: 0 10px 26px rgba(2, 6, 23, 0.22)
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .nvSoftEnter,
+  .nvSoftLeave {
+    animation: none !important
+  }
+}
+
+/* Make sure auth-card headers use the same dark glass appearance */
+.op-embed-active .auth-card-header {
+  background: transparent !important;
+  color: #e6ebf5 !important;
+}
+
+/* Ensure operation header area also uses darker color */
+.op-embed-active .auth-card-header,
+.op-embed-active .auth-card .auth-card-header {
+  color: #e6ebf5 !important;
+  border-bottom: 1px solid rgba(255,255,255,0.04) !important;
+}
+
+/* Make sure .op-card body sections are clearly dark */
+.op-embed-active .op-card,
+.op-embed-active .section-card,
+.op-embed-active .section-card .section-head h4,
+.op-embed-active .section-card .hint {
+  color: #e6ebf5 !important;
+}
+
+/* Dashboard panels use the exact same skin as the login card */
+.action-panel--dashboard .panel-surface {
+  background: rgba(19, 31, 52, 0.42) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 12px 30px rgba(2, 6, 23, 0.4) !important;
+  backdrop-filter: blur(6px) saturate(140%) !important;
+  color: #e6ebf5 !important;
+  border-radius: 14px !important;
+}
+
+.action-panel--dashboard .panel-title,
+.action-panel--dashboard .panel-header,
+.action-panel--dashboard .panel-body {
+  color: #e6ebf5 !important;
+}
+
+.action-panel--dashboard .panel-label {
+  color: rgba(255, 255, 255, 0.66) !important;
+}
+
+/* Keep input measurements intact; only recolor fields inside dashboard panels */
+.action-panel--dashboard .control,
+.action-panel--dashboard .input,
+.action-panel--dashboard input,
+.action-panel--dashboard textarea {
+  background: rgba(255, 255, 255, 0.09) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: inherit !important;
+}
+
+/* Estilos globales para date picker - Glassmorphism oscuro */
+input[type="date"] {
+  color-scheme: dark !important;
+  background: rgba(15, 20, 40, 0.65) !important;
+  backdrop-filter: blur(18px) !important;
+  -webkit-backdrop-filter: blur(18px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 14px !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35) !important;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+input[type="date"]:focus {
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.25) !important;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+input[type="date"]:hover {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15), 0 3px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2300ff6a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 18px;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+  filter: drop-shadow(0 1px 2px rgba(0, 255, 106, 0.5));
+  margin-right: 2px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.1);
+  filter: drop-shadow(0 2px 4px rgba(0, 255, 106, 0.7));
+}
+
+/* Texto del date picker con colores más vivos */
+input[type="date"]::-webkit-datetime-edit {
+  color: #f1f5f9;
+  font-weight: 500;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  background: transparent;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  color: #64748b;
+  padding: 0 3px;
+  font-weight: 400;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field,
+input[type="date"]::-webkit-datetime-edit-day-field,
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #ffffff !important;
+  background: rgba(0, 255, 106, 0.15) !important;
+  border-radius: 6px;
+  padding: 3px 6px;
+  margin: 0 2px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus {
+  background: rgba(0, 255, 106, 0.25) !important;
+  color: #00ff6a !important;
+  border-color: rgba(0, 255, 106, 0.4);
+  box-shadow: 0 0 0 2px rgba(0, 255, 106, 0.2);
+}
+
+/* Personalización avanzada del calendario emergente */
+input[type="date"]::-webkit-inner-spin-button {
+  display: none;
+}
+
+/* Efectos adicionales para mejor experiencia visual */
+input[type="date"]::selection {
+  background: rgba(34, 211, 238, 0.3);
+  color: #f1f5f9;
+}
+
+/* Glassmorphism Calendar - Estilo oscuro, elegante y minimalista */
+input[type="date"]::-webkit-calendar-picker {
+  background: rgba(15, 20, 40, 0.85) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 255, 106, 0.1) !important;
+  padding: 20px !important;
+  min-width: 300px !important;
+  font-family: 'Source Sans 3', 'Segoe UI', sans-serif !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Cabecera del calendario - Mes, año y navegación */
+input[type="date"]::-webkit-calendar-picker-header {
+  background: rgba(0, 255, 106, 0.1) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border-radius: 8px !important;
+  padding: 12px 16px !important;
+  margin-bottom: 16px !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  text-align: center !important;
+  border: 1px solid rgba(0, 255, 106, 0.2) !important;
+  box-shadow: none !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Botones de navegación (< >) - Rectangulares con bordes redondeados */
+input[type="date"]::-webkit-calendar-picker-navigation-button {
+  background: rgba(0, 255, 106, 0.15) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 255, 106, 0.3) !important;
+  border-radius: 6px !important;
+  width: 32px !important;
+  height: 28px !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-navigation-button:hover {
+  background: rgba(0, 255, 106, 0.25) !important;
+  color: #00ff6a !important;
+  border-color: rgba(0, 255, 106, 0.5) !important;
+  transform: scale(1.05) !important;
+  box-shadow: none;
+}
+
+/* Tabla del calendario - Fondo transparente */
+input[type="date"]::-webkit-calendar-picker-table {
+  background: transparent !important;
+  border-radius: 8px !important;
+  padding: 8px !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Barra de días de la semana (L M X J V S D) */
+input[type="date"]::-webkit-calendar-picker-week-header {
+  background: rgba(0, 255, 106, 0.05) !important;
+  color: rgba(0, 255, 106, 0.8) !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  padding: 6px 4px !important;
+  border-radius: 4px !important;
+  margin-bottom: 8px !important;
+  font-size: 11px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 1px !important;
+  border: 1px solid rgba(0, 255, 106, 0.15) !important;
+}
+
+/* Grilla de días del mes - Botones redondeados */
+input[type="date"]::-webkit-calendar-picker-day-cell {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  margin: 1px !important;
+  padding: 6px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+}
+
+/* Día actual - Verde tenue con soft-glow */
+input[type="date"]::-webkit-calendar-picker-day-cell:current-day {
+  background: rgba(0, 255, 106, 0.2) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 255, 106, 0.5) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 8px rgba(0, 255, 106, 0.4) !important;
+  animation: none !important;
+}
+
+/* Día seleccionado - Verde fosforescente intenso */
+input[type="date"]::-webkit-calendar-picker-day-cell:selected {
+  background: #00ff6a !important;
+  color: #0a0a0a !important;
+  border: 2px solid rgba(0, 255, 106, 0.8) !important;
+  font-weight: 700 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 0 12px rgba(0, 255, 106, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 8px !important;
+}
+
+/* Hover en días normales - Iluminación tenue */
+input[type="date"]::-webkit-calendar-picker-day-cell:hover {
+  background: rgba(0, 255, 106, 0.1) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 255, 106, 0.3) !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 2px 4px rgba(0, 255, 106, 0.2) !important;
+}
+
+/* Días inactivos (fuera del mes) - Gris con baja opacidad */
+input[type="date"]::-webkit-calendar-picker-day-cell:inactive {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid transparent !important;
+  opacity: 0.5 !important;
+}
+
+/* Botones inferiores del calendario ("Hoy" y "Limpiar") */
+input[type="date"]::-webkit-calendar-picker-footer {
+  background: rgba(0, 255, 106, 0.05) !important;
+  padding: 12px 8px 8px 8px !important;
+  margin-top: 12px !important;
+  border-top: 1px solid rgba(0, 255, 106, 0.2) !important;
+  border-radius: 0 0 12px 12px !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-footer button {
+  background: rgba(0, 255, 106, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 255, 106, 0.3) !important;
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  margin: 0 3px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-footer button:hover {
+  background: rgba(0, 255, 106, 0.25) !important;
+  color: #00ff6a !important;
+  border-color: rgba(0, 255, 106, 0.5) !important;
+  transform: scale(1.02) !important;
+}
+
+/* Hover en días normales - Iluminación tenue */
+input[type="date"]::-webkit-calendar-picker-day-cell:hover {
+  background: rgba(0, 255, 106, 0.1) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+  border: 1px solid rgba(0, 255, 106, 0.3) !important;
+  transform: scale(1.02) !important;
+  box-shadow: 0 2px 4px rgba(0, 255, 106, 0.2) !important;
+}
+
+/* Días inactivos (fuera del mes) - Gris con baja opacidad */
+input[type="date"]::-webkit-calendar-picker-day-cell:inactive {
+  background: transparent !important;
+  color: rgba(255, 255, 255, 0.25) !important;
+  border: 1px solid transparent !important;
+  opacity: 0.5 !important;
+}
+
+/* Botones inferiores del calendario ("Hoy" y "Limpiar") */
+input[type="date"]::-webkit-calendar-picker-footer {
+  background: rgba(0, 255, 106, 0.05) !important;
+  padding: 12px 8px 8px 8px !important;
+  margin-top: 12px !important;
+  border-top: 1px solid rgba(0, 255, 106, 0.2) !important;
+  border-radius: 0 0 12px 12px !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-footer button {
+  background: rgba(0, 255, 106, 0.15) !important;
+  backdrop-filter: blur(8px) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 255, 106, 0.3) !important;
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  margin: 0 3px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  cursor: pointer !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-footer button:hover {
+  background: rgba(0, 255, 106, 0.25) !important;
+  color: #00ff6a !important;
+  border-color: rgba(0, 255, 106, 0.5) !important;
+  transform: scale(1.02) !important;
+}
+
+
+
+/* NOTIVUE NOTIFICATIONS - GLOBAL Z-INDEX MANAGEMENT */
+/* SOLUCIÓN AGRESIVA: position fixed + z-index ultra alto */
+.notivue-container {
+  z-index: 999999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+}
+
+.notivue-item {
+  z-index: 999999 !important;
+  position: relative !important;
+}
+
+.notivue {
+  z-index: 999999 !important;
+  position: fixed !important;
+}

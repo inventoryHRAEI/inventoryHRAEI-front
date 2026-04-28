@@ -1,0 +1,170 @@
+<template>
+  <div class="form-wrap">
+    <LoadingSkeleton v-if="isLoading" :type="skeletonType" />
+    
+    <div v-else class="form-col">
+      <div class="glass">
+        <Breadcrumbs :items="breadcrumbItems" />
+
+        <div class="form-header">
+          <div class="icon-circle">
+            <component :is="EnvelopeIcon" class="form-icon" />
+          </div>
+          <h2>Recuperar Contraseña</h2>
+          <p class="form-subtitle">Recibe un código en tu correo</p>
+        </div>
+
+        <StepBubbles :steps="stepBubbles" :current-step="1" />
+
+        <form @submit.prevent="forgot">
+          <div class="form-group">
+            <label class="field-label">Correo Electrónico</label>
+            <div class="input-wrapper">
+              <component :is="EnvelopeIcon" class="input-icon" />
+              <input v-model="email" v-sanitize:email placeholder="tu@email.com" type="email" required class="input" />
+            </div>
+          </div>
+
+          <button class="btn secondary btn-lg" type="submit">Enviar Código</button>
+        </form>
+
+        <div class="link-row mt-12">
+          <router-link to="/login" class="link-item">
+            <component :is="ArrowLeftIcon" class="link-icon" />
+            Volver a iniciar sesión
+          </router-link>
+        </div>
+
+        <div v-if="msg" class="msg">{{ msg }}</div>
+        <div v-if="error" class="error">{{ error }}</div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, onMounted } from 'vue'
+import notifier from '@/utils/notifier'
+import { useRouter } from 'vue-router'
+import { navigateAndRefresh } from '@/utils/routerHelpers.js'
+import { EnvelopeIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
+import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import StepBubbles from '@/components/StepBubbles.vue'
+
+const router = useRouter()
+const isLoading = ref(true)
+const skeletonType = ref('forgot')
+
+function updateSkeletonType() {
+  skeletonType.value = window.innerWidth >= 1024 ? 'hero' : 'forgot'
+}
+
+onMounted(() => {
+  updateSkeletonType()
+  window.addEventListener('resize', updateSkeletonType)
+  setTimeout(() => {
+    isLoading.value = false
+    window.removeEventListener('resize', updateSkeletonType)
+  }, 800)
+})
+
+const breadcrumbItems = [
+  { label: 'Inicio', to: '/login' },
+  { label: 'Recuperar Contraseña', to: '/forgot' }
+]
+
+const stepBubbles = [
+  { title: 'Correo', desc: 'Ingresa tu email' },
+  { title: 'Verificación', desc: 'Confirma tu código' }
+]
+
+onMounted(() => {
+  setTimeout(() => {
+    isLoading.value = false
+  }, 800)
+})
+
+const email = ref('')
+const msg = ref('')
+const error = ref('')
+
+const forgot = async () => {
+  msg.value = ''
+  error.value = ''
+  if (!email.value) { notifier.error('Email requerido'); return }
+  try {
+    const res = await fetch('/api/auth/forgot', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify((await import('@/utils/sanitizer.js')).sanitizeObject({ email: email.value }))
+    })
+    let data
+    try { data = await res.json() } catch (_) { data = { msg: res.statusText || 'Respuesta vacía' } }
+    if (!res.ok) throw new Error(data.msg || 'Error al solicitar token')
+    msg.value = 'Revisa tu correo por favor, ahí debería estar tu código de verificación.'
+    notifier.success(msg.value)
+    try {
+      const q = new URLSearchParams({ email: email.value })
+      if (data && data.token) q.set('token', data.token)
+      if (data && data.resetUrl) {
+        window.location.href = data.resetUrl
+      } else {
+        navigateAndRefresh(router, { path: '/reset', query: Object.fromEntries(q) })
+      }
+    } catch (e) { console.error('Redirección a reset falló:', e) }
+  } catch (e) {
+    error.value = e.message
+    notifier.error(e.message)
+  }
+}
+</script>
+
+<style scoped>
+/* Responsive form styling */
+.form-wrap{ 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  min-height: 72vh; 
+  padding: 24px 16px;
+  margin-top: 8px;
+}
+
+.form-col{ 
+  width: 100%; 
+  max-width: 480px;
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+  .form-wrap {
+    padding: 24px 32px;
+  }
+  
+  .form-col {
+    max-width: 520px;
+  }
+}
+
+/* Large desktop styles */
+@media (min-width: 1024px) {
+  .form-col {
+    max-width: 580px;
+  }
+}
+
+/* Mobile styles */
+@media (max-width: 480px) {
+  .form-wrap {
+    padding: 16px 12px;
+    min-height: 70vh;
+  }
+  
+  .form-col {
+    max-width: 100%;
+  }
+}
+
+/* Ocultar cualquier H2 directo dentro del contenedor principal para evitar títulos duplicados */
+:deep(.container) > h2 { display: none !important; }
+</style>

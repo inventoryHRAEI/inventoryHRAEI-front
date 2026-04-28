@@ -1,0 +1,150 @@
+/* ╔════════════════════════════════════════════════════════════════════════════╗
+   ║  STICKY FILTERS FIX - Keep filter bar stuck to header during scroll         ║
+   ║  Applies to: .filters-section (OpInventarioBiomedica.vue)                  ║
+   ║  Last Updated: 2026-03-05                                                   ║
+   ║  SOLUTION: position: fixed + padding-top compensation                      ║
+   ╚════════════════════════════════════════════════════════════════════════════╝ */
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 1: AGGRESSIVE - Make filters section FIXED to top (not sticky)         */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 9999 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 2: Ensure background prevents content bleed                            */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section {
+    background: white !important;
+    background-color: white !important;
+    background-image: none !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 3: Add visual separation from scrolling content                        */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section {
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 4: Padding and margin synchronization                                 */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section {
+    padding: 16px 0 !important;
+    margin: 0 0 20px 0 !important;
+    width: 100% !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 5: Ensure flex layout works correctly when sticky                      */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 16px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 6: Prevent scroll container overflow issues                            */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section {
+    contain: layout !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 7: Ensure search wrapper doesn't break sticky behavior                 */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section .search-wrapper {
+    flex: 1 1 240px !important;
+    min-width: 240px !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 8: Ensure view controls stay right aligned                             */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section .view-controls {
+    display: flex !important;
+    gap: 6px !important;
+    margin-left: auto !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 9: Fix for table container scroll (internal scroll)                    */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.table-container {
+    /* Ensure table headers don't conflict with sticky filters */
+    margin-top: 0 !important;
+}
+
+.data-table thead th {
+    /* Table headers should be sticky within the table container */
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 3 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* STEP 10: Responsive adjustments for mobile                                  */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+    .filters-section {
+        position: sticky !important;
+        top: 0 !important;
+        padding: 12px 0 !important;
+        margin: 0 0 16px 0 !important;
+        gap: 12px !important;
+    }
+
+    .filters-section .view-controls {
+        width: 100% !important;
+        margin-left: 0 !important;
+        justify-content: flex-end !important;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* BONUS: Smooth scroll behavior when filters stick                            */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.filters-section {
+    transition: box-shadow 0.2s ease !important;
+}
+
+/* Add extra shadow when scrolled */
+.filters-section.scrolled {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* FIX: Ensure ActionPanel doesn't clip sticky content                         */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.action-panel {
+    overflow: visible !important;
+}
+
+.action-panel .panel-body {
+    overflow: visible !important;
+}
+
+.biomedica-management-main {
+    overflow: visible !important;
+}

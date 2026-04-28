@@ -1,0 +1,57 @@
+/* ==========================================
+   FIX GLOBAL PARA TODAS LAS TABLAS
+   Alinea thead con tbody sin desfases
+   ========================================== */
+
+/* Aplicar a TODAS las tablas */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    box-sizing: border-box;
+}
+
+/* Headers */
+table thead th {
+    padding: 12px 12px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Datos */
+table tbody td {
+    padding: 12px 12px !important;
+    box-sizing: border-box !important;
+    vertical-align: middle !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+/* Asegurar que thead y tbody tengan misma estructura */
+table th,
+table td {
+    width: auto !important;  /* Dejar que se distribuya naturalmente */
+}
+
+/* Scrollbars no deben afectar layout */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.3);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(128, 128, 128, 0.5);
+}
