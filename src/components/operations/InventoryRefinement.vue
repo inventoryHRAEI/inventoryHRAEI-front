@@ -75,7 +75,9 @@
             <div class="field-row"><span class="field-label">Lote:</span> <span>{{ item.lote || 'N/A' }}</span></div>
             <div class="field-row"><span class="field-label">Serie:</span> <span>{{ item.serie || 'N/A' }}</span></div>
             <div class="field-row"><span class="field-label">Referencia:</span> <span>{{ item.referencia || 'N/A' }}</span></div>
-            <div class="field-row"><span class="field-label">Clave:</span> <span>{{ item.claveHRAEI || 'N/A' }}</span></div>
+            <div class="field-row" v-if="newItem.tipo !== 'equipo-medico'"><span class="field-label">Clave:</span> <span>{{ item.claveHRAEI || 'N/A' }}</span></div>
+            <div class="field-row"><span class="field-label">No. de Inventario:</span> <span>{{ item.noInventario || item.no_inventario || item.N_DE_INVENTARIO || 'N/A' }}</span></div>
+            <div class="field-row" v-if="['accesorio', 'consumible', 'refaccion'].includes(newItem.tipo)"><span class="field-label">Origen:</span> <span>{{ item.origenBien || 'N/A' }}</span></div>
           </div>
           <div class="result-extra-controls">
             <label>
@@ -100,6 +102,10 @@
             <label v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'">
               Equipo Asociado
               <input type="text" list="datalist-equipos-refinement" v-model="localItemState[item._itemKey].equipoAsociado" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 140px;" placeholder="Ej. Monitor SN123" />
+            </label>
+            <label v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'">
+              Origen del Bien
+              <input type="text" v-model="localItemState[item._itemKey].origenBien" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 140px;" placeholder="Compra, donación..." />
             </label>
             <div class="descuento-info" v-if="(newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion') && localItemState[item._itemKey]?.estado === 'nuevo'">Descuento: Sí</div>
             <div class="descuento-info" v-else-if="newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">Descuento: No</div>
@@ -168,22 +174,23 @@ let refinementBlurTimer = null
 const inventoryBase = computed(() => {
   const suggestionsList = Array.isArray(props.suggestions) ? props.suggestions : []
   const equipoList = Array.isArray(props.equipoMedicoList) ? props.equipoMedicoList : []
-  const tipoActual = props.newItem?.tipo
-  if (tipoActual === 'equipo-medico' || tipoActual === 'mobiliario') return equipoList.length > 0 ? equipoList : []
-  if (['accesorio', 'consumible', 'refaccion'].includes(tipoActual)) return suggestionsList
-  if (equipoList.length > 0) {
-    const combined = new Map()
-    suggestionsList.forEach(item => {
-      const key = item.id || item._id || `${item.nombre || ''}-${item.marca || ''}-${item.serie || ''}-${item.lote || ''}-${item.referencia || ''}`
-      combined.set(key, item)
-    })
-    equipoList.forEach(item => {
-      const key = item.id || item._id || `${item.nombre || ''}-${item.marca || ''}-${item.serie || ''}-${item.lote || ''}-${item.referencia || ''}`
-      if (!combined.has(key)) combined.set(key, item)
-    })
-    return Array.from(combined.values())
-  }
-  return suggestionsList
+  
+  // Merge both lists for "universal search" (Request 8)
+  const combined = new Map()
+  
+  // Add suggestions (supplies/ACR)
+  suggestionsList.forEach(item => {
+    const key = item.id || item._id || `acr-${item.nombre || ''}-${item.serie || ''}-${item.noInventario || ''}`
+    combined.set(key, item)
+  })
+  
+  // Add equipment (Medical/Furniture)
+  equipoList.forEach(item => {
+    const key = item.id || item._id || `eq-${item.nombre || ''}-${item.serie || ''}-${item.noInventario || ''}`
+    if (!combined.has(key)) combined.set(key, item)
+  })
+  
+  return Array.from(combined.values())
 })
 
 function getRefinementFieldValue(item, key) {
@@ -226,7 +233,8 @@ const refinedInventory = computed(() => {
         cantidad: 1,
         estado: 'nuevo',
         ubicacion: item.ubicacion || '',
-        equipoAsociado: item.equipoAsociado || ''
+        equipoAsociado: item.equipoAsociado || '',
+        origenBien: item.origenBien || ''
       }
     }
   })
@@ -297,6 +305,7 @@ function selectInventoryRefinedItem(item) {
     equipoAsociado: state.equipoAsociado?.trim() || item.equipoAsociado || '',
     claveHRAEI: item.claveHRAEI || '',
     noInventario: item.noInventario || item.no_inventario || '',
+    origenBien: state.origenBien?.trim() || item.origenBien || '',
     cantidad: Number(state.cantidad) || 1,
     consumibleEstado: isConsumibleLike ? (state.estado || 'nuevo') : null,
     descuento: isConsumibleLike ? ((state.estado || 'nuevo') === 'nuevo') : false
