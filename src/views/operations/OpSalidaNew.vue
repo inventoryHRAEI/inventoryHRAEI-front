@@ -8,6 +8,9 @@
                     title="Configuración de administrador">
                     <Settings :size="20" />
                 </button>
+                <button v-if="isAdmin" class="edit-requests-btn" @click="goToImportCsv" title="Importar CSV">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
             </template>
 
             <!-- ========== STEP 0: Solicitante ========== -->
@@ -738,9 +741,9 @@
                                     <div class="item-info">
                                         <div class="item-header">
                                             <h5 class="item-name">{{ item.descripcion }}</h5>
-                                            <div class="item-quantity-badge">{{ item.cantidad }}</div>
+                                            <div class="item-quantity-badge">{{ getItemQuantity(item) }}</div>
                                         </div>
-                                        <p class="item-quantity-text">{{ item.cantidad }} {{ item.cantidad !== 1 ?
+                                        <p class="item-quantity-text">{{ getItemQuantity(item) }} {{ getItemQuantity(item) !== 1 ?
                                             'artículos' : 'artículo'
                                             }} de {{ getTipoLabel(item.tipo).toLowerCase() }}</p>
                                         <div class="item-details">
@@ -1093,6 +1096,10 @@ const emit = defineEmits({
     cancel: () => true
 })
 const router = useRouter()
+
+function goToImportCsv() {
+    try { router.push({ name: 'import' }) } catch (e) { console.warn('goToImportCsv failed', e) }
+}
 
 function getAuthenticatedUserName() {
     try {
@@ -1689,6 +1696,57 @@ function getTipoLabel(tipo) {
     return type?.label || tipo
 }
 
+function getItemQuantity(item) {
+    if (!item) return 1
+    const q = Number(item.cantidad)
+    if (q && q > 0) return q
+    if (Array.isArray(item.unidades)) return item.unidades.reduce((s, u) => s + (Number(u && u.cantidad) || 1), 0)
+    return 1
+}
+
+function normalizeUnitForSubmit(unit, fallbackQuantity = 1) {
+    return {
+        ...unit,
+        cantidad: Math.max(1, Number(unit?.cantidad) || Number(fallbackQuantity) || 1)
+    }
+}
+
+function buildSubmitItem(item) {
+    const quantityTotal = getItemQuantity(item)
+    const isExternal = item?.isExternal ?? item?.is_external ?? false
+    const rawUnits = Array.isArray(item?.unidades) && item.unidades.length
+        ? item.unidades
+        : [{
+            nombre: item?.nombre || item?.descripcion || '',
+            descripcion: item?.descripcion || item?.nombre || '',
+            marca: item?.marca || '',
+            modelo: item?.modelo || '',
+            lote: item?.lote || '',
+            serie: item?.serie || '',
+            referencia: item?.referencia || '',
+            referenciaEquipo: item?.referenciaEquipo || '',
+            ubicacion: item?.ubicacion || '',
+            equipoAsociado: item?.equipoAsociado || '',
+            serieEquipoAsociado: item?.serieEquipoAsociado || '',
+            origenBien: item?.origenBien || item?.origen_bien || '',
+            claveHRAEI: item?.claveHRAEI || '',
+            cantidad: quantityTotal
+        }]
+    const normalizedUnits = isExternal
+        ? [normalizeUnitForSubmit(rawUnits[0], quantityTotal)]
+        : rawUnits.map(unit => normalizeUnitForSubmit(unit, unit?.cantidad || 1))
+    const firstUnit = normalizedUnits[0] || {}
+
+    return {
+        ...item,
+        isExternal,
+        cantidad: quantityTotal,
+        descripcion: item?.descripcion || firstUnit.descripcion || firstUnit.nombre || '',
+        nombre: item?.nombre || firstUnit.nombre || item?.descripcion || '',
+        unidades: normalizedUnits
+    }
+}
+
 function isConsumibleLikeType(tipo) {
     return ['consumible', 'accesorio', 'refaccion'].includes(tipo)
 }
@@ -1742,7 +1800,8 @@ function editarItem(index) {
     belongsToHospital.value = !(item.isExternal ?? item.is_external ?? false)
     selectEquipmentType(item.tipo || 'equipo-medico')
     newItem.consumibleEstado = item.consumibleEstado || item.consumible_estado || (isConsumibleLikeType(item.tipo) ? 'nuevo' : '')
-    newItem.cantidad = 1
+    const quantityTotal = getItemQuantity(item)
+    newItem.cantidad = quantityTotal
     newItem.unidades = [{
         nombre: item.descripcion || item.nombre || '',
         marca: item.marca || '',
@@ -1756,7 +1815,7 @@ function editarItem(index) {
         serieEquipoAsociado: item.serieEquipoAsociado || '',
         origenBien: item.origenBien || item.origen_bien || '',
         claveHRAEI: item.claveHRAEI || '',
-        cantidad: Math.max(1, item.cantidad || 1)
+        cantidad: quantityTotal
     }]
 
     currentStep.value = 2
@@ -1766,8 +1825,9 @@ function editarItem(index) {
 function incNew() {
     if (newItem.cantidad < 100) {
         newItem.cantidad++
-        // Agregar unidad vacía para mantener sincronización
-        if (newItem.unidades.length < newItem.cantidad) {
+        // Para equipos internos: agregar unidad vacía para mantener sincronización
+        // Para equipos externos: NO agregar unidades (solo se maneja cantidad)
+        if (!isCurrentItemExternal.value && newItem.unidades.length < newItem.cantidad) {
             newItem.unidades.push(createEmptyUnit())
         }
     }
@@ -1776,9 +1836,11 @@ function incNew() {
 function decNew() {
     if (newItem.cantidad > 1) {
         newItem.cantidad--
-        // Remover unidades extras
-        while (newItem.unidades.length > newItem.cantidad) {
-            newItem.unidades.pop()
+        // Para equipos internos: remover unidades extras
+        if (!isCurrentItemExternal.value) {
+            while (newItem.unidades.length > newItem.cantidad) {
+                newItem.unidades.pop()
+            }
         }
     }
 }
@@ -1793,28 +1855,59 @@ function removeUnit(idx) {
 
 function agregarItemsSinWarning() {
     const generatedItems = []
+    // Determine si tratar como externo: preferir selector, pero aceptar patrón común
+    const unidadesLooksLikeExpanded = (Array.isArray(newItem.unidades) && newItem.unidades.length === (newItem.cantidad || 0)
+        && newItem.unidades.length > 1 && newItem.unidades.every(u => ((u.nombre || '').trim() === '' && (u.cantidad || 1) === 1)))
 
-    for (const unidad of newItem.unidades) {
-        const descripcionFinal = (unidad.nombre || '').trim() || `Bien sin descripción (${getTipoLabel(newItem.tipo)})`
-        const cantidadDeEstaUnidad = Math.max(1, unidad.cantidad || 1)
+    const treatAsExternal = isCurrentItemExternal.value || unidadesLooksLikeExpanded
+
+    // Para equipos externos: crear 1 solo item con la cantidad total (no iterar sobre unidades)
+    if (treatAsExternal) {
+        const descripcionFinal = (newItem.unidades[0]?.nombre || '').trim() || `Bien sin descripción (${getTipoLabel(newItem.tipo)})`
+        const cantidadTotal = newItem.cantidad || 1
 
         generatedItems.push({
             tipo: newItem.tipo,
             consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-            cantidad: cantidadDeEstaUnidad,
-            isExternal: isCurrentItemExternal.value,
+            cantidad: cantidadTotal,
+            unidades: [{ ...newItem.unidades[0], cantidad: cantidadTotal }],
+            isExternal: true,
             descripcion: descripcionFinal,
-            marca: unidad.marca,
-            modelo: unidad.modelo,
-            lote: unidad.lote,
-            serie: unidad.serie,
-            referencia: unidad.referencia,
-            ubicacion: unidad.ubicacion,
-            equipoAsociado: unidad.equipoAsociado || '',
-            serieEquipoAsociado: unidad.serieEquipoAsociado || '',
-            origenBien: unidad.origenBien || '',
-            claveHRAEI: unidad.claveHRAEI
+            marca: newItem.unidades[0]?.marca,
+            modelo: newItem.unidades[0]?.modelo,
+            lote: newItem.unidades[0]?.lote,
+            serie: newItem.unidades[0]?.serie,
+            referencia: newItem.unidades[0]?.referencia,
+            ubicacion: newItem.unidades[0]?.ubicacion,
+            equipoAsociado: newItem.unidades[0]?.equipoAsociado || '',
+            serieEquipoAsociado: newItem.unidades[0]?.serieEquipoAsociado || '',
+            origenBien: newItem.unidades[0]?.origenBien || '',
+            claveHRAEI: newItem.unidades[0]?.claveHRAEI
         })
+    } else {
+        // Para equipos internos (del hospital): iterar sobre unidades (cada unidad es un item distinto)
+        for (const unidad of newItem.unidades) {
+            const descripcionFinal = (unidad.nombre || '').trim() || `Bien sin descripción (${getTipoLabel(newItem.tipo)})`
+            const cantidadDeEstaUnidad = Math.max(1, unidad.cantidad || 1)
+
+            generatedItems.push({
+                tipo: newItem.tipo,
+                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                cantidad: cantidadDeEstaUnidad,
+                isExternal: false,
+                descripcion: descripcionFinal,
+                marca: unidad.marca,
+                modelo: unidad.modelo,
+                lote: unidad.lote,
+                serie: unidad.serie,
+                referencia: unidad.referencia,
+                ubicacion: unidad.ubicacion,
+                equipoAsociado: unidad.equipoAsociado || '',
+                serieEquipoAsociado: unidad.serieEquipoAsociado || '',
+                origenBien: unidad.origenBien || '',
+                claveHRAEI: unidad.claveHRAEI
+            })
+        }
     }
 
     if (generatedItems.length > 0) {
@@ -1938,21 +2031,50 @@ async function agregarItem() {
                 const highSeverityWarnings = warnings.filter(w => w.severity === 'high' && w.allowOverride)
                 
                 if (highSeverityWarnings.length > 0) {
-                    const itemsToAdd = newItem.unidades
-                        .filter(u => u.nombre?.trim())
-                        .map(u => ({
-                            tipo: newItem.tipo,
-                            consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-                            lote: u.lote,
-                            serie: u.serie,
-                            referencia: u.referencia,
-                            ubicacion: u.ubicacion,
-                            equipoAsociado: u.equipoAsociado || '',
-                            serieEquipoAsociado: u.serieEquipoAsociado || '',
-                            origenBien: u.origenBien || '',
-                            claveHRAEI: u.claveHRAEI,
-                            isExternal: isCurrentItemExternal.value
-                        }))
+                    const itemsToAdd = isCurrentItemExternal.value
+                        ? newItem.unidades
+                            .filter(u => u.nombre?.trim())
+                            .slice(0, 1)
+                            .map(u => ({
+                                tipo: newItem.tipo,
+                                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                                cantidad: newItem.cantidad || 1,
+                                unidades: [{ ...u, cantidad: newItem.cantidad || 1 }],
+                                descripcion: u.descripcion || u.nombre || '',
+                                nombre: u.nombre || u.descripcion || '',
+                                marca: u.marca || '',
+                                modelo: u.modelo || '',
+                                lote: u.lote,
+                                serie: u.serie,
+                                referencia: u.referencia,
+                                ubicacion: u.ubicacion,
+                                equipoAsociado: u.equipoAsociado || '',
+                                serieEquipoAsociado: u.serieEquipoAsociado || '',
+                                origenBien: u.origenBien || '',
+                                claveHRAEI: u.claveHRAEI,
+                                isExternal: true
+                            }))
+                        : newItem.unidades
+                            .filter(u => u.nombre?.trim())
+                            .map(u => ({
+                                tipo: newItem.tipo,
+                                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                                cantidad: Math.max(1, Number(u.cantidad) || 1),
+                                unidades: [{ ...u, cantidad: Math.max(1, Number(u.cantidad) || 1) }],
+                                descripcion: u.descripcion || u.nombre || '',
+                                nombre: u.nombre || u.descripcion || '',
+                                marca: u.marca || '',
+                                modelo: u.modelo || '',
+                                lote: u.lote,
+                                serie: u.serie,
+                                referencia: u.referencia,
+                                ubicacion: u.ubicacion,
+                                equipoAsociado: u.equipoAsociado || '',
+                                serieEquipoAsociado: u.serieEquipoAsociado || '',
+                                origenBien: u.origenBien || '',
+                                claveHRAEI: u.claveHRAEI,
+                                isExternal: false
+                            }))
                     
                     pendingEquipment.value = { items: itemsToAdd, isMultiple: true }
                     equipmentWarnings.value = warnings
@@ -2323,7 +2445,8 @@ async function onSubmit() {
         const categoriesMap = {}
         if (form.equiposSalida && form.equiposSalida.length > 0) {
             for (const item of form.equiposSalida) {
-                const tipo = (item.tipo || 'equipo').toLowerCase()
+                const normalizedItem = buildSubmitItem(item)
+                const tipo = (normalizedItem.tipo || 'equipo').toLowerCase()
                 let categoria = 'equipos' // default
 
                 // Mapear tipo a categoría según inventario
@@ -2341,28 +2464,31 @@ async function onSubmit() {
                     categoriesMap[categoria] = []
                 }
 
-                const _serieVal = item.serie || item.N || '';
-                const _modeloVal = item.modelo || item.MODELO || '';
-                const _marcaVal = item.marca || item.MARCA || '';
+                const _serieVal = normalizedItem.serie || normalizedItem.N || '';
+                const _modeloVal = normalizedItem.modelo || normalizedItem.MODELO || '';
+                const _marcaVal = normalizedItem.marca || normalizedItem.MARCA || '';
                 const safeSerie = (_serieVal && String(_serieVal).trim().toUpperCase() === 'N/A') ? '' : _serieVal;
                 const safeModelo = (_modeloVal && String(_modeloVal).trim().toUpperCase() === 'N/A') ? '' : _modeloVal;
                 const safeMarca = (_marcaVal && String(_marcaVal).trim().toUpperCase() === 'N/A') ? '' : _marcaVal;
                 categoriesMap[categoria].push({
-                    claveHRAEI: item.claveHRAEI || '',
-                    consumibleEstado: item.consumibleEstado || item.consumible_estado || null,
-                    itemId: `${item.claveHRAEI || 'SIN_CLAVE'}|${safeSerie}|${safeModelo}|${safeMarca}`,
-                    isExternal: item.isExternal ?? item.is_external ?? false,
-                    cantidad: Math.max(1, item.cantidad),  // BRUTAL: siempre usa item.cantidad
-                    descripcion: item.descripcion || '',
-                    marca: item.marca || '',
-                    modelo: item.modelo || '',
-                    serie: item.serie || '',
-                    lote: item.lote || '',
-                    referencia: item.referencia || '',
-                    ubicacion: item.ubicacion || '',
-                    tipo: item.tipo || 'equipo',
-                    equipoAsociado: item.equipoAsociado || '',
-                    serieEquipoAsociado: item.serieEquipoAsociado || ''
+                    claveHRAEI: normalizedItem.claveHRAEI || '',
+                    consumibleEstado: normalizedItem.consumibleEstado || normalizedItem.consumible_estado || null,
+                    itemId: `${normalizedItem.claveHRAEI || 'SIN_CLAVE'}|${safeSerie}|${safeModelo}|${safeMarca}`,
+                    isExternal: normalizedItem.isExternal,
+                    cantidad: normalizedItem.cantidad,
+                    descripcion: normalizedItem.descripcion || '',
+                    nombre: normalizedItem.nombre || normalizedItem.descripcion || '',
+                    marca: normalizedItem.marca || '',
+                    modelo: normalizedItem.modelo || '',
+                    serie: normalizedItem.serie || '',
+                    lote: normalizedItem.lote || '',
+                    referencia: normalizedItem.referencia || '',
+                    ubicacion: normalizedItem.ubicacion || '',
+                    tipo: normalizedItem.tipo || 'equipo-medico',
+                    equipoAsociado: normalizedItem.equipoAsociado || '',
+                    serieEquipoAsociado: normalizedItem.serieEquipoAsociado || '',
+                    origenBien: normalizedItem.origenBien || normalizedItem.origen_bien || '',
+                    unidades: normalizedItem.unidades
                 })
             }
         }

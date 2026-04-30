@@ -57,6 +57,19 @@ import inactivityHandler from '@/utils/inactivityHandler'
 import { logout } from '@/utils/auth'
 import { saveSessionState } from '@/utils/sessionRestore'
 
+function redirectToHomeSafely() {
+  try {
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({}, '', '/')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      return
+    }
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  } catch (e) {
+    window.location.href = '/'
+  }
+}
+
 const showWarning = ref(false)
 const countdownRemaining = ref(0)
 const warningDuration = ref(60000)
@@ -122,7 +135,7 @@ const handleLogout = async () => {
   showWarning.value = false
   try { saveSessionState('manual') } catch (e) {}
   await logout()
-  window.location.href = '/'
+  redirectToHomeSafely()
 }
 
 onMounted(() => {

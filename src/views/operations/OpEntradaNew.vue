@@ -2388,6 +2388,49 @@ function getItemQuantity(item) {
     return 1
 }
 
+function normalizeUnitForSubmit(unit, fallbackQuantity = 1) {
+    return {
+        ...unit,
+        cantidad: Math.max(1, Number(unit?.cantidad) || Number(fallbackQuantity) || 1)
+    }
+}
+
+function buildSubmitItem(item) {
+    const quantityTotal = getItemQuantity(item)
+    const isExternal = item?.isExternal ?? item?.is_external ?? false
+    const rawUnits = Array.isArray(item?.unidades) && item.unidades.length
+        ? item.unidades
+        : [{
+            nombre: item?.nombre || item?.descripcion || '',
+            descripcion: item?.descripcion || item?.nombre || '',
+            marca: item?.marca || '',
+            modelo: item?.modelo || '',
+            lote: item?.lote || '',
+            serie: item?.serie || '',
+            referencia: item?.referencia || '',
+            referenciaEquipo: item?.referenciaEquipo || '',
+            ubicacion: item?.ubicacion || '',
+            equipoAsociado: item?.equipoAsociado || '',
+            serieEquipoAsociado: item?.serieEquipoAsociado || '',
+            origenBien: item?.origenBien || item?.origen_bien || '',
+            claveHRAEI: item?.claveHRAEI || '',
+            cantidad: quantityTotal
+        }]
+    const normalizedUnits = isExternal
+        ? [normalizeUnitForSubmit(rawUnits[0], quantityTotal)]
+        : rawUnits.map(unit => normalizeUnitForSubmit(unit, unit?.cantidad || 1))
+    const firstUnit = normalizedUnits[0] || {}
+
+    return {
+        ...item,
+        isExternal,
+        cantidad: quantityTotal,
+        descripcion: item?.descripcion || firstUnit.descripcion || firstUnit.nombre || '',
+        nombre: item?.nombre || firstUnit.nombre || item?.descripcion || '',
+        unidades: normalizedUnits
+    }
+}
+
 function getRequiredFieldsText() {
     if (!newItem.tipo) return 'Selecciona un tipo de bien primero.'
     if (newItem.isBlank) {
@@ -2439,14 +2482,23 @@ function createEmptyUnit() {
 
 // Quantity controls
 function incNew() {
-    newItem.cantidad++
-    newItem.unidades.push(createEmptyUnit())
+    // Para equipos internos: agregar unidad vacía para mantener sincronización
+    // Para equipos externos: NO agregar unidades (solo se maneja cantidad)
+    if (!isCurrentItemExternal.value) {
+        newItem.cantidad++
+        newItem.unidades.push(createEmptyUnit())
+    } else {
+        newItem.cantidad++
+    }
 }
 
 function decNew() {
     if (newItem.cantidad > 1) {
         newItem.cantidad--
-        newItem.unidades.pop()
+        // Para equipos internos: remover unidades extras
+        if (!isCurrentItemExternal.value) {
+            newItem.unidades.pop()
+        }
     }
 }
 
@@ -2467,7 +2519,7 @@ function editarItem(index) {
     editingItemIndex.value = index
     newItem.tipo = item.tipo
     newItem.consumibleEstado = item.consumibleEstado || 'nuevo'
-    newItem.cantidad = item.unidades?.length || 1
+    newItem.cantidad = getItemQuantity(item)
     newItem.unidades = JSON.parse(JSON.stringify(item.unidades || [item]))
     belongsToHospital.value = !item.isExternal
     acrFlowActive.value = !!item.paraEquipoMedico
@@ -2480,14 +2532,19 @@ function isConsumibleLikeType(type) {
 
 function agregarItemsSinWarning() {
     const firstUnit = (newItem.unidades && newItem.unidades[0]) || {}
+
+    const unidadesLooksLikeExpanded = (Array.isArray(newItem.unidades) && newItem.unidades.length === (newItem.cantidad || 0)
+        && newItem.unidades.length > 1 && newItem.unidades.every(u => ((u.nombre || '').trim() === '' && (u.cantidad || 1) === 1)))
+
+    const treatAsExternal = isCurrentItemExternal.value || unidadesLooksLikeExpanded
+
     const equipmentToAdd = {
         tipo: newItem.tipo,
         consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-        cantidad: (newItem.unidades || []).reduce((s, u) => s + (Number(u && u.cantidad) || 1), 0),
-        isExternal: isCurrentItemExternal.value,
-        unidades: newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 })),
+        cantidad: treatAsExternal ? (newItem.cantidad || 1) : (newItem.unidades || []).reduce((s, u) => s + (Number(u && u.cantidad) || 1), 0),
+        isExternal: treatAsExternal,
+        unidades: treatAsExternal ? [ { ...firstUnit, cantidad: newItem.cantidad || 1 } ] : newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 })),
         paraEquipoMedico: acrFlowActive.value,
-        // Carry over top-level technical info for backward compatibility and backend robustness
         descripcion: firstUnit.descripcion || firstUnit.nombre || '',
         marca: firstUnit.marca || '',
         modelo: firstUnit.modelo || '',
@@ -2558,27 +2615,54 @@ async function agregarItem() {
                 const highSeverityWarnings = warnings.filter(w => w.severity === 'high' && w.allowOverride)
                 
                 if (highSeverityWarnings.length > 0) {
-                    const itemsToAdd = newItem.unidades
-                        .filter(u => (u.nombre || u.descripcion)?.trim())
-                        .map(u => ({
-                            tipo: newItem.tipo,
-                            consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-                            nombre: u.nombre || u.descripcion || '',
-                            descripcion: u.descripcion || u.nombre || '',
-                            marca: u.marca || '',
-                            modelo: u.modelo || '',
-                            lote: u.lote,
-                            serie: u.serie,
-                            referencia: u.referencia,
-                            referenciaEquipo: u.referenciaEquipo || '',
-                            ubicacion: u.ubicacion,
-                            equipoAsociado: u.equipoAsociado || '',
-                            serieEquipoAsociado: u.serieEquipoAsociado || '',
-                            origenBien: u.origenBien || '',
-                            claveHRAEI: u.claveHRAEI || u.claveHraei || '',
-                            noInventario: u.noInventario || '',
-                            isExternal: isCurrentItemExternal.value
-                        }))
+                    const itemsToAdd = isCurrentItemExternal.value
+                        ? newItem.unidades
+                            .filter(u => (u.nombre || u.descripcion)?.trim())
+                            .slice(0, 1)
+                            .map(u => ({
+                                tipo: newItem.tipo,
+                                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                                cantidad: newItem.cantidad || 1,
+                                unidades: [{ ...u, cantidad: newItem.cantidad || 1 }],
+                                nombre: u.nombre || u.descripcion || '',
+                                descripcion: u.descripcion || u.nombre || '',
+                                marca: u.marca || '',
+                                modelo: u.modelo || '',
+                                lote: u.lote,
+                                serie: u.serie,
+                                referencia: u.referencia,
+                                referenciaEquipo: u.referenciaEquipo || '',
+                                ubicacion: u.ubicacion,
+                                equipoAsociado: u.equipoAsociado || '',
+                                serieEquipoAsociado: u.serieEquipoAsociado || '',
+                                origenBien: u.origenBien || '',
+                                claveHRAEI: u.claveHRAEI || u.claveHraei || '',
+                                noInventario: u.noInventario || '',
+                                isExternal: true
+                            }))
+                        : newItem.unidades
+                            .filter(u => (u.nombre || u.descripcion)?.trim())
+                            .map(u => ({
+                                tipo: newItem.tipo,
+                                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                                cantidad: Math.max(1, Number(u.cantidad) || 1),
+                                unidades: [{ ...u, cantidad: Math.max(1, Number(u.cantidad) || 1) }],
+                                nombre: u.nombre || u.descripcion || '',
+                                descripcion: u.descripcion || u.nombre || '',
+                                marca: u.marca || '',
+                                modelo: u.modelo || '',
+                                lote: u.lote,
+                                serie: u.serie,
+                                referencia: u.referencia,
+                                referenciaEquipo: u.referenciaEquipo || '',
+                                ubicacion: u.ubicacion,
+                                equipoAsociado: u.equipoAsociado || '',
+                                serieEquipoAsociado: u.serieEquipoAsociado || '',
+                                origenBien: u.origenBien || '',
+                                claveHRAEI: u.claveHRAEI || u.claveHraei || '',
+                                noInventario: u.noInventario || '',
+                                isExternal: false
+                            }))
                     
                     pendingEquipment.value = { items: itemsToAdd, isMultiple: true }
                     equipmentWarnings.value = warnings
@@ -2937,15 +3021,16 @@ async function onSubmit() {
             observacionesImg: form.observacionesImg,
             nombreIngeniero: form.nombreIngeniero,
             equiposEntrada: (form.equiposEntrada || []).map(item => {
-                const _serieVal = item.serie || item.N || '';
-                const _modeloVal = item.modelo || item.MODELO || '';
-                const _marcaVal = item.marca || item.MARCA || '';
+                const normalizedItem = buildSubmitItem(item)
+                const _serieVal = normalizedItem.serie || normalizedItem.N || '';
+                const _modeloVal = normalizedItem.modelo || normalizedItem.MODELO || '';
+                const _marcaVal = normalizedItem.marca || normalizedItem.MARCA || '';
                 const safeSerie = (_serieVal && String(_serieVal).trim().toUpperCase() === 'N/A') ? '' : _serieVal;
                 const safeModelo = (_modeloVal && String(_modeloVal).trim().toUpperCase() === 'N/A') ? '' : _modeloVal;
                 const safeMarca = (_marcaVal && String(_marcaVal).trim().toUpperCase() === 'N/A') ? '' : _marcaVal;
                 return {
-                    ...item,
-                    itemId: `${item.claveHRAEI || 'SIN_CLAVE'}|${safeSerie}|${safeModelo}|${safeMarca}`
+                    ...normalizedItem,
+                    itemId: `${normalizedItem.claveHRAEI || 'SIN_CLAVE'}|${safeSerie}|${safeModelo}|${safeMarca}`
                 }
             }),
             agregarAlInventario: form.agregarAlInventario,

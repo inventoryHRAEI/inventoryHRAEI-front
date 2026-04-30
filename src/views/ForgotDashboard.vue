@@ -74,12 +74,8 @@ const forgot = async () => {
     notifier.success(msg.value)
     try {
       const q = new URLSearchParams({ email: email.value })
-      if (data && data.token) q.set('token', data.token)
-      if (data && data.resetUrl) {
-        window.location.href = data.resetUrl
-      } else {
-        navigateAndRefresh(router, { path: '/reset', query: Object.fromEntries(q) })
-      }
+      // Siempre usar router.push para navegación interna (evita mezcla HTTP/HTTPS)
+      router.push({ path: '/reset', query: Object.fromEntries(q) })
     } catch (e) { console.error('Redirección a reset falló:', e) }
   } catch (e) {
     error.value = e.message

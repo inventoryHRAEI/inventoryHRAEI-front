@@ -8,6 +8,9 @@
                     title="Configuración de administrador">
                     <component :is="Settings" :size="20" stroke-width="2" />
                 </button>
+                <button v-if="isAdmin" class="edit-requests-btn" @click="goToEditRequests" title="Solicitudes de edición">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                </button>
             </template>
 
             <!-- Added Admin Panel -->
@@ -676,11 +679,11 @@
                                         <div class="item-header">
                                             <h5 class="item-name">{{ item.descripcion || item.unidades?.[0]?.nombre ||
                                                 'Sin nombre' }}</h5>
-                                            <div class="item-quantity-badge">{{ item.unidades?.length || 1 }}</div>
+                                            <div class="item-quantity-badge">{{ getItemQuantity(item) }}</div>
                                         </div>
-                                        <p class="item-quantity-text">{{ item.unidades?.length || 1 }}
+                                        <p class="item-quantity-text">{{ getItemQuantity(item) }}
                                             unidad{{
-                                                (item.unidades?.length || 1) !== 1 ? 'es' : '' }} de {{
+                                                getItemQuantity(item) !== 1 ? 'es' : '' }} de {{
                                                 getTipoLabel(item.tipo).toLowerCase() }}</p>
                                         <div class="item-details">
                                             <span v-if="item.marca"><strong>Marca:</strong> {{ item.marca }}</span>
@@ -980,6 +983,10 @@ const emit = defineEmits({
     cancel: () => true
 })
 const router = useRouter()
+
+function goToEditRequests() {
+    try { router.push({ name: 'admin-edit-requests' }) } catch (e) { console.warn('goToEditRequests failed', e) }
+}
 
 // --- ADMIN / SCHEMA ---
 const isAdmin = ref(false)
@@ -1401,6 +1408,57 @@ function getTipoLabel(tipo) {
     return type?.label || tipo
 }
 
+function getItemQuantity(item) {
+    if (!item) return 1
+    const q = Number(item.cantidad)
+    if (q && q > 0) return q
+    if (Array.isArray(item.unidades)) return item.unidades.reduce((s, u) => s + (Number(u && u.cantidad) || 1), 0)
+    return 1
+}
+
+function normalizeUnitForSubmit(unit, fallbackQuantity = 1) {
+    return {
+        ...unit,
+        cantidad: Math.max(1, Number(unit?.cantidad) || Number(fallbackQuantity) || 1)
+    }
+}
+
+function buildSubmitItem(item) {
+    const quantityTotal = getItemQuantity(item)
+    const isExternal = item?.isExternal ?? item?.is_external ?? false
+    const rawUnits = Array.isArray(item?.unidades) && item.unidades.length
+        ? item.unidades
+        : [{
+            nombre: item?.nombre || item?.descripcion || '',
+            descripcion: item?.descripcion || item?.nombre || '',
+            marca: item?.marca || '',
+            modelo: item?.modelo || '',
+            lote: item?.lote || '',
+            serie: item?.serie || '',
+            referencia: item?.referencia || '',
+            referenciaEquipo: item?.referenciaEquipo || '',
+            ubicacion: item?.ubicacion || '',
+            equipoAsociado: item?.equipoAsociado || '',
+            serieEquipoAsociado: item?.serieEquipoAsociado || '',
+            origenBien: item?.origenBien || item?.origen_bien || '',
+            claveHRAEI: item?.claveHRAEI || '',
+            cantidad: quantityTotal
+        }]
+    const normalizedUnits = isExternal
+        ? [normalizeUnitForSubmit(rawUnits[0], quantityTotal)]
+        : rawUnits.map(unit => normalizeUnitForSubmit(unit, unit?.cantidad || 1))
+    const firstUnit = normalizedUnits[0] || {}
+
+    return {
+        ...item,
+        isExternal,
+        cantidad: quantityTotal,
+        descripcion: item?.descripcion || firstUnit.descripcion || firstUnit.nombre || '',
+        nombre: item?.nombre || firstUnit.nombre || item?.descripcion || '',
+        unidades: normalizedUnits
+    }
+}
+
 function getNombrePlaceholder() {
     switch (newItem.tipo) {
         case 'equipo-medico': return 'Ej. Monitor de signos vitales'
@@ -1462,7 +1520,13 @@ function editarItem(index) {
             cantidad: Math.max(1, item.cantidad || 1)
         }]
 
-    newItem.cantidad = sourceUnits.length
+    const quantityTotal = (() => {
+        const q = Number(item.cantidad)
+        if (q && q > 0) return q
+        return sourceUnits.reduce((s, u) => s + (Number(u && u.cantidad) || 1), 0)
+    })()
+
+    newItem.cantidad = Math.max(1, quantityTotal)
     newItem.unidades = sourceUnits.map(u => ({
         nombre: u.nombre || u.descripcion || '',
         marca: u.marca || '',
@@ -1504,14 +1568,23 @@ function persistEquipmentItem(itemPayload, warningMode = false) {
 }
 
 function incNew() {
-    newItem.cantidad++
-    newItem.unidades.push(createEmptyUnit())
+    // Para equipos internos: agregar unidad vacía para mantener sincronización
+    // Para equipos externos: NO agregar unidades (solo se maneja cantidad)
+    if (!isCurrentItemExternal.value) {
+        newItem.cantidad++
+        newItem.unidades.push(createEmptyUnit())
+    } else {
+        newItem.cantidad++
+    }
 }
 
 function decNew() {
     if (newItem.cantidad > 1) {
         newItem.cantidad--
-        newItem.unidades.pop()
+        // Para equipos internos: remover unidades extras
+        if (!isCurrentItemExternal.value) {
+            newItem.unidades.pop()
+        }
     }
 }
 
@@ -1524,11 +1597,17 @@ function removeUnit(idx) {
 
 function agregarItemsSinWarning() {
     const firstUnit = newItem.unidades[0]
+
+    const unidadesLooksLikeExpanded = (Array.isArray(newItem.unidades) && newItem.unidades.length === (newItem.cantidad || 0)
+        && newItem.unidades.length > 1 && newItem.unidades.every(u => ((u.nombre || '').trim() === '' && (u.cantidad || 1) === 1)))
+
+    const treatAsExternal = isCurrentItemExternal.value || unidadesLooksLikeExpanded
+
     const equipmentToAdd = {
         tipo: newItem.tipo,
         consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-        cantidad: newItem.cantidad,
-        isExternal: isCurrentItemExternal.value,
+        cantidad: treatAsExternal ? (newItem.cantidad || 1) : newItem.cantidad,
+        isExternal: treatAsExternal,
         descripcion: firstUnit.nombre,
         marca: firstUnit.marca,
         modelo: firstUnit.modelo,
@@ -1541,7 +1620,7 @@ function agregarItemsSinWarning() {
         serieEquipoAsociado: firstUnit.serieEquipoAsociado || '',
         origenBien: firstUnit.origenBien || '',
         claveHRAEI: firstUnit.claveHRAEI,
-        unidades: newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 }))
+        unidades: treatAsExternal ? [{ ...firstUnit, cantidad: newItem.cantidad || 1 }] : newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 }))
     }
     persistEquipmentItem(equipmentToAdd)
 }
@@ -1622,21 +1701,50 @@ function agregarItem() {
                 const highSeverityWarnings = warnings.filter(w => w.severity === 'high' && w.allowOverride)
                 
                 if (highSeverityWarnings.length > 0) {
-                    const itemsToAdd = newItem.unidades
-                        .filter(u => u.nombre?.trim())
-                        .map(u => ({
-                            tipo: newItem.tipo,
-                            consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-                            lote: u.lote,
-                            serie: u.serie,
-                            referencia: u.referencia,
-                            ubicacion: u.ubicacion,
-                            equipoAsociado: u.equipoAsociado || '',
-                            serieEquipoAsociado: u.serieEquipoAsociado || '',
-                            origenBien: u.origenBien || '',
-                            claveHRAEI: u.claveHRAEI,
-                            isExternal: isCurrentItemExternal.value
-                        }))
+                    const itemsToAdd = isCurrentItemExternal.value
+                        ? newItem.unidades
+                            .filter(u => u.nombre?.trim())
+                            .slice(0, 1)
+                            .map(u => ({
+                                tipo: newItem.tipo,
+                                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                                cantidad: newItem.cantidad || 1,
+                                unidades: [{ ...u, cantidad: newItem.cantidad || 1 }],
+                                descripcion: u.descripcion || u.nombre || '',
+                                nombre: u.nombre || u.descripcion || '',
+                                marca: u.marca || '',
+                                modelo: u.modelo || '',
+                                lote: u.lote,
+                                serie: u.serie,
+                                referencia: u.referencia,
+                                ubicacion: u.ubicacion,
+                                equipoAsociado: u.equipoAsociado || '',
+                                serieEquipoAsociado: u.serieEquipoAsociado || '',
+                                origenBien: u.origenBien || '',
+                                claveHRAEI: u.claveHRAEI,
+                                isExternal: true
+                            }))
+                        : newItem.unidades
+                            .filter(u => u.nombre?.trim())
+                            .map(u => ({
+                                tipo: newItem.tipo,
+                                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                                cantidad: Math.max(1, Number(u.cantidad) || 1),
+                                unidades: [{ ...u, cantidad: Math.max(1, Number(u.cantidad) || 1) }],
+                                descripcion: u.descripcion || u.nombre || '',
+                                nombre: u.nombre || u.descripcion || '',
+                                marca: u.marca || '',
+                                modelo: u.modelo || '',
+                                lote: u.lote,
+                                serie: u.serie,
+                                referencia: u.referencia,
+                                ubicacion: u.ubicacion,
+                                equipoAsociado: u.equipoAsociado || '',
+                                serieEquipoAsociado: u.serieEquipoAsociado || '',
+                                origenBien: u.origenBien || '',
+                                claveHRAEI: u.claveHRAEI,
+                                isExternal: false
+                            }))
                     
                     pendingEquipment.value = { items: itemsToAdd, isMultiple: true }
                     equipmentWarnings.value = warnings
@@ -1935,7 +2043,8 @@ async function onSubmit() {
         const categoriesMap = {}
         if (form.equiposEntrada && form.equiposEntrada.length > 0) {
             for (const item of form.equiposEntrada) {
-                const tipo = (item.tipo || 'equipo').toLowerCase()
+                const normalizedItem = buildSubmitItem(item)
+                const tipo = (normalizedItem.tipo || 'equipo').toLowerCase()
                 let categoria = 'equipos' // default
 
                 // Mapear tipo a categoría según inventario
@@ -1953,28 +2062,32 @@ async function onSubmit() {
                     categoriesMap[categoria] = []
                 }
 
-                const _serieVal = item.serie || item.N || '';
-                const _modeloVal = item.modelo || item.MODELO || '';
-                const _marcaVal = item.marca || item.MARCA || '';
+                const _serieVal = normalizedItem.serie || normalizedItem.N || '';
+                const _modeloVal = normalizedItem.modelo || normalizedItem.MODELO || '';
+                const _marcaVal = normalizedItem.marca || normalizedItem.MARCA || '';
                 const safeSerie = (_serieVal && String(_serieVal).trim().toUpperCase() === 'N/A') ? '' : _serieVal;
                 const safeModelo = (_modeloVal && String(_modeloVal).trim().toUpperCase() === 'N/A') ? '' : _modeloVal;
                 const safeMarca = (_marcaVal && String(_marcaVal).trim().toUpperCase() === 'N/A') ? '' : _marcaVal;
 
                 categoriesMap[categoria].push({
-                    claveHRAEI: item.claveHRAEI || '',
-                    consumibleEstado: item.consumibleEstado || item.consumible_estado || null,
-                    itemId: `${item.claveHRAEI || 'SIN_CLAVE'}|${safeSerie}|${safeModelo}|${safeMarca}`,
-                    cantidad: item.cantidad || 1,
-                    descripcion: item.descripcion || '',
-                    marca: item.marca || '',
-                    modelo: item.modelo || '',
-                    serie: item.serie || '',
-                    lote: item.lote || '',
-                    referencia: item.referencia || '',
-                    ubicacion: item.ubicacion || '',
-                    tipo: item.tipo || 'equipo',
-                    equipoAsociado: item.equipoAsociado || '',
-                    serieEquipoAsociado: item.serieEquipoAsociado || ''
+                    claveHRAEI: normalizedItem.claveHRAEI || '',
+                    consumibleEstado: normalizedItem.consumibleEstado || normalizedItem.consumible_estado || null,
+                    itemId: `${normalizedItem.claveHRAEI || 'SIN_CLAVE'}|${safeSerie}|${safeModelo}|${safeMarca}`,
+                    isExternal: normalizedItem.isExternal,
+                    cantidad: normalizedItem.cantidad,
+                    descripcion: normalizedItem.descripcion || '',
+                    nombre: normalizedItem.nombre || normalizedItem.descripcion || '',
+                    marca: normalizedItem.marca || '',
+                    modelo: normalizedItem.modelo || '',
+                    serie: normalizedItem.serie || '',
+                    lote: normalizedItem.lote || '',
+                    referencia: normalizedItem.referencia || '',
+                    ubicacion: normalizedItem.ubicacion || '',
+                    tipo: normalizedItem.tipo || 'equipo-medico',
+                    equipoAsociado: normalizedItem.equipoAsociado || '',
+                    serieEquipoAsociado: normalizedItem.serieEquipoAsociado || '',
+                    origenBien: normalizedItem.origenBien || normalizedItem.origen_bien || '',
+                    unidades: normalizedItem.unidades
                 })
             }
         }

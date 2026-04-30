@@ -53,6 +53,16 @@
                     <button class="dropdown-item" @click="goProfile">Perfil</button>
                     <button class="dropdown-item" @click="goDashboard">Panel principal</button>
                     <button v-if="isAdmin" class="dropdown-item admin-item" @click="goManageUsers">Gestionar usuarios</button>
+                    <button
+                      v-if="isAdmin"
+                      class="dropdown-item admin-item"
+                      :class="{ 'edit-requests-alert': hasPendingEditRequests }"
+                      @click="goEditRequests"
+                      :title="pendingEditRequests > 0 ? `${pendingEditRequestsLabel} solicitudes de edición pendientes` : 'Solicitudes de edición'"
+                    >
+                      <span>Solicitudes de edición</span>
+                      <span v-if="pendingEditRequests > 0" class="edit-requests-badge">{{ pendingEditRequestsLabel }}</span>
+                    </button>
                     <button v-if="isAdmin" class="dropdown-item admin-item" @click="goImport">📥 Importar CSV</button>
                     <hr class="dropdown-divider" />
                     <button class="dropdown-item logout-item" @click="handleLogout">Cerrar sesion</button>
@@ -101,6 +111,7 @@ import { useRouter, useRoute } from 'vue-router'
 import NotificationBell from '@/components/NotificationBell.vue'
 import InactivityWarning from '@/components/InactivityWarning.vue'
 import inactivityHandler from '@/utils/inactivityHandler'
+import { authedFetch } from '@/utils/api'
 import { logout } from '@/utils/auth'
 import { saveSessionState, peekSessionState, peekWizardState, peekPanelState, clearSessionState, backupWizardDrafts } from '@/utils/sessionRestore'
 import { warmupBiomedicalEquipmentCatalog } from '@/services/biomedicalEquipmentCatalog.js'
@@ -115,6 +126,9 @@ const menuOpen = ref(false)
 const componentRenderKey = ref(0)
 const lastRenderedRoute = ref(null)
 const isTransitioning = ref(false)
+let editRequestsRefreshTimer = null
+const editRequestsPendingCount = ref(0)
+const INACTIVITY_PUBLIC_ROUTE_NAMES = new Set(['home', 'login', 'register', 'forgot', 'reset'])
 // Handlers declarados en scope superior para poder removerlos en onBeforeUnmount
 let handleSessionUpdate = null
 let handleStorageChange = null
@@ -154,6 +168,14 @@ const userBtnClasses = computed(() => ({
   'user-btn-user': !isAdmin.value,
   open: menuOpen.value
 }))
+
+const pendingEditRequests = computed(() => Number(editRequestsPendingCount.value || 0))
+const hasPendingEditRequests = computed(() => isAdmin.value && pendingEditRequests.value > 0)
+const pendingEditRequestsLabel = computed(() => {
+  const total = pendingEditRequests.value
+  if (total <= 0) return ''
+  return total > 100 ? '99+' : String(total)
+})
 
 // Normaliza distintos formatos de foto de usuario a un src utilizable
 function processPhotoUrl(foto) {
@@ -235,8 +257,12 @@ function syncUserFromStorage() {
    }
  }
 
-function toggleUserMenu() {
-  menuOpen.value = !menuOpen.value
+async function toggleUserMenu() {
+  const willOpen = !menuOpen.value
+  if (willOpen) {
+    await refreshPendingEditRequests()
+  }
+  menuOpen.value = willOpen
 }
 
 function closeUserMenu() {
@@ -246,6 +272,23 @@ function closeUserMenu() {
 function handleBodyClick(e) {
   if (!menuOpen.value) return
   closeUserMenu()
+}
+
+async function refreshPendingEditRequests() {
+  try {
+    if (!isAuthenticated.value) return
+    const res = await authedFetch('/api/edit-requests')
+    if (!res || !res.ok) {
+      editRequestsPendingCount.value = 0
+      return
+    }
+    const data = await res.json().catch(() => [])
+    const rows = Array.isArray(data) ? data : []
+    editRequestsPendingCount.value = rows.filter(r => String(r?.status || '').toLowerCase() === 'pending').length
+  } catch (e) {
+    console.warn('[App] refreshPendingEditRequests failed', e)
+    editRequestsPendingCount.value = 0
+  }
 }
 
 async function handleLogout() {
@@ -302,6 +345,11 @@ function goProfile() {
 function goManageUsers() {
   closeUserMenu()
   router.push({ name: 'admin-users' })
+}
+
+function goEditRequests() {
+  closeUserMenu()
+  router.push({ name: 'admin-edit-requests' })
 }
 
 function goImport() {
@@ -375,11 +423,52 @@ function handleVisibilityChange() {
   }
 }
 
+function syncInactivityHandler() {
+  const inactivityEnabled = localStorage.getItem('inactivityEnabled') !== 'false'
+  const inactivityMinutes = Math.max(15, parseInt(localStorage.getItem('inactivityTimeout') || '15', 10))
+  const warningSeconds = Math.max(10, parseInt(localStorage.getItem('inactivityWarningSeconds') || '60', 10))
+  const routeName = String(route?.name || '')
+  const shouldRun = inactivityEnabled && isAuthenticated.value && !INACTIVITY_PUBLIC_ROUTE_NAMES.has(routeName)
+
+  try {
+    window.inactivityHandler = inactivityHandler
+  } catch (e) {
+    console.warn('[App] No se pudo exponer inactivityHandler en window', e)
+  }
+
+  if (!shouldRun) {
+    if (inactivityHandler.isInitialized && inactivityHandler.isEnabled) {
+      inactivityHandler.pause()
+      console.log('[App] Inactivity handler pausado', { routeName, isAuthenticated: isAuthenticated.value })
+    }
+    return
+  }
+
+  try {
+    if (!inactivityHandler.isInitialized) {
+      inactivityHandler.init(inactivityMinutes, warningSeconds)
+      console.log('[App] Inactivity handler inicializado', { inactivityMinutes, warningSeconds, routeName })
+      console.log('[App] Tip: Usa window.inactivityHandler.forceWarning() para testear sin esperar 15 min')
+    } else if (!inactivityHandler.isEnabled) {
+      inactivityHandler.resume()
+      console.log('[App] Inactivity handler reanudado', { routeName })
+    }
+
+    inactivityHandler.setSyncAcrossTabs(true)
+    inactivityHandler.setKeepAliveRefresh(true)
+    inactivityHandler.setPreWarningSeconds(Math.min(60, warningSeconds))
+  } catch (e) {
+    console.error('[App] No se pudo sincronizar inactivityHandler', e)
+  }
+}
+
 // System initialization
 onMounted(() => {
   console.log('[App] 🚀 App mounted - Route:', route.name)
 
   syncUserFromStorage()
+  refreshPendingEditRequests()
+  editRequestsRefreshTimer = window.setInterval(refreshPendingEditRequests, 30000)
   
   // Listener para cambios de sesión: si el evento lleva `detail`, usarlo para actualizar inmediatamente
   handleSessionUpdate = (e) => {
@@ -406,6 +495,7 @@ onMounted(() => {
     syncUserFromStorage()
     if (isAuthenticated.value) {
       try { warmupBiomedicalEquipmentCatalog() } catch (e) { /* ignore */ }
+      refreshPendingEditRequests()
     }
   }
   window.addEventListener('focus', handleWindowFocus)
@@ -419,27 +509,7 @@ onMounted(() => {
   window.addEventListener('beforeunload', handleBeforeUnload)
   document.addEventListener('visibilitychange', handleVisibilityChange)
   
-  // Inactivity logout config (preferible 15 min, con advertencia previa)
-  const inactivityEnabled = localStorage.getItem('inactivityEnabled') !== 'false'
-  const inactivityMinutes = Math.max(15, parseInt(localStorage.getItem('inactivityTimeout') || '15', 10))
-  const warningSeconds = Math.max(10, parseInt(localStorage.getItem('inactivityWarningSeconds') || '60', 10))
-
-  if (inactivityEnabled) {
-    try {
-      inactivityHandler.init(inactivityMinutes, warningSeconds)
-      inactivityHandler.setSyncAcrossTabs(true)
-      inactivityHandler.setKeepAliveRefresh(true)
-      inactivityHandler.setPreWarningSeconds(Math.min(60, warningSeconds))
-      
-      // Exponer handler en window para testing desde consola
-      window.inactivityHandler = inactivityHandler
-      
-      console.log('[App] Inactivity handler inicializado', { inactivityMinutes, warningSeconds })
-      console.log('[App] 💡 Tip: Usa window.inactivityHandler.forceWarning() para testear sin esperar 15 min')
-    } catch (e) {
-      console.error('[App] No se pudo inicializar inactivityHandler', e)
-    }
-  }
+  syncInactivityHandler()
 
   // Validate component render after next frame
   requestAnimationFrame(() => {
@@ -455,6 +525,14 @@ watch(isAuthenticated, (val) => {
   try { warmupBiomedicalEquipmentCatalog() } catch (e) { /* ignore */ }
 }, { immediate: true })
 
+watch(
+  [isAuthenticated, () => route.name],
+  () => {
+    syncInactivityHandler()
+  },
+  { immediate: true }
+)
+
 onBeforeUnmount(() => {
   console.log('[App] Unmounting')
   try {
@@ -464,6 +542,7 @@ onBeforeUnmount(() => {
     if (handleStorageChange) window.removeEventListener('storage', handleStorageChange)
     window.removeEventListener('beforeunload', handleBeforeUnload)
     document.removeEventListener('visibilitychange', handleVisibilityChange)
+    if (editRequestsRefreshTimer) window.clearInterval(editRequestsRefreshTimer)
   } catch (e) {
     console.warn('[App] Error removing event listeners:', e)
   }
@@ -520,6 +599,7 @@ watch(menuOpen, (isOpen) => {
 // Watch user changes to trigger immediate topbar updates
 watch(() => user.value, (newUser) => {
   console.log('[App] 👥 User changed:', newUser?.nombre || 'null')
+  refreshPendingEditRequests()
 }, { deep: true })
 </script>
 
@@ -622,6 +702,61 @@ main.container.op-embed-active .route-component {
   top: 80px !important;
   right: 20px !important;
   z-index: 99999 !important;
+}
+
+.dropdown-item.admin-item.edit-requests-alert {
+  position: relative;
+  overflow: hidden;
+  color: #fff !important;
+  background: linear-gradient(90deg, #ff4d6d, #ffb703, #22c55e, #06b6d4, #8b5cf6, #ff4d6d) !important;
+  background-size: 300% 300% !important;
+  animation: edit-requests-rainbow 8s linear infinite !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: 0 10px 28px rgba(31, 41, 55, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
+}
+
+.dropdown-item.admin-item.edit-requests-alert:hover {
+  filter: brightness(1.06) saturate(1.08);
+  transform: translateX(2px);
+}
+
+.dropdown-item.admin-item.edit-requests-alert .edit-requests-badge {
+  margin-left: auto;
+  min-width: 28px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+}
+
+.dropdown-item.admin-item.edit-requests-alert::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.22) 45%, transparent 60%);
+  transform: translateX(-100%);
+  animation: edit-requests-sheen 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes edit-requests-rainbow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes edit-requests-sheen {
+  0% { transform: translateX(-100%); }
+  45% { transform: translateX(115%); }
+  100% { transform: translateX(115%); }
 }
 
 /* Responsive adjustments */

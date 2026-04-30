@@ -15,6 +15,22 @@ import { saveSessionState } from './sessionRestore'
 import notifier from './notifier'
 import Swal from 'sweetalert2'
 
+function redirectToHomeSafely() {
+  try {
+    if (typeof window === 'undefined') return
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({}, '', '/')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      return
+    }
+    window.dispatchEvent(new PopStateEvent('popstate'))
+  } catch (e) {
+    try {
+      window.location.href = '/'
+    } catch {}
+  }
+}
+
 class InactivityHandlerNew {
   constructor() {
     // Configuración fija
@@ -248,7 +264,7 @@ class InactivityHandlerNew {
     console.log('[InactivityHandlerNew] 🔄 Redirigiendo...')
     setTimeout(() => {
       try {
-        window.location.href = '/'
+        redirectToHomeSafely()
       } catch (e) {
         console.error('[InactivityHandlerNew] Error en redirección:', e)
       }
@@ -701,7 +717,7 @@ class InactivityHandlerNew {
         this.isInLogoutProcess = true
         this.isEnabled = false
         this._clearAllTimers()
-        window.location.href = '/'
+        redirectToHomeSafely()
       }
     } else if (data.type === 'warning') {
       // Otra pestaña mostró warning

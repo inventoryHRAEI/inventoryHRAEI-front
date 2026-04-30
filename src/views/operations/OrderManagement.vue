@@ -21,6 +21,16 @@
 
                     </button>
 
+                    <button class="btn-reload-table" @click="handleRefreshTable" :disabled="isReloadingTable" :class="{ 'is-loading': isReloadingTable }" title="Recargar tabla de órdenes">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" :class="{ 'spin': isReloadingTable }">
+                            <polyline points="23 4 23 10 17 10"></polyline>
+                            <polyline points="1 20 1 14 7 14"></polyline>
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+                        </svg>
+                        <span v-if="!isReloadingTable">Recargar</span>
+                    </button>
+
                     <details v-if="isAdmin" ref="archiveMenuRef" class="archive-menu">
                         <summary class="btn-reset-folios archive-summary" :class="{ 'viewing-archived': viewingArchived }" title="Opciones de archivo">
                             <svg v-if="!viewingArchived && !archivedStore.hasArchivedByType.entrada" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1753,6 +1763,7 @@ const filterMaxItems = ref(null)
 const filterTipo = ref('')
 const filterItemText = ref('')
 const loading = ref(true)
+const isReloadingTable = ref(false)
 const showEditModal = ref(false)
 const editingOrder = ref(null)
 const selectedOrderId = ref(null)
@@ -2083,6 +2094,7 @@ async function onWizardCreated() {
     showWizardModal.value = false
     // Recargar la lista de órdenes
     await reloadOrdersFromServer()
+    await refreshApprovedEditOrders()
 }
 
 const { confirmAndClose } = useCloseConfirmation({
@@ -2115,6 +2127,23 @@ function closeWizardImmediately() {
 function goToDashboard() {
     console.debug('[OrderManagement] navigating to dashboard')
     navigateAndRefresh(router, { name: 'dashboard' })
+}
+
+/**
+ * Recarga la tabla de órdenes desde el servidor
+ * Muestra un indicador visual de carga mientras se refresca
+ */
+async function handleRefreshTable() {
+    isReloadingTable.value = true
+    try {
+        await reloadOrdersFromServer()
+        showSuccess('Actualizado', 'La tabla de órdenes se ha refrescado correctamente.')
+    } catch (e) {
+        console.error('Error refrescando tabla:', e)
+        showError('Error', 'No se pudo refrescar la tabla de órdenes.')
+    } finally {
+        isReloadingTable.value = false
+    }
 }
 
 function closeFiltersDropdown() {
@@ -2254,7 +2283,12 @@ function onOrderUpdated(updated) {
         closeEditModal()
         return
     }
-    persistEditedOrder(updated)
+    persistEditedOrder(updated).finally(() => {
+        // Cerrar modal después de que se complete la actualización y refresco
+        closeEditModal()
+    }).catch(e => {
+        console.error('Error en onOrderUpdated:', e)
+    })
 }
 
 function safeShort(v) {
@@ -3585,6 +3619,46 @@ onMounted(() => {
 .btn-create-order svg {
     width: 16px;
     height: 16px;
+}
+
+.btn-reload-table {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    color: white;
+    border: 1px solid rgba(74, 144, 226, 0.3);
+    border-radius: 9px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.18);
+}
+
+.btn-reload-table:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(74, 144, 226, 0.28);
+}
+
+.btn-reload-table:disabled,
+.btn-reload-table.is-loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn-reload-table svg.spin {
+    animation: spin-animation 1.5s linear infinite;
+}
+
+@keyframes spin-animation {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .btn-back-to-dashboard {

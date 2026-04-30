@@ -38,7 +38,7 @@
 
 <script setup>
 import { useResetComposable } from '@/composables/useReset'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { navigateAndRefresh } from '@/utils/routerHelpers.js'
 
@@ -46,6 +46,12 @@ const { email, token, password, msg, error, show, sendingResend, resendCode, res
 const router = useRouter()
 function goHome(){ try { navigateAndRefresh(router, { name: 'dashboard' }) } catch {} }
 function goManageUsers(){ try { navigateAndRefresh(router, { name: 'admin-users' }) } catch {} }
+
+const isLoading = ref(true)
+
+onMounted(() => {
+  isLoading.value = false
+})
 </script>
 
 <style scoped>
