@@ -1748,8 +1748,8 @@ function agregarItem() {
                             .map(u => ({
                                 tipo: newItem.tipo,
                                 consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-                                cantidad: newItem.cantidad || 1,
-                                unidades: [{ ...u, cantidad: newItem.cantidad || 1 }],
+                                cantidad: u.cantidad || newItem.cantidad || 1,
+                                unidades: [{ ...u, cantidad: u.cantidad || newItem.cantidad || 1 }],
                                 descripcion: u.descripcion || u.nombre || '',
                                 nombre: u.nombre || u.descripcion || '',
                                 marca: u.marca || '',
@@ -1817,8 +1817,8 @@ function agregarItemsSinWarning() {
             generatedItems.push({
                 tipo: newItem.tipo,
                 consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-                cantidad: newItem.cantidad || 1,
-                unidades: [{ ...unidad, cantidad: newItem.cantidad || 1 }],
+                cantidad: unidad.cantidad || newItem.cantidad || 1,
+                unidades: [{ ...unidad, cantidad: unidad.cantidad || newItem.cantidad || 1 }],
                 isExternal: true,
                 descripcion: unidad.descripcion || unidad.nombre,
                 nombre: unidad.nombre,
@@ -2527,6 +2527,9 @@ watch(() => newItem.tipo, async (nuevoTipo) => {
 watch(() => belongsToHospital.value, async (isHospitalItem) => {
     if (isHospitalItem !== true) {
         clearSuggestions()
+        // Asegurar que solo haya 1 unidad para bienes externos
+        newItem.unidades = [createEmptyUnit()]
+        newItem.cantidad = 1
         return
     }
     try {

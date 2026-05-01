@@ -1864,7 +1864,7 @@ function agregarItemsSinWarning() {
     // Para equipos externos: crear 1 solo item con la cantidad total (no iterar sobre unidades)
     if (treatAsExternal) {
         const descripcionFinal = (newItem.unidades[0]?.nombre || '').trim() || `Bien sin descripción (${getTipoLabel(newItem.tipo)})`
-        const cantidadTotal = newItem.cantidad || 1
+        const cantidadTotal = newItem.unidades[0]?.cantidad || newItem.cantidad || 1
 
         generatedItems.push({
             tipo: newItem.tipo,
@@ -2800,6 +2800,9 @@ watch(() => newItem.tipo, async (nuevoTipo) => {
 watch(() => belongsToHospital.value, async (isHospitalItem) => {
     if (isHospitalItem !== true) {
         clearSuggestions()
+        // Asegurar que solo haya 1 unidad para bienes externos
+        newItem.unidades = [createEmptyUnit()]
+        newItem.cantidad = 1
         return
     }
     try {

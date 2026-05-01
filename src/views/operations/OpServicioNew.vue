@@ -1606,7 +1606,7 @@ function agregarItemsSinWarning() {
     const equipmentToAdd = {
         tipo: newItem.tipo,
         consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-        cantidad: treatAsExternal ? (newItem.cantidad || 1) : newItem.cantidad,
+        cantidad: treatAsExternal ? (firstUnit.cantidad || newItem.cantidad || 1) : newItem.cantidad,
         isExternal: treatAsExternal,
         descripcion: firstUnit.nombre,
         marca: firstUnit.marca,
@@ -1620,7 +1620,7 @@ function agregarItemsSinWarning() {
         serieEquipoAsociado: firstUnit.serieEquipoAsociado || '',
         origenBien: firstUnit.origenBien || '',
         claveHRAEI: firstUnit.claveHRAEI,
-        unidades: treatAsExternal ? [{ ...firstUnit, cantidad: newItem.cantidad || 1 }] : newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 }))
+        unidades: treatAsExternal ? [{ ...firstUnit, cantidad: firstUnit.cantidad || newItem.cantidad || 1 }] : newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 }))
     }
     persistEquipmentItem(equipmentToAdd)
 }
@@ -1708,8 +1708,8 @@ function agregarItem() {
                             .map(u => ({
                                 tipo: newItem.tipo,
                                 consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-                                cantidad: newItem.cantidad || 1,
-                                unidades: [{ ...u, cantidad: newItem.cantidad || 1 }],
+                                cantidad: u.cantidad || newItem.cantidad || 1,
+                                unidades: [{ ...u, cantidad: u.cantidad || newItem.cantidad || 1 }],
                                 descripcion: u.descripcion || u.nombre || '',
                                 nombre: u.nombre || u.descripcion || '',
                                 marca: u.marca || '',
@@ -2451,6 +2451,9 @@ watch(() => newItem.tipo, async (nuevoTipo) => {
 watch(() => belongsToHospital.value, async (isHospitalItem) => {
     if (isHospitalItem !== true) {
         clearSuggestions()
+        // Asegurar que solo haya 1 unidad para bienes externos
+        newItem.unidades = [createEmptyUnit()]
+        newItem.cantidad = 1
         return
     }
     try {
