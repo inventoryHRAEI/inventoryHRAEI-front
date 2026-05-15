@@ -667,15 +667,37 @@
                 
                 <!-- STATUS SEMÁFORO VISUAL -->
                 <td class="status-semaphore-col">
-                  <div 
-                    class="semaphore-badge"
-                    :class="[
-                      `semaphore-${renderedStatuses[idx]?.badge}`,
-                      { 'semaphore-animate': renderedStatuses[idx]?.animate }
-                    ]"
-                    :title="renderedStatuses[idx]?.label"
-                  >
-                    <i class="pi semaphore-icon" :class="renderedStatuses[idx]?.icon"></i>
+                  <div class="semaphore-flip-container" :class="{ 'is-flipped': showLottieForSemaforo }">
+                    <div class="semaphore-flipper">
+                      <!-- Lado Frontal: Icono -->
+                      <div 
+                        class="semaphore-front semaphore-badge"
+                        :class="[
+                          `semaphore-${renderedStatuses[idx]?.badge}`,
+                          { 'semaphore-animate': renderedStatuses[idx]?.animate }
+                        ]"
+                        :title="renderedStatuses[idx]?.label"
+                      >
+                        <i class="pi semaphore-icon" :class="renderedStatuses[idx]?.icon"></i>
+                      </div>
+                      
+                      <!-- Lado Trasero: Animación Lottie -->
+                      <div 
+                        class="semaphore-back semaphore-badge lottie-mode"
+                        :class="[`semaphore-${renderedStatuses[idx]?.badge}`]"
+                        :title="renderedStatuses[idx]?.label"
+                      >
+                        <lottie-player
+                          :key="getLottieUrlForStatus(renderedStatuses[idx]?.badge)"
+                          :src="getLottieUrlForStatus(renderedStatuses[idx]?.badge)"
+                          background="transparent"
+                          speed="1"
+                          loop
+                          autoplay
+                          style="width: 150%; height: 150%;"
+                        ></lottie-player>
+                      </div>
+                    </div>
                   </div>
                 </td>
                 
@@ -795,11 +817,42 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import '@lottiefiles/lottie-player'; // Lottie player for rotating emojis
 import AddEquipmentWizard from './AddEquipmentWizard.vue'
 import OrderFilterBar from './OrderFilterBar.vue'
 import { useSemaforoRuleEngine } from '@/composables/useSemaforoRuleEngine.js'
 import { usePermissions } from '@/composables/usePermissions.js'
 import { invalidateBiomedicalEquipmentCatalog } from '@/services/biomedicalEquipmentCatalog.js'
+
+// Timer para rotar entre Semaforo y Lottie
+const rotationStep = ref(0);
+const showLottieForSemaforo = computed(() => rotationStep.value % 2 !== 0);
+let lottieRotationTimer = null;
+
+const LOTTIE_SEMAFORO_PATHS = {
+  operational:   ['/lottie/excellent.json', '/lottie/excellent_sunglasses.json', '/lottie/excellent_stars.json'],
+  partial:       ['/lottie/regular.json', '/lottie/regular_thinking.json'],
+  warning:       ['/lottie/regular.json', '/lottie/regular_thinking.json'],
+  critical:      ['/lottie/critical.json', '/lottie/critical_frown.json', '/lottie/critical_dizzy.json'],
+  maintenance:   ['/lottie/critical_bandage.json', '/lottie/critical_dizzy.json'],
+  empty:         ['/lottie/empty.json']
+};
+
+onMounted(() => {
+  lottieRotationTimer = setInterval(() => {
+    rotationStep.value++;
+  }, 5000);
+});
+
+onUnmounted(() => {
+  if (lottieRotationTimer) clearInterval(lottieRotationTimer);
+});
+
+function getLottieUrlForStatus(badge) {
+  const paths = LOTTIE_SEMAFORO_PATHS[badge] || LOTTIE_SEMAFORO_PATHS.empty;
+  const idx = Math.floor(rotationStep.value / 2) % paths.length;
+  return paths[idx];
+}
 
 // Permisos del usuario actual
 const { canCreateBiomedicalEquipment, canEditBiomedicalEquipment, canManageBiomedical } = usePermissions()
@@ -4468,7 +4521,7 @@ watch(currentPage, (val) => {
   50% { transform: translateX(100%) rotate(45deg); }
 }
 
-.semaphore-badge:hover {
+.semaphore-front:hover {
   transform: scale(1.3) translateY(-3px) rotate(5deg);
   filter: brightness(1.3) saturate(1.2);
   box-shadow: 
@@ -5654,6 +5707,47 @@ thead .sticky-col-right {
 .context-menu-leave-to {
   opacity: 0;
   transform: scale(0.95);
+}
+
+/* Semaphore Flip Container */
+.semaphore-flip-container {
+  width: 42px;
+  height: 42px;
+  perspective: 1000px;
+  margin: 0 auto;
+}
+
+.semaphore-flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.semaphore-flip-container.is-flipped .semaphore-flipper {
+  transform: rotateY(180deg);
+}
+
+.semaphore-front, .semaphore-back {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.semaphore-back {
+  transform: rotateY(180deg);
+  background: transparent !important; 
+  box-shadow: none !important; 
+  border: none !important;
 }
 
 /* ═══════════════════════════════════════════════════════════════

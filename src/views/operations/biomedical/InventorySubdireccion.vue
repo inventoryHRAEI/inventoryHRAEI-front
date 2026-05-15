@@ -42,6 +42,10 @@
                     <IIcon name="ic:baseline-delete-forever" size="20" color="#ef4444" />
                     <span class="btn-text">Dar de Baja</span>
                 </button>
+                <button class="btn-delete-catalog" @click="openDeleteCatalog" title="Eliminar artículos del catálogo definitivamente">
+                    <IIcon name="ic:baseline-delete-sweep" size="20" color="#f43f5e" />
+                    <span class="btn-text">Eliminar Catálogo</span>
+                </button>
             </div>
 
             <div class="search-and-refresh">
@@ -74,6 +78,7 @@
         <MovementWizard :open="movementOpen" @close="movementOpen = false" @success="handleWizardSuccess" />
         <IntakeWizard :open="intakeOpen" @close="intakeOpen = false" @success="handleWizardSuccess" />
         <DecommissionWizard :open="decommissionOpen" @close="decommissionOpen = false" @success="handleWizardSuccess" />
+        <DeleteCatalogWizard :open="deleteCatalogOpen" @close="deleteCatalogOpen = false" @success="handleWizardSuccess" />
         <KardexPreviewModal :isOpen="kardexModalOpen" :itemData="kardexModalData" title="Vista Previa del Kardex"
             @close="kardexModalOpen = false" />
 
@@ -202,6 +207,7 @@ import BiomedicalEquipmentTableV2 from '@/components/BiomedicalEquipmentTableV2.
 import MovementWizard from '@/components/inventario-biomedica/MovementWizard.vue';
 import IntakeWizard from '@/components/inventario-biomedica/IntakeWizard.vue';
 import DecommissionWizard from '@/components/inventario-biomedica/DecommissionWizard.vue';
+import DeleteCatalogWizard from '@/components/inventario-biomedica/DeleteCatalogWizard.vue';
 import { usePermissions } from '@/composables/usePermissions.js'
 import notificationStore from '@/stores/notificationStore.js'
 
@@ -298,6 +304,7 @@ const viewMode = ref('cards'); // 'cards' o 'table'
 const movementOpen = ref(false);
 const intakeOpen = ref(false);
 const decommissionOpen = ref(false);
+const deleteCatalogOpen = ref(false);
 const kardexModalOpen = ref(false);
 const kardexModalData = ref(null);
 const newItemIds = ref(new Map()); // Ahora es Map con item ID -> timestamp
@@ -364,6 +371,7 @@ onBeforeUnmount(() => {
 const openMovement = () => { movementOpen.value = true; };
 const openIntake = () => { intakeOpen.value = true; };
 const openDecommission = () => { decommissionOpen.value = true; };
+const openDeleteCatalog = () => { deleteCatalogOpen.value = true; };
 
 // Reset page cuando cambia el modo de vista
 watch(viewMode, () => {
@@ -836,6 +844,7 @@ const handleSearchKeydown = (event) => {
 
 .header-toolbar {
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
     gap: 20px;
@@ -846,6 +855,7 @@ const handleSearchKeydown = (event) => {
 
 .action-buttons-container {
     display: flex;
+    flex-wrap: wrap;
     gap: 3px;
     background: rgba(15, 23, 42, 0.6);
     backdrop-filter: blur(14px);
@@ -854,7 +864,6 @@ const handleSearchKeydown = (event) => {
     border-radius: 15px;
     padding: 5px;
     position: relative;
-    overflow: hidden;
     box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.3),
         inset 0 1px 1px rgba(255, 255, 255, 0.05);
@@ -877,7 +886,8 @@ const handleSearchKeydown = (event) => {
 
 .btn-warehouse-transfer,
 .btn-consumable-intake,
-.btn-decommission {
+.btn-decommission,
+.btn-delete-catalog {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1014,6 +1024,45 @@ const handleSearchKeydown = (event) => {
     left: 100%;
 }
 
+.btn-delete-catalog {
+    color: #fecdd3;
+}
+
+.btn-delete-catalog::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.25) 0%, rgba(244, 63, 94, 0.1) 100%);
+    z-index: -1;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.btn-delete-catalog::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.4s ease;
+}
+
+.btn-delete-catalog:hover {
+    color: #ffe4e6;
+    transform: translateY(-2px);
+}
+
+.btn-delete-catalog:hover::before {
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.4) 0%, rgba(244, 63, 94, 0.2) 100%);
+    box-shadow: 0 0 24px rgba(244, 63, 94, 0.35);
+}
+
+.btn-delete-catalog:hover::after {
+    left: 100%;
+}
+
 .btn-text {
     white-space: nowrap;
 }
@@ -1022,13 +1071,15 @@ const handleSearchKeydown = (event) => {
 
     .btn-warehouse-transfer .btn-text,
     .btn-consumable-intake .btn-text,
-    .btn-decommission .btn-text {
+    .btn-decommission .btn-text,
+    .btn-delete-catalog .btn-text {
         display: none;
     }
 
     .btn-warehouse-transfer,
     .btn-consumable-intake,
-    .btn-decommission {
+    .btn-decommission,
+    .btn-delete-catalog {
         padding: 10px 14px;
     }
 }

@@ -147,6 +147,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
+import Swal from 'sweetalert2';
 import WizardShell from './WizardShell.vue';
 import ItemListVirtual from './ItemListVirtual.vue';
 import OrderFilterBar from '@/components/OrderFilterBar.vue'
@@ -567,6 +568,8 @@ const close = () => { emit('close'); resetState(); };
 
 watch(() => props.open, (v) => { if (v) resetState(); });
 
+const darkSwal = { background: '#0f1423', color: '#e0e7ff', confirmButtonColor: '#5d8dff', cancelButtonColor: '#64748b' };
+
 /* Submit */
 const submit = async () => {
   submitError.value = '';
@@ -603,11 +606,30 @@ const submit = async () => {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || data.ok === false) throw new Error(data.msg || data.error || 'La transferencia falló');
+    await Swal.fire({
+      title: '¡Transferencia completada!',
+      text: `Se movieron ${totalUnits.value} unidades de ${desde} a ${hacia} exitosamente.`,
+      icon: 'success',
+      ...darkSwal
+    });
     emit('success');
     close();
   } catch (err) {
-    const detail = String(err?.message || 'No se pudo completar el movimiento entre bodegas');
-    submitError.value = `Movimiento entre bodegas no completado: ${detail}`;
+    console.error('[MovementWizard] Submit error:', err);
+    const raw = String(err?.message || '');
+    let userMsg = 'No se pudo completar el movimiento entre bodegas.';
+    if (raw.includes('stock') || raw.includes('existencias') || raw.includes('insuficiente')) userMsg = 'No hay suficiente stock en el almacén de origen para mover la cantidad solicitada.';
+    else if (raw.includes('Selecciona')) userMsg = 'Debes seleccionar al menos un artículo antes de continuar.';
+    else if (raw.includes('falló') || raw.includes('failed')) userMsg = 'El servidor no pudo procesar la transferencia. Verifica tu conexión e intenta de nuevo.';
+    else if (raw.includes('iguales')) userMsg = 'No puedes transferir al mismo almacén de origen.';
+    else if (raw) userMsg = raw;
+    submitError.value = '';
+    await Swal.fire({
+      title: 'Transferencia no completada',
+      text: userMsg,
+      icon: 'error',
+      ...darkSwal
+    });
   } finally {
     submitting.value = false;
   }

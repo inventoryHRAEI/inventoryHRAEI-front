@@ -1,3711 +1,1865 @@
 <template>
-    <Teleport to="body">
-        <Transition name="panel-fade">
-            <div v-if="visible" class="equipment-overlay" @click.self="closePanel">
-                <div class="equipment-panel">
-                    <!-- HEADER -->
-                    <div class="panel-header-simple">
-                        <div class="header-info">
-                            <h1>Historial del Equipo</h1>
-                            <p v-if="item" class="header-subtitle">
-                                <span class="header-inv">{{ getVal('inventario') }}</span>
-                                <span class="header-divider">|</span>
-                                <span class="header-eq">{{ getVal('equipo') }}</span>
-                            </p>
-                        </div>
-                        <div class="header-actions">
-                            <button 
-                                v-if="!isEditMode && canEditBiomedicalEquipment"
-                                @click="toggleEditMode" 
-                                class="btn-edit-mode"
-                                title="Editar información"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                                Editar
-                            </button>
-                            <template v-else-if="canEditBiomedicalEquipment">
-                                <button @click="toggleEditMode" class="btn-cancel">
-                                    Cancelar
-                                </button>
-                                <button @click="saveChanges" class="btn-save" :disabled="isSaving">
-                                    <svg v-if="!isSaving" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <polyline points="20 6 9 17 4 12"></polyline>
-                                    </svg>
-                                    {{ isSaving ? 'Guardando...' : 'Guardar' }}
-                                </button>
-                            </template>
-                            <button @click="closePanel" class="btn-close-simple">✕</button>
-                        </div>
-                    </div>
+  <Teleport to="body">
+    <Transition name="panel-slide">
+      <div v-if="visible" class="ehp-root" @click.self="closePanel">
+        <div class="ehp-container" :class="{ 'global-maint-active': isInMaintenance }">
 
-                    <!-- MAINTENANCE BANNER -->
-                    <div v-if="maintenanceFlow.in_progress || maintenanceFlow.last_completed" :class="['maintenance-banner', maintenanceFlow.in_progress ? 'in-progress' : 'completed']">
-                        <template v-if="maintenanceFlow.in_progress">
-                            <div class="banner-wrapper">
-                                <div class="banner-left">
-                                    <div class="status-indicator">
-                                         <div class="pulse-dot"></div>
-                                         <WrenchIcon class="status-icon" />
-                                     </div>
-                                </div>
-                                
-                                <div class="banner-main">
-                                    <div class="banner-header">
-                                        <h3 class="banner-title">Equipo en Mantenimiento</h3>
-                                        <span class="badge" :class="maintenanceFlow.in_progress.maintenance_type === 'MP' ? 'preventive' : 'corrective'">
-                                            <template v-if="maintenanceFlow.in_progress.maintenance_type === 'MP'"><CheckIcon class="badge-icon" /></template><template v-else><WrenchIcon class="badge-icon" /></template>
-                                             {{ maintenanceFlow.in_progress.maintenance_type === 'MP' ? 'Preventivo' : 'Correctivo' }}
-                                         </span>
-                                    </div>
-                                    
-                                    <div class="banner-meta">
-                                        <div class="meta-item">
-                                             <BuildingLibraryIcon class="meta-icon" />
-                                             <span class="meta-label">Empresa:</span>
-                                             <span class="meta-value">{{ maintenanceFlow.in_progress.started_by || 'Interno' }}</span>
-                                         </div>
-                                         <div class="meta-item">
-                                             <CalendarIcon class="meta-icon" />
-                                             <span class="meta-label">Desde:</span>
-                                             <span class="meta-value">{{ formatDateTime(maintenanceFlow.in_progress.started_at) }}</span>
-                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                        <template v-else>
-                            <div class="banner-wrapper">
-                                <div class="banner-left">
-                                     <div class="status-indicator completed">
-                                         <CheckIcon class="status-icon" />
-                                     </div>
-                                 </div>
-                                
-                                <div class="banner-main">
-                                    <div class="banner-header">
-                                        <h3 class="banner-title">Mantenimiento Completado</h3>
-                                    </div>
-                                    
-                                    <div class="banner-meta">
-                                        <div class="meta-item">
-                                             <CheckIcon class="meta-icon" />
-                                             <span class="meta-label">Tipo:</span>
-                                             <span class="meta-value">{{ maintenanceFlow.last_completed.maintenance_type === 'MP' ? 'Preventivo' : 'Correctivo' }}</span>
-                                         </div>
-                                         <div class="meta-item">
-                                             <ClockIcon class="meta-icon" />
-                                             <span class="meta-label">Finalizado:</span>
-                                             <span class="meta-value">{{ formatDateTime(maintenanceFlow.last_completed.finished_at) }}</span>
-                                         </div>
-                                         <div class="meta-item">
-                                             <UserCircleIcon class="meta-icon" />
-                                             <span class="meta-label">Por:</span>
-                                             <span class="meta-value">{{ maintenanceFlow.last_completed.finished_by || 'N/A' }}</span>
-                                         </div>
-                                         <div v-if="maintenanceFlow.last_completed.return_location" class="meta-item">
-                                             <MapPinIcon class="meta-icon" />
-                                             <span class="meta-label">Retornado a:</span>
-                                             <span class="meta-value">{{ maintenanceFlow.last_completed.return_location }}</span>
-                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </template>
-                    </div>
-
-                    <!-- TABS -->
-                    <div class="tabs-bar">
-                        <button @click="activeTab = 'info'" :class="{ active: activeTab === 'info' }">
-                            <InformationCircleIcon class="tab-icon" />
-                            INFORMACIÓN
-                        </button>
-                        <button @click="activeTab = 'images'" :class="{ active: activeTab === 'images' }">
-                            <PhotoIcon class="tab-icon" />
-                            IMÁGENES
-                        </button>
-                    </div>
-
-                    <!-- CONTENT -->
-                    <div class="panel-content">
-                        <!-- Info Tab -->
-                        <div v-show="activeTab === 'info'" class="tab-content info-tab-content">
-                            <div v-if="item" class="info-layout">
-                                <!-- Main Info Grid (Hardcoded Highlights) -->
-                                <div class="info-grid highlight-grid" :class="{ 'edit-mode': isEditMode }">
-                                    <div class="info-item">
-                                        <label>Inventario:</label>
-                                        <span v-if="!isEditMode">{{ getVal('inventario') }}</span>
-                                        <input v-else v-model="editedItem['No DE INVENTARIO']" type="text" class="edit-input" />
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Equipo:</label>
-                                        <span v-if="!isEditMode">{{ getVal('equipo') }}</span>
-                                        <input v-else v-model="editedItem['EQUIPO MEDICO']" type="text" class="edit-input" />
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Marca:</label>
-                                        <span v-if="!isEditMode">{{ getVal('marca') }}</span>
-                                        <input v-else v-model="editedItem['MARCA']" type="text" class="edit-input" />
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Modelo:</label>
-                                        <span v-if="!isEditMode">{{ getVal('modelo') }}</span>
-                                        <input v-else v-model="editedItem['MODELO']" type="text" class="edit-input" />
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Serie:</label>
-                                        <span v-if="!isEditMode">{{ getVal('serie') }}</span>
-                                        <input v-else v-model="editedItem['NUMERO DE SERIE']" type="text" class="edit-input" />
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Ubicación:</label>
-                                        <span v-if="!isEditMode">{{ getVal('ubicacion') }}</span>
-                                        <input v-else v-model="editedItem['UBICACION ESPECIFICA']" type="text" class="edit-input" />
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Especialidad:</label>
-                                        <span v-if="!isEditMode">{{ getVal('especialidad') }}</span>
-                                        <input v-else v-model="editedItem['ESPECIALIDAD AREA DEL HOSPITAL']" type="text" class="edit-input" />
-                                    </div>
-                                    <div class="info-item">
-                                        <label>Condición:</label>
-                                        <span v-if="!isEditMode">{{ getVal('condicion') }}</span>
-                                        <input v-else v-model="editedItem['CONDICIONES DEL EQUIPO']" type="text" class="edit-input" />
-                                    </div>
-                                </div>
-
-                                <!-- Detailed Info (Grouped by Category) -->
-                                <div class="detailed-info-sections">
-                                    <div v-for="(fields, category) in groupedEquipmentInfo" :key="category" class="info-category-group">
-                                        <h3 class="category-title" :style="{ borderLeftColor: categoryColor(category) }">
-                                            {{ category }}
-                                        </h3>
-                                        <div class="category-fields-grid">
-                                            <div v-for="field in fields" :key="field.label" class="detail-field" :class="{ 'editing': isEditMode }">
-                                                <span class="field-label">{{ field.label }}:</span>
-                                                <span v-if="!isEditMode" class="field-value">{{ field.value || '—' }}</span>
-                                                <input v-else v-model="editedItem[field.label]" type="text" class="edit-input-small" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Integrated Sections: History and Maintenance -->
-                                <div class="detailed-info-sections integrated-sections">
-                                    <div class="info-category-group">
-                                        <h3 class="category-title">Registros de Mantenimiento y Seguimiento</h3>
-                                        <div class="maintenance-details" style="padding-top: 10px;">
-                                            <div v-if="history && history.length > 0" class="maintenance-list">
-                                                <div v-for="maint in history" :key="maint.id" class="maintenance-item">
-                                                    <div class="item-header">
-                                                        <span class="item-date">{{ formatDateTime(maint.started_at) }}</span>
-                                                        <span class="badge" :class="maint.maintenance_type === 'MP' ? 'preventive' : 'corrective'">
-                                                            {{ maint.maintenance_type === 'MP' ? 'Preventivo' : 'Correctivo' }}
-                                                        </span>
-                                                        <span v-if="maint.status === 'completed'" class="badge functional">Completado</span>
-                                                        <span v-else class="badge warning">En Progreso</span>
-                                                    </div>
-                                                    <div class="item-details">
-                                                        <div class="detail-row">
-                                                            <span class="detail-label">Técnico:</span>
-                                                            <span class="detail-value">{{ maint.finished_by || maint.started_by || 'N/A' }}</span>
-                                                        </div>
-                                                        <div v-if="maint.finished_at" class="detail-row">
-                                                            <span class="detail-label">Finalizado:</span>
-                                                            <span class="detail-value">{{ formatDateTime(maint.finished_at) }}</span>
-                                                        </div>
-                                                        <div v-if="maint.observaciones" class="detail-row">
-                                                            <span class="detail-label">Notas:</span>
-                                                            <span class="detail-value">{{ maint.observaciones }}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div v-else class="empty-small">No hay registros de mantenimiento recientes</div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div v-if="historyMovimientos && historyMovimientos.length > 0" class="info-category-group">
-                                        <h3 class="category-title">Historial de Movimientos</h3>
-                                        <div class="history-list-compact">
-                                            <div v-for="(entry, idx) in historyMovimientos" :key="idx" class="history-entry-small">
-                                                <div class="entry-dot"></div>
-                                                <div class="entry-content">
-                                                    <div class="entry-header">
-                                                        <span class="entry-date">{{ entry['FECHA'] || entry['ULTIMO MP DD MM AAAA'] || 'S/F' }}</span>
-                                                        <span class="entry-type">{{ entry['TIPO DE MANTENIMIENTO'] || 'MOVIMIENTO' }}</span>
-                                                    </div>
-                                                    <div class="entry-desc">{{ entry['OBSERVACIONES'] || 'Sin observaciones' }}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-
-                        <!-- Images Tab -->
-                        <div v-show="activeTab === 'images'" class="tab-content">
-                            <div class="images-section">
-                                <!-- Upload section -->
-                                <div v-if="isEditMode" class="upload-section">
-                                    <h3 class="section-title">Agregar Imágenes</h3>
-                                    <div class="upload-area">
-                                        <input 
-                                            type="file" 
-                                            id="imageUpload" 
-                                            @change="handleImageUpload" 
-                                            accept="image/*" 
-                                            multiple 
-                                            class="file-input"
-                                        />
-                                        <label for="imageUpload" class="upload-label">
-                                            <PhotoIcon class="upload-icon" />
-                                            <span>Arrastra imágenes aquí o haz clic para seleccionar</span>
-                                        </label>
-                                    </div>
-                                    
-                                    <!-- Preview of uploaded images -->
-                                    <div v-if="uploadedImages.length > 0" class="uploaded-images">
-                                        <h4>Imágenes pendientes ({{ uploadedImages.length }})</h4>
-                                        <div class="images-grid">
-                                            <div v-for="(img, idx) in uploadedImages" :key="'upload-'+idx" class="image-preview">
-                                                <img :src="img.data" :alt="img.name" />
-                                                <button @click="removeUploadedImage(idx)" class="remove-btn">✕</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Existing images from item -->
-                                <div class="existing-images">
-                                    <h3 class="section-title">Imágenes del Equipo</h3>
-                                    <div v-if="equipmentImages && equipmentImages.length > 0" class="images-grid">
-                                        <div v-for="(img, idx) in equipmentImages" :key="'existing-'+idx" class="image-preview">
-                                            <!-- Handle both object and string formats -->
-                                            <img v-if="typeof img === 'string'" 
-                                                 :src="img.startsWith('/') ? img : '/api/uploads/' + img" 
-                                                 :alt="'Imagen ' + (idx + 1)"
-                                                 @error="handleImageError" />
-                                            <img v-else-if="img.path" 
-                                                 :src="img.path.startsWith('data:') ? img.path : (img.path.startsWith('/api') ? img.path : '/api' + (img.path.startsWith('/') ? img.path : '/' + img.path))" 
-                                                 :alt="img.originalName || 'Imagen ' + (idx + 1)"
-                                                 @error="handleImageError" />
-                                            <img v-else-if="img.filename"
-                                                 :src="'/api/uploads/' + img.filename"
-                                                 :alt="img.originalName || 'Imagen ' + (idx + 1)"
-                                                 @error="handleImageError" />
-                                            <img v-else 
-                                                 :src="img.url || img" 
-                                                 :alt="'Imagen ' + (idx + 1)"
-                                                 @error="handleImageError" />
-                                            <button v-if="isEditMode" @click="removeExistingImage(idx)" class="remove-btn">✕</button>
-                                        </div>
-                                    </div>
-                                    <div v-else class="no-images">
-                                        <PhotoIcon class="no-images-icon" />
-                                        <p>No hay imágenes registradas para este equipo</p>
-                                        <p v-if="!isEditMode" class="hint">Usa el botón "Editar" para agregar imágenes</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Maintenance Tab -->
-                        <div v-show="activeTab === 'maintenance'" class="tab-content">
-                            <div v-if="maintenanceFlow.last_completed || maintenanceFlow.in_progress" class="maintenance-details">
-                                <!-- Último Mantenimiento Completado -->
-                                <template v-if="maintenanceFlow.last_completed">
-                                    <div class="maintenance-section completed">
-                                        <div class="section-header">
-                                            <h3>Último Mantenimiento Completado</h3>
-                                            <span class="completion-indicator">
-                                                <CheckIcon class="completion-icon" />
-                                                COMPLETADO
-                                            </span>
-                                        </div>
-                                        <div class="maintenance-grid">
-                                            <div class="maint-card">
-                                                <div class="maint-label">Tipo de Mantenimiento</div>
-                                                <div class="maint-value">
-                                                    <span class="badge" :class="maintenanceFlow.last_completed.maintenance_type === 'MP' ? 'preventive' : 'corrective'">
-                                                        <template v-if="maintenanceFlow.last_completed.maintenance_type === 'MP'"><CheckIcon class="badge-icon" /></template>
-                                                        <template v-else><WrenchIcon class="badge-icon" /></template>
-                                                        {{ maintenanceFlow.last_completed.maintenance_type === 'MP' ? 'Preventivo' : 'Correctivo' }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="maint-card">
-                                                <div class="maint-label">Estado Final</div>
-                                                <div class="maint-value">
-                                                    <span class="badge" :class="maintenanceFlow.last_completed.result_status === 'functional' ? 'functional' : maintenanceFlow.last_completed.result_status === 'partial' ? 'warning' : 'non-functional'">
-                                                        <template v-if="maintenanceFlow.last_completed.result_status === 'functional'"><CheckCircleIcon class="badge-icon" /></template>
-                                                        <template v-else><ExclamationCircleIcon class="badge-icon" /></template>
-                                                        {{ maintenanceFlow.last_completed.result_status === 'functional' ? 'Funcional' : maintenanceFlow.last_completed.result_status === 'partial' ? 'Parcialmente Funcional' : 'No Funcional' }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="maint-card">
-                                                <div class="maint-label">Realizado Por</div>
-                                                <div class="maint-value">{{ maintenanceFlow.last_completed.finished_by || 'Sistema' }}</div>
-                                            </div>
-                                            <div class="maint-card">
-                                                <div class="maint-label">Fecha Inicio</div>
-                                                <div class="maint-value">{{ formatDateTime(maintenanceFlow.last_completed.started_at) }}</div>
-                                            </div>
-                                            <div class="maint-card">
-                                                <div class="maint-label">Fecha Finalización</div>
-                                                <div class="maint-value">{{ formatDateTime(maintenanceFlow.last_completed.finished_at) }}</div>
-                                            </div>
-                                            <div class="maint-card" v-if="calculateDuration(maintenanceFlow.last_completed)">
-                                                <div class="maint-label">Duración</div>
-                                                <div class="maint-value">{{ calculateDuration(maintenanceFlow.last_completed) }}</div>
-                                            </div>
-                                            <div class="maint-card" v-if="maintenanceFlow.last_completed.return_location">
-                                                <div class="maint-label">Retornado a</div>
-                                                <div class="maint-value">{{ maintenanceFlow.last_completed.return_location }}</div>
-                                            </div>
-                                            <div class="maint-card" v-if="maintenanceFlow.last_completed.provider_name">
-                                                <div class="maint-label">Proveedor</div>
-                                                <div class="maint-value">{{ maintenanceFlow.last_completed.provider_name }}</div>
-                                            </div>
-                                        </div>
-                                        <div v-if="maintenanceFlow.last_completed.observaciones" class="maint-observations">
-                                            <div class="obs-label">Observaciones</div>
-                                            <div class="obs-value">{{ maintenanceFlow.last_completed.observaciones }}</div>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <!-- Mantenimiento en Progreso -->
-                                <template v-if="maintenanceFlow.in_progress">
-                                    <div class="maintenance-section in-progress">
-                                        <div class="section-header">
-                                            <h3>Mantenimiento en Progreso</h3>
-                                            <span class="progress-indicator">
-                                                <div class="pulse-dot"></div>
-                                                EN PROGRESO
-                                            </span>
-                                        </div>
-                                        <div class="maintenance-grid">
-                                            <div class="maint-card">
-                                                <div class="maint-label">Tipo de Mantenimiento</div>
-                                                <div class="maint-value">
-                                                    <span class="badge" :class="maintenanceFlow.in_progress.maintenance_type === 'MP' ? 'preventive' : 'corrective'">
-                                                        <template v-if="maintenanceFlow.in_progress.maintenance_type === 'MP'"><CheckIcon class="badge-icon" /></template>
-                                                        <template v-else><WrenchIcon class="badge-icon" /></template>
-                                                        {{ maintenanceFlow.in_progress.maintenance_type === 'MP' ? 'Preventivo' : 'Correctivo' }}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div class="maint-card">
-                                                <div class="maint-label">Iniciado Por</div>
-                                                <div class="maint-value">{{ maintenanceFlow.in_progress.started_by || 'Sistema' }}</div>
-                                            </div>
-                                            <div class="maint-card">
-                                                <div class="maint-label">Fecha Inicio</div>
-                                                <div class="maint-value">{{ formatDateTime(maintenanceFlow.in_progress.started_at) }}</div>
-                                            </div>
-                                            <div class="maint-card" v-if="calculateElapsedTime(maintenanceFlow.in_progress)">
-                                                <div class="maint-label">Tiempo Transcurrido</div>
-                                                <div class="maint-value">{{ calculateElapsedTime(maintenanceFlow.in_progress) }}</div>
-                                            </div>
-                                        </div>
-                                        <div v-if="maintenanceFlow.in_progress.start_notes" class="maint-observations">
-                                            <div class="obs-label">Notas Iniciales</div>
-                                            <div class="obs-value">{{ maintenanceFlow.in_progress.start_notes }}</div>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <!-- Historial de Mantenimientos -->
-                                <div v-if="maintenanceFlow.history && maintenanceFlow.history.length > 0" class="maintenance-section history">
-                                    <div class="section-header">
-                                        <h3>Historial de Mantenimientos ({{ maintenanceFlow.history.length }})</h3>
-                                    </div>
-                                    <div class="maintenance-list">
-                                        <div v-for="(maint, idx) in maintenanceFlow.history" :key="idx" class="maintenance-item">
-                                            <div class="item-header">
-                                                <span class="item-date">{{ formatDate(maint.started_at) }}</span>
-                                                <span class="badge" :class="maint.maintenance_type === 'MP' ? 'preventive' : 'corrective'">
-                                                    {{ maint.maintenance_type === 'MP' ? 'Preventivo' : 'Correctivo' }}
-                                                </span>
-                                                <span v-if="maint.status === 'completed'" class="badge functional">Completado</span>
-                                                <span v-else class="badge warning">En Progreso</span>
-                                            </div>
-                                            <div class="item-details">
-                                                <div class="detail-row">
-                                                    <span class="detail-label">Técnico:</span>
-                                                    <span class="detail-value">{{ maint.finished_by || maint.started_by || 'N/A' }}</span>
-                                                </div>
-                                                <div v-if="maint.finished_at" class="detail-row">
-                                                    <span class="detail-label">Finalizado:</span>
-                                                    <span class="detail-value">{{ formatDateTime(maint.finished_at) }}</span>
-                                                </div>
-                                                <div v-if="maint.result_status" class="detail-row">
-                                                    <span class="detail-label">Resultado:</span>
-                                                    <span class="detail-value">{{ maint.result_status === 'functional' ? 'Funcional' : 'No Funcional' }}</span>
-                                                </div>
-                                                <div v-if="maint.observaciones" class="detail-row">
-                                                    <span class="detail-label">Notas:</span>
-                                                    <span class="detail-value">{{ maint.observaciones }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div v-else class="empty">No hay registros de mantenimiento para este equipo</div>
-                        </div>
-                    </div>
-
-                    <!-- FOOTER -->
-                    <!-- DEBUG: Mostrar estado de mantenimiento para depuración (solo si prop `showDebug` = true) -->
-                    <div v-if="showDebug" style="background: #1a1a2e; color: #00ff00; padding: 10px; font-family: monospace; font-size: 12px; border-bottom: 1px solid #333;">
-                        <div>🔍 DEBUG: maintenanceFlow.in_progress = {{ maintenanceFlow.in_progress ? 'EXISTS (ID: ' + maintenanceFlow.in_progress.id + ')' : 'NULL' }}</div>
-                        <div>📊 Estado: {{ maintenanceFlow }}</div>
-                    </div>
-                    <div class="panel-footer-simple">
-                        <button v-if="!maintenanceFlow.in_progress && canManageBiomedical" @click="openMaintenanceWizard" class="btn-simple start">
-                            <VueIcon name="fa-play-circle" class="footer-icon" />
-                            Iniciar Mantenimiento
-                        </button>
-                        <button v-else-if="maintenanceFlow.in_progress && canManageBiomedical" @click="openMaintenanceWizard" class="btn-simple finish">
-                            <VueIcon name="fa-check-circle" class="footer-icon" />
-                            Finalizar Mantenimiento
-                        </button>
-                        <button @click="previewPdf" class="btn-simple">
-                            <EyeIcon class="footer-icon" />
-                            Vista Previa
-                        </button>
-                        <button @click="downloadPdf" class="btn-simple">
-                            <ArrowDownTrayIcon class="footer-icon" />
-                            Descargar
-                        </button>
-                        <button @click="closePanel" class="btn-simple close">
-                            <XMarkIcon class="footer-icon" />
-                            Cerrar
-                        </button>
-                    </div>
+          <aside class="ehp-sidebar">
+            <div class="sidebar-identity-group">
+              <div class="sidebar-header">
+                <h1 class="eq-name">{{ normalizedItem.name }}</h1>
+                <div class="id-badge">
+                  <span class="id-label">ID INVENTARIO</span>
+                  <span class="id-value">{{ normalizedItem.inventoryNo }}</span>
                 </div>
-            </div>
-        </Transition>
+              </div>
 
-        <!-- PDF Preview Modal -->
-        <Transition name="panel-fade">
-            <div v-if="pdfPreviewVisible" class="pdf-modal-overlay" @click.self="closePdfPreview">
-                <div class="pdf-modal-container">
-                    <div class="pdf-modal-header">
-                        <h3>Vista Previa del Expediente</h3>
-                        <button @click="closePdfPreview" class="btn-close">✕</button>
-                    </div>
-                    <div class="pdf-modal-content">
-                        <BlobPdfViewer v-if="pdfDataUrl" :src="pdfDataUrl" />
-                        <div v-else class="pdf-loading">Generando PDF...</div>
-                    </div>
+              <div class="sidebar-metadata">
+                <div v-if="isInMaintenance" class="sidebar-maint-badge">
+                  <ZapIcon :size="14" class="zap-pulse" />
+                  <span>INTERVENCIÓN ACTIVA</span>
                 </div>
-            </div>
-        </Transition>
-
-        <!-- Maintenance Wizard -->
-        <MaintenanceWizardV2 v-model:visible="wizardVisible" :inventoryNo="item ? item['No DE INVENTARIO'] : ''"
-            :equipmentName="item ? item['EQUIPO MEDICO'] : ''"
-            :currentStatus="maintenanceFlow.in_progress ? { ...maintenanceFlow.in_progress, state: 'in_progress' } : null"
-            @close="wizardVisible = false" @saved="onMaintenanceSaved"
-            @maintenance-started="onMaintenanceSaved" @maintenance-finished="onMaintenanceSaved" />
-
-        <!-- PDF Preview Modal -->
-        <div v-if="pdfPreviewVisible" class="pdf-preview-overlay" @click.self="closePdfPreview">
-            <div class="pdf-preview-content">
-                <div class="pdf-header">
-                    <h3>Vista Previa del Expediente</h3>
-                    <button class="close-btn" @click="closePdfPreview">✕</button>
+                <div class="meta-box">
+                  <span class="m-label">Marca / Modelo</span>
+                  <span class="m-value">{{ normalizedItem.brand || '—' }} {{ normalizedItem.model || '' }}</span>
                 </div>
-                <BlobPdfViewer v-if="pdfDataUrl" :src="pdfDataUrl" />
-                <div v-else class="pdf-loading">Generando PDF...</div>
+                <div class="meta-box">
+                  <span class="m-label">Serie No.</span>
+                  <span class="m-value font-mono">{{ normalizedItem.serialNo || '—' }}</span>
+                </div>
+              </div>
             </div>
+
+            <div class="sidebar-vitals">
+              <div class="vital-card" :class="statusColorClass">
+                <div class="vital-icon">
+                  <ActivityIcon :size="16" aria-hidden="true" />
+                </div>
+                <div class="vital-data">
+                  <span class="v-label">Estado operativo</span>
+                  <span class="v-value">{{ normalizedItem.condition }}</span>
+                </div>
+              </div>
+              <div class="vital-card location">
+                <div class="vital-icon location">
+                  <MapPinIcon :size="16" aria-hidden="true" />
+                </div>
+                <div class="vital-data">
+                  <span class="v-label">Ubicación actual</span>
+                  <span class="v-value">{{ normalizedItem.area || 'No asignada' }}</span>
+                </div>
+              </div>
+            </div>
+
+            <nav class="sidebar-nav" role="navigation" aria-label="Secciones del panel">
+              <button
+                v-for="item in navItems"
+                :key="item.key"
+                :class="{ active: activeSection === item.key }"
+                @click="activeSection = item.key"
+                :aria-current="activeSection === item.key ? 'page' : undefined"
+              >
+                <component :is="item.icon" :size="18" aria-hidden="true" />
+                <span>{{ item.label }}</span>
+              </button>
+            </nav>
+
+            <div class="sidebar-actions">
+              <button
+                @click="openMaintenanceWizard"
+                class="btn-primary"
+                :class="{ 'btn-maint-pulse': isInMaintenance }"
+                :disabled="!canManageBiomedical"
+              >
+                <component :is="isInMaintenance ? 'FileCheckIcon' : 'ZapIcon'" :size="16" aria-hidden="true" />
+                <span>{{ isInMaintenance ? 'Finalizar mantenimiento' : 'Gestionar mantenimiento' }}</span>
+              </button>
+              <div class="tool-group">
+                <button @click="downloadPdf" class="btn-tool" title="Exportar reporte">
+                  <DownloadIcon :size="16" aria-hidden="true" />
+                </button>
+                <button @click="previewPdf" class="btn-tool" title="Vista previa PDF">
+                  <EyeIcon :size="16" aria-hidden="true" />
+                </button>
+              </div>
+              <button class="btn-close-panel" @click="closePanel">
+                <LogOutIcon :size="15" aria-hidden="true" />
+                <span>Salir del panel</span>
+              </button>
+            </div>
+
+          </aside>
+
+          <main class="ehp-main">
+
+            <header class="main-header">
+              <nav class="breadcrumb" aria-label="Ruta de navegación">
+                <span class="bc-item"><HomeIcon :size="13" aria-hidden="true" /><span>Inicio</span></span>
+                <ChevronRightIcon :size="13" class="bc-sep" aria-hidden="true" />
+                <span class="bc-item">Inventario</span>
+                <ChevronRightIcon :size="13" class="bc-sep" aria-hidden="true" />
+                <span class="bc-item bc-active">{{ activeSectionName }}</span>
+              </nav>
+
+              <div class="header-actions">
+                <template v-if="isEditMode">
+                  <button @click="toggleEditMode" class="btn-ghost">Descartar</button>
+                  <button @click="saveChanges" class="btn-save" :disabled="isSaving">
+                    {{ isSaving ? 'Guardando...' : 'Guardar cambios' }}
+                  </button>
+                </template>
+                <button
+                  v-else-if="canEditBiomedicalEquipment"
+                  @click="toggleEditMode"
+                  class="btn-edit"
+                >
+                  <Edit3Icon :size="14" aria-hidden="true" />
+                  <span>Modificar registro</span>
+                </button>
+              </div>
+            </header>
+
+            <div class="main-content">
+
+              <section v-if="activeSection === 'dashboard'" class="section-dashboard-elite">
+                <div class="elite-grid">
+                  <!-- Bloque 1: Centro de Control de Salud (2x2) -->
+                  <div class="elite-card health-center" :class="statusColorClass">
+                    <div class="ec-header">
+                      <ZapIcon v-if="isInMaintenance" :size="16" class="text-maint" />
+                      <ShieldCheckIcon v-else-if="reactionLevel === 'Óptimo'" :size="16" class="text-success" />
+                      <AlertCircleIcon v-else-if="reactionLevel === 'Preventivo'" :size="16" class="text-warning" />
+                      <ThermometerIcon v-else :size="16" class="text-danger" />
+                      <span class="ec-tag">{{ isInMaintenance ? 'Intervención Activa' : 'Estado Operativo' }}</span>
+                    </div>
+                    <div class="health-display">
+                      <div class="health-gauge-elite">
+                        <svg viewBox="0 0 100 100">
+                          <circle class="e-track" cx="50" cy="50" r="44" />
+                          <circle class="e-fill" cx="50" cy="50" r="44" :style="{ strokeDashoffset: gaugeOffset }" />
+                        </svg>
+                        <div class="e-content">
+                          <span class="e-num">{{ gaugePercentage }}%</span>
+                        </div>
+                      </div>
+                      <div class="health-info">
+                        <h2 class="health-title-elite">{{ healthTitle }}</h2>
+                        <div class="health-emoji-wrap">
+                          <Transition name="emoji-pop" mode="out-in">
+                            <lottie-player
+                              :key="activeEmojiUrl"
+                              :src="activeEmojiUrl"
+                              background="transparent"
+                              speed="1"
+                              class="lottie-elite"
+                              loop
+                              autoplay
+                            ></lottie-player>
+                          </Transition>
+                        </div>
+                      </div>
+                    </div>
+                    <p class="health-desc-elite">{{ healthMessage }}</p>
+                  </div>
+
+                  <!-- Bloque 2: Distribución Técnica (1x1) -->
+                  <div class="elite-card stats-mini">
+                    <span class="ec-tag">Distribución</span>
+                    <div class="mini-stats-grid">
+                      <div class="m-stat">
+                        <div class="m-label">MP</div>
+                        <div class="m-bar"><div class="m-fill success" :style="{ width: maintPercentage + '%' }"></div></div>
+                        <div class="m-val">{{ countMP }}</div>
+                      </div>
+                      <div class="m-stat">
+                        <div class="m-label">MC</div>
+                        <div class="m-bar"><div class="m-fill danger" :style="{ width: (100 - maintPercentage) + '%' }"></div></div>
+                        <div class="m-val">{{ countMC }}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Bloque 3: Métrica Total (1x1) -->
+                  <div class="elite-card count-mini">
+                    <span class="ec-tag">Total Eventos</span>
+                    <div class="big-count">{{ history.length }}</div>
+                    <div class="count-label">Servicios registrados</div>
+                  </div>
+
+                  <!-- Bloque 4: Registro Clínico (1x1) -->
+                  <div class="elite-card meta-mini">
+                    <span class="ec-tag">Última Inspección</span>
+                    <div class="meta-val">{{ formatDateShort(maintenanceFlow.last_completed?.finished_at) || '---' }}</div>
+                    <div class="meta-label">Finalizada con éxito</div>
+                  </div>
+
+                  <!-- Bloque 5: Responsable (1x1) -->
+                  <div class="elite-card meta-mini">
+                    <span class="ec-tag">Responsable</span>
+                    <div class="meta-val text-truncate">{{ maintenanceFlow.last_completed?.finished_by || 'Hospital' }}</div>
+                    <div class="meta-label">Área de ingeniería</div>
+                  </div>
+
+                  <!-- Bloque 6: Accesos Directos Rápidos (2x1) -->
+                  <div class="elite-card quick-actions-card">
+                    <div class="ec-header">
+                      <ZapIcon :size="14" />
+                      <span class="ec-tag">Accesos Directos Rápidos</span>
+                    </div>
+                    <div class="qa-grid">
+                      <button @click="openMaintenanceWizard" class="qa-btn warning">
+                        <AlertCircleIcon :size="16" />
+                        <span>Reportar Falla</span>
+                      </button>
+                      <button @click="openMaintenanceWizard" class="qa-btn" :class="isInMaintenance ? 'primary-glow' : 'success'">
+                        <component :is="isInMaintenance ? 'FileCheckIcon' : 'WrenchIcon'" :size="16" />
+                        <span>{{ isInMaintenance ? 'Finalizar Mantenimiento' : 'Solicitar Preventivo' }}</span>
+                      </button>
+                      <button @click="downloadTechnicalSheet" class="qa-btn clinical">
+                        <FileTextIcon :size="16" />
+                        <span>Ficha Técnica</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Bloque 7: Línea de Tiempo (Vertical) -->
+                  <div class="elite-card timeline-card">
+                    <div class="ec-header">
+                      <ClockIcon :size="14" />
+                      <span class="ec-tag">Eventos Recientes</span>
+                    </div>
+                    <div v-if="history.length > 0" class="elite-feed">
+                      <div v-for="h in history.slice(0, 3)" :key="h.id || h.fecha" class="ef-item">
+                        <div class="ef-icon" :class="(h.maintenance_type || h.tipoMantenimiento) === 'MP' ? 'mp' : 'mc'">
+                          <ShieldCheckIcon v-if="(h.maintenance_type || h.tipoMantenimiento) === 'MP'" :size="12" />
+                          <WrenchIcon v-else :size="12" />
+                        </div>
+                        <div class="ef-info">
+                          <span class="ef-title">{{ (h.maintenance_type || h.tipoMantenimiento) === 'MP' ? 'Preventivo' : 'Correctivo' }}</span>
+                          <span class="ef-date">{{ formatDateShort(h.started_at || h.fecha || h.ultimoMP) }}</span>
+                        </div>
+                        <ChevronRightIcon :size="14" class="ef-chev" />
+                      </div>
+                    </div>
+                    <div v-else class="elite-empty">
+                      <span>Sin registros</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Transition name="slide-up">
+                  <div v-if="isInMaintenance" class="maintenance-intervention-banner" role="alert">
+                    <div class="mib-content">
+                      <div class="mib-icon-pulse">
+                        <ZapIcon :size="20" />
+                      </div>
+                      <div class="mib-text">
+                        <div class="mib-title">Intervención en curso</div>
+                        <div class="mib-desc">
+                          El equipo está siendo atendido por <strong>{{ maintenanceProvider }}</strong> desde el {{ maintenanceStartDate }}
+                        </div>
+                      </div>
+                    </div>
+                    <button @click="openMaintenanceWizard" class="mib-action-btn">
+                      <span>Gestionar</span>
+                      <ChevronRightIcon :size="14" />
+                    </button>
+                  </div>
+                </Transition>
+              </section>
+
+              <section v-if="activeSection === 'specs'" class="section-specs-elite">
+                <div class="specs-toolbar">
+                  <div class="elite-search">
+                    <SearchIcon :size="16" />
+                    <input v-model="specSearch" placeholder="Filtrar atributos técnicos..." />
+                  </div>
+                  <button @click="downloadTechnicalSheet" class="btn-tool-elite">
+                    <DownloadIcon :size="14" />
+                    <span>Exportar Ficha</span>
+                  </button>
+                </div>
+
+                <div class="specs-clinical-grid">
+                  <div v-for="(fields, category) in filteredGroupedInfo" :key="category" class="spec-category-card">
+                    <header class="scc-header">
+                      <span class="scc-bar" :style="{ background: getCategoryColor(category) }"></span>
+                      <h3 class="scc-title">{{ category }}</h3>
+                    </header>
+                    <div class="scc-body">
+                      <div v-for="field in fields" :key="field.label" class="scc-row">
+                        <span class="scc-label">{{ field.label }}</span>
+                        <div class="scc-value-wrap">
+                          <span v-if="!isEditMode" class="scc-value" :class="{ 'is-fallback': field.value.includes('No registrado') || field.value.includes('Dato no') }">
+                            {{ field.value }}
+                          </span>
+                          <input v-else v-model="editedItem[field.label]" class="scc-input" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- 5. Seguimiento Técnico (Mantenimientos) -->
+                  <div class="spec-category-card tracking-category-card">
+                    <header class="scc-header">
+                      <span class="scc-bar" style="background: #2563eb"></span>
+                      <h3 class="scc-title">5. Seguimiento Técnico (Historial)</h3>
+                    </header>
+                    <div v-if="Object.keys(monthlyChronologicalHistory).length > 0" class="tracking-mini-list">
+                      <div v-for="(events, month) in monthlyChronologicalHistory" :key="month" class="month-tracking-item">
+                        <div class="mti-header">{{ month }}</div>
+                        <div v-for="ev in events" :key="ev.id" class="mti-event">
+                          <div class="mti-badge" :class="ev.maintenance_type === 'MP' ? 'mp' : 'mc'">
+                            {{ ev.maintenance_type }}
+                          </div>
+                          <div class="mti-info">
+                            <span class="mti-folio">#{{ ev.folio }}</span>
+                            <span class="mti-date">{{ formatDateShort(ev.started_at) }}</span>
+                          </div>
+                          <div class="mti-hours">{{ calculateDuration(ev) }}</div>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="elite-empty">Sin mantenimientos registrados</div>
+                  </div>
+
+                  <!-- 6. Etiquetas y Códigos de Barras -->
+                  <div class="spec-category-card barcode-labels-card">
+                    <header class="scc-header">
+                      <span class="scc-bar" style="background: #000"></span>
+                      <h3 class="scc-title">6. Etiquetas y Códigos de Barras</h3>
+                    </header>
+                    <div class="barcode-labels-grid">
+                      <div class="label-box">
+                        <div class="label-header">HRAEI - ACTIVO BIOMÉDICO</div>
+                        <svg class="elite-barcode-canvas"></svg>
+                        <div class="label-footer">CORTE AQUÍ</div>
+                      </div>
+                      <div class="label-box">
+                        <div class="label-header">HRAEI - ACTIVO BIOMÉDICO</div>
+                        <svg class="elite-barcode-canvas"></svg>
+                        <div class="label-footer">CORTE AQUÍ</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="Object.keys(filteredGroupedInfo).length === 0" class="empty-elite">
+                  <SearchXIcon :size="32" />
+                  <p>Sin coincidencia en la ficha técnica</p>
+                </div>
+              </section>
+
+              <section v-if="activeSection === 'history'" class="section-history-elite">
+                <div class="history-controls-elite">
+                  <span class="history-count-elite"><strong>5. Seguimiento Técnico:</strong> {{ history.length }} registros documentados</span>
+                </div>
+                
+                <div v-if="Object.keys(monthlyChronologicalHistory).length > 0" class="monthly-tracking-rail">
+                  <div v-for="(events, month) in monthlyChronologicalHistory" :key="month" class="month-block">
+                    <div class="month-header-elite">{{ month }}</div>
+                    <div class="clinical-timeline-full">
+                      <div v-for="(event, idx) in events" :key="idx" class="ctf-node">
+                        <div class="ctf-aside">
+                          <span class="ctf-date">{{ formatDateShort(event.started_at) }}</span>
+                          <span class="ctf-time">{{ formatTime(event.started_at) }}</span>
+                        </div>
+                        <div class="ctf-rail">
+                          <div class="ctf-dot" :class="{
+                            'mp': event.maintenance_type === 'MP',
+                            'mc': event.maintenance_type === 'MC',
+                            'pending': event.maintenance_type === 'MC-PENDIENTE'
+                          }"></div>
+                          <div class="ctf-line"></div>
+                        </div>
+                        <div class="ctf-card" :class="{
+                            'type-mp': event.maintenance_type === 'MP',
+                            'type-mc': event.maintenance_type === 'MC',
+                            'type-pending': event.maintenance_type === 'MC-PENDIENTE'
+                          }">
+                          <div class="ctf-header">
+                            <span class="ctf-badge" :class="{
+                              'mp': event.maintenance_type === 'MP',
+                              'mc': event.maintenance_type === 'MC',
+                              'pending': event.maintenance_type === 'MC-PENDIENTE'
+                            }">
+                              {{ event.maintenance_type === 'MP' ? 'Preventivo' : (event.maintenance_type === 'MC-PENDIENTE' ? 'Correctivo Pendiente' : 'Correctivo') }}
+                            </span>
+                            <span class="ctf-folio">Folio: #{{ event.folio || 'N/A' }}</span>
+                          </div>
+                          <div class="ctf-body">
+                            <div v-if="event.diagnostico" class="ctf-section">
+                              <span class="ctf-section-label">Diagnóstico/Hallazgos:</span>
+                              <p class="ctf-desc">{{ event.diagnostico }}</p>
+                            </div>
+                            <div v-if="event.causa" class="ctf-section">
+                              <span class="ctf-section-label">Causa Raíz:</span>
+                              <p class="ctf-desc">{{ event.causa }}</p>
+                            </div>
+                            <div v-if="event.observaciones" class="ctf-section">
+                              <span class="ctf-section-label">Observaciones Técnicas:</span>
+                              <p class="ctf-desc">{{ event.observaciones }}</p>
+                            </div>
+
+                            <div class="ctf-tech-tags">
+                              <span v-if="event.routine_preventive" class="tech-tag">Manto. Rutinario</span>
+                              <span v-if="event.simulator_tests" class="tech-tag">Pruebas Simulador</span>
+                              <span v-if="event.analyzer_tests" class="tech-tag">Pruebas Analizador</span>
+                            </div>
+
+                            <!-- Metadata Grid: Execution Details -->
+                            <div class="ctf-meta-compact-grid">
+                              <div class="ctf-meta-item main-item">
+                                <VueIcon name="fa-user-check" :size="12" />
+                                <span><strong>Responsables:</strong> Inició: {{ event.started_by || 'Sistema' }} | Técnico: {{ event.maintenance_responsible || 'Sin especificar' }} | Cerró: {{ event.finished_by || '—' }}</span>
+                              </div>
+                              
+                              <div class="ctf-meta-item">
+                                <VueIcon :name="event.provider_type === 'external' ? 'fa-industry' : 'fa-building'" :size="12" />
+                                <span><strong>Proveedor:</strong> {{ event.provider_type === 'external' ? 'Externo' : 'Interno' }} ({{ event.provider_company || event.internal_department || 'No especificado' }})</span>
+                              </div>
+
+                              <div class="ctf-meta-item">
+                                <VueIcon :name="event.has_warranty ? 'bi-patch-check-fill' : 'bi-patch-exclamation'" :size="12" />
+                                <span><strong>Garantía:</strong> {{ event.has_warranty ? 'Vigente' : 'Sin Garantía' }}{{ event.warranty_end_date ? ` (${event.warranty_end_date})` : '' }}</span>
+                              </div>
+
+                              <div class="ctf-meta-item">
+                                <VueIcon name="fa-file-contract" :size="12" />
+                                <span><strong>Contrato:</strong> {{ event.maintenance_contract === true ? 'MP Preventivo' : (event.maintenance_contract === false ? 'MC Correctivo' : 'Sin Contrato') }}</span>
+                              </div>
+
+                              <div class="ctf-meta-item">
+                                <ClockIcon :size="12" />
+                                <span><strong>Tiempo de Labor:</strong> {{ event.maintenance_hours || '0' }} h | Total: {{ calculateDuration(event) }}</span>
+                              </div>
+                            </div>
+
+                            <!-- Metadata Grid: Closure & Location -->
+                            <div class="ctf-meta-compact-grid secondary" style="margin-top: 8px;">
+                              <div class="ctf-meta-item">
+                                <MapPinIcon :size="12" />
+                                <span><strong>Logística:</strong> Retorno: {{ event.returnLocation || 'Sin especificar' }} | Área Final: {{ event.finalArea || 'Igual a retorno' }}</span>
+                              </div>
+                              
+                              <div class="ctf-meta-item checks-inline">
+                                <VueIcon name="fa-tasks" :size="12" />
+                                <strong>Verificaciones:</strong>
+                                <span :class="{ active: event.routine_preventive }">Rutinario</span> |
+                                <span :class="{ active: event.simulator_tests }">Simulador</span> |
+                                <span :class="{ active: event.analyzer_tests }">Analizador</span>
+                              </div>
+                            </div>
+                            
+                            <div v-if="event.observaciones_iniciales" class="ctf-notes-mini">
+                              <strong>Reporte Inicial:</strong> {{ event.observaciones_iniciales }}
+                            </div>
+                            
+                            <div v-if="event.causa" class="ctf-notes-mini warning">
+                              <strong>Causa de Falla:</strong> {{ event.causa }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div v-else class="empty-elite">
+                  <ClipboardListIcon :size="32" />
+                  <p>Sin historial de mantenimientos registrados</p>
+                </div>
+              </section>
+
+              <section v-if="activeSection === 'gallery'" class="section-gallery-elite">
+                <div class="gallery-header-elite">
+                  <p class="gallery-info-elite">Evidencia fotográfica del activo biomédico</p>
+                  <label v-if="isEditMode" class="btn-primary-small" for="gal-up-elite">
+                    <PlusIcon :size="14" />
+                    <span>Anexar evidencia</span>
+                    <input type="file" id="gal-up-elite" @change="handleImageUpload" multiple class="sr-only" />
+                  </label>
+                </div>
+                <div v-if="equipmentImages.length > 0" class="gallery-elite-grid">
+                  <div v-for="(img, idx) in equipmentImages" :key="idx" class="ge-item">
+                    <img :src="getImageSrc(img)" alt="Evidencia" />
+                    <div class="ge-overlay">
+                      <button @click="previewImage(img)" class="ge-btn"><MaximizeIcon :size="16" /></button>
+                      <button v-if="isEditMode" @click="removeExistingImage(idx)" class="ge-btn danger"><XIcon :size="16" /></button>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="empty-elite">
+                  <CameraIcon :size="32" />
+                  <p>Sin registros multimedia</p>
+                </div>
+              </section>
+
+              <section v-if="activeSection === 'docs'" class="section-docs-elite">
+                <div class="docs-clinical-list">
+                  <div class="doc-elite-item" @click="downloadTechnicalSheet">
+                    <div class="dei-icon pdf"><FileTextIcon :size="18" /></div>
+                    <div class="dei-info">
+                      <span class="dei-title">Ficha Técnica Oficial</span>
+                      <span class="dei-desc">Documento generado por el sistema HRAEI</span>
+                    </div>
+                    <DownloadIcon :size="16" class="dei-action" />
+                  </div>
+                  <!-- Placeholder para futuros documentos -->
+                  <div class="doc-elite-item disabled">
+                    <div class="dei-icon manual"><ShieldIcon :size="18" /></div>
+                    <div class="dei-info">
+                      <span class="dei-title">Manual de Usuario</span>
+                      <span class="dei-desc">Archivo del fabricante (No disponible)</span>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+            </div>
+          </main>
         </div>
-    </Teleport>
+      </div>
+    </Transition>
+
+    <MaintenanceWizardV2
+      v-model:visible="wizardVisible"
+      :inventoryNo="normalizedItem.inventoryNo"
+      :equipmentName="normalizedItem.name"
+      :currentStatus="maintenanceFlow.in_progress ? { ...maintenanceFlow.in_progress, state: 'in_progress' } : null"
+      @close="wizardVisible = false"
+      @saved="onMaintenanceSaved"
+    />
+
+    <Transition name="fade">
+      <div v-if="pdfPreviewVisible" class="pdf-overlay" @click.self="closePdfPreview">
+        <div class="pdf-modal" role="dialog" aria-modal="true" aria-labelledby="pdf-modal-title">
+          <header class="pdf-modal-header">
+            <h3 id="pdf-modal-title">Ficha Técnica del Equipo</h3>
+            <button @click="closePdfPreview" class="pdf-close-btn" aria-label="Cerrar vista previa">
+              <XIcon :size="18" aria-hidden="true" />
+            </button>
+          </header>
+          <div class="pdf-body">
+            <div v-if="!pdfDataUrl" class="pdf-loading-zone">
+              <div class="pdf-progress-card">
+                <div class="clinical-loading-icon">
+                  <FileTextIcon :size="64" class="base-icon" />
+                  <div class="scan-bar"></div>
+                </div>
+                <h4 class="loading-title">Generando Expediente Clínico</h4>
+                <p class="loading-desc">Compilando historial, imágenes y normativas técnicas...</p>
+                <div class="pdf-progress-track">
+                  <div class="pdf-progress-fill" :style="{ width: pdfProgress + '%' }"></div>
+                </div>
+                <span class="pdf-progress-num">{{ Math.round(pdfProgress) }}%</span>
+              </div>
+            </div>
+            <BlobPdfViewer v-if="pdfDataUrl" :src="pdfDataUrl" :blob="pdfBlob" />
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue';
-import Swal from 'sweetalert2';
-import VueIcon from '@kalimahapps/vue-icons/VueIcon';
-// Icons from Heroicons
-import { WrenchIcon, CheckIcon, ClockIcon, BuildingLibraryIcon, CalendarIcon, MapPinIcon, UserCircleIcon, InformationCircleIcon, ListBulletIcon, EyeIcon, ArrowDownTrayIcon, XMarkIcon, DocumentIcon, CheckCircleIcon, ExclamationCircleIcon, PhotoIcon } from '@heroicons/vue/24/outline';
+import JsBarcode from 'jsbarcode';
+import { ref, watch, computed, nextTick, onBeforeUnmount, onMounted } from 'vue';
+import '@lottiefiles/lottie-player';
+import { normalizeEquipment } from '@/utils/equipmentNormalizer.js';
 import { getEquipmentHistory } from '@/services/historialService.js';
 import { generateEquipmentPDF } from '@/services/pdfService.js';
 import { updateItem, getItemDetails } from '@/services/updateItemService.js';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import DOMPurify from 'dompurify';
-import JsBarcode from 'jsbarcode';
-import { fetchStatusHistory, getMaintenanceFlowStatus } from '@/services/equipmentStatusService.js';
+import { getMaintenanceFlowStatus } from '@/services/equipmentStatusService.js';
+import { usePermissions } from '@/composables/usePermissions.js';
 import MaintenanceWizardV2 from './MaintenanceWizardV2.vue';
 import BlobPdfViewer from './BlobPdfViewer.vue';
-import { usePermissions } from '@/composables/usePermissions.js';
-// Icon component for small SVGs
-// import encabezado image directly
-import encabezadoImg from '@/images/encabezado.jpeg?inline';
+import Swal from 'sweetalert2';
+import gsap from 'gsap';
 
-const props = defineProps({
-    visible: { type: Boolean, default: false },
-    item: { type: Object, default: null },
-    // Mostrar información de depuración en pantalla (desactivado por defecto)
-    showDebug: { type: Boolean, default: false }
-});
+import {
+  LayoutDashboardIcon, FileTextIcon, HistoryIcon, ImageIcon,
+  DownloadIcon, EyeIcon, LogOutIcon, Edit3Icon,
+  ActivityIcon, MapPinIcon, HomeIcon, ChevronRightIcon,
+  AlertCircleIcon, SearchIcon, SearchXIcon, UserIcon, ClockIcon,
+  CameraIcon, MaximizeIcon, PlusIcon, XIcon, FileCheckIcon,
+  ZapIcon, ShieldCheckIcon, ThermometerIcon, ClipboardListIcon,
+  ShieldIcon, WrenchIcon
+} from 'lucide-vue-next';
 
-const emit = defineEmits(['close', 'edit-item']);
+const props = defineProps({ visible: Boolean, item: Object });
+const emit = defineEmits(['close']);
 const { canEditBiomedicalEquipment, canManageBiomedical } = usePermissions();
 
-// State
-const activeTab = ref('info');
-const loading = ref(false);
-const history = ref([]);
-const historyMeta = ref([]);       // meta.fields from backend
-const historyMovimientos = ref([]); // ENTRADA/SALIDA/RESGUARDO/SERVICIO entries
-const openCategories = ref(new Set());
-
-// Edit mode state
+const activeSection = ref('dashboard');
 const isEditMode = ref(false);
-const editedItem = ref({});
 const isSaving = ref(false);
-const uploadedImages = ref([]);
-const existingImages = ref([]); // URLs of existing images
-const equipmentImages = ref([]); // Images fetched from backend (equipment_images table)
+const wizardVisible = ref(false);
+const pdfPreviewVisible = ref(false);
+const pdfDataUrl = ref(null);
+const pdfBlob = ref(null);
+const pdfProgress = ref(0);
+let progressInterval = null;
+const specSearch = ref('');
+const history = ref([]);
+const equipmentImages = ref([]);
+const editedItem = ref({});
+const maintenanceFlow = ref({ in_progress: null, last_completed: null, history: [] });
 
-function toggleCategory(cat) {
-    if (openCategories.value.has(cat)) {
-        openCategories.value.delete(cat);
-    } else {
-        openCategories.value.add(cat);
-    }
-}
-
-// simple color palette for categories
-const categoryColors = {
-    'Fijos': '#8b5cf6',
-    'Mantenimiento': '#34d399',
-    'Ubicación / Institucional': '#3b82f6',
-    'Datos del Equipo': '#fbbf24',
-    'Estado y Condición': '#f87171',
-    'Otros': '#9ca3af'
+const LOTTIE_PATHS = {
+  EXCELLENT:   ['/lottie/excellent.json', '/lottie/excellent_sunglasses.json', '/lottie/excellent_stars.json'],
+  REGULAR:     ['/lottie/regular.json', '/lottie/regular_thinking.json'],
+  CRITICAL:    ['/lottie/critical.json', '/lottie/critical_bandage.json', '/lottie/critical_frown.json'],
+  MAINTENANCE: ['/lottie/critical_bandage.json'],
+  EMPTY:       ['/lottie/empty.json']
 };
 
-function categoryColor(cat) {
-    return categoryColors[cat] || categoryColors['Otros'];
-}
-const pdfPreviewVisible = ref(false);   // controls preview modal
-const pdfDataUrl = ref(null);
-const statuses = ref([]);
-const statusesLoading = ref(false);
-const wizardVisible = ref(false);
+const navItems = [
+  { key: 'dashboard', label: 'Centro de control', icon: LayoutDashboardIcon },
+  { key: 'specs',     label: 'Ficha técnica',     icon: FileTextIcon },
+  { key: 'history',   label: 'Historial clínico', icon: HistoryIcon },
+  { key: 'gallery',   label: 'Evidencia visual',  icon: ImageIcon },
+  { key: 'docs',      label: 'Documentación',     icon: ShieldIcon },
+];
 
-const maintenanceFlow = ref({
-    in_progress: null,
-    last_completed: null,
-    history: []
+const normalizedItem = computed(() => normalizeEquipment(props.item)?._normalized || {});
+
+const activeEmojiUrl = ref('');
+const emojiIndex = ref(0);
+let emojiTimer = null;
+
+const isInMaintenance = computed(() => !!maintenanceFlow.value.in_progress);
+
+const maintenanceProvider = computed(() => {
+  const by = maintenanceFlow.value.in_progress?.started_by;
+  if (!by || by.toLowerCase() === 'internal') return 'Personal de Biomédica HRAEI';
+  return by;
 });
 
-/**
- * Obtiene un valor del item de forma resiliente, probando múltiples variantes de nombres de columnas.
- */
-function getVal(key) {
-    if (!props.item) return '—'
-    
-    // 1. Intento exacto
-    if (props.item[key] !== undefined && props.item[key] !== null && String(props.item[key]).trim() !== '' && String(props.item[key]).toUpperCase() !== 'N/A') {
-        return props.item[key]
+const maintenanceStartDate = computed(() => {
+  return formatDateShort(maintenanceFlow.value.in_progress?.started_at) || 'fecha reciente';
+});
+
+const availableEmojis = computed(() => {
+  if (isInMaintenance.value) return LOTTIE_PATHS.MAINTENANCE;
+  
+  const c = (normalizedItem.value.condition || '').toLowerCase();
+  const hasHistory = history.value.length > 0;
+  const isGood = c.includes('buen') || c.includes('excelente');
+  
+  if (isGood && hasHistory) return LOTTIE_PATHS.EXCELLENT;
+  // Caso "Angustiado": Está bueno pero no sabemos nada de él (Sin historial)
+  if (isGood && !hasHistory) return ['/lottie/regular_thinking.json'];
+  if (c.includes('regular')) return LOTTIE_PATHS.REGULAR;
+  
+  // Estado malo: Crítico/Triste
+  return LOTTIE_PATHS.CRITICAL;
+});
+
+function cycleEmoji() {
+  const emojis = availableEmojis.value;
+  if (!emojis || emojis.length <= 1) return;
+  
+  emojiIndex.value = (emojiIndex.value + 1) % emojis.length;
+  activeEmojiUrl.value = emojis[emojiIndex.value];
+  console.log('[EHP] Emoji cycled to:', activeEmojiUrl.value);
+}
+
+function cycleEmojiManual() {
+  // Manual cycling removed for more professional appearance
+}
+
+function startEmojiTimer() {
+  stopEmojiTimer();
+  console.log('[EHP] Starting emoji cycle timer (5s)');
+  emojiTimer = setInterval(cycleEmoji, 5000);
+}
+
+function stopEmojiTimer() {
+  if (emojiTimer) clearInterval(emojiTimer);
+}
+
+watch(() => normalizedItem.value.condition, () => {
+  emojiIndex.value = 0;
+  activeEmojiUrl.value = availableEmojis.value[0];
+  startEmojiTimer();
+}, { immediate: true });
+
+const statusColorClass = computed(() => {
+  if (isInMaintenance.value) return 'st-maint';
+  const c = (normalizedItem.value.condition || '').toLowerCase();
+  if (c.includes('buen') || c.includes('excelente')) return 'st-ok';
+  if (c.includes('regular')) return 'st-warn';
+  return 'st-crit';
+});
+
+const healthTitle = computed(() => {
+  if (isInMaintenance.value) return 'Mantenimiento en Curso';
+  const c = (normalizedItem.value.condition || '').toLowerCase();
+  const hasHistory = history.value.length > 0;
+  if ((c.includes('buen') || c.includes('excelente')) && hasHistory) return 'Estado Operativo Nominal';
+  if ((c.includes('buen') || c.includes('excelente')) && !hasHistory) return 'Seguimiento de Registro Requerido';
+  if (c.includes('regular')) return 'Seguimiento Técnico Sugerido';
+  return 'Revisión Técnica Requerida';
+});
+
+const healthMessage = computed(() => {
+  if (isInMaintenance.value) {
+    return `Atención: El activo está bajo revisión por ${maintenanceProvider.value}. Favor de no utilizar hasta que el personal técnico libere el equipo.`;
+  }
+  const c = (normalizedItem.value.condition || '').toLowerCase();
+  const hasHistory = history.value.length > 0;
+  if ((c.includes('buen') || c.includes('excelente')) && hasHistory) return 'El equipo cumple con los estándares de funcionamiento y cuenta con trazabilidad documental.';
+  if ((c.includes('buen') || c.includes('excelente')) && !hasHistory) return 'Aunque el estado es bueno, no se detectan registros de mantenimiento previos. Se recomienda iniciar historial.';
+  if (c.includes('regular')) return 'Se han identificado desviaciones menores. Se recomienda programar una inspección preventiva.';
+  return 'Se requiere diagnóstico especializado. Evitar el uso clínico hasta completar el mantenimiento correctivo.';
+});
+
+// 3 Niveles exactos para emparejar con los Lotties
+const reactionLevel = computed(() => {
+  const c = (normalizedItem.value.condition || '').toLowerCase();
+  const hasHistory = history.value.length > 0;
+  
+  if ((c.includes('buen') || c.includes('excelente')) && hasHistory) return 'Óptimo';
+  if ((c.includes('buen') || c.includes('excelente')) && !hasHistory) return 'Preventivo';
+  if (c.includes('regular')) return 'Preventivo';
+  return 'Crítico';
+});
+
+const gaugePercentage = computed(() => {
+  if (isInMaintenance.value) return 50;
+  if (reactionLevel.value === 'Óptimo') return 100;
+  if (reactionLevel.value === 'Preventivo') return 60;
+  return 20;
+});
+
+const gaugeOffset = computed(() => {
+  // 264 es el stroke-dasharray total del circulo
+  return 264 - (264 * (gaugePercentage.value / 100));
+});
+
+const activeSectionName = computed(() => ({
+  dashboard: 'Centro de control',
+  specs: 'Ficha Técnica Clínica',
+  history: 'Seguimiento Técnico',
+  gallery: 'Evidencia Visual',
+  docs: 'Expediente Documental',
+}[activeSection.value]));
+
+const countMP = computed(() => history.value.filter(h => h.maintenance_type === 'MP').length);
+const countMC = computed(() => history.value.filter(h => h.maintenance_type !== 'MP').length);
+const maintPercentage = computed(() =>
+  history.value.length === 0 ? 0 : Math.min((history.value.length / 8) * 100, 100)
+);
+const filteredSpecsCount = computed(() => {
+  let n = 0;
+  Object.values(filteredGroupedInfo.value).forEach(l => n += l.length);
+  return n;
+});
+
+watch(() => props.visible, (val) => {
+  if (val && props.item) { 
+    loadData(); 
+    animateEntrance(); 
+    startEmojiTimer();
+    if (activeSection.value === 'specs') nextTick(renderBarcodes);
+  } else {
+    stopEmojiTimer();
+  }
+});
+
+watch(activeSection, (val) => {
+  if (val === 'specs') nextTick(renderBarcodes);
+});
+
+onMounted(() => {
+  if (props.visible) startEmojiTimer();
+});
+
+onBeforeUnmount(() => {
+  stopEmojiTimer();
+});
+
+function animateEntrance() {
+  nextTick(() => {
+    gsap.from('.ehp-sidebar > *', { x: -30, opacity: 0, duration: 0.6, stagger: 0.08, ease: 'power3.out' });
+    gsap.from('.bento-card',      { y: 20,  opacity: 0, duration: 0.7, stagger: 0.1,  ease: 'expo.out', delay: 0.2 });
+    gsap.from('.main-header',     { y: -15, opacity: 0, duration: 0.6, ease: 'power3.out' });
+  });
+}
+
+async function loadData() {
+  const inv = normalizedItem.value.inventoryNo;
+  if (!inv) return;
+  try {
+    const [hRes, sRes, details] = await Promise.all([
+      getEquipmentHistory(inv),
+      getMaintenanceFlowStatus(inv),
+      getItemDetails(inv),
+    ]);
+    console.log('[EHP] hRes content:', JSON.stringify(hRes));
+    history.value        = hRes.history?.mantenimientos || hRes.history || hRes.data || [];
+    maintenanceFlow.value = sRes;
+    equipmentImages.value = details?.imagenes || details?.images || [];
+    // También podemos guardar movimientos si queremos usarlos en otra sección
+    if (hRes.history?.movimientos) {
+      // Si tienes un ref para movimientos, asígnalo aquí
     }
-
-    // 2. Mapeo de variantes comunes para campos críticos
-    const variants = {
-        'inventario': ['No DE INVENTARIO', 'No. DE INVENTARIO', 'N_DE_INVENTARIO', 'noInventario', 'inventario', 'CODIGO'],
-        'equipo': ['EQUIPO MÉDICO', 'EQUIPO MEDICO', 'EQUIPO_MEDICO', 'nombre', 'equipo'],
-        'serie': ['NÚMERO DE SERIE', 'NUMERO DE SERIE', 'SERIE', 'Serie', 'serie'],
-        'marca': ['MARCA', 'Brand', 'marca'],
-        'modelo': ['MODELO', 'Model', 'modelo'],
-        'ubicacion': ['UBICACIÓN ESPECÍFICA', 'UBICACION ESPECIFICA', 'UBICACION', 'UBICACIÓN', 'ubicacion'],
-        'especialidad': ['ESPECIALIDAD AREA DEL HOSPITAL', 'ESPECIALIDAD', 'especialidad'],
-        'condicion': ['CONDICIONES DEL EQUIPO', 'ESTATUS', 'estado', 'condicion']
-    }
-
-    const lowerKey = key.toLowerCase()
-    const searchList = variants[lowerKey] || [key]
-
-    for (const variant of searchList) {
-        if (props.item[variant] !== undefined && props.item[variant] !== null && String(props.item[variant]).trim() !== '' && String(props.item[variant]).toUpperCase() !== 'N/A') {
-            return props.item[variant]
-        }
-    }
-
-    // 3. Normalización agresiva de todas las llaves disponibles
-    const targetNorm = key.toUpperCase().replace(/[^A-Z0-9]/g, '')
-    for (const k of Object.keys(props.item)) {
-        const knorm = k.toUpperCase().replace(/[^A-Z0-9]/g, '')
-        if (knorm === targetNorm) {
-            const v = props.item[k]
-            if (v !== undefined && v !== null && String(v).trim() !== '' && String(v).toUpperCase() !== 'N/A') return v
-        }
-    }
-
-    return '—'
+  } catch (e) { console.error('[EHP] loadData error:', e); }
 }
 
 const groupedEquipmentInfo = computed(() => {
-    if (!props.item) return {}
+  if (!props.item || !normalizedItem.value) return {};
+  
+  // 1. Identificación del Equipo
+  const idFields = [
+    { label: 'Nombre', value: normalizedItem.value.name || 'Sin nombre registrado' },
+    { label: 'Marca', value: normalizedItem.value.brand || 'Genérica' },
+    { label: 'Modelo', value: normalizedItem.value.model || 'N/A' },
+    { label: 'Número de Serie', value: normalizedItem.value.serialNo || 'Sin número de serie' },
+    { label: 'Número de Inventario', value: normalizedItem.value.inventoryNo || 'No asignado' },
+  ];
 
-    const excludePatterns = [
-        /^MP\s/i, /OBSERVACIONES_/i, /^ESTATUS_/i, /LEVANTAMIENTO/i, /ETIQUETA/i, /_ID$/i, /images/i, /semaforizacion/i, /__hasRealData/i
-    ]
+  // 2. Ubicaciones
+  const locationFields = [
+    { label: 'Ubicación de entrega', value: props.item['UBICACION DE ENTREGA'] || props.item['LUGAR_ENTREGA'] || 'HRAEI' },
+    { label: 'Área o Especialidad', value: normalizedItem.value.area || 'Biomédica' },
+    { label: 'Ubicación específica', value: props.item['UBICACION ESPECIFICA'] || 'Consulte Manual' },
+    { label: 'Fecha de entrega', value: props.item['FECHA DE ENTREGA'] || 'Histórico' },
+  ];
 
-    // Lista de alias conocidos que genera el backend por compatibilidad
-    const ALIAS_KEYS = new Set([
-        'nombre', 'marca', 'modelo', 'serie', 'ubicacion', 'estado', 'noInventario', 
-        'claveHRAEI', 'claveCNIS', 'clues', 'unidadMedica', 'especialidadArea', 
-        'categoria', 'observaciones', 'condicionesEquipo', 'tipoMantenimiento', 
-        'funcional', 'causaNoFuncionamiento', 'garantia', 'finGarantia', 
-        'ultimoMantenimientoPreventivo', 'fechaInstalacion', 'anioFabricacion', 
-        'origenBien', 'lote', 'referencia', 'proveedorServicio', 'cartaObsolescencia',
-        'UNIDAD_MEDICA', 'EQUIPO_MEDICO', 'N_DE_INVENTARIO', 'TIPO_MANTENIMIENTO',
-        'No DE INVENTARIO', 'No. DE INVENTARIO', 'NUMERO DE SERIE', 'NÚMERO DE SERIE', 'SERIE'
-    ]);
+  // 3. Estado y Condiciones del Equipo
+  const conditionFields = [
+    { label: 'Estatus del equipo', value: normalizedItem.value.condition || 'Activo' },
+    { label: 'Condiciones físicas/operativas', value: props.item['CONDICIONES'] || props.item['OBSERVACIONES'] || 'Óptimas' },
+    { label: 'Estatus Levantamiento 2025', value: props.item['ESTATUS LEVANTAMIENTO 2025'] || 'Pendiente' },
+    { label: 'Carta de obsolescencia', value: props.item['CARTA DE OBSOLESCENCIA'] || 'Vigente' },
+    { label: 'Último estatus de Mantenimiento', value: maintenanceFlow.value?.last_completed ? `${maintenanceFlow.value.last_completed.maintenance_type} (${maintenanceFlow.value.last_completed.is_manual ? 'Manual' : 'App'})` : 'Sin registros' },
+  ];
 
-    const getCategory = key => {
-        const f = key.toUpperCase();
-        if (/INVENTARIO|SERIE|MODELO|EQUIPO|CODIGO/.test(f)) return 'Identificación';
-        if (/MARCA|FABRICANTE|TECNOLOGIA|VOLTAJE|POTENCIA|CARACTERISTICAS/.test(f)) return 'Especificaciones';
-        if (/UBICACION|SERVICIO|AREA|DEPARTAMENTO|PISO/.test(f)) return 'Ubicación';
-        if (/COSTO|PRECIO|VALOR|PROVEEDOR|COMPRA/.test(f)) return 'Financiera';
-        if (/FECHA|GARANTIA|ADQUISICION|CADUCIDAD/.test(f)) return 'Fechas';
-        if (/ESTADO|STATUS|CONDICION|ESTATUS/.test(f)) return 'Estado';
-        return 'Otros Detalles';
-    };
+  // 4. Componentes Asociados
+  const componentFields = [
+    { label: 'Accesorios', value: props.item['ACCESORIOS'] || 'Ninguno' },
+    { label: 'Consumibles', value: props.item['CONSUMIBLES'] || 'N/A' },
+    { label: 'Refacciones', value: props.item['REFACCIONES'] || 'No requiere' },
+    { label: 'Área de entrega (Control)', value: normalizedItem.value.area || 'N/A' },
+  ];
 
-    const keys = Object.keys(props.item);
-    const groups = {};
+  return {
+    '1. Identificación del Equipo': idFields,
+    '2. Ubicaciones': locationFields,
+    '3. Estado y Condiciones': conditionFields,
+    '4. Componentes Asociados': componentFields,
+  };
+});
+
+const monthlyChronologicalHistory = computed(() => {
+  if (!history.value || history.value.length === 0) return {};
+  
+  const groups = {};
+  const sorted = [...history.value].sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
+  
+  sorted.forEach(event => {
+    const dateVal = event.started_at || event.fecha || event.ultimoMP;
+    if (!dateVal) return;
     
-    // Función para normalizar y comparar llaves
-    const normalize = k => k.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return;
 
-    keys.forEach(k => {
-        // 1. Excluir patrones técnicos
-        if (excludePatterns.some(p => p.test(k))) return;
-        
-        // 2. Excluir alias conocidos explícitamente
-        if (ALIAS_KEYS.has(k)) return;
+    const monthYear = d.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+    const capitalized = monthYear.charAt(0).toUpperCase() + monthYear.slice(1);
+    
+    if (!groups[capitalized]) groups[capitalized] = [];
+    groups[capitalized].push(event);
+  });
+  
+  return groups;
+});
 
-        // 3. Heurística para detectar alias dinámicos: 
-        // Si existe una versión de la llave con espacios o tildes que normalice igual,
-        // y esta llave actual es "limpia" (solo A-Z y _), probablemente sea un alias.
-        const knorm = normalize(k);
-        const isLikelyAlias = keys.some(otherK => {
-            if (otherK === k) return false;
-            if (normalize(otherK) !== knorm) return false;
-            
-            // Si otherK tiene caracteres especiales o espacios, es la original
-            const hasSpecial = /[^A-Z0-9_]/.test(otherK.toUpperCase());
-            const otherIsAllUpper = otherK === otherK.toUpperCase();
-            
-            // Si la actual es camelCase y la otra es UPPER, la actual es alias
-            if (k !== k.toUpperCase() && otherIsAllUpper) return true;
-            
-            return hasSpecial;
+function renderBarcodes() {
+  if (activeSection.value !== 'specs' || !normalizedItem.value.inventoryNo) return;
+  
+  const inv = normalizedItem.value.inventoryNo;
+  // Pequeño delay para asegurar que el DOM de la pestaña esté listo tras la transición
+  setTimeout(() => {
+    const els = document.querySelectorAll('.elite-barcode-canvas');
+    if (els.length === 0) return;
+    
+    els.forEach(el => {
+      try {
+        JsBarcode(el, inv, {
+          format: "CODE128",
+          width: 2,
+          height: 60,
+          displayValue: true,
+          fontSize: 14,
+          fontOptions: "bold",
+          margin: 10,
+          background: "#ffffff",
+          lineColor: "#000000"
         });
-
-        if (isLikelyAlias) return;
-
-        const cat = getCategory(k)
-        if (!groups[cat]) groups[cat] = []
-        groups[cat].push({ label: k, value: props.item[k] })
+      } catch (e) {
+        console.error('[EHP] JsBarcode Error:', e);
+      }
     });
-
-    // Sort categories
-    const order = ['Identificación', 'Especificaciones', 'Ubicación', 'Estado', 'Fechas', 'Financiera', 'Otros Detalles']
-    const sortedGroups = {}
-    order.forEach(cat => {
-        if (groups[cat] && groups[cat].length > 0) sortedGroups[cat] = groups[cat]
-    })
-    
-    // Add any remaining categories
-    Object.keys(groups).forEach(cat => {
-        if (!sortedGroups[cat]) sortedGroups[cat] = groups[cat]
-    })
-
-    return sortedGroups
-})
-
-// Functions
-function closePanel() {
-    document.body.style.overflow = 'auto';
-    emit('close');
+  }, 200);
 }
 
-function openMaintenanceWizard() {
-    if (!canManageBiomedical) {
-        console.warn('[EquipmentHistoryPanel] openMaintenanceWizard blocked: insufficient permissions')
-        return
-    }
-    wizardVisible.value = true;
+watch(activeSection, (val) => {
+  if (val === 'specs') renderBarcodes();
+});
+
+function getCategoryColor(cat) {
+  if (cat.includes('Identificación')) return '#2563eb';
+  if (cat.includes('Ubicaciones')) return '#10b981';
+  if (cat.includes('Estado')) return '#f59e0b';
+  if (cat.includes('Componentes')) return '#8b5cf6';
+  return '#64748b';
 }
 
-// Edit mode functions
+const filteredGroupedInfo = computed(() => {
+  const groups = groupedEquipmentInfo.value;
+  if (!specSearch.value) return groups;
+  const q = specSearch.value.toLowerCase();
+  const out = {};
+  Object.keys(groups).forEach(cat => {
+    const items = groups[cat].filter(f =>
+      f.label.toLowerCase().includes(q) || (f.value && String(f.value).toLowerCase().includes(q))
+    );
+    if (items.length > 0) out[cat] = items;
+  });
+  return out;
+});
+
+function formatDateShort(d) {
+  if (!d) return '---';
+  return new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function formatTime(d) {
+  if (!d) return '';
+  return new Date(d).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+}
+
+function calculateDuration(event) {
+  const start = event.started_at || event.created_at;
+  const end = event.finished_at || event.updated_at;
+  if (!start) return 'N/A';
+  if (!end) return 'En curso...';
+  
+  const diffMs = new Date(end) - new Date(start);
+  const hours = Math.floor(diffMs / 3600000);
+  const minutes = Math.floor((diffMs % 3600000) / 60000);
+  return `${hours}h ${minutes}m`;
+}
+
 function toggleEditMode() {
-    if (!canEditBiomedicalEquipment) {
-        console.warn('[EquipmentHistoryPanel] toggleEditMode blocked: insufficient permissions')
-        return
-    }
-    if (isEditMode.value) {
-        // Cancel editing - reset
-        isEditMode.value = false;
-        editedItem.value = {};
-    } else {
-        // Enter edit mode - copy current item
-        isEditMode.value = true;
-        editedItem.value = { ...props.item };
-    }
-}
-
-async function loadEquipmentImages() {
-    if (!props.item) return;
-    const itemId = props.item['No DE INVENTARIO'] || props.item['CODIGO'];
-    if (!itemId) {
-        console.warn('[EquipmentHistoryPanel] No itemId found');
-        return;
-    }
-    try {
-        const details = await getItemDetails(itemId);
-        if (details) {
-            // Try multiple field names that might contain images
-            if (Array.isArray(details.imagenes) && details.imagenes.length > 0) {
-                equipmentImages.value = details.imagenes;
-            } else if (Array.isArray(details.images) && details.images.length > 0) {
-                equipmentImages.value = details.images;
-            } else {
-                equipmentImages.value = [];
-            }
-            console.log('[EquipmentHistoryPanel] Loaded images:', {
-                count: equipmentImages.value.length,
-                first: equipmentImages.value[0],
-                structure: equipmentImages.value.map((img, i) => ({
-                    idx: i,
-                    type: typeof img,
-                    keys: typeof img === 'object' ? Object.keys(img) : 'N/A',
-                    img
-                }))
-            });
-        } else {
-            console.warn('[EquipmentHistoryPanel] No details returned');
-            equipmentImages.value = [];
-        }
-    } catch (e) {
-        console.error('[EquipmentHistoryPanel] Could not load equipment images:', e);
-        equipmentImages.value = [];
-    }
+  if (isEditMode.value) { isEditMode.value = false; }
+  else { isEditMode.value = true; editedItem.value = { ...props.item }; }
 }
 
 async function saveChanges() {
-    isSaving.value = true;
-    try {
-        const itemId = editedItem.value['No DE INVENTARIO'] || editedItem.value['CODIGO'] || props.item?.['No DE INVENTARIO'];
-        
-        if (!itemId) {
-            throw new Error('No se puede identificar el equipo');
-        }
-        
-        // Preparar datos para actualización - enviar todos los campos editados
-        const updates = {};
-        Object.entries(editedItem.value).forEach(([key, value]) => {
-            // Comparar como strings para evitar falsos negativos por tipos
-            const original = props.item?.[key];
-            const valStr = (value === null || value === undefined) ? '' : String(value);
-            const origStr = (original === null || original === undefined) ? '' : String(original);
-            if (valStr !== origStr) {
-                updates[key] = value;
-            }
-        });
-        
-        // Convertir imágenes base64 a File objects para que multer las procese
-        const imageFiles = [];
-        for (const img of uploadedImages.value) {
-            if (img.data && typeof img.data === 'string' && img.data.startsWith('data:')) {
-                // Convert base64 data URL to File
-                try {
-                    // Extraer el tipo de MIME del data URL
-                    const matches = img.data.match(/^data:([^;]+);base64,/);
-                    const mimeType = matches ? matches[1] : 'image/png';
-                    
-                    // Decodificar base64 y crear blob
-                    const base64Data = img.data.replace(/^data:[^;]+;base64,/, '');
-                    const binaryString = atob(base64Data);
-                    const bytes = new Uint8Array(binaryString.length);
-                    for (let i = 0; i < binaryString.length; i++) {
-                        bytes[i] = binaryString.charCodeAt(i);
-                    }
-                    const blob = new Blob([bytes], { type: mimeType });
-                    imageFiles.push(new File([blob], img.name || 'image.png', { type: mimeType }));
-                } catch (e) {
-                    console.warn('[EquipmentHistoryPanel] Could not convert image:', e);
-                }
-            }
-        }
-        
-        // Llamar al servicio de actualización
-        const result = await updateItem(
-            itemId,
-            updates,
-            imageFiles,
-            [] // captions
-        );
-        
-        console.log('[EquipmentHistoryPanel] Changes saved:', result);
-        
-        // Refresh equipment images after save
-        if (result && Array.isArray(result.images)) {
-            equipmentImages.value = result.images;
-        } else {
-            await loadEquipmentImages();
-        }
-        
-        // Emit the edit-item event for parent to refresh
-        emit('edit-item', { 
-            ...editedItem.value, 
-            newImages: uploadedImages.value,
-            source: 'history-panel'
-        });
-        
-        // Show success notification
-        Swal.fire({
-            title: '¡Guardado!',
-            text: 'La información del equipo se ha actualizado correctamente.',
-            icon: 'success',
-            timer: 2000,
-            showConfirmButton: false,
-            background: '#1e293b',
-            color: '#fff'
-        });
-        
-        isEditMode.value = false;
-        uploadedImages.value = [];
-    } catch (error) {
-        console.error('Error saving changes:', error);
-        Swal.fire({
-            title: 'Error',
-            text: 'No se pudo guardar la información: ' + error.message,
-            icon: 'error',
-            background: '#1e293b',
-            color: '#fff'
-        });
-    } finally {
-        isSaving.value = false;
-    }
-}
-
-function handleImageUpload(event) {
-    const files = event.target.files;
-    if (!files) return;
-    
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.type.startsWith('image/')) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                uploadedImages.value.push({
-                    name: file.name,
-                    data: e.target.result
-                });
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-}
-
-function removeUploadedImage(index) {
-    uploadedImages.value.splice(index, 1);
-}
-
-function removeExistingImage(index) {
-    existingImages.value.splice(index, 1);
-}
-
-function handleImageError(event) {
-    console.warn('[EquipmentHistoryPanel] Image failed to load:', event.target.src);
-}
-
-async function loadHeaderImage() {
-    // attempt to load a header graphic; return base64 or null
-    try {
-        const resp = await fetch('/images/membrete.png');
-        if (!resp.ok) return null;
-        const blob = await resp.blob();
-        return await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (_) {
-        return null;
-    }
-}
-
-// build html representing the history entries with categories
-async function generateBarcodeDataUrl(code) {
-    if (!code) return '';
-    // create off-screen canvas
-    const canvas = document.createElement('canvas');
-    try {
-        JsBarcode(canvas, code, {
-            format: 'CODE128',
-            lineColor: '#000',
-            width: 2,
-            height: 60,
-            displayValue: true,
-            fontSize: 14,
-            textMargin: 4,
-            margin: 0
-        });
-        return canvas.toDataURL('image/png');
-    } catch (e) {
-        console.warn('[generateBarcodeDataUrl] failed', e);
-        return '';
-    }
-}
-
-async function buildPdfHtml() {
-    // Generate barcode
-    const barcodeUrl = await generateBarcodeDataUrl(props.item?.['No DE INVENTARIO'] || 'N/A');
-    
-    // global styles ensure clean breaks and corporate look
-    const globalStyles = `
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
-            body { font-family: 'Roboto', sans-serif; font-size: 10px; color: #222; }
-            table { page-break-inside: auto; width: 90%; border-collapse: collapse; margin: 0 auto; }
-            thead { display: table-header-group; }
-            tfoot { display: table-footer-group; }
-            tr { page-break-inside: avoid; page-break-after: auto; }
-            td, th { word-break: break-word; white-space: normal; padding: 8px 10px; }
-            h1,h2,h3,p,div { page-break-inside: avoid; }
-        </style>
-    `;
-    
-    // Equipment info table grouped by category with visible borders and corporate palette
-    // Excludes MP monthly fields and "levantamiento" fields (they go to maintenance section)
-    const buildEquipmentInfo = () => {
-        if (!props.item) return '<p>No hay información del equipo</p>';
-
-        // Fields to exclude from equipment info (they belong to maintenance/levantamiento sections)
-        const excludePatterns = [
-            /^MP\s/i,                    // MP fields (maintenance)
-            /^MP\b/i,                    // MP prefix
-            /OBSERVACIONES_/i,           // Monthly observations
-            /^ESTATUS_/i,                // Monthly status
-            /LEVANTAMIENTO/i,             // Levantamiento fields
-            /ETIQUETA/i                  // Label fields
-        ];
-
-        const getCategory = key => {
-            const f = key.toUpperCase();
-            if (/INVENTARIO|SERIE|MODELO|EQUIPO/.test(f)) return 'Identificación';
-            if (/MARCA|FABRICANTE|TECNOLOGIA|VOLTAJE|POTENCIA/.test(f)) return 'Especificaciones';
-            if (/UBICACION|SERVICIO|AREA|DEPARTAMENTO/.test(f)) return 'Ubicación';
-            if (/COSTO|PRECIO|VALOR|PROVEEDOR/.test(f)) return 'Financiera';
-            if (/FECHA|GARANTIA|ADQUISICION/.test(f)) return 'Fechas';
-            if (/ESTADO|STATUS|CONDICION/.test(f)) return 'Estado';
-            return 'Otros';
-        };
-
-        const groups = {};
-        Object.entries(props.item).forEach(([k, v]) => {
-            // Skip fields that belong to maintenance or levantamento sections
-            const shouldExclude = excludePatterns.some(pattern => pattern.test(k));
-            if (shouldExclude) return;
-            
-            const cat = getCategory(k);
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push({ label: k, value: v });
-        });
-
-        const headerColors = {
-            'Identificación': '#1f3a93',        // navy
-            'Especificaciones': '#0d47a1',      // dark blue
-            'Ubicación': '#00695c',             // teal
-            'Financiera': '#bf360c',            // dark red
-            'Fechas': '#ff6f00',                // amber
-            'Estado': '#374151',                // slate
-            'Otros': '#455a64'                  // greyish
-        };
-
-        let html = '<table style="width:100%; border-collapse:collapse; margin:10px 0; page-break-inside:avoid; border:1px solid #333;">';
-        Object.entries(groups).forEach(([cat, items]) => {
-            const catColor = headerColors[cat] || '#374151';
-            html += `<tr><td colspan=2 style="background:${catColor};color:white;padding:4px;font-size:9px;border-left:6px solid ${catColor};">${cat}</td></tr>`;
-            items.forEach((it,idx) => {
-                const bg = idx%2===0?'#f7f7f7':'#ffffff';
-                html += `<tr style="page-break-inside:avoid;"><td style="border:1px solid #444;padding:4px;background:${bg};font-weight:600; font-size:8px;width:35%;">${it.label}</td><td style="border:1px solid #444;padding:4px;background:${bg};font-size:8px;">${it.value||'N/A'}</td></tr>`;
-            });
-        });
-        html += '</table>';
-        return html;
-    };
-    
-    // Simple maintenance table (returns html + counts)
-    // Only shows maintenance from August onwards (MP AGOSTO, MP SEPTIEMBRE, MP OCTUBRE, MP NOVIEMBRE)
-    // Filters out rows where ALL fields are N/A
-    // Excludes "levantamiento" fields from maintenance section
-    const buildMaintenanceTable = () => {
-        const headers = ['Fecha', 'Tipo', 'Estado', 'Ubicación Final', 'Observaciones'];
-        // Use columns that match the backend history response
-        const cols = ['ULTIMO MP DD MM AAAA', 'TIPO DE MANTENIMIENTO', 'ESTATUS', 'UBICACION ESPECIFICA', 'OBSERVACIONES'];
-
-        // Month mapping for MP fields in the database
-        const monthFields = {
-            'MP AGOSTO': { short: 'AGOS', obsKey: 'OBSERVACIONES_AGOS', statusKey: 'ESTATUS_AGOS' },
-            'MP SEPTIEMBRE': { short: 'SEPT', obsKey: 'OBSERVACIONES_SEPT', statusKey: 'ESTATUS_SEP' },
-            'MP OCTUBRE': { short: 'OCT', obsKey: 'OBSERVACIONES_OCT', statusKey: 'ESTATUS_OCT' },
-            'MP NOVIEMBRE': { short: 'NOV', obsKey: 'OBSERVACIONES_NOV', statusKey: 'ESTATUS_NOV' }
-        };
-
-        const rows = [];
-        const addedTypes = new Set();
-        
-        // First, add synthetic rows from monthly MP fields (only from August onwards)
-        if (props.item) {
-            Object.entries(props.item).forEach(([k, v]) => {
-                const upperKey = k.toUpperCase().trim();
-                const monthInfo = monthFields[upperKey];
-                
-                if (monthInfo) {
-                    const obs = props.item[monthInfo.obsKey] || '';
-                    const status = props.item[monthInfo.statusKey] || '';
-                    
-                    // Only add if at least one field has real data (not N/A or empty)
-                    const hasDate = v && v.toString().toUpperCase() !== 'N/A' && v.toString().trim() !== '';
-                    const hasObs = obs && obs.toString().toUpperCase() !== 'N/A' && obs.toString().trim() !== '';
-                    const hasStatus = status && status.toString().toUpperCase() !== 'N/A' && status.toString().trim() !== '';
-                    
-                    if (hasDate || hasObs || hasStatus) {
-                        const tipoMantenimiento = 'MP ' + upperKey.replace('MP ', '').toUpperCase();
-                        // Add synthetic row and mark as added
-                        const synthetic = {};
-                        synthetic['ULTIMO MP DD MM AAAA'] = hasDate ? v : '';
-                        synthetic['TIPO DE MANTENIMIENTO'] = tipoMantenimiento;
-                        synthetic['ESTATUS'] = hasStatus ? status : '';
-                        synthetic['UBICACION ESPECIFICA'] = props.item['UBICACION ESPECIFICA'] || '';
-                        synthetic['OBSERVACIONES'] = hasObs ? obs : '';
-                        rows.push(synthetic);
-                        addedTypes.add(tipoMantenimiento);
-                    }
-                }
-            });
-        }
-        
-        // Then, add history entries ONLY if their type wasn't already added as synthetic
-        // Skip ENTRADA/SALIDA/RESGUARDO/SERVICIO — they are movimientos, not mantenimientos
-        const SKIP_TYPES_MANT = new Set(['ENTRADA', 'SALIDA', 'RESGUARDO', 'SERVICIO']);
-        if (history.value && history.value.length) {
-            history.value.forEach(entry => {
-                if (SKIP_TYPES_MANT.has(entry.tipoMantenimiento)) return;
-                const tipo = entry['TIPO DE MANTENIMIENTO'];
-                const tipoUpper = tipo ? tipo.toString().toUpperCase() : '';
-                
-                // Only add if this type wasn't already added from synthetic
-                if (!addedTypes.has(tipoUpper)) {
-                    rows.push(entry);
-                    if (tipoUpper) addedTypes.add(tipoUpper);
-                }
-            });
-        }
-
-        if (rows.length === 0) {
-            return { html: '<p style="text-align:center; padding:20px; color:#666;">No hay registros de mantenimiento</p>', counts: {} };
-        }
-
-        const headerRow = headers.map(h => `<th style="border:1px solid #333; padding:6px; background:#8b5cf6; color:white;">${h}</th>`).join('');
-        const bodyRows = rows.map((entry, i) => {
-            const bg = i % 2 === 0 ? '#e0e7ff' : '#ffffff';
-            const cells = cols.map(col => `<td style="border:1px solid #444; padding:4px; background:${bg}; font-size:7px;">${entry[col] || ''}</td>`).join('');
-            return `<tr style="page-break-inside:avoid;">${cells}</tr>`;
-        }).join('');
-
-        const counts = {};
-        rows.forEach(e => {
-            const t = e['TIPO DE MANTENIMIENTO'] || 'Sin tipo';
-            counts[t] = (counts[t] || 0) + 1;
-        });
-
-        const html = `
-            <table style="width:100%; border-collapse:collapse; margin:15px 0; page-break-inside:avoid; border:1px solid #333;">
-                <thead><tr>${headerRow}</tr></thead>
-                <tbody>${bodyRows}</tbody>
-            </table>
-        `;
-        return { html, counts };
-    };
-    
-    const timestamp = new Date().toLocaleString('es-ES');
-    const inventoryNumber = props.item?.['No DE INVENTARIO'] || 'N/A';
-    const equipmentName = props.item?.['EQUIPO MEDICO'] || '';
-
-    // prepare maintenance table HTML
-    const maintenanceResult = buildMaintenanceTable();
-    const maintenanceHtml = maintenanceResult.html || '';
-
-    return `${globalStyles}
-        <div style="text-align:center; padding:10px 0; background:#f0f4f8;">
-            <div style="width:520px; margin:0 auto; padding:0; box-sizing:border-box; border:1px solid #ccc; border-left:8px solid #1f3a93; border-radius:4px; background:white;">
-            <!-- colored stripe -->
-            <div style="height:6px; background:#1f3a93;"></div>
-            <!-- header with optional logo -->
-            <div style="text-align:center; background:#1f3a93; color:white; padding:12px 5px 8px; page-break-inside:avoid;">
-                <div style="font-size:11px; font-weight:700; letter-spacing:0.5px;">HOSPITAL REGIONAL DE ALTA ESPECIALIDAD IXTAPALUCA</div>
-                <h1 style="margin:4px 0 0 0; font-size:15px; font-weight:700; letter-spacing:1px;">REPORTE DE EQUIPO MÉDICO</h1>
-            </div>
-            
-            <div style="margin-bottom:20px; page-break-inside:avoid;">
-                <h2 style="background:#00695c; color:white; padding:8px; margin:0 0 10px 0; font-size:14px; border-radius:2px;">Información del Equipo</h2>
-                <p style="font-weight:700; color:#1f3a93;margin:0 0 4px 0;">${equipmentName}</p>
-                <p style="margin:0 0 4px 0;color:#333;">Inventario: ${inventoryNumber}</p>
-                ${maintenanceFlow.value.in_progress ?
-                    `<p style="color:#d97706; font-size:10px;">En mantenimiento (${maintenanceFlow.value.in_progress.maintenance_type}) con ${maintenanceFlow.value.in_progress.started_by || 'N/A'} desde ${formatDateTime(maintenanceFlow.value.in_progress.started_at)}</p>` : ''}
-                ${maintenanceFlow.value.last_completed ?
-                    `<p style="color:#10b981; font-size:10px;">Último mantenimiento ${maintenanceFlow.value.last_completed.maintenance_type} finalizado el ${formatDateTime(maintenanceFlow.value.last_completed.finished_at)}${maintenanceFlow.value.last_completed.return_location ? ' - Retornado a ' + maintenanceFlow.value.last_completed.return_location : ''}</p>` : ''}
-                ${buildEquipmentInfo()}
-            </div>
-
-            
-            ${barcodeUrl ? `
-                <div style="text-align:center; margin:20px 0; padding:15px; border:2px solid #374151; background:#f9f9f9;">
-                    <h3 style="margin:0 0 10px 0; color:#374151;">Código de Barras</h3>
-                    <img src="${barcodeUrl}" style="max-width:250px; height:auto;" />
-                    <p style="margin:8px 0 0 0; font-weight:bold;">${inventoryNumber}</p>
-                </div>
-            ` : ''}
-            
-            <div style="page-break-before:always;
-                    margin-bottom:20px; page-break-inside:avoid;">
-                <h2 style="background:#8b5cf6; color:white; padding:8px; margin:0 0 10px 0; font-size:14px; border-radius:2px;">Historial de Mantenimientos</h2>
-                ${maintenanceHtml}
-            </div>
-            <div style="text-align:center; margin-top:30px; padding:10px; background:#f5f5f5; border-top:2px solid #ccc; font-size:10px; color:#666;">
-                <p>Generado: ${timestamp}</p>
-                <p>Sistema de Inventario HRAEI</p>
-            </div>
-        </div>
-    `;
-}
-
-// build PDF using jsPDF and autoTable for cleaner appearance
-// Función auxiliar para convertir URL a Data URL
-async function urlToDataUrl(url) {
-    try {
-        const response = await fetch(url);
-        const blob = await response.blob();
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (e) {
-        console.warn('[EquipmentHistoryPanel] Error converting URL to Data URL:', url, e);
-        return null;
-    }
-}
-
-// Función para procesar imágenes del mantenimiento
-async function processMaintenanceImages(images) {
-    if (!Array.isArray(images)) {
-        console.warn('[EquipmentHistoryPanel] processMaintenanceImages recibió non-array:', typeof images);
-        return [];
-    }
-    
-    console.log('[EquipmentHistoryPanel] Procesando', images.length, 'imágenes de mantenimiento');
-    
-    const processed = [];
-    for (const img of images) {
-        try {
-            let dataUrl = null;
-            let source = 'unknown';
-            
-            // Si ya es Data URL, usarlo directamente
-            if (typeof img === 'string' && img.startsWith('data:image/')) {
-                dataUrl = img;
-                source = 'data-url (existing)';
-            } 
-            // Si es objeto con path, cargar desde la URL
-            else if (typeof img === 'object' && img.path) {
-                let fullUrl = img.path;
-                if (fullUrl.startsWith('/uploads/')) {
-                    fullUrl = `/api${fullUrl}`;
-                } else if (!fullUrl.startsWith('http') && !fullUrl.startsWith('/api')) {
-                    fullUrl = `/api${fullUrl}`;
-                }
-                console.log('[EquipmentHistoryPanel] Convirtiendo ruta a Data URL:', fullUrl);
-                dataUrl = await urlToDataUrl(fullUrl);
-                source = `object-path: ${img.path}`;
-            }
-            // Si es string que es una ruta relativa o absoluta
-            else if (typeof img === 'string' && (img.startsWith('/') || img.startsWith('http'))) {
-                let fullUrl = img;
-                if (img.startsWith('/uploads/')) {
-                    fullUrl = `/api${img}`;
-                } else if (!img.startsWith('http') && !img.startsWith('/api')) {
-                    fullUrl = `/api${img}`;
-                }
-                console.log('[EquipmentHistoryPanel] Convirtiendo string-ruta a Data URL:', fullUrl);
-                dataUrl = await urlToDataUrl(fullUrl);
-                source = `string-path: ${img}`;
-            }
-            
-            if (dataUrl) {
-                processed.push(dataUrl);
-                console.log(`[EquipmentHistoryPanel] ✅ Imagen convertida exitosamente (${source})`);
-            } else {
-                console.warn('[EquipmentHistoryPanel] No se pudo convertir imagen:', source, img);
-            }
-        } catch (e) {
-            console.warn('[EquipmentHistoryPanel] Error procesando imagen:', img, e);
-        }
-    }
-    console.log('[EquipmentHistoryPanel] Procesadas', processed.length, '/', images.length, 'imágenes');
-    return processed;
-}
-
-async function generateDoc() {
-    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 40;
-
-    // header image imported at build time
-    let headerImg = encabezadoImg || null;
-    const headerHeight = headerImg ? 60 : 0; // vertical reservation for header image
-    // watermark diagonal
-    doc.setFontSize(60);
-    doc.setTextColor(200);
-    doc.setGState(new doc.GState({ opacity: 0.1 }));
-    doc.text('CONFIDENCIAL', pageWidth/2, pageHeight/2, { align:'center', angle:45 });
-    doc.setGState(new doc.GState({ opacity: 1 }));
-
-    // header stripe
-    doc.setFillColor('#1f3a93');
-    doc.rect(0, 0, pageWidth, 6, 'F');
-
-    // decorative line beneath header
-    doc.setDrawColor('#ffffff');
-    doc.setLineWidth(0.5);
-    doc.line(margin, 46, pageWidth - margin, 46);
-
-    // header text centered
-    doc.setFontSize(16).setTextColor('#fff');
-    doc.text('REPORTE DE EQUIPO MÉDICO', pageWidth/2, 24, { align: 'center' });
-    doc.setFontSize(10);
-    doc.text('Hospital Regional de Alta Especialidad Ixtapaluca', pageWidth/2, 38, { align: 'center' });
-
-    // compute some quick-access values
-    const inventoryNumber = props.item?.['No DE INVENTARIO'] || '';
-    const equipmentName = props.item?.['EQUIPO MEDICO'] || '---';
-    const timestamp = new Date().toLocaleString('es-ES');
-
-    // starting vertical position just below header area
-    let y = margin + headerHeight + 20;
-
-    // table margin used by multiple autoTable calls
-    const tableMargin = { left: margin, right: margin, top: margin + headerHeight + 10 };
-
-    // function that draws header image on current page
-    const paintHeaderOnPage = (pageNum) => {
-        if (!headerImg) return;
-        doc.setPage(pageNum);
-        const imgW = pageWidth - 2*margin;
-        const imgH = headerHeight; // use measured height
-        const imgY = margin + 10; // a little below the stripe/text area
-        doc.addImage(headerImg, 'JPEG', margin, imgY, imgW, imgH);
-    };
-
-    // after header text we leave a little space and print the equipment ID/name
-    doc.setFontSize(14).setTextColor('#1f3a93');
-    doc.text(equipmentName, margin, y);    y += 18;
-    doc.setFontSize(10).setTextColor('#333');
-    doc.text(`Inventario: ${inventoryNumber}`, margin, y);
-    y += 20;
-
-    // helper to paint a bold section header
-    function sectionHeader(text, color = '#374151') {
-        doc.setFillColor(color);
-        doc.rect(margin, y, pageWidth - 2*margin, 18, 'F');
-        doc.setTextColor('#fff').setFontSize(12).setFont(undefined,'bold');
-        doc.text(text, margin+6, y+13);
-        y += 24;
-    }
-
-    // we'll compute summary again later after assembling full history rows
-
-    // Fields to exclude from equipment info (they belong to maintenance/levantamiento sections)
-    const excludePatterns = [
-        /^MP\s/i,                    // MP fields (maintenance)
-        /^MP\b/i,                    // MP prefix
-        /OBSERVACIONES_/i,           // Monthly observations
-        /^ESTATUS_/i,                // Monthly status
-        /LEVANTAMIENTO/i,             // Levantamiento fields
-        /ETIQUETA/i                  // Label fields
-    ];
-
-    // categories grouping function (same as buildEquipmentInfo)
-    const getCategory = key => {
-        const f = key.toUpperCase();
-        if (/INVENTARIO|SERIE|MODELO|EQUIPO/.test(f)) return 'Identificación';
-        if (/MARCA|FABRICANTE|TECNOLOGIA|VOLTAJE|POTENCIA/.test(f)) return 'Especificaciones';
-        if (/UBICACION|SERVICIO|AREA|DEPARTAMENTO/.test(f)) return 'Ubicación';
-        if (/COSTO|PRECIO|VALOR|PROVEEDOR/.test(f)) return 'Financiera';
-        if (/FECHA|GARANTIA|ADQUISICION/.test(f)) return 'Fechas';
-        if (/ESTADO|STATUS|CONDICION/.test(f)) return 'Estado';
-        return 'Otros';
-    };
-
-    const groups = {};
-    if (props.item) {
-        Object.entries(props.item).forEach(([k, v]) => {
-            // Skip fields that belong to maintenance or levantamento sections
-            const shouldExclude = excludePatterns.some(pattern => pattern.test(k));
-            if (shouldExclude) return;
-            
-            const cat = getCategory(k);
-            if (!groups[cat]) groups[cat] = [];
-            groups[cat].push({ label: k, value: v || 'N/A' });
-        });
-    }
-
-    const headerColors = {
-        'Identificación': '#1f3a93',
-        'Especificaciones': '#0d47a1',
-        'Ubicación': '#00695c',
-        'Financiera': '#bf360c',
-        'Fechas': '#ff6f00',
-        'Estado': '#374151',
-        'Otros': '#455a64'
-    };
-
-    // separator before equipment info
-    doc.setDrawColor('#ccc');
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, pageWidth - margin, y);
-    y += 10;
-
-    sectionHeader('Información del Equipo', '#00695c');
-
-    // establish top margin so tables never flow above header (already computed above)
-    for (const [cat, items] of Object.entries(groups)) {
-        // category title banner
-        doc.setFillColor(headerColors[cat] || '#374151');
-        doc.rect(margin, y, pageWidth - 2*margin, 18, 'F');
-        doc.setTextColor('#fff').setFontSize(10).setFont(undefined, 'bold');
-        doc.text(cat, margin+6, y+13);
-        y += 24;
-
-        // build rows
-        const rows = items.map(it => [it.label, it.value]);
-        autoTable(doc, {
-            startY: y,
-            head: [['Campo','Valor']],
-            body: rows,
-            theme: 'striped',
-            headStyles: { fillColor: 220, textColor: 50, fontSize:8 },
-            styles: { fontSize:7, cellPadding:4, halign: 'left' },
-            columnStyles: { 0: {cellWidth: (pageWidth - margin*2)*0.3, fontStyle:'bold'}, 1: {cellWidth: (pageWidth - margin*2)*0.6} },
-            margin: tableMargin,
-            didDrawPage: (data) => {
-                // paint header on each page and adjust y for new pages
-                const curr = doc.getCurrentPageInfo().pageNumber;
-                paintHeaderOnPage(curr);
-            }
-        });
-        y = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : y + 12;
-    }
-
-    // Maintenance history section - starts on new page
-    doc.addPage();
-    paintHeaderOnPage(doc.getNumberOfPages());
-    y = margin + headerHeight + 20;
-    sectionHeader('Historial de Mantenimientos', '#8b5cf6');
-
-    const headers = historyMeta.value && historyMeta.value.length
-        ? historyMeta.value.map(f => f.label)
-        : ['Fecha','Tipo','Estado','Ubicación Final','Observaciones'];
-    const cols = historyMeta.value && historyMeta.value.length
-        ? historyMeta.value.map(f => f.column)
-        : ['ULTIMO MP DD MM AAAA','TIPO DE MANTENIMIENTO','ESTATUS','UBICACION ESPECIFICA','OBSERVACIONES'];
-
-    // synthesize MP/OBS fields from item if they contain data
-    // Only from August onwards (MP AGOSTO, MP SEPTIEMBRE, MP OCTUBRE, MP NOVIEMBRE)
-    // Filters out rows where ALL fields are N/A
-    const monthFields = {
-        'MP AGOSTO': { short: 'AGOS', obsKey: 'OBSERVACIONES_AGOS', statusKey: 'ESTATUS_AGOS' },
-        'MP SEPTIEMBRE': { short: 'SEPT', obsKey: 'OBSERVACIONES_SEPT', statusKey: 'ESTATUS_SEP' },
-        'MP OCTUBRE': { short: 'OCT', obsKey: 'OBSERVACIONES_OCT', statusKey: 'ESTATUS_OCT' },
-        'MP NOVIEMBRE': { short: 'NOV', obsKey: 'OBSERVACIONES_NOV', statusKey: 'ESTATUS_NOV' }
-    };
-    
-    const addedTypes = new Set();
-    const allRows = [];
-    
-    // First, add synthetic rows from monthly MP fields (only from August onwards)
-    if (props.item) {
-        Object.entries(props.item).forEach(([k, v]) => {
-            const upperKey = k.toUpperCase().trim();
-            const monthInfo = monthFields[upperKey];
-            
-            if (monthInfo) {
-                const obs = props.item[monthInfo.obsKey] || '';
-                const status = props.item[monthInfo.statusKey] || '';
-                
-                // Only add if at least one field has real data (not N/A or empty)
-                const hasDate = v && v.toString().toUpperCase() !== 'N/A' && v.toString().trim() !== '';
-                const hasObs = obs && obs.toString().toUpperCase() !== 'N/A' && obs.toString().trim() !== '';
-                const hasStatus = status && status.toString().toUpperCase() !== 'N/A' && status.toString().trim() !== '';
-                
-                if (hasDate || hasObs || hasStatus) {
-                    const tipoMantenimiento = 'MP ' + upperKey.replace('MP ', '').toUpperCase();
-                    const row = cols.map(c => {
-                        if (c === 'ULTIMO MP DD MM AAAA') return hasDate ? v : '';
-                        if (c === 'TIPO DE MANTENIMIENTO') return tipoMantenimiento;
-                        if (c === 'ESTATUS') return hasStatus ? status : '';
-                        if (c === 'UBICACION ESPECIFICA') return props.item['UBICACION ESPECIFICA'] || '';
-                        if (c === 'OBSERVACIONES') return hasObs ? obs : '';
-                        return '';
-                    });
-                    allRows.push(row);
-                    addedTypes.add(tipoMantenimiento);
-                }
-            }
-        });
-    }
-    
-    // Then, add history entries ONLY if their type wasn't already added as synthetic
-    // Skip ENTRADA/SALIDA/RESGUARDO/SERVICIO — they go in the movimientos section below
-    const SKIP_MOV_TYPES = new Set(['ENTRADA', 'SALIDA', 'RESGUARDO', 'SERVICIO']);
-    if (history.value && history.value.length) {
-        history.value.forEach(entry => {
-            if (SKIP_MOV_TYPES.has(entry.tipoMantenimiento)) return;
-            const tipo = entry['TIPO DE MANTENIMIENTO'];
-            const tipoUpper = tipo ? tipo.toString().toUpperCase() : '';
-            
-            // Only add if this type wasn't already added from synthetic
-            if (!addedTypes.has(tipoUpper)) {
-                const row = cols.map(c => {
-                    let val = entry[c] || 'N/A';
-                    if (/\d{2}\/\d{2}\/\d{4}/.test(val) || /\d{4}-\d{2}-\d{2}/.test(val)) {
-                        val = formatDate(val);
-                    }
-                    return val;
-                });
-                allRows.push(row);
-                if (tipoUpper) addedTypes.add(tipoUpper);
-            }
-        });
-    }
-    
-    // Renderizar TODOS como tarjetas (datos históricos + mantenimientos)
-    if (maintenanceFlow.value && maintenanceFlow.value.history && maintenanceFlow.value.history.length) {
-        const completedMaintenances = maintenanceFlow.value.history.filter(m => m.finished_at);
-        const historyRows = allRows;
-        
-        // Renderizar datos históricos como tarjetas si existen
-        if (historyRows.length > 0) {
-            y += 12;
-            
-            historyRows.forEach((row, rowIdx) => {
-                const boxWidth = pageWidth - 2 * margin;
-                const cardPadding = 5;
-                
-                // Verificar espacio
-                if (y + 95 > pageHeight - margin) {
-                    doc.addPage();
-                    paintHeaderOnPage(doc.getNumberOfPages());
-                    y = margin + headerHeight + 20;
-                }
-                
-                // Tarjeta con color neutro
-                const cardBgColor = [245, 245, 248];
-                const cardBorderColor = [150, 150, 180];
-                
-                doc.setFillColor(...cardBgColor);
-                doc.setDrawColor(...cardBorderColor);
-                doc.setLineWidth(0.6);
-                
-                let cardHeightEstimate = 70;
-                const obsVal = row[4] || '';
-                const obsLines = doc.splitTextToSize(obsVal, boxWidth - 2 * cardPadding - 8);
-                const obsHeight = Math.max(16, obsLines.length * 3.3 + 8);
-                cardHeightEstimate += obsHeight + 6;
-                
-                doc.rect(margin, y, boxWidth, cardHeightEstimate, 'FD');
-                
-                let cardY = y;
-                
-                // Encabezado
-                doc.setFontSize(8).setTextColor(...cardBorderColor).setFont(undefined, 'bold');
-                doc.text(`Registro #${rowIdx + 1}`, margin + cardPadding, cardY + 7);
-                
-                doc.setFontSize(7).setTextColor(100, 100, 100).setFont(undefined, 'normal');
-                const histDate = row[0] || 'N/A';
-                doc.text(histDate, pageWidth - margin - cardPadding - 30, cardY + 7, { align: 'right' });
-                
-                cardY += 14;
-                
-                // Información en 4 campos con más espacio
-                const fieldWidth = (boxWidth - 2 * cardPadding) / 4;
-                const histFields = [
-                    { label: 'TIPO', value: row[1] || 'N/A' },
-                    { label: 'ESTADO', value: row[2] || 'N/A' },
-                    { label: 'UBICACIÓN', value: (row[3] || 'N/A').substring(0, 18) },
-                    { label: 'RESPONSABLE', value: (row[5] || 'N/A').substring(0, 15) }
-                ];
-                
-                histFields.forEach((field, fIdx) => {
-                    const fX = margin + cardPadding + fIdx * fieldWidth;
-                    
-                    if (fIdx > 0) {
-                        doc.setDrawColor(180, 170, 200);
-                        doc.setLineWidth(0.2);
-                        doc.line(fX, cardY, fX, cardY + 18);
-                    }
-                    
-                    doc.setFontSize(5.5).setTextColor(120, 100, 150).setFont(undefined, 'bold');
-                    doc.text(field.label, fX + 3, cardY + 3);
-                    
-                    doc.setFontSize(6.5).setTextColor(50, 50, 80).setFont(undefined, 'normal');
-                    const valLines = doc.splitTextToSize(field.value, fieldWidth - 6);
-                    doc.text(valLines, fX + 3, cardY + 10);
-                });
-                
-                cardY += 20;
-                
-                // Observaciones con más espacio
-                doc.setFontSize(6).setTextColor(80, 80, 120).setFont(undefined, 'bold');
-                doc.text('OBSERVACIONES:', margin + cardPadding, cardY + 4);
-                
-                doc.setFontSize(6.5).setTextColor(60, 60, 90).setFont(undefined, 'normal');
-                doc.text(obsLines, margin + cardPadding, cardY + 10);
-                
-                cardY += obsHeight + 6;
-                
-                // Área de fotos
-                const imgBoxHeight = 28;
-                const imgXStart = margin + cardPadding;
-                const imgBoxWidth = boxWidth - 2 * cardPadding;
-                
-                doc.setFillColor(242, 242, 250);
-                doc.setDrawColor(190, 180, 215);
-                doc.setLineWidth(0.4);
-                doc.rect(imgXStart, cardY, imgBoxWidth, imgBoxHeight, 'FD');
-                
-                doc.setFontSize(6).setTextColor(110, 100, 150).setFont(undefined, 'bold');
-                doc.text('FOTOS:', imgXStart + 3, cardY + 5);
-                
-                doc.setFontSize(6).setTextColor(160, 150, 185).setFont(undefined, 'italic');
-                doc.text('—', imgXStart + 27, cardY + 12);
-                
-                y += cardHeightEstimate + 12;
-            });
-        }
-        
-        y += 4;
-        
-        // Convertir imágenes de los mantenimientos a Data URLs
-        const convertedMaintenances = await Promise.all(completedMaintenances.map(async (maint) => {
-            const convertedImages = await processMaintenanceImages(maint.images || []);
-            return { ...maint, images: convertedImages };
-        }));
-    
-    // Renderizar cada mantenimiento como una tarjeta ordenada
-        convertedMaintenances.forEach((maint, idx) => {
-            const boxWidth = pageWidth - 2 * margin;
-            const cardPadding = 5;
-            
-            // Verificar espacio disponible
-            if (y + 110 > pageHeight - margin) {
-                doc.addPage();
-                paintHeaderOnPage(doc.getNumberOfPages());
-                y = margin + headerHeight + 20;
-            }
-            
-            // ========== TARJETA CONTENEDOR ==========
-            const cardBgColor = maint.maintenance_type === 'MP' ? [230, 245, 230] : [255, 235, 238];
-            const cardBorderColor = maint.maintenance_type === 'MP' ? [76, 175, 80] : [244, 67, 54];
-            
-            // Fondo de la tarjeta
-            doc.setFillColor(...cardBgColor);
-            doc.setDrawColor(...cardBorderColor);
-            doc.setLineWidth(0.6);
-            
-            // Altura estimada de la tarjeta (DINÁMICA)
-            const obsText = maint.observaciones || 'Sin observaciones';
-            const obsLines = doc.splitTextToSize(obsText, boxWidth - 2 * cardPadding - 8);
-            const obsHeight = Math.max(16, obsLines.length * 3.3 + 8);
-            
-            // Calcular altura de campos dinámicamente
-            const fieldsHeight = 4 * 11;  // 4 filas de 11px cada una
-            
-            let cardHeightEstimate = 20 + fieldsHeight + 4 + obsHeight + 6; // header + campos + obs
-            if (Array.isArray(maint.images) && maint.images.length) {
-                cardHeightEstimate += 28;
-            } else {
-                cardHeightEstimate += 28;
-            }
-            
-            doc.rect(margin, y, boxWidth, cardHeightEstimate, 'FD');
-            
-            let cardY = y;
-            
-            // ========== ENCABEZADO CON NÚMERO ==========
-            doc.setFontSize(8).setTextColor(...cardBorderColor).setFont(undefined, 'bold');
-            doc.text(`Mantenimiento #${idx + 1}`, margin + cardPadding, cardY + 7);
-            
-            doc.setFontSize(7).setTextColor(100, 100, 100).setFont(undefined, 'normal');
-            doc.text(formatDate(maint.finished_at), pageWidth - margin - cardPadding - 30, cardY + 7, { align: 'right' });
-            
-            cardY += 13;
-            
-            // ========== INFORMACIÓN EN 2 COLUMNAS ==========
-            const colWidth = (boxWidth - 2 * cardPadding) / 2;
-            const infoFields = [
-                { label: 'TIPO:', value: maint.maintenance_type === 'MP' ? 'Preventivo' : 'Correctivo' },
-                { label: 'ESTADO:', value: maint.result_status === 'functional' ? 'Funcional' : 'No Funcional' },
-                { label: 'RESPONSABLE:', value: maint.finished_by || 'N/A' },
-                { label: 'UBICACIÓN:', value: maint.return_location || 'N/A' }
-            ];
-            
-            for (let i = 0; i < infoFields.length; i += 2) {
-                // Columna izquierda
-                const leftX = margin + cardPadding;
-                doc.setFontSize(5.5).setTextColor(100, 80, 130).setFont(undefined, 'bold');
-                doc.text(infoFields[i].label, leftX, cardY + 3);
-                
-                doc.setFontSize(6.5).setTextColor(50, 50, 80).setFont(undefined, 'normal');
-                const leftVal = doc.splitTextToSize(infoFields[i].value, colWidth - 8);
-                doc.text(leftVal, leftX, cardY + 8);
-                
-                // Columna derecha (si existe)
-                if (i + 1 < infoFields.length) {
-                    const rightX = margin + cardPadding + colWidth;
-                    doc.setFontSize(5.5).setTextColor(100, 80, 130).setFont(undefined, 'bold');
-                    doc.text(infoFields[i + 1].label, rightX, cardY + 3);
-                    
-                    doc.setFontSize(6.5).setTextColor(50, 50, 80).setFont(undefined, 'normal');
-                    const rightVal = doc.splitTextToSize(infoFields[i + 1].value, colWidth - 8);
-                    doc.text(rightVal, rightX, cardY + 8);
-                }
-                
-                cardY += 11;
-            }
-            
-            cardY += 2;
-            
-            // ========== OBSERVACIONES ==========
-            doc.setFontSize(6).setTextColor(80, 80, 120).setFont(undefined, 'bold');
-            doc.text('OBSERVACIONES:', margin + cardPadding, cardY + 4);
-            
-            doc.setFontSize(6.5).setTextColor(60, 60, 90).setFont(undefined, 'normal');
-            doc.text(obsLines, margin + cardPadding, cardY + 10);
-            
-            cardY += obsHeight + 6;
-            
-            // ========== IMÁGENES SIEMPRE PRESENTES (ALTURA CONSISTENTE) ==========
-            const imgBoxHeight = 28;
-            const imgXStart = margin + cardPadding;
-            const imgBoxWidth = boxWidth - 2 * cardPadding;
-            
-            // Fondo del área de imágenes (SIEMPRE IGUAL)
-            doc.setFillColor(242, 242, 250);
-            doc.setDrawColor(190, 180, 215);
-            doc.setLineWidth(0.4);
-            doc.rect(imgXStart, cardY, imgBoxWidth, imgBoxHeight, 'FD');
-            
-            // Label FOTOS (SIEMPRE VISIBLE)
-            doc.setFontSize(6).setTextColor(110, 100, 150).setFont(undefined, 'bold');
-            doc.text('FOTOS:', imgXStart + 3, cardY + 5);
-            
-            if (Array.isArray(maint.images) && maint.images.length) {
-                // RENDERIZAR IMÁGENES (ya convertidas a Data URLs)
-                const images = maint.images.slice(0, 5);
-                const imgW = 18;
-                const imgH = 18;
-                const imgGap = 3;
-                let imgX = imgXStart + 27;
-                const imgY = cardY + 3;
-                let successCount = 0;
-                
-                images.forEach((imgSrc, imgIdx) => {
-                    try {
-                        if (imgSrc && typeof imgSrc === 'string' && imgSrc.startsWith('data:image/')) {
-                            // Determinar formato basado en el data URL
-                            const fmt = imgSrc.includes('data:image/png') ? 'PNG' : 'JPEG';
-                            doc.addImage(imgSrc, fmt, imgX, imgY, imgW, imgH);
-                            imgX += imgW + imgGap;
-                            successCount++;
-                        }
-                    } catch (e) {
-                        console.warn('[EquipmentHistoryPanel] Error renderizando imagen en PDF:', e);
-                    }
-                });
-                
-                // Contador
-                doc.setFontSize(5).setTextColor(130, 120, 160).setFont(undefined, 'normal');
-                doc.text(`(${successCount})`, imgXStart + 27, cardY + 23);
-            } else {
-                // SIN IMÁGENES - Mismo estilo, texto en lugar de fotos
-                doc.setFontSize(6).setTextColor(160, 150, 185).setFont(undefined, 'italic');
-                doc.text('—', imgXStart + 27, cardY + 12);
-            }
-            
-            y += cardHeightEstimate + 12;
-            });
-            } else {
-            // Si no hay mantenimientos completados, mostrar como tarjetas
-            const histRows = allRows;
-            if (histRows.length > 0) {
-            y += 12;
-            
-            histRows.forEach((row, rowIdx) => {
-                const boxWidth = pageWidth - 2 * margin;
-                const cardPadding = 5;
-                
-                // Verificar espacio
-                if (y + 95 > pageHeight - margin) {
-                    doc.addPage();
-                    paintHeaderOnPage(doc.getNumberOfPages());
-                    y = margin + headerHeight + 20;
-                }
-                
-                // Tarjeta con color neutro
-                const cardBgColor = [245, 245, 248];
-                const cardBorderColor = [150, 150, 180];
-                
-                doc.setFillColor(...cardBgColor);
-                doc.setDrawColor(...cardBorderColor);
-                doc.setLineWidth(0.6);
-                
-                const obsVal = row[4] || '';
-                const obsLines = doc.splitTextToSize(obsVal, boxWidth - 2 * cardPadding - 8);
-                const obsHeight = Math.max(16, obsLines.length * 3.3 + 8);
-                
-                const fieldsHeight = 4 * 11;
-                let cardHeightEstimate = 20 + fieldsHeight + 4 + obsHeight + 6;
-                
-                doc.rect(margin, y, boxWidth, cardHeightEstimate, 'FD');
-                
-                let cardY = y;
-                
-                // Encabezado
-                doc.setFontSize(8).setTextColor(...cardBorderColor).setFont(undefined, 'bold');
-                doc.text(`Registro #${rowIdx + 1}`, margin + cardPadding, cardY + 7);
-                
-                doc.setFontSize(7).setTextColor(100, 100, 100).setFont(undefined, 'normal');
-                const histDate = row[0] || 'N/A';
-                doc.text(histDate, pageWidth - margin - cardPadding - 30, cardY + 7, { align: 'right' });
-                
-                cardY += 13;
-                
-                // Información en 2 columnas
-                const fieldWidth = (boxWidth - 2 * cardPadding) / 2;
-                const histFields = [
-                    { label: 'TIPO:', value: row[1] || 'N/A' },
-                    { label: 'ESTADO:', value: row[2] || 'N/A' },
-                    { label: 'UBICACIÓN:', value: row[3] || 'N/A' },
-                    { label: 'RESPONSABLE:', value: row[5] || 'N/A' }
-                ];
-                
-                for (let h = 0; h < histFields.length; h += 2) {
-                    // Columna izquierda
-                    const leftX = margin + cardPadding;
-                    doc.setFontSize(5.5).setTextColor(100, 80, 130).setFont(undefined, 'bold');
-                    doc.text(histFields[h].label, leftX, cardY + 3);
-                    
-                    doc.setFontSize(6.5).setTextColor(50, 50, 80).setFont(undefined, 'normal');
-                    const leftVal = doc.splitTextToSize(histFields[h].value, fieldWidth - 8);
-                    doc.text(leftVal, leftX, cardY + 8);
-                    
-                    // Columna derecha (si existe)
-                    if (h + 1 < histFields.length) {
-                        const rightX = margin + cardPadding + fieldWidth;
-                        doc.setFontSize(5.5).setTextColor(100, 80, 130).setFont(undefined, 'bold');
-                        doc.text(histFields[h + 1].label, rightX, cardY + 3);
-                        
-                        doc.setFontSize(6.5).setTextColor(50, 50, 80).setFont(undefined, 'normal');
-                        const rightVal = doc.splitTextToSize(histFields[h + 1].value, fieldWidth - 8);
-                        doc.text(rightVal, rightX, cardY + 8);
-                    }
-                    
-                    cardY += 11;
-                }
-                
-                cardY += 2;
-                
-                // Observaciones
-                doc.setFontSize(6).setTextColor(80, 80, 120).setFont(undefined, 'bold');
-                doc.text('OBSERVACIONES:', margin + cardPadding, cardY + 4);
-                
-                doc.setFontSize(6.5).setTextColor(60, 60, 90).setFont(undefined, 'normal');
-                doc.text(obsLines, margin + cardPadding, cardY + 10);
-                
-                cardY += obsHeight + 6;
-                
-                // Área de fotos
-                const imgBoxHeight = 28;
-                const imgXStart = margin + cardPadding;
-                const imgBoxWidth = boxWidth - 2 * cardPadding;
-                
-                doc.setFillColor(242, 242, 250);
-                doc.setDrawColor(190, 180, 215);
-                doc.setLineWidth(0.4);
-                doc.rect(imgXStart, cardY, imgBoxWidth, imgBoxHeight, 'FD');
-                
-                doc.setFontSize(6).setTextColor(110, 100, 150).setFont(undefined, 'bold');
-                doc.text('FOTOS:', imgXStart + 3, cardY + 5);
-                
-                doc.setFontSize(6).setTextColor(160, 150, 185).setFont(undefined, 'italic');
-                doc.text('—', imgXStart + 27, cardY + 12);
-                
-                y += cardHeightEstimate + 12;
-            });
-            }
-            }
-    
-
-    // ============================================================
-    // SECCIÓN: MOVIMIENTOS DE ÓRDENES (ENTRADA/SALIDA/RESGUARDO/SERVICIO)
-    // ============================================================
-    const movsList = historyMovimientos.value;
-    if (movsList && movsList.length > 0) {
-        doc.addPage();
-        paintHeaderOnPage(doc.getNumberOfPages());
-        y = margin + headerHeight + 20;
-        sectionHeader('Movimientos de Órdenes', '#1565c0');
-
-        const movColors = {
-            'ENTRADA':   { bg: [232, 245, 233], border: [56, 142, 60]  },  // verde
-            'SALIDA':    { bg: [255, 235, 238], border: [211, 47, 47]  },  // rojo
-            'RESGUARDO': { bg: [255, 243, 224], border: [230, 119, 0]  },  // naranja
-            'SERVICIO':  { bg: [227, 242, 253], border: [21, 101, 192] }   // azul
-        };
-
-        movsList.forEach((mov, idx) => {
-            const tipo = (mov.tipoMantenimiento || 'ENTRADA').toUpperCase();
-            const colors = movColors[tipo] || movColors['ENTRADA'];
-            const boxWidth = pageWidth - 2 * margin;
-            const cardPadding = 6;
-
-            // texto largo → calcular alturas
-            const descText = String(mov.descripcion || '—');
-            const descLines = doc.splitTextToSize(descText, boxWidth - 2 * cardPadding - 8);
-            const descHeight = Math.max(10, descLines.length * 3.3 + 6);
-
-            const obsText = String(mov.observaciones || '—');
-            const obsLines = doc.splitTextToSize(obsText, boxWidth - 2 * cardPadding - 8);
-            const obsHeight = Math.max(10, obsLines.length * 3.3 + 6);
-
-            // header (13) + row1..4 (4×11=44) + label DESCRIPCIÓN (8) + descHeight + label OBS (8) + obsHeight + padding (6)
-            const cardH = 13 + 44 + 8 + descHeight + 8 + obsHeight + 6;
-
-            if (y + cardH > pageHeight - margin) {
-                doc.addPage();
-                paintHeaderOnPage(doc.getNumberOfPages());
-                y = margin + headerHeight + 20;
-            }
-
-            // Fondo y borde
-            doc.setFillColor(...colors.bg);
-            doc.setDrawColor(...colors.border);
-            doc.setLineWidth(0.7);
-            doc.rect(margin, y, boxWidth, cardH, 'FD');
-
-            // Barra lateral de color (tipo)
-            doc.setFillColor(...colors.border);
-            doc.rect(margin, y, 5, cardH, 'F');
-
-            let cy = y;
-
-            // Encabezado: tipo + número
-            doc.setFontSize(8).setTextColor(...colors.border).setFont(undefined, 'bold');
-            doc.text(`${tipo}  #${idx + 1}`, margin + cardPadding + 4, cy + 9);
-
-            // Fecha al lado derecho
-            const fechaStr = mov.ultimoMP ? formatDate(mov.ultimoMP) : 'N/A';
-            doc.setFontSize(7).setTextColor(90, 90, 90).setFont(undefined, 'normal');
-            doc.text(fechaStr, pageWidth - margin - cardPadding, cy + 9, { align: 'right' });
-
-            cy += 14;
-
-            // 4 campos en 2 columnas: FOLIO / MOTIVO  |  RESPONSABLE / SOLICITANTE
-            const halfW = (boxWidth - 2 * cardPadding - 4) / 2;
-            const col1X = margin + cardPadding + 6;
-            const col2X = col1X + halfW + 4;
-
-            const field2col = [
-                [{ label: 'FOLIO:',       value: mov.folio       || 'N/A' },
-                 { label: 'RESPONSABLE:', value: mov.responsable || 'N/A' }],
-                [{ label: 'MOTIVO:',      value: mov.motivo      || 'N/A' },
-                 { label: 'SOLICITANTE:', value: mov.solicitante || 'N/A' }]
-            ];
-
-            field2col.forEach(pair => {
-                // Columna izquierda
-                doc.setFontSize(5.5).setTextColor(...colors.border).setFont(undefined, 'bold');
-                doc.text(pair[0].label, col1X, cy + 3);
-                doc.setFontSize(6.5).setTextColor(40, 40, 70).setFont(undefined, 'normal');
-                const v1 = doc.splitTextToSize(String(pair[0].value), halfW - 4);
-                doc.text(v1, col1X, cy + 9);
-
-                // Columna derecha
-                doc.setFontSize(5.5).setTextColor(...colors.border).setFont(undefined, 'bold');
-                doc.text(pair[1].label, col2X, cy + 3);
-                doc.setFontSize(6.5).setTextColor(40, 40, 70).setFont(undefined, 'normal');
-                const v2 = doc.splitTextToSize(String(pair[1].value), halfW - 4);
-                doc.text(v2, col2X, cy + 9);
-
-                cy += 11;
-            });
-
-            // DESCRIPCIÓN
-            doc.setFontSize(6).setTextColor(...colors.border).setFont(undefined, 'bold');
-            doc.text('DESCRIPCIÓN:', col1X, cy + 4);
-            cy += 8;
-            doc.setFontSize(6.5).setTextColor(40, 40, 70).setFont(undefined, 'normal');
-            doc.text(descLines, col1X, cy);
-            cy += descHeight;
-
-            // OBSERVACIONES
-            doc.setFontSize(6).setTextColor(...colors.border).setFont(undefined, 'bold');
-            doc.text('OBSERVACIONES:', col1X, cy + 4);
-            cy += 8;
-            doc.setFontSize(6.5).setTextColor(40, 40, 70).setFont(undefined, 'normal');
-            doc.text(obsLines, col1X, cy);
-
-            y += cardH + 10;
-        });
-    }
-
-    // ADD BARCODE AS LAST PAGE (RECORTABLE)
-    doc.addPage();
-    paintHeaderOnPage(doc.getNumberOfPages());
-    y = margin + headerHeight + 30;
-    
-    // Recortable barcode section - only element on this page
-    const barcodeUrl = await generateBarcodeDataUrl(inventoryNumber);
-    if (barcodeUrl) {
-        // Draw cut lines (dashed border for cutting)
-        doc.setLineWidth(0.5);
-        doc.setDrawColor(100);
-        doc.setLineDash([5, 3], 0);
-        const cutBoxW = 350;
-        const cutBoxH = 140;
-        const cutBoxX = (pageWidth - cutBoxW) / 2;
-        doc.rect(cutBoxX, y, cutBoxW, cutBoxH);
-        doc.setLineDash();
-        
-        // "Cut here" indicator
-        doc.setFontSize(8).setTextColor(150);
-        doc.text('⟵ RECORTAR ⟶', pageWidth/2, y - 5, { align: 'center' });
-        
-        // Place barcode centered in cut area
-        const barcodeW = 280;
-        const barcodeH = 70;
-        const barcodeX = (pageWidth - barcodeW) / 2;
-        doc.addImage(barcodeUrl, 'PNG', barcodeX, y + 15, barcodeW, barcodeH);
-        
-        // Inventory number below barcode
-        y += cutBoxH - 20;
-        doc.setFontSize(14).setTextColor(0);
-        doc.setFont(undefined, 'bold');
-        doc.text(inventoryNumber, pageWidth/2, y, { align: 'center' });
-        
-        // Small label
-        doc.setFontSize(8).setTextColor(100);
-        doc.setFont(undefined, 'normal');
-        doc.text('Código de Inventario', pageWidth/2, y + 10, { align: 'center' });
-    }
-
-    // Add footer to all pages
-    const pageCount = doc.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-        paintHeaderOnPage(i);
-        doc.setPage(i);
-        // Footer separator line
-        const footerY = pageHeight - 24;
-        doc.setDrawColor('#ccc');
-        doc.setLineWidth(0.5);
-        doc.line(margin, footerY, pageWidth - margin, footerY);
-        // Timestamp left and page number right
-        doc.setFontSize(8).setTextColor(100);
-        doc.text(`Generado: ${timestamp}`, margin, footerY + 12);
-        doc.text(`Página ${i} de ${pageCount}`, pageWidth - margin, footerY + 12, { align: 'right' });
-    }
-
-    return doc;
-}
-
-function closePdfPreview() {
-    pdfPreviewVisible.value = false;
-    pdfDataUrl.value = null;
+  isSaving.value = true;
+  try {
+    await updateItem(props.item?.['No DE INVENTARIO'], editedItem.value);
+    Swal.fire({
+      icon: 'success', title: 'Registro actualizado',
+      text: 'Los cambios se han guardado correctamente.',
+      background: '#0D1117', color: '#F0F6FF', confirmButtonColor: '#2563EB',
+    });
+    isEditMode.value = false;
+    loadData();
+  } catch (e) { Swal.fire('Error', e.message, 'error'); }
+  finally { isSaving.value = false; }
 }
 
 async function previewPdf() {
-    pdfPreviewVisible.value = true;
-    pdfDataUrl.value = null;
-    try {
-        const inventoryNo = getVal('inventario') !== '—' ? getVal('inventario') : getVal('serie');
-        
-        if (inventoryNo === '—') {
-            const pdfService = await import('../services/pdfService.js');
-            pdfService.generateSimplePDF({
-                ...props.item,
-                inventoryNo: 'S/N',
-                name: getVal('equipo')
-            });
-            pdfPreviewVisible.value = false;
-            return;
-        }
+  pdfPreviewVisible.value = true;
+  pdfDataUrl.value = null;
+  pdfBlob.value = null;
+  pdfProgress.value = 0;
+  
+  if (progressInterval) clearInterval(progressInterval);
+  progressInterval = setInterval(() => {
+    if (pdfProgress.value < 95) pdfProgress.value += (95 - pdfProgress.value) * 0.1;
+  }, 300);
 
-        const result = await generateEquipmentPDF(props.item);
-        if (result && result.pdfUrl) {
-            pdfDataUrl.value = result.pdfUrl;
-        } else {
-            const pdfService = await import('../services/pdfService.js');
-            pdfService.generateSimplePDF(props.item);
-            pdfPreviewVisible.value = false;
-        }
-    } catch (e) {
-        console.error('[EquipmentHistoryPanel] error generating PDF preview', e);
-        pdfPreviewVisible.value = false;
-        Swal.fire({ title: 'Error', text: 'No se pudo generar la vista previa: ' + e.message, icon: 'error', background: '#1e293b', color: '#fff' });
+  try {
+    const result = await generateEquipmentPDF(props.item);
+    clearInterval(progressInterval);
+    pdfProgress.value = 100;
+
+    if (result && result.fallback) {
+      // El documento se abrió en otra pestaña como fallback simple (silencioso por petición de usuario)
+      pdfPreviewVisible.value = false;
+      return;
     }
-}
 
-async function downloadPdf() {
-    try {
-        const inventoryNo = getVal('inventario') !== '—' ? getVal('inventario') : getVal('serie');
-        if (inventoryNo === '—') {
-            const pdfService = await import('../services/pdfService.js');
-            pdfService.generateSimplePDF({ ...props.item, inventoryNo: 'S/N', name: getVal('equipo') });
-            return;
-        }
-        const result = await generateEquipmentPDF(props.item);
-        if (result && result.pdfUrl) {
-            const link = document.createElement('a');
-            link.href = result.pdfUrl;
-            link.download = `expediente-${inventoryNo}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        } else {
-            const pdfService = await import('../services/pdfService.js');
-            pdfService.generateSimplePDF(props.item);
-        }
-    } catch (error) {
-        console.error('Error downloading PDF:', error);
-    }
-}
-
-async function onMaintenanceSaved() {
-    console.log('[EquipmentHistoryPanel] onMaintenanceSaved called - starting reload');
-    wizardVisible.value = false;
-    // Wait for backend to fully process
-    await new Promise(r => setTimeout(r, 800));
-    
-    console.log('[EquipmentHistoryPanel] Reloading maintenance flow...');
-    await loadMaintenanceFlow();
-    console.log('[EquipmentHistoryPanel] maintenanceFlow after reload:', JSON.stringify(maintenanceFlow.value));
-    
-    await fetchHistory();
-    console.log('[EquipmentHistoryPanel] History reloaded');
-    
-    await fetchStatuses();
-    console.log('[EquipmentHistoryPanel] Statuses reloaded');
-    
-    // Force Vue reactivity update
-    maintenanceFlow.value = { ...maintenanceFlow.value };
-    console.log('[EquipmentHistoryPanel] Force update applied');
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return 'N/A';
-    try {
-        const d = new Date(dateStr);
-        return d.toLocaleDateString('es-ES', { year:'numeric', month:'2-digit', day:'2-digit' });
-    } catch {
-        return dateStr;
-    }
-}
-
-function formatDateTime(dateStr) {
-    if (!dateStr) return 'N/A';
-    try {
-        const d = new Date(dateStr);
-        return d.toLocaleString('es-ES', { year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-    } catch {
-        return dateStr;
-    }
-}
-
-function calculateDuration(maintenance) {
-    if (!maintenance || !maintenance.started_at || !maintenance.finished_at) return '';
-    try {
-        const start = new Date(maintenance.started_at);
-        const finish = new Date(maintenance.finished_at);
-        const ms = finish - start;
-        
-        const totalSeconds = Math.floor(ms / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        } else if (minutes > 0) {
-            return `${minutes} minutos`;
-        } else {
-            return `${totalSeconds} segundos`;
-        }
-    } catch {
-        return '';
-    }
-}
-
-function calculateElapsedTime(maintenance) {
-    if (!maintenance || !maintenance.started_at) return '';
-    try {
-        const start = new Date(maintenance.started_at);
-        const now = new Date();
-        const ms = now - start;
-        
-        const totalSeconds = Math.floor(ms / 1000);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        
-        if (hours > 0) {
-            return `${hours}h ${minutes}m`;
-        } else if (minutes > 0) {
-            return `${minutes} minutos`;
-        } else {
-            return `${totalSeconds} segundos`;
-        }
-    } catch {
-        return '';
-    }
-}
-
-function getEntryFields(entry) {
-    const core = ['ULTIMO MP DD MM AAAA', 'TIPO DE MANTENIMIENTO', 'OBSERVACIONES'];
-    if (historyMeta.value && historyMeta.value.length) {
-        return historyMeta.value
-            .filter(f => !core.includes(f.column))
-            .map(f => ({ column: f.column, label: f.label, value: entry[f.column] || '—', category: f.category || 'Otros' }));
-    }
-    // fallback: use all keys except core fields and helper columns
-    return Object.keys(entry)
-        .filter(k => !core.includes(k) && k !== 'source_table' && k !== 'id')
-        .map(k => ({ column: k, label: k, value: entry[k], category: 'Otros' }));
-}
-
-function getGroupedFields(entry) {
-    const fields = getEntryFields(entry);
-    const groups = {};
-    fields.forEach(f => {
-        const cat = f.category || 'Otros';
-        if (!groups[cat]) groups[cat] = [];
-        groups[cat].push(f);
-    });
-    return groups; // object with category arrays
-}
-
-async function fetchHistory() {
-    if (!props.item || !props.item['No DE INVENTARIO']) return;
-    loading.value = true;
-    try {
-        const response = await getEquipmentHistory(props.item['No DE INVENTARIO']);
-        if (response && typeof response === 'object') {
-            // the backend may return an object with a nested `history` array
-            // or it may already be an array depending on version; handle both.
-            let arr = [];
-            if (Array.isArray(response.history)) {
-                arr = response.history;
-            } else if (response.history && Array.isArray(response.history.history)) {
-                // nested one more level
-                arr = response.history.history;
-            } else if (Array.isArray(response)) {
-                arr = response;
-            }
-
-            history.value = arr;
-            // movimientos separados (ENTRADA/SALIDA/RESGUARDO/SERVICIO)
-            historyMovimientos.value = Array.isArray(response.movimientos) ? response.movimientos : [];
-            // capture metadata if provided
-            historyMeta.value = response.meta && Array.isArray(response.meta.fields)
-                ? response.meta.fields
-                : [];
-
-            // debug dump so developer can see the complete payload
-            console.debug('[EquipmentHistoryPanel] raw history response', response);
-            console.debug('[EquipmentHistoryPanel] got history', arr.length,
-                         response.futureCount, response.historicalCount,
-                         'meta fields', historyMeta.value.length);
-        } else {
-            history.value = [];
-            historyMeta.value = [];
-        }
-    } catch (err) {
-        console.error('Error fetching history:', err);
-        history.value = [];
-        historyMeta.value = [];
-    } finally {
-        loading.value = false;
-    }
-}
-
-async function loadMaintenanceFlow() {
-    if (!props.item) {
-        console.log('[EquipmentHistoryPanel] loadMaintenanceFlow: no item');
-        return;
-    }
-    try {
-        console.log('[EquipmentHistoryPanel] loadMaintenanceFlow: fetching for', props.item['No DE INVENTARIO']);
-        const result = await getMaintenanceFlowStatus(props.item['No DE INVENTARIO']);
-        console.log('[EquipmentHistoryPanel] loadMaintenanceFlow result:', result);
-        maintenanceFlow.value = result || { in_progress: null, last_completed: null, history: [] };
-    } catch (error) {
-        console.error('Error loading maintenance flow:', error);
-    }
-}
-
-async function fetchStatuses() {
-    if (!props.item) return;
-    try {
-        statusesLoading.value = true;
-        const result = await fetchStatusHistory(props.item['No DE INVENTARIO']);
-        statuses.value = result || [];
-    } catch (error) {
-        console.error('Error fetching statuses:', error);
-        statuses.value = [];
-    } finally {
-        statusesLoading.value = false;
-    }
-}
-
-// Global listener for equipment status updates from MaintenanceWizardV2
-function handleEquipmentStatusUpdated(event) {
-    const { inventoryNo } = event.detail || {};
-    const eventCode = String(inventoryNo || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const currentCode = String(props.item?.['No DE INVENTARIO'] || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (eventCode && currentCode && eventCode === currentCode) {
-        console.log('[EquipmentHistoryPanel] Escuché equipment:status-updated para', inventoryNo, '— recargando...');
-        // Reload maintenance flow and history after a small delay to ensure backend is ready
-        setTimeout(async () => {
-            await loadMaintenanceFlow();
-            await fetchHistory();
-            await fetchStatuses();
-        }, 500);
-    }
-}
-
-// Register and unregister the global listener
-onMounted(() => {
-    window.addEventListener('equipment:status-updated', handleEquipmentStatusUpdated);
-});
-
-onUnmounted(() => {
-    window.removeEventListener('equipment:status-updated', handleEquipmentStatusUpdated);
-});
-
-// Watchers
-watch(() => props.visible, async (newVal) => {
-    if (newVal && props.item) {
-        document.body.style.overflow = 'hidden';
-        activeTab.value = 'info';
-        await fetchHistory();
-        await loadMaintenanceFlow();
-        await fetchStatuses();
-        await loadEquipmentImages();
+    if (result && result.pdfUrl) {
+      pdfDataUrl.value = result.pdfUrl;
+      pdfBlob.value = result.blob;
     } else {
-        document.body.style.overflow = 'auto';
-        // make sure PDF modal is closed when panel hides
-        pdfPreviewVisible.value = false;
-        pdfDataUrl.value = null;
+      pdfPreviewVisible.value = false;
     }
-});
+  } catch (e) { 
+    console.error('[EHP] PDF Preview Error:', e);
+    clearInterval(progressInterval);
+    pdfPreviewVisible.value = false; 
+  }
+}
+
+function downloadPdf() {
+  generateEquipmentPDF(props.item).then(result => {
+    if (result && result.blob) {
+      const a = document.createElement('a');
+      a.href = window.URL.createObjectURL(result.blob);
+      a.download = `EXPEDIENTE-${normalizedItem.value.inventoryNo}.pdf`;
+      a.click();
+    }
+  }).catch(e => {
+    console.error('[EHP] PDF Download Error:', e);
+  });
+}
+
+function openMaintenanceWizard() { wizardVisible.value = true; }
+function onMaintenanceSaved() { loadData(); wizardVisible.value = false; }
+function closePanel() { emit('close'); }
+function closePdfPreview() { 
+  pdfPreviewVisible.value = false; 
+  pdfDataUrl.value = null;
+  pdfBlob.value = null;
+  pdfProgress.value = 0;
+  if (progressInterval) clearInterval(progressInterval);
+}
+
+
+
+
+function getImageSrc(img) {
+  if (typeof img === 'string') return img.startsWith('http') ? img : `/api/uploads/${img}`;
+  return img.path || img.url || '';
+}
+
+
+
+function handleImageUpload(e) { /* implementar según servicio */ }
+function removeExistingImage(idx) { equipmentImages.value.splice(idx, 1); }
+function previewImage(img) { /* implementar lightbox */ }
 </script>
 
 <style scoped>
-.equipment-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.75);
-    backdrop-filter: blur(8px);
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    animation: fadeIn 0.3s ease-out;
+/* ─── TOKENS ───────────────────────────────────────────────────── */
+.ehp-root, .pdf-overlay {
+  /* FONDOS QUE GARANTIZAN CONTRASTE */
+  --bg-page   : #0F172A; /* slate-900 (Main background) */
+  --bg-surface: #0F172A; /* slate-900 (Tarjetas principales) */
+  --bg-raised : #1E293B; /* slate-800 (Tarjetas secundarias / anidadas) */
+  
+  --border    : #1E293B; /* slate-800 (Borde tarjetas principales) */
+  --border-md : #334155; /* slate-700 (Borde tarjetas secundarias) */
+
+  /* ESCALA DE COLOR PARA TEXTO */
+  --text-1    : #F8FAFC; /* slate-50  (Títulos principales) */
+  --text-2    : #CBD5E1; /* slate-300 (Texto secundario / labels) */
+  --text-3    : #94A3B8; /* slate-400 (Elemento inactivo) */
+  --text-val  : #E2E8F0; /* slate-200 (Valores destacados / datos) */
+  --text-link : #38BDF8; /* sky-400   (Acciones / links) */
+  --text-link-hv: #7DD3FC; /* sky-300 (Acciones hover +100) */
+
+  --accent    : #60A5FA; /* blue-400  (Elemento activo / seleccionado) */
+  --accent-hv : #93C5FD; /* blue-300  (Elemento activo hover +100) */
+  --accent-dim: rgba(96, 165, 250, 0.1);
+
+  --success   : #34D399; /* emerald-400 (Indicadores positivos) */
+  --success-dim: rgba(52, 211, 153, 0.1);
+  --warning   : #FBBF24; /* amber-400 */
+  --warning-dim: rgba(251, 191, 36, 0.1);
+  --danger    : #F87171; /* red-400 (Indicadores negativos) */
+  --danger-dim: rgba(248, 113, 113, 0.1);
+
+  --radius-sm : 8px;
+  --radius-md : 12px;
+  --radius-lg : 18px;
+  --radius-xl : 26px;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+/* ─── OVERLAY ──────────────────────────────────────────────────── */
+.ehp-root {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(18px);
+  z-index: 100000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
 }
 
-.equipment-panel {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    max-width: 1200px;
-    height: 85vh;
-    background: #0f1419;
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
-    animation: slideUp 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+.ehp-container {
+  width: 100%; max-width: 1480px; height: 92vh;
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: 32px;
+  display: flex; overflow: hidden;
+  box-shadow: 0 40px 120px -30px rgba(0, 0, 0, 0.85);
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes slideUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.ehp-container.global-maint-active {
+  border-color: rgba(14, 165, 233, 0.5);
+  box-shadow: 0 40px 120px -30px rgba(0, 0, 0, 0.9), 0 0 40px rgba(14, 165, 233, 0.2);
+  --accent: #38bdf8;
+  --accent-dim: rgba(14, 165, 233, 0.15);
 }
 
-.panel-header-simple {
-    padding: 16px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+.ehp-container.global-maint-active::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 40%),
+              radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.05), transparent 40%);
+  pointer-events: none;
+  animation: bgBreathing 8s infinite ease-in-out;
+  z-index: 0;
 }
 
-.header-info h1 {
-    margin: 0 0 4px 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
+@keyframes bgBreathing {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
 }
 
-.header-info p {
-    margin: 0;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.6);
+/* ─── SIDEBAR ──────────────────────────────────────────────────── */
+.ehp-sidebar {
+  width: 300px; flex-shrink: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 36px 24px 28px;
+  gap: 32px;
+  overflow-y: auto;
 }
 
-.header-actions {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+/* Header */
+.sidebar-identity-group { display: flex; flex-direction: column; gap: 12px; }
+.sidebar-metadata { 
+  display: flex; flex-direction: column; gap: 12px; 
+  padding: 16px; 
+  background: var(--bg-raised); 
+  border-radius: var(--radius-md); 
+  border: 1px solid var(--border-md); 
+}
+.meta-box { display: flex; flex-direction: column; gap: 4px; }
+.m-label { font-size: 0.875rem; font-weight: 500; color: var(--text-2); text-transform: none; letter-spacing: normal; }
+.m-value { font-size: 1.125rem; font-weight: 700; color: var(--text-val); }
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; letter-spacing: 0.05em; }
+
+.avatar-ring {
+  width: 100px; height: 100px;
+  border-radius: 28px;
+  background: var(--bg-raised);
+  border: 2px solid var(--border-md);
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; transition: border-color 0.4s, transform 0.2s;
+}
+.st-ok   .avatar-ring { border-color: rgba(52, 211, 153, 0.45); }
+.st-warn .avatar-ring { border-color: rgba(251, 191, 36, 0.45); }
+.st-crit .avatar-ring { border-color: rgba(248, 113, 113, 0.45); }
+
+.lottie-avatar { width: 80px; height: 80px; }
+
+.eq-name {
+  color: var(--text-1); font-size: 1.5rem; font-weight: 700;
+  margin: 0; line-height: 1.2; text-align: center;
 }
 
-.btn-edit-mode {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: rgba(59, 130, 246, 0.15);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 8px;
-    color: #60a5fa;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
+.id-badge {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--accent-dim);
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 100px;
+  padding: 6px 16px;
+  margin: 0 auto;
+}
+.id-label { font-size: 0.875rem; font-weight: 500; color: var(--text-2); }
+.id-value { font-size: 1.125rem; font-weight: 700; color: var(--text-val); }
+
+/* Vitals */
+.sidebar-vitals { display: flex; flex-direction: column; gap: 12px; }
+
+.vital-card {
+  background: var(--bg-raised); border: 1px solid var(--border-md);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex; align-items: center; gap: 16px;
 }
 
-.btn-edit-mode:hover {
-    background: rgba(59, 130, 246, 0.25);
-    border-color: rgba(59, 130, 246, 0.5);
+.vital-icon {
+  width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-surface);
+  color: var(--text-2);
+}
+.st-ok   .vital-icon { color: var(--success); background: var(--success-dim); }
+.st-warn .vital-icon { color: var(--warning); background: var(--warning-dim); }
+.st-crit .vital-icon { color: var(--danger);  background: var(--danger-dim); }
+.vital-card.location .vital-icon { color: var(--accent); background: var(--accent-dim); }
+
+.vital-data { display: flex; flex-direction: column; gap: 4px; }
+.v-label { display: block; font-size: 0.875rem; font-weight: 500; color: var(--text-2); }
+.v-value { 
+  font-size: 1.15rem; font-weight: 700; color: var(--text-val); line-height: 1.2; 
+  word-break: break-word; overflow-wrap: break-word;
 }
 
-.btn-cancel {
-    padding: 8px 14px;
-    background: rgba(100, 116, 139, 0.2);
-    border: 1px solid rgba(100, 116, 139, 0.3);
-    border-radius: 8px;
-    color: #94a3b8;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
+/* Nav */
+.sidebar-nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+
+.sidebar-nav button {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-3); padding: 12px 16px; border-radius: var(--radius-md);
+  display: flex; align-items: center; gap: 14px;
+  font-size: 1rem; font-weight: 500; transition: background 0.2s, color 0.2s;
+  text-align: left;
+}
+.sidebar-nav button:hover { background: var(--bg-raised); color: var(--text-2); }
+.sidebar-nav button.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+.sidebar-nav button.active:hover { background: rgba(96, 165, 250, 0.15); color: var(--accent-hv); }
+
+/* Actions */
+.sidebar-actions { display: flex; flex-direction: column; gap: 12px; }
+
+.btn-primary {
+  background: var(--bg-raised); color: var(--text-link); border: 1px solid var(--border-md); cursor: pointer;
+  padding: 14px 16px; border-radius: var(--radius-md);
+  font-size: 0.875rem; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all 0.2s;
+}
+.btn-primary:hover:not(:disabled) { background: var(--bg-surface); color: var(--text-link-hv); border-color: var(--border); }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; color: var(--text-3); }
+
+.btn-maint-pulse {
+  background: var(--accent) !important;
+  color: #0F172A !important;
+  border: none !important;
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.4);
+  animation: btnPulseMaint 2s infinite ease-in-out;
 }
 
-.btn-cancel:hover {
-    background: rgba(100, 116, 139, 0.3);
-    color: #fff;
+@keyframes btnPulseMaint {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(14, 165, 233, 0.4); }
+  50% { transform: scale(1.03); box-shadow: 0 0 30px rgba(14, 165, 233, 0.6); }
 }
+
+.sidebar-maint-badge {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(14, 165, 233, 0.2);
+  border: 1px solid rgba(14, 165, 233, 0.4);
+  padding: 6px 12px; border-radius: 8px;
+  color: #38bdf8; font-size: 0.7rem; font-weight: 900;
+  margin-bottom: 8px; letter-spacing: 0.05em;
+}
+
+.zap-pulse {
+  animation: zapSmallPulse 1.5s infinite;
+}
+
+@keyframes zapSmallPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+.tool-group { display: flex; gap: 12px; }
+
+.btn-tool {
+  flex: 1; background: var(--bg-raised); border: 1px solid var(--border-md);
+  color: var(--text-link); padding: 12px; border-radius: var(--radius-md);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-tool:hover { background: var(--bg-surface); color: var(--text-link-hv); border-color: var(--border); }
+
+.btn-close-panel {
+  background: transparent; border: none; cursor: pointer;
+  color: var(--text-3); font-size: 0.875rem; font-weight: 500;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px; border-radius: var(--radius-md); transition: color 0.2s;
+}
+.btn-close-panel:hover { color: var(--text-2); background: var(--bg-raised); }
+
+/* ─── MAIN ─────────────────────────────────────────────────────── */
+.ehp-main {
+  flex: 1; display: flex; flex-direction: column;
+  background: var(--bg-page); min-width: 0;
+}
+
+.main-header {
+  padding: 24px 48px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  flex-shrink: 0;
+}
+
+.breadcrumb {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.875rem; font-weight: 500; color: var(--text-2);
+}
+.bc-item { display: flex; align-items: center; gap: 6px; }
+.bc-active { color: var(--accent); font-weight: 600; }
+.bc-sep { color: var(--text-3); }
+
+.header-actions { display: flex; align-items: center; gap: 12px; }
+
+.btn-edit {
+  background: var(--bg-raised); border: 1px solid var(--border-md);
+  color: var(--text-link); padding: 10px 20px; border-radius: var(--radius-md);
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 8px;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+.btn-edit:hover { background: var(--bg-surface); color: var(--text-link-hv); border-color: var(--border); }
 
 .btn-save {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 14px;
-    background: rgba(34, 197, 94, 0.2);
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    border-radius: 8px;
-    color: #4ade80;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.btn-save:hover:not(:disabled) {
-    background: rgba(34, 197, 94, 0.3);
-}
-
-.btn-save:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.header-info h1 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
-}
-
-.tabs-bar {
-    display: flex;
-    gap: 0;
-    padding: 0;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-    background: rgba(0, 0, 0, 0.2);
-    flex-shrink: 0;
-}
-
-.tabs-bar button {
-    flex: 1;
-    padding: 12px 16px;
-    background: none;
-    border: none;
-    color: #cbd5e1;
-    font-weight: 600;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s;
-    font-size: 12px;
-}
-
-.tabs-bar button:hover {
-    background: rgba(139, 92, 246, 0.05);
-    color: #e2e8f0;
-}
-.tab-icon {
-    vertical-align: middle;
-    margin-right: 6px;
-    width: 20px;
-    height: 20px;
-}
-.footer-icon {
-    vertical-align: middle;
-    margin-right: 4px;
-    width: 16px;
-    height: 16px;
-}
-
-.tabs-bar button.active {
-    color: #8b5cf6;
-    border-bottom-color: #8b5cf6;
-    background: rgba(139, 92, 246, 0.1);
-}
-
-.panel-content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 20px;
-}
-
-.tab-content {
-    animation: fadeIn 0.3s ease-out;
-}
-
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-}
-
-.info-item {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
-    background: rgba(139, 92, 246, 0.08);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    border-radius: 6px;
-}
-
-.info-item label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #a0aec0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.info-item span {
-    font-size: 12px;
-    color: #e2e8f0;
-    font-weight: 500;
-}
-
-/* Edit mode styles */
-.info-grid.edit-mode {
-    gap: 12px;
-}
-
-.info-grid.edit-mode .info-item {
-    flex-direction: column;
-    gap: 4px;
-}
-
-.edit-input {
-    width: 100%;
-    padding: 8px 12px;
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(59, 130, 246, 0.3);
-    border-radius: 6px;
-    color: #fff;
-    font-size: 12px;
-    transition: all 0.2s ease;
-}
-
-.edit-input:focus {
-    outline: none;
-    border-color: rgba(59, 130, 246, 0.6);
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-}
-
-/* Images section styles */
-.images-section {
-    padding: 16px 0;
-}
-
-.section-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: #fff;
-    margin: 0 0 12px 0;
-}
-
-.upload-section {
-    margin-bottom: 24px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.upload-area {
-    position: relative;
-}
-
-.file-input {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
-}
-
-.upload-label {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 32px;
-    border: 2px dashed rgba(59, 130, 246, 0.4);
-    border-radius: 12px;
-    background: rgba(59, 130, 246, 0.05);
-    color: rgba(59, 130, 246, 0.8);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.upload-label:hover {
-    border-color: rgba(59, 130, 246, 0.6);
-    background: rgba(59, 130, 246, 0.1);
-}
-
-.upload-icon {
-    width: 32px;
-    height: 32px;
-    margin-bottom: 8px;
-}
-
-.uploaded-images {
-    margin-top: 16px;
-}
-
-.uploaded-images h4 {
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-    margin: 0 0 8px 0;
-}
-
-.images-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 12px;
-}
-
-.image-preview {
-    position: relative;
-    aspect-ratio: 1;
-    border-radius: 8px;
-    overflow: hidden;
-    background: rgba(15, 23, 42, 0.5);
-}
-
-.image-preview img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.image-preview .remove-btn {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: rgba(239, 68, 68, 0.9);
-    border: none;
-    color: #fff;
-    font-size: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.image-preview:hover .remove-btn {
-    opacity: 1;
-}
-
-.no-images {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 48px;
-    color: rgba(255, 255, 255, 0.4);
-}
-
-.no-images-icon {
-    width: 48px;
-    height: 48px;
-    margin-bottom: 12px;
-    opacity: 0.5;
-}
-
-.no-images p {
-    margin: 0;
-    font-size: 13px;
-}
-
-.no-images .hint {
-    font-size: 12px;
-    margin-top: 8px;
-    opacity: 0.7;
-}
-
-.history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.history-item {
-    padding: 16px;
-    background: rgba(139, 92, 246, 0.08);
-    border-left: 3px solid #8b5cf6;
-    border-radius: 4px;
-}
-
-.history-date {
-    font-size: 12px;
-    color: #a0aec0;
-    font-weight: 600;
-}
-
-.history-type {
-    font-size: 14px;
-    color: #e2e8f0;
-    font-weight: 600;
-    margin-top: 4px;
-}
-.history-icon {
-    vertical-align: middle;
-    margin-right: 4px;
-    width: 16px;
-    height: 16px;
-}
-.banner-icon {
-    vertical-align: middle;
-    margin-right: 6px;
-    width: 20px;
-    height: 20px;
-}
-
-.history-note {
-    font-size: 13px;
-    color: #cbd5e1;
-    margin-top: 8px;
-    line-height: 1.5;
-}
-
-.history-images {
-    margin-top: 8px;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-.history-image {
-    max-width: 100px;
-    max-height: 80px;
-    border: 1px solid #444;
-    border-radius: 4px;
-}
-
-
-/* field rows container */
-.history-fields {
-    margin-top: 8px;
-}
-.field-category {
-    margin-bottom: 12px;
-    border-left: 4px solid #8b5cf6;
-    padding-left: 8px;
-}
-.category-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    padding: 4px 0;
-    font-size: 13px;
-    font-weight: 700;
-    color: #fff;
-}
-.category-toggle svg {
-    vertical-align: middle;
-}
-.category-rows {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 6px 12px;
-    margin-top: 4px;
-}
-.field-row {
-    display: flex;
-    flex-direction: column;
-    background: rgba(59, 130, 246, 0.1);
-    padding: 6px 8px;
-    border-radius: 4px;
-}
-.field-label {
-    font-size: 11px;
-    color: #a0aec0;
-    font-weight: 600;
-    margin-bottom: 2px;
-}
-.field-value {
-    font-size: 13px;
-    color: #e2e8f0;
-}
-
-.states-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 12px;
-}
-
-.state-item {
-    padding: 12px;
-    background: rgba(139, 92, 246, 0.08);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    border-radius: 6px;
-    text-align: center;
-}
-
-.state-date {
-    display: block;
-    font-size: 11px;
-    color: #a0aec0;
-    font-weight: 600;
-}
-
-.state-type {
-    display: block;
-    font-size: 12px;
-    color: #e2e8f0;
-    margin-top: 4px;
-}
-
-.empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: #a0aec0;
-    font-size: 14px;
-}
-
-.maintenance-banner {
-    margin: 0 32px 16px 32px;
-    border-radius: 10px;
-    overflow: hidden;
-    border-left: 4px solid;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.95) 100%);
-    backdrop-filter: blur(10px);
-}
-
-.maintenance-banner.in-progress {
-    border-left-color: #3b82f6;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.02) 0%, rgba(30, 58, 138, 0.02) 100%);
-}
-
-.maintenance-banner.completed {
-    border-left-color: #10b981;
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.02) 0%, rgba(5, 150, 105, 0.02) 100%);
-}
-
-.banner-wrapper {
-    display: flex;
-    gap: 16px;
-    padding: 16px 20px;
-    align-items: flex-start;
-}
-
-.banner-left {
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-}
-
-.status-indicator {
-    position: relative;
-    width: 56px;
-    height: 56px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(30, 58, 138, 0.1));
-    border: 2px solid rgba(59, 130, 246, 0.3);
-    box-shadow: 0 0 16px rgba(59, 130, 246, 0.15);
-}
-
-.status-indicator.completed {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.1));
-    border-color: rgba(16, 185, 129, 0.3);
-    box-shadow: 0 0 16px rgba(16, 185, 129, 0.15);
-}
-
-.status-icon {
-    width: 28px;
-    height: 28px;
-    color: #3b82f6;
-    animation: subtle-float 3s ease-in-out infinite;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.status-indicator.completed .status-icon {
-    color: #10b981;
-    animation: scale-pulse 2s ease-in-out infinite;
-}
-
-.pulse-dot {
-    position: absolute;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #ef4444;
-    box-shadow: 0 0 8px #ef4444;
-    animation: pulse-ring 2s ease-in-out infinite, dot-glow 2s ease-in-out infinite;
-    top: -8px;
-    right: -8px;
-}
-
-.banner-main {
-    flex: 1;
-    min-width: 0;
-}
-
-.banner-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-}
-
-.banner-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0;
-    letter-spacing: 0.2px;
-}
-
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-    border: 1px solid rgba(59, 130, 246, 0.2);
-    transition: all 0.3s ease;
-}
-
-.badge.preventive {
-    background: rgba(34, 197, 94, 0.1);
-    color: #16a34a;
-    border-color: rgba(34, 197, 94, 0.2);
-}
-
-.badge.corrective {
-    background: rgba(239, 68, 68, 0.1);
-    color: #dc2626;
-    border-color: rgba(239, 68, 68, 0.2);
-}
-
-.badge:hover {
-    background: rgba(59, 130, 246, 0.15);
-    border-color: rgba(59, 130, 246, 0.3);
-}
-
-.badge svg {
-    width: 14px;
-    height: 14px;
-}
-
-.banner-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-}
-
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: #475569;
-    white-space: nowrap;
-}
-
-.meta-icon {
-    width: 16px;
-    height: 16px;
-    color: #64748b;
-    flex-shrink: 0;
-}
-
-.meta-label {
-    font-weight: 600;
-    color: #64748b;
-}
-
-.meta-value {
-    color: #334155;
-    font-weight: 500;
-}
-
-/* ============ ANIMATIONS ============ */
-
-@keyframes subtle-float {
-    0%, 100% {
-        transform: translateY(0px);
-    }
-    50% {
-        transform: translateY(-4px);
-    }
-}
-
-@keyframes scale-pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.08);
-    }
-}
-
-@keyframes pulse-ring {
-    0% {
-        width: 14px;
-        height: 14px;
-        opacity: 1;
-    }
-    100% {
-        width: 32px;
-        height: 32px;
-        opacity: 0;
-    }
-}
-
-@keyframes dot-glow {
-    0%, 100% {
-        box-shadow: 0 0 8px #ef4444;
-    }
-    50% {
-        box-shadow: 0 0 16px #ef4444, 0 0 24px rgba(239, 68, 68, 0.5);
-    }
-}
-
-@media (max-width: 768px) {
-    .banner-content {
-        gap: 12px;
-        padding: 12px 16px;
-    }
-    
-    .banner-icon {
-        width: 40px;
-        height: 40px;
-        font-size: 24px;
-    }
-    
-    .banner-title {
-        font-size: 14px;
-    }
-    
-    .banner-details {
-        font-size: 12px;
-    }
-    
-    .timeline-dots {
-        display: none;
-    }
-}
-
-.loading {
-    text-align: center;
-    padding: 40px 20px;
-    color: #cbd5e1;
-}
-
-.panel-footer-simple {
-    padding: 20px 32px;
-    border-top: 1px solid rgba(139, 92, 246, 0.2);
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    flex-shrink: 0;
-    background: rgba(0, 0, 0, 0.2);
-}
-
-.btn-simple {
-    padding: 12px 24px;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(59, 130, 246, 0.1));
-    border: 1px solid rgba(139, 92, 246, 0.4);
-    border-radius: 8px;
-    color: #e2e8f0;
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-simple:hover {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(59, 130, 246, 0.2));
-    border-color: rgba(139, 92, 246, 0.6);
-    color: #fff;
-}
-
-.btn-simple.maintenance {
-    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-    border-color: #8b5cf6;
-}
-
-.btn-simple.start {
-    background: rgba(34, 197, 94, 0.1);
-    color: #4ade80;
-    border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-.btn-simple.start:hover {
-    background: rgba(34, 197, 94, 0.2);
-    border-color: rgba(34, 197, 94, 0.4);
-}
-
-.btn-simple.finish {
-    background: rgba(245, 158, 11, 0.1);
-    color: #fbbf24;
-    border: 1px solid rgba(245, 158, 11, 0.2);
-}
-
-.btn-simple.finish:hover {
-    background: rgba(245, 158, 11, 0.2);
-    border-color: rgba(245, 158, 11, 0.4);
-}
-
-.btn-simple.close {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(220, 38, 38, 0.1));
-    border-color: rgba(239, 68, 68, 0.4);
-    color: #fca5a5;
-}
-
-.btn-simple.close:hover {
-    background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2));
-    border-color: rgba(239, 68, 68, 0.6);
-    color: #fecaca;
-}
-
-/* PDF preview modal styles */
-.pdf-preview-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(4px);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100000;
-    padding: 20px;
-}
-
-.pdf-preview-content {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    max-width: 1200px;
-    background: #1a1f2e;
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.8);
-}
-
-.pdf-header {
-    padding: 16px 24px;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.05));
-    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-shrink: 0;
-}
-
-.pdf-header h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #e2e8f0;
-}
-
-.close-btn {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: #a0aec0;
-    cursor: pointer;
-    padding: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.close-btn:hover {
-    color: #e2e8f0;
-}
-
-.pdf-loading {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #a0aec0;
-    font-size: 14px;
-}
-
-:deep(.pdf-preview-content .blob-pdf-shell) {
-    flex: 1;
-    overflow: hidden;
-}
-
-/* Scroll styling */
-.panel-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-.panel-content::-webkit-scrollbar-track {
-    background: rgba(139, 92, 246, 0.05);
-}
-
-.panel-content::-webkit-scrollbar-thumb {
-    background: rgba(139, 92, 246, 0.3);
-    border-radius: 4px;
-}
-
-.panel-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(139, 92, 246, 0.5);
-}
-
-/* Improved Info Tab Styles */
-.info-tab-content {
-    padding: 0 !important;
-}
-
-.info-layout {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-}
-
-.highlight-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 16px;
-    padding: 24px;
-    background: rgba(139, 92, 246, 0.05);
-    border-radius: 12px;
-}
-
-.detailed-info-sections {
-    display: flex;
-    flex-direction: column;
-    gap: 32px;
-    padding: 0 24px 40px;
-}
-
-.info-category-group {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.category-title {
-    font-size: 14px;
-    font-weight: 800;
-    color: #e2e8f0;
-    margin: 0;
-    padding-left: 12px;
-    border-left: 4px solid #8b5cf6;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-}
-
-.category-fields-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 12px;
-}
-
-.detail-field {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    padding: 8px 12px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 8px;
-    font-size: 12px;
-}
-
-.detail-field .field-label {
-    color: #94a3b8;
-    font-weight: 600;
-    margin-right: 12px;
-}
-
-.detail-field .field-value {
-    color: #f8fafc;
-    font-weight: 500;
-    text-align: right;
-    word-break: break-word;
-}
-
-.detail-field.editing {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    background: rgba(139, 92, 246, 0.1);
-    border-color: rgba(139, 92, 246, 0.3);
-}
-
-.edit-input-small {
-    width: 100%;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(139, 92, 246, 0.4);
-    border-radius: 4px;
-    color: #fff;
-    padding: 6px 10px;
-    font-size: 12px;
-    outline: none;
-    transition: border-color 0.2s;
-}
-
-.edit-input-small:focus {
-    border-color: #8b5cf6;
-    background: rgba(0, 0, 0, 0.5);
-}
-
-.header-subtitle {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 4px;
-    font-weight: 600;
-}
-
-.header-inv {
-    color: #a78bfa;
-}
-
-.header-eq {
-    color: #cbd5e1;
-}
-
-.header-divider {
-    color: rgba(255, 255, 255, 0.2);
-}
-
-/* Maintenance Tab Styles */
-.maintenance-details {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.maintenance-section {
-    padding: 16px;
-    background: rgba(139, 92, 246, 0.08);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    border-radius: 8px;
-    border-left: 4px solid #8b5cf6;
-}
-
-.maintenance-section.completed {
-    border-left-color: #10b981;
-    background: rgba(16, 185, 129, 0.05);
-    border-color: rgba(16, 185, 129, 0.2);
-}
-
-.maintenance-section.in-progress {
-    border-left-color: #3b82f6;
-    background: rgba(59, 130, 246, 0.05);
-    border-color: rgba(59, 130, 246, 0.2);
-}
-
-.maintenance-section.history {
-    border-left-color: #f59e0b;
-    background: rgba(245, 158, 11, 0.05);
-    border-color: rgba(245, 158, 11, 0.2);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-}
-
-.section-header h3 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 700;
-    color: #e2e8f0;
-}
-
-.completion-indicator,
-.progress-indicator {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 4px 8px;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.completion-indicator {
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
-}
-
-.progress-indicator {
-    background: rgba(59, 130, 246, 0.2);
-    color: #3b82f6;
-    position: relative;
-}
-
-.completion-icon,
-.progress-indicator svg {
-    width: 12px;
-    height: 12px;
-}
-
-.progress-indicator .pulse-dot {
-    position: relative;
-    width: 6px;
-    height: 6px;
-    background: #3b82f6;
-    border-radius: 50%;
-    animation: dot-glow 1.5s ease-in-out infinite;
-}
-
-.maintenance-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.maint-card {
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(139, 92, 246, 0.1);
-    border-radius: 6px;
-}
-
-.maint-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #a0aec0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-}
-
-.maint-value {
-    font-size: 12px;
-    color: #e2e8f0;
-    font-weight: 500;
-}
-
-.badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    white-space: nowrap;
-}
-
-.badge-icon {
-    width: 12px;
-    height: 12px;
-}
-
-.badge.preventive {
-    background: rgba(59, 130, 246, 0.2);
-    color: #3b82f6;
-    border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
-.badge.corrective {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.badge.functional {
-    background: rgba(16, 185, 129, 0.2);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-.badge.non-functional {
-    background: rgba(239, 68, 68, 0.2);
-    color: #ef4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.badge.warning {
-    background: rgba(245, 158, 11, 0.2);
-    color: #f59e0b;
-    border: 1px solid rgba(245, 158, 11, 0.3);
-}
-
-.maint-observations {
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.3);
-    border-left: 3px solid #8b5cf6;
-    border-radius: 4px;
-}
-
-.obs-label {
-    font-size: 10px;
-    font-weight: 700;
-    color: #a0aec0;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 6px;
-}
-
-.obs-value {
-    font-size: 12px;
-    color: #cbd5e1;
-    line-height: 1.5;
-}
-
-.maintenance-list {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.maintenance-item {
-    padding: 12px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(139, 92, 246, 0.1);
-    border-radius: 6px;
-}
-
-.item-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    flex-wrap: wrap;
-}
-
-.item-date {
-    font-size: 11px;
-    color: #a0aec0;
-    font-weight: 600;
-}
-
-.item-details {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 8px;
-}
-
-.detail-row {
-    display: flex;
-    flex-direction: column;
-    font-size: 12px;
-}
-
-.detail-label {
-    color: #a0aec0;
-    font-weight: 600;
-    margin-bottom: 2px;
-    font-size: 10px;
-}
-
-.detail-value {
-    color: #cbd5e1;
-}
-
-/* Integrated Sections Styling */
-.integrated-sections {
-    margin-top: 30px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 20px;
-}
-
-.history-list-compact {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-    padding: 10px 0;
-}
-
-.history-entry-small {
-    display: flex;
-    gap: 12px;
-    position: relative;
-}
-
-.entry-dot {
-    width: 8px;
-    height: 8px;
-    background: #8b5cf6;
-    border-radius: 50%;
-    margin-top: 6px;
-    flex-shrink: 0;
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
-}
-
-.entry-content {
-    flex: 1;
-}
-
-.entry-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-}
-
-.entry-date {
-    font-size: 11px;
-    font-weight: 700;
-    color: #a0aec0;
-}
-
-.entry-type {
-    font-size: 10px;
-    font-weight: 600;
-    color: #8b5cf6;
-    text-transform: uppercase;
-}
-
-.entry-desc {
-    font-size: 12px;
-    color: #cbd5e1;
-}
-
-.empty-small {
-    padding: 20px;
-    text-align: center;
-    color: #64748b;
-    font-size: 13px;
-    font-style: italic;
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 8px;
+  background: var(--success); color: #0F172A; border: none; padding: 10px 20px;
+  border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 700;
+  cursor: pointer; transition: background 0.2s;
+}
+.btn-save:hover:not(:disabled) { background: #10B981; }
+.btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-ghost {
+  background: transparent; border: 1px solid var(--border-md);
+  color: var(--text-link); padding: 10px 20px; border-radius: var(--radius-md);
+  font-size: 0.875rem; font-weight: 600; cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.btn-ghost:hover { color: var(--text-link-hv); border-color: var(--border); background: var(--bg-raised); }
+
+.main-content {
+  flex: 1; overflow-y: auto; padding: 40px 48px;
+}
+
+/* ─── ELITE BENTO DASHBOARD ───────────────────────────────────── */
+.section-dashboard-elite { display: flex; flex-direction: column; gap: 24px; }
+.elite-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: auto auto;
+  gap: 24px;
+}
+
+.elite-card { 
+  background: var(--bg-surface); border: 1px solid var(--border); 
+  border-radius: var(--radius-xl); padding: 28px; 
+  display: flex; flex-direction: column; gap: 20px; 
+  transition: transform 0.2s, border-color 0.2s; 
+}
+.elite-card:hover { border-color: var(--border-md); }
+
+.ec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.ec-tag { font-size: 1.125rem; font-weight: 700; color: var(--text-1); }
+
+/* Health Center (2x2) */
+.health-center { grid-column: span 2; grid-row: span 2; display: flex; flex-direction: column; justify-content: space-between; }
+.health-center.st-ok   { background: linear-gradient(135deg, rgba(52, 211, 153, 0.08) 0%, var(--bg-surface) 100%); border-color: rgba(52, 211, 153, 0.2); }
+.health-center.st-warn { background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, var(--bg-surface) 100%); border-color: rgba(251, 191, 36, 0.2); }
+.health-center.st-crit { background: linear-gradient(135deg, rgba(248, 113, 113, 0.08) 0%, var(--bg-surface) 100%); border-color: rgba(248, 113, 113, 0.2); }
+
+.health-display { display: flex; align-items: center; gap: 36px; flex: 1; }
+.health-gauge-elite { position: relative; width: 140px; height: 140px; flex-shrink: 0; }
+.health-gauge-elite svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.e-track { fill: none; stroke: var(--bg-raised); stroke-width: 8; }
+.e-fill  { fill: none; stroke: currentColor; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); stroke-dasharray: 276; }
+.st-ok   .e-fill { stroke: var(--success); }
+.st-warn .e-fill { stroke: var(--warning); }
+.st-crit .e-fill { stroke: var(--danger); }
+.st-maint .e-fill { stroke: var(--accent); }
+.e-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2.25rem; font-weight: 800; color: var(--text-val); }
+
+.health-info { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.health-title-elite { font-size: 1.875rem; font-weight: 800; color: var(--text-1); margin: 0; line-height: 1.2; }
+.lottie-elite { width: 85px; height: 85px; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15)); }
+.health-desc-elite { font-size: 1rem; font-weight: 500; color: var(--text-2); line-height: 1.6; margin: 0; }
+
+/* Quick Actions */
+.quick-actions-card { grid-column: span 2; }
+.qa-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; flex: 1; }
+.qa-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: 18px; border-radius: var(--radius-lg); border: 1px solid var(--border-md);
+  background: var(--bg-raised); color: var(--text-link); cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.qa-btn span { font-size: 0.875rem; font-weight: 600; }
+.qa-btn:hover { transform: translateY(-3px); border-color: var(--accent); background: var(--accent-dim); color: var(--text-link-hv); box-shadow: 0 8px 24px -8px rgba(0,0,0,0.5); }
+.qa-btn.warning:hover { border-color: var(--warning); background: var(--warning-dim); color: #FCD34D; }
+.qa-btn.success:hover { border-color: var(--success); background: var(--success-dim); color: #6EE7B7; }
+
+/* Stats Mini */
+.mini-stats-grid { display: flex; flex-direction: column; gap: 16px; justify-content: center; flex: 1; }
+.m-stat { display: flex; align-items: center; gap: 16px; }
+.m-label { font-size: 1rem; font-weight: 600; color: var(--text-2); width: 36px; }
+.m-bar { flex: 1; height: 8px; background: var(--bg-raised); border-radius: 4px; overflow: hidden; border: 1px solid var(--border-md); }
+.m-fill { height: 100%; border-radius: 4px; }
+.m-fill.success { background: var(--success); }
+.m-fill.danger  { background: var(--danger); }
+.m-val { font-size: 1.25rem; font-weight: 800; color: var(--text-val); width: 36px; text-align: right; }
+
+/* Count & Meta */
+.count-mini { justify-content: center; }
+.big-count { font-size: 3rem; font-weight: 800; color: var(--text-val); line-height: 1; margin: 8px 0; }
+.count-label, .meta-label { font-size: 1rem; font-weight: 500; color: var(--text-2); }
+.meta-val { font-size: 1.25rem; font-weight: 800; color: var(--text-val); margin-top: auto; margin-bottom: 8px; }
+.text-truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Timeline Card */
+.timeline-card { grid-column: span 2; }
+.elite-feed { display: flex; flex-direction: column; gap: 12px; }
+.ef-item { display: flex; align-items: center; gap: 16px; padding: 14px 16px; background: var(--bg-raised); border-radius: var(--radius-md); border: 1px solid var(--border-md); transition: all 0.2s; cursor: pointer; }
+.ef-item:hover { background: var(--bg-surface); border-color: var(--border); transform: translateX(4px); }
+.ef-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #0F172A; }
+.ef-icon.mp { background: var(--success); }
+.ef-icon.mc { background: var(--danger); }
+.ef-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.ef-title { font-size: 1rem; font-weight: 700; color: var(--text-1); }
+.ef-date { font-size: 0.875rem; font-weight: 500; color: var(--text-2); }
+.ef-chev { color: var(--text-3); }
+.elite-empty { color: var(--text-3); font-size: 1rem; font-weight: 500; text-align: center; padding: 24px; }
+
+/* Maintenance Intervention Banner */
+.maintenance-intervention-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25) 0%, rgba(30, 64, 175, 0.15) 100%);
+  border: 1px solid rgba(14, 165, 233, 0.4);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 10px 30px -10px rgba(14, 165, 233, 0.4);
+  animation: bannerPulse 4s infinite ease-in-out;
+}
+
+@keyframes bannerPulse {
+  0%, 100% { border-color: rgba(14, 165, 233, 0.4); box-shadow: 0 10px 30px -10px rgba(14, 165, 233, 0.4); }
+  50% { border-color: rgba(14, 165, 233, 0.8); box-shadow: 0 15px 40px -5px rgba(14, 165, 233, 0.6); }
+}
+
+.mib-content { display: flex; align-items: center; gap: 20px; }
+.mib-icon-pulse {
+  width: 48px; height: 48px;
+  background: var(--accent);
+  color: #0F172A;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  animation: zapPulse 2s infinite;
+}
+
+@keyframes zapPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(14, 165, 233, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(14, 165, 233, 0); }
+}
+
+.mib-text { display: flex; flex-direction: column; gap: 4px; }
+.mib-title { font-size: 1.125rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
+.mib-desc { font-size: 1rem; font-weight: 500; color: var(--text-2); }
+.mib-desc strong { color: var(--text-val); }
+
+.mib-action-btn {
+  background: var(--accent); color: #0F172A; border: none;
+  padding: 12px 24px; border-radius: 12px;
+  font-size: 0.95rem; font-weight: 800;
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; transition: all 0.2s;
+}
+.mib-action-btn:hover { background: var(--text-link-hv); transform: scale(1.05); }
+
+.primary-glow {
+  background: var(--accent-dim) !important;
+  border-color: var(--accent) !important;
+  color: var(--accent) !important;
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.3);
+}
+.primary-glow:hover {
+  background: var(--accent) !important;
+  color: #0F172A !important;
+}
+
+.text-maint { color: var(--accent) !important; }
+
+/* Dashboard Card Maintenance Themes */
+.health-center.st-maint {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, var(--bg-surface) 100%);
+  border-color: rgba(14, 165, 233, 0.4);
+}
+
+/* Stats card */
+.health-banner {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-xl); padding: 24px 32px; margin-bottom: 24px;
+}
+.health-banner.st-ok   { border-color: rgba(52, 211, 153, 0.3); background: linear-gradient(90deg, rgba(52, 211, 153, 0.05) 0%, var(--bg-surface) 100%); }
+.health-banner.st-warn { border-color: rgba(251, 191, 36, 0.3);  background: linear-gradient(90deg, rgba(251, 191, 36, 0.05) 0%, var(--bg-surface) 100%); }
+.health-banner.st-crit { border-color: rgba(248, 113, 113, 0.3);  background: linear-gradient(90deg, rgba(248, 113, 113, 0.05) 0%, var(--bg-surface) 100%); }
+
+.h-banner-main { display: flex; align-items: center; justify-content: space-between; gap: 40px; }
+
+/* ─── ELITE TABS ──────────────────────────────────────────────── */
+.section-specs-elite, .section-history-elite, .section-gallery-elite, .section-docs-elite { display: flex; flex-direction: column; gap: 32px; animation: slideUp 0.4s ease-out; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+.empty-elite { padding: 100px 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; color: var(--text-3); text-align: center; border: 2px dashed var(--border-md); border-radius: var(--radius-xl); font-size: 1.125rem; font-weight: 500; }
+
+/* Specs */
+.specs-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.elite-search { flex: 1; display: flex; align-items: center; gap: 14px; background: var(--bg-raised); border: 1px solid var(--border-md); border-radius: var(--radius-lg); padding: 14px 20px; transition: border-color 0.2s; }
+.elite-search:focus-within { border-color: var(--accent); }
+.elite-search input { background: transparent; border: none; outline: none; color: var(--text-val); font-size: 1rem; font-weight: 500; width: 100%; }
+.elite-search input::placeholder { color: var(--text-3); }
+.btn-tool-elite { background: var(--bg-raised); border: 1px solid var(--border-md); color: var(--text-link); padding: 14px 20px; border-radius: var(--radius-lg); display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 0.875rem; font-weight: 700; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+.btn-tool-elite:hover { background: var(--bg-surface); color: var(--text-link-hv); border-color: var(--border); }
+
+.specs-clinical-grid { 
+  display: grid; 
+  grid-template-columns: repeat(2, 1fr); 
+  gap: 32px; 
+}
+.spec-category-card { 
+  background: var(--bg-surface); 
+  border: 1px solid var(--border); 
+  border-radius: var(--radius-xl); 
+  padding: 32px; 
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.scc-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.scc-bar { width: 4px; height: 20px; border-radius: 2px; }
+.scc-title { font-size: 1.25rem; font-weight: 800; color: var(--text-1); margin: 0; letter-spacing: -0.02em; }
+.scc-row { 
+  display: flex; 
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 0; 
+  border-bottom: 1px solid var(--border-md); 
+}
+.scc-row:last-child { border-bottom: none; padding-bottom: 0; }
+.scc-label { color: var(--text-3); font-weight: 700; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.scc-value { color: var(--text-val); font-weight: 700; font-size: 1.05rem; }
+.scc-value.is-fallback { color: var(--text-3); font-style: italic; font-weight: 500; }
+.scc-input { background: var(--bg-raised); border: 1px solid var(--accent); color: var(--text-val); font-size: 1rem; font-weight: 700; padding: 10px; border-radius: var(--radius-sm); outline: none; width: 100%; }
+
+/* Barcodes */
+.barcode-labels-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 10px; }
+.label-box { background: white; border: 2px solid #000; padding: 15px; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 4px; }
+.label-header { font-size: 10px; font-weight: 900; color: #000; margin-bottom: 5px; }
+.label-footer { font-size: 8px; font-weight: 700; color: #666; margin-top: 5px; border-top: 1px dashed #ccc; width: 100%; text-align: center; padding-top: 5px; }
+.elite-barcode-canvas { max-width: 100%; height: auto; }
+
+/* History */
+.month-block { margin-bottom: 40px; }
+.month-header-elite { font-size: 1.25rem; font-weight: 800; color: var(--accent); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--accent-dim); }
+.history-controls-elite { margin-bottom: 24px; font-size: 1.125rem; font-weight: 500; color: var(--text-2); }
+.history-count-elite strong { font-weight: 800; color: var(--text-val); }
+.clinical-timeline-full { display: flex; flex-direction: column; }
+.ctf-node { display: flex; gap: 28px; padding: 24px 0; }
+.ctf-aside { width: 90px; text-align: right; display: flex; flex-direction: column; gap: 6px; }
+.ctf-date { font-size: 1rem; font-weight: 800; color: var(--text-val); }
+.ctf-time { font-size: 0.875rem; font-weight: 500; color: var(--text-2); }
+.ctf-rail { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.ctf-dot { width: 14px; height: 14px; border-radius: 50%; box-shadow: 0 0 0 3px currentColor; background: var(--bg-page); }
+.ctf-dot.mp { color: var(--success); }
+.ctf-dot.mc { color: var(--danger); }
+.ctf-line { flex: 1; width: 2px; background: var(--border-md); }
+.ctf-node:last-child .ctf-line { display: none; }
+.ctf-card {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+.ctf-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 30px rgba(14, 165, 233, 0.08);
+  transform: translateY(-2px);
+}
+.ctf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid var(--border-md); }
+.ctf-badge { font-size: 0.8rem; font-weight: 800; padding: 6px 14px; border-radius: 8px; color: #0F172A; text-transform: uppercase; letter-spacing: 0.02em; }
+.ctf-badge.mp { background: var(--success); }
+.ctf-badge.mc { background: var(--danger); }
+.ctf-folio { font-size: 1.125rem; font-weight: 800; color: var(--text-val); }
+
+.ctf-section { margin-bottom: 16px; }
+.ctf-section-label { display: block; font-size: 0.7rem; font-weight: 800; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.05em; }
+.ctf-desc { font-size: 1rem; font-weight: 500; color: var(--text-2); line-height: 1.6; margin: 0; }
+
+.ctf-tech-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.tech-tag { font-size: 0.75rem; font-weight: 700; background: var(--bg-raised); color: var(--text-2); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border-md); }
+
+.ctf-meta-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ctf-meta-item.main-item {
+  grid-column: 1 / -1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+
+/* Status & Type Colors */
+.ctf-event-card.type-mp { border-left-color: #0d9488; }
+.ctf-event-card.type-mc { border-left-color: #b91c1c; }
+.ctf-event-card.type-pending { border-left-color: #f59e0b; }
+
+.ctf-event-card.type-mp .ctf-header { background: rgba(13, 148, 136, 0.05); }
+.ctf-event-card.type-mc .ctf-header { background: rgba(185, 28, 28, 0.05); }
+.ctf-event-card.type-pending .ctf-header { background: rgba(245, 158, 11, 0.05); }
+
+.ctf-dot.mp { background: #0d9488; box-shadow: 0 0 10px rgba(13, 148, 136, 0.5); }
+.ctf-dot.mc { background: #b91c1c; box-shadow: 0 0 10px rgba(185, 28, 28, 0.5); }
+.ctf-dot.pending { background: #f59e0b; box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+
+.ctf-badge.mp { background: rgba(13, 148, 136, 0.1); color: #0d9488; border: 1px solid rgba(13, 148, 136, 0.2); }
+.ctf-badge.mc { background: rgba(185, 28, 28, 0.1); color: #b91c1c; border: 1px solid rgba(185, 28, 28, 0.2); }
+.ctf-badge.pending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.2); }
+
+.ctf-meta-compact-grid.secondary {
+  background: rgba(255, 255, 255, 0.015);
+  border-style: dashed;
+}
+
+.checks-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.checks-inline span {
+  opacity: 0.3;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.checks-inline span.active {
+  opacity: 1;
+  color: var(--brand-primary);
+}
+
+.ctf-notes-mini {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 3px solid var(--brand-primary);
+  font-size: 0.8rem;
+  color: var(--text-2);
+  line-height: 1.4;
+  border-radius: 0 4px 4px 0;
+}
+
+.ctf-notes-mini.warning {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.05);
+  margin-top: 6px;
+}
+
+.ctf-meta-grid { 
+  display: grid; 
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+  gap: 12px; 
+  margin-top: 20px; 
+  padding-top: 16px; 
+  border-top: 1px dashed var(--border-md); 
+}
+.ctf-meta-item { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 600; color: var(--text-3); }
+.ctf-meta-item strong { color: var(--text-val); margin-right: 4px; }
+.ctf-meta-item svg { color: var(--accent); }
+
+/* Tracking Mini List (Inside Specs) */
+.tracking-mini-list { display: flex; flex-direction: column; gap: 16px; }
+.month-tracking-item { border-left: 2px solid var(--border-md); padding-left: 16px; margin-bottom: 8px; }
+.mti-header { font-size: 0.875rem; font-weight: 800; color: var(--accent); margin-bottom: 8px; text-transform: uppercase; }
+.mti-event { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--bg-raised); border-radius: 8px; margin-bottom: 6px; border: 1px solid var(--border-md); }
+.mti-badge { font-size: 0.65rem; font-weight: 900; padding: 2px 6px; border-radius: 4px; color: #fff; }
+.mti-badge.mp { background: var(--success); }
+.mti-badge.mc { background: var(--danger); }
+.mti-info { flex: 1; display: flex; flex-direction: column; }
+.mti-folio { font-size: 0.75rem; font-weight: 700; color: var(--text-val); }
+.mti-date { font-size: 0.65rem; color: var(--text-2); }
+.mti-hours { font-size: 0.75rem; font-weight: 800; color: var(--text-3); }
+
+/* Root Layering Fix */
+.ehp-root { z-index: 100000; }
+.pdf-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 300000 !important;
+  display: flex; align-items: center; justify-content: center;
+  padding: 40px;
+}
+.pdf-modal {
+  width: 100%; max-width: 1100px; height: 90vh;
+  background: var(--bg-page);
+  border: 1px solid var(--border-md);
+  border-radius: var(--radius-xl);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 50px 100px -20px rgba(0,0,0,0.7);
+}
+.pdf-modal-header {
+  padding: 20px 32px;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--border-md);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.pdf-modal-header h3 { font-size: 1.25rem; font-weight: 800; color: var(--text-1); margin: 0; }
+.pdf-close-btn {
+  width: 36px; height: 36px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-md);
+  color: var(--text-link);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex: none;
+}
+.pdf-close-btn:hover { 
+  background: var(--bg-raised); 
+  color: var(--text-link-hv); 
+  border-color: var(--accent); 
+  transform: rotate(90deg); 
+}
+.pdf-body { flex: 1; min-height: 0; position: relative; height: 100%; display: flex; flex-direction: column; }
+
+.pdf-loading-zone {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-page); z-index: 10;
+}
+.clinical-loading-icon {
+  position: relative;
+  width: 80px; height: 80px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  margin-bottom: 20px;
+  animation: float 3s ease-in-out infinite;
+}
+.clinical-loading-icon .base-icon {
+  filter: drop-shadow(0 0 15px rgba(96, 165, 250, 0.4));
+}
+.scan-bar {
+  position: absolute;
+  top: 10%; left: 10%; width: 80%; height: 3px;
+  background: var(--success);
+  box-shadow: 0 0 10px var(--success);
+  border-radius: 2px;
+  animation: scan 2s linear infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes scan {
+  0% { top: 10%; opacity: 0; }
+  10%, 90% { opacity: 1; }
+  100% { top: 90%; opacity: 0; }
+}
+.pdf-progress-card {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  max-width: 400px; padding: 40px; gap: 16px;
+}
+.loading-title { font-size: 1.5rem; font-weight: 800; color: var(--text-1); margin: 0; }
+.loading-desc { font-size: 0.875rem; color: var(--text-3); line-height: 1.5; }
+.pdf-progress-track {
+  width: 100%; height: 6px; background: var(--bg-raised);
+  border-radius: 100px; overflow: hidden; margin-top: 10px;
+  border: 1px solid var(--border-md);
+}
+.pdf-progress-fill {
+  height: 100%; background: linear-gradient(90deg, var(--accent), var(--success));
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.pdf-progress-num { font-size: 1.25rem; font-weight: 800; color: var(--accent); margin-top: 8px; }
+
+.ehp-container { z-index: 501; }
+:deep(.wizard-overlay) { z-index: 200000 !important; }
+
+/* Gallery */
+.gallery-header-elite { display: flex; justify-content: space-between; align-items: center; }
+.gallery-info-elite { font-size: 1.125rem; font-weight: 500; color: var(--text-2); margin: 0; }
+.btn-primary-small { background: var(--bg-raised); border: 1px solid var(--border-md); color: var(--text-link); padding: 10px 16px; border-radius: var(--radius-md); font-size: 0.875rem; font-weight: 700; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+.btn-primary-small:hover { background: var(--bg-surface); color: var(--text-link-hv); border-color: var(--border); }
+.gallery-elite-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+.ge-item { position: relative; aspect-ratio: 4/3; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-md); }
+.ge-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease; }
+.ge-item:hover img { transform: scale(1.05); }
+.ge-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.7); opacity: 0; display: flex; align-items: center; justify-content: center; gap: 16px; transition: opacity 0.2s; }
+.ge-item:hover .ge-overlay { opacity: 1; }
+.ge-btn { background: var(--bg-raised); border: 1px solid var(--border-md); color: var(--text-link); padding: 10px; border-radius: 50%; cursor: pointer; transition: background 0.2s, color 0.2s; }
+.ge-btn.danger { color: var(--danger); }
+.ge-btn:hover { background: var(--bg-surface); color: var(--text-link-hv); }
+.ge-btn.danger:hover { color: #FCA5A5; }
+
+/* Docs */
+.docs-clinical-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+.doc-elite-item { display: flex; align-items: center; gap: 20px; padding: 24px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-xl); cursor: pointer; transition: border-color 0.2s, transform 0.2s; }
+.doc-elite-item:hover { border-color: var(--border-md); transform: translateY(-2px); }
+.dei-icon { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); color: #0F172A; }
+.dei-icon.pdf { background: var(--accent); }
+.dei-icon.manual { background: var(--text-3); }
+.dei-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.dei-title { font-size: 1.125rem; font-weight: 700; color: var(--text-1); }
+.dei-desc { font-size: 0.875rem; font-weight: 500; color: var(--text-2); }
+.dei-action { color: var(--text-link); transition: color 0.2s; }
+.doc-elite-item:hover .dei-action { color: var(--text-link-hv); }
+
+/* ─── UTILITIES & ANIMATIONS ─────────────────────────────────── */
+.emoji-pop-enter-active, .emoji-pop-leave-active { transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+.emoji-pop-enter-from { opacity: 0; transform: scale(0.5); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── RESPONSIVE ───────────────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .ehp-sidebar {
+    width: 80px; padding: 28px 16px; gap: 24px;
+  }
+  .sidebar-header .eq-name,
+  .sidebar-header .id-badge,
+  .sidebar-vitals .vital-data,
+  .sidebar-nav button span,
+  .btn-primary span,
+  .btn-close-panel span { display: none; }
+
+  .sidebar-nav button { padding: 14px; justify-content: center; }
+  .btn-primary { padding: 14px; }
+  .vital-card  { padding: 12px; justify-content: center; }
+  .vital-icon  { width: 40px; height: 40px; }
+  .avatar-ring { width: 56px; height: 56px; border-radius: 16px; }
+  .lottie-avatar { width: 44px; height: 44px; }
+
+  .elite-grid  { grid-template-columns: 1fr; }
+  .specs-clinical-grid { columns: 1; }
+  .health-center { grid-row: span 1; grid-column: span 1; }
+  .quick-actions-card { grid-column: span 1; }
+  .timeline-card { grid-column: span 1; }
+}
+
+@media (max-width: 900px) {
+  .main-content { padding: 32px 24px; }
+  .main-header  { padding: 20px 24px; }
+  .ctf-time { display: none; }
 }
 </style>

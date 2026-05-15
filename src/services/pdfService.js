@@ -5,8 +5,10 @@
  */
 
 export async function generateEquipmentPDF(equipment) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s watchdog synchronized with backend
+
     try {
-        // Normalizar el parámetro - puede ser string o objeto
         const invNo = typeof equipment === 'string' ? equipment : (equipment?.inventoryNo || equipment?.['No DE INVENTARIO'] || equipment?.['NUMERO DE SERIE']);
         
         if (!invNo && !equipment) {
@@ -14,28 +16,28 @@ export async function generateEquipmentPDF(equipment) {
             return null;
         }
 
-        // Hacer una petición al backend para generar el PDF
         const response = await fetch('/api/pdf/equipment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: controller.signal,
             body: JSON.stringify({ 
                 inventoryNo: invNo,
                 equipment: typeof equipment === 'object' ? equipment : null
             })
-        })
+        });
+        clearTimeout(timeoutId);
 
-        if (!response.ok) throw new Error('Error generating PDF')
-
-        const blob = await response.blob()
-        
-        // Crear URL para el blob (para preview)
-        const pdfUrl = window.URL.createObjectURL(blob)
-        
-        // Devolver objeto con pdfUrl para que pueda usarse en preview
-        return { pdfUrl, blob }
+        if (!response.ok) throw new Error('Error generating PDF');
+        const blob = await response.blob();
+        const pdfUrl = window.URL.createObjectURL(blob);
+        return { pdfUrl, blob };
     } catch (error) {
-        console.error('PDF generation error:', error)
-        return null
+        clearTimeout(timeoutId);
+        console.warn('PDF Engine Timeout/Error. Triggering Clinical Fallback...', error);
+        
+        // El "Si o Sí" se entrega: Usar el generador simple del cliente
+        generateSimplePDF(equipment);
+        return { fallback: true };
     }
 }
 

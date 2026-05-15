@@ -102,11 +102,11 @@
             <input v-model="meta.responsable" class="ik-input" placeholder="Nombre completo" />
           </label>
           <label class="ik-field">
-            <span>Proveedor / Origen *</span>
+            <span>Proveedor / Origen (opcional)</span>
             <input v-model="meta.proveedor" class="ik-input" placeholder="Empresa, donación o procedencia" />
           </label>
           <label class="ik-field">
-            <span>Motivo *</span>
+            <span>Motivo (opcional)</span>
             <input v-model="meta.motivo" class="ik-input" placeholder="Alta inicial, reposición estratégica..." />
           </label>
           <label class="ik-field">
@@ -134,7 +134,7 @@
           <div class="ik-new-main-header">
             <div>
               <h3>Ficha completa por bien</h3>
-              <p>Captura identificación, trazabilidad y distribución para cada renglón.</p>
+              <p>Captura la descripción y cantidad. Los demás campos son opcionales.</p>
             </div>
             <button type="button" class="ik-add-row" @click="addNewItemRow">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -168,37 +168,37 @@
                 </label>
 
                 <label class="ik-field">
-                  <span>Clave HRAEI *</span>
+                  <span>Clave HRAEI (opcional)</span>
                   <input v-model.trim="item.claveHRAEI" class="ik-input" placeholder="C-XXXXX" />
                 </label>
                 <label class="ik-field">
-                  <span>No. inventario</span>
+                  <span>No. inventario (opcional)</span>
                   <input v-model.trim="item.noInventario" class="ik-input" placeholder="INV-000123" />
                 </label>
                 <label class="ik-field">
-                  <span>Ubicación *</span>
+                  <span>Ubicación (opcional)</span>
                   <input v-model.trim="item.ubicacion" class="ik-input" placeholder="Ej. CEYE, Urgencias" />
                 </label>
 
                 <label class="ik-field">
-                  <span>Marca *</span>
+                  <span>Marca (opcional)</span>
                   <input v-model.trim="item.marca" class="ik-input" placeholder="Ej. BD" />
                 </label>
                 <label class="ik-field">
-                  <span>Modelo *</span>
+                  <span>Modelo (opcional)</span>
                   <input v-model.trim="item.modelo" class="ik-input" placeholder="Ej. Luer-Lok" />
                 </label>
                 <label class="ik-field">
-                  <span>Referencia *</span>
+                  <span>Referencia (opcional)</span>
                   <input v-model.trim="item.referencia" class="ik-input" placeholder="Código del fabricante" />
                 </label>
 
                 <label class="ik-field">
-                  <span>Lote *</span>
+                  <span>Lote (opcional)</span>
                   <input v-model.trim="item.lote" class="ik-input" placeholder="Ej. 0936-01" />
                 </label>
                 <label class="ik-field">
-                  <span>Origen del bien *</span>
+                  <span>Origen del bien (opcional)</span>
                   <input v-model.trim="item.origenBien" class="ik-input" placeholder="Compra, donación, comodato..." />
                 </label>
                 <label class="ik-field">
@@ -323,6 +323,7 @@
 
 <script setup>
 import { ref, computed, watch, reactive } from 'vue';
+import Swal from 'sweetalert2';
 import WizardShell from './WizardShell.vue';
 import ItemListVirtual from './ItemListVirtual.vue';
 import OrderFilterBar from '@/components/OrderFilterBar.vue';
@@ -700,26 +701,18 @@ function removeNewItemRow(index) {
 function isNewItemValid(item) {
   if (!item) return false;
   const desc = (item.descripcion || '').trim();
-  const clave = (item.claveHRAEI || '').trim();
-  const marca = (item.marca || '').trim();
-  const modelo = (item.modelo || '').trim();
-  const referencia = (item.referencia || '').trim();
-  const lote = (item.lote || '').trim();
-  const ubicacion = (item.ubicacion || '').trim();
-  const origenBien = (item.origenBien || '').trim();
   const total = getNewItemTotal(item);
-  const tipo = item.unidadTipo;
-  const medida = item.unidadMedida;
-  const fechaCad = (item.fechaCaducidad || '').trim();
-
-  if (!desc || !clave || !marca || !modelo || !referencia || !lote || !ubicacion || !origenBien) return false;
-  if (!tipo || !medida || total <= 0) return false;
-  if (!item.sinCaducidad && !fechaCad) return false;
-  if (isUnidadCustom(tipo, medida)) {
-    const custom = (item.unidadMedidaCustom || '').trim();
-    if (!custom) return false;
-  }
+  // Solo la descripción y al menos 1 unidad son obligatorios
+  if (!desc) return false;
+  if (total <= 0) return false;
   return true;
+}
+
+function getNewItemMissingFields(item) {
+  const missing = [];
+  if (!(item.descripcion || '').trim()) missing.push('Descripción del bien');
+  if (getNewItemTotal(item) <= 0) missing.push('Cantidad (al menos 1 unidad)');
+  return missing;
 }
 
 function areNewItemsValid() {
@@ -769,14 +762,14 @@ const canNext = computed(() => {
   if (step.value === 0) return !!intakeType.value;
   if (step.value === 1 && intakeType.value === 'refill') return selectedCount.value > 0 && !!meta.value.responsable;
   if (step.value === 1 && intakeType.value === 'new') {
-    return areNewItemsValid() && !!meta.value.responsable && !!meta.value.proveedor && !!meta.value.motivo;
+    return areNewItemsValid() && !!meta.value.responsable;
   }
   return true;
 });
 
 const canFinish = computed(() => {
   if (intakeType.value === 'refill') return selectedCount.value > 0 && !!meta.value.responsable;
-  return areNewItemsValid() && !!meta.value.responsable && !!meta.value.proveedor && !!meta.value.motivo;
+  return areNewItemsValid() && !!meta.value.responsable;
 });
 
 /* Load items for refill */
@@ -817,8 +810,24 @@ const resetState = () => {
   meta.value = { responsable: '', proveedor: '', motivo: '', notas: '' };
   newItems.value = [makeNewItem()]
 };
-const close = (force = false) => {
-    if (force || window.confirm('¿Está seguro de que desea cerrar el wizard? Se perderán los cambios no guardados.')) {
+const darkSwal = { background: '#0f1423', color: '#e0e7ff', confirmButtonColor: '#5d8dff', cancelButtonColor: '#64748b' };
+
+const close = async (force = false) => {
+    if (force) {
+        emit('close');
+        resetState();
+        return;
+    }
+    const result = await Swal.fire({
+        title: '¿Cerrar el ingreso?',
+        text: 'Se perderán los cambios no guardados.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, cerrar',
+        cancelButtonText: 'Cancelar',
+        ...darkSwal
+    });
+    if (result.isConfirmed) {
         emit('close');
         resetState();
     }
@@ -894,11 +903,31 @@ const submit = async () => {
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.ok === false) throw new Error(data.msg || data.error || 'La creación falló');
     }
+     await Swal.fire({
+       title: '¡Ingreso completado!',
+       text: intakeType.value === 'refill' ? `Se resurtieron ${totalUnits.value} unidades exitosamente.` : `Se registraron ${newItems.value.length} bien(es) correctamente.`,
+       icon: 'success',
+       ...darkSwal
+     });
      emit('success');
      close(true);
   } catch (err) {
-    const detail = String(err?.message || 'No se pudo completar el ingreso de bienes');
-    submitError.value = `Ingreso no completado: ${detail}`;
+    console.error('[IntakeWizard] Submit error:', err);
+    const raw = String(err?.message || '');
+    // Mapear errores técnicos a mensajes amigables
+    let userMsg = 'No se pudo completar el ingreso. Intenta de nuevo.';
+    if (raw.includes('duplica') || raw.includes('ya existe')) userMsg = 'Uno o más artículos ya existen en el catálogo. Verifica los datos o utiliza el modo de "Resurtido".';
+    else if (raw.includes('stock') || raw.includes('existencias')) userMsg = 'No hay suficiente stock disponible para completar esta operación.';
+    else if (raw.includes('Selecciona')) userMsg = 'Debes seleccionar al menos un artículo antes de continuar.';
+    else if (raw.includes('falló') || raw.includes('failed')) userMsg = 'El servidor no pudo procesar la solicitud. Verifica tu conexión e intenta nuevamente.';
+    else if (raw) userMsg = raw;
+    submitError.value = '';
+    await Swal.fire({
+      title: 'Ingreso no completado',
+      text: userMsg,
+      icon: 'error',
+      ...darkSwal
+    });
   } finally {
     submitting.value = false;
   }

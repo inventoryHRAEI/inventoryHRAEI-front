@@ -79,8 +79,23 @@ export async function getAllMaintenances(inventoryNo) {
 // === FLUJO DE MANTENIMIENTOS ===
 
 // Iniciar un mantenimiento
-export async function startMaintenance(inventoryNo, { maintenance_type = 'MP', notes = '', started_by = '', images = [],
-  routine_preventive = false, simulator_tests = false, analyzer_tests = false, folio_inicio = '' } = {}) {
+export async function startMaintenance(inventoryNo, { 
+  maintenance_type = 'MP', 
+  notes = '', 
+  started_by = '', 
+  images = [],
+  routine_preventive = false, 
+  simulator_tests = false, 
+  analyzer_tests = false, 
+  folio_inicio = '',
+  maintenance_responsible = '',
+  provider_type = 'internal',
+  provider_company = '',
+  internal_department = '',
+  has_warranty = false,
+  warranty_end_date = null,
+  maintenance_contract = null
+} = {}) {
   if (!inventoryNo) throw new Error('inventoryNo requerido')
   const url = `/api/ops/maintenance/start`
   
@@ -103,6 +118,13 @@ export async function startMaintenance(inventoryNo, { maintenance_type = 'MP', n
     formData.append('simulator_tests', simulator_tests ? '1' : '0')
     formData.append('analyzer_tests', analyzer_tests ? '1' : '0')
     formData.append('folio_inicio', folio_inicio)
+    formData.append('maintenance_responsible', maintenance_responsible)
+    formData.append('provider_type', provider_type)
+    formData.append('provider_company', provider_company)
+    formData.append('internal_department', internal_department)
+    formData.append('has_warranty', has_warranty ? '1' : '0')
+    formData.append('warranty_end_date', warranty_end_date || '')
+    formData.append('maintenance_contract', maintenance_contract !== null ? String(maintenance_contract) : '')
     
     // Append each image file
     // append each image, converting data URLs to File objects if needed
@@ -138,7 +160,14 @@ export async function startMaintenance(inventoryNo, { maintenance_type = 'MP', n
       routine_preventive,
       simulator_tests,
       analyzer_tests,
-      folio_inicio
+      folio_inicio,
+      maintenance_responsible,
+      provider_type,
+      provider_company,
+      internal_department,
+      has_warranty,
+      warranty_end_date,
+      maintenance_contract
     })
     // authedFetch will set Content-Type: application/json automatically
   }
@@ -170,7 +199,10 @@ export async function finishMaintenance(inventoryNo, {
   maintenance_hours = 0,
   technician_name = '',
   tests = [],
-  folio_inicio = ''
+  folio_inicio = '',
+  routine_preventive = false,
+  simulator_tests = false,
+  analyzer_tests = false
 } = {}) {
   if (!inventoryNo) throw new Error('inventoryNo requerido')
   const url = `/api/ops/maintenance/finish`
@@ -196,6 +228,10 @@ export async function finishMaintenance(inventoryNo, {
     formData.append('finished_by', finished_by)
     formData.append('return_location', return_location)
     formData.append('final_area', final_area)
+    formData.append('maintenance_hours', maintenance_hours)
+    formData.append('routine_preventive', routine_preventive ? '1' : '0')
+    formData.append('simulator_tests', simulator_tests ? '1' : '0')
+    formData.append('analyzer_tests', analyzer_tests ? '1' : '0')
     
     // Append each image file (convert data URLs to File if needed)
     images.forEach((img, idx) => {
@@ -233,7 +269,10 @@ export async function finishMaintenance(inventoryNo, {
       maintenance_hours,
       technician_name,
       folio_inicio,
-      tests
+      tests,
+      routine_preventive,
+      simulator_tests,
+      analyzer_tests
     })
     // authedFetch will set Content-Type: application/json automatically
   }

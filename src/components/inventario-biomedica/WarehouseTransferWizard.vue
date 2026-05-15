@@ -493,6 +493,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import Swal from 'sweetalert2';
 import {
     XIcon,
     ArrowRightLeftIcon,
@@ -853,6 +854,8 @@ const nextStep = () => {
     }
 };
 
+const darkSwal = { background: '#0f1423', color: '#e0e7ff', confirmButtonColor: '#5d8dff', cancelButtonColor: '#64748b' };
+
 const submit = async () => {
     submitting.value = true;
     try {
@@ -861,10 +864,33 @@ const submit = async () => {
         } else if (operation.value === 'intake') {
             await submitIntake();
         }
+        await Swal.fire({
+            title: '¡Operación completada!',
+            text: operation.value === 'movement'
+                ? `Se transfirieron ${totalSelectedUnits.value} unidades exitosamente.`
+                : intakeType.value === 'refill'
+                    ? `Se resurtieron ${totalSelectedUnits.value} unidades correctamente.`
+                    : `Se registró el nuevo bien "${newItem.value.descripcion}" correctamente.`,
+            icon: 'success',
+            ...darkSwal
+        });
         emit('success');
         closeWizard();
     } catch (error) {
-        alert('Error: ' + error.message);
+        console.error('[WarehouseTransferWizard] Submit error:', error);
+        const raw = String(error?.message || '');
+        let userMsg = 'No se pudo completar la operación. Intenta de nuevo.';
+        if (raw.includes('stock') || raw.includes('existencias') || raw.includes('insuficiente')) userMsg = 'No hay suficiente stock en el almacén de origen para completar esta transferencia.';
+        else if (raw.includes('Selecciona')) userMsg = 'Debes seleccionar al menos un artículo antes de continuar.';
+        else if (raw.includes('falló') || raw.includes('failed')) userMsg = 'El servidor no pudo procesar la solicitud. Verifica tu conexión e intenta nuevamente.';
+        else if (raw.includes('duplica') || raw.includes('ya existe')) userMsg = 'Uno o más artículos ya están registrados. Usa "Resurtir Stock" en lugar de "Nuevo Bien".';
+        else if (raw) userMsg = raw;
+        await Swal.fire({
+            title: 'Operación no completada',
+            text: userMsg,
+            icon: 'error',
+            ...darkSwal
+        });
     } finally {
         submitting.value = false;
     }

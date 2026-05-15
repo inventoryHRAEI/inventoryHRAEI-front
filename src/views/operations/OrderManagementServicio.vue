@@ -928,6 +928,7 @@ const route = useRoute()
 // Estado para el modal del wizard de creación de órdenes
 const showWizardModal = ref(false)
 const wizardType = ref('servicio')
+const wizardInitialItems = ref([])
 
 watch([showWizardModal, wizardType], ([open, type]) => {
     try {

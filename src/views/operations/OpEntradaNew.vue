@@ -417,7 +417,7 @@
                                             </button>
                                             <button type="button" class="acr-cat-btn" @click="seleccionarCategoriaAcr('refaccion')">
                                                 <div class="acr-cat-icon" style="--cat-color:#ef4444">
-                                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                                                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M 14.7 6.3 a 1 1 0 0 0 0 1.4 l 1.6 1.6 a 1 1 0 0 0 1.4 0 l 3.77 -3.77 a 6 6 0 0 1 -7.94 7.94 l -6.91 6.91 a 2.12 2.12 0 0 1 -3 -3 l 6.91 -6.91 a 6 6 0 0 1 7.94 -7.94 l -3.76 3.76 z"/></svg>
                                                 </div>
                                                 <span>Refacción</span>
                                             </button>
@@ -429,139 +429,25 @@
 
 
 
-                         <!-- Refinamiento inteligente de inventario -->
-                         <!-- Only show when item DOES belong to hospital (belongsToHospital === true) -->
-                         <div v-if="belongsToHospital === true && newItem.tipo && !isEditingItem && !newItem.isBlank && newItem.tipo !== 'mobiliario' && newItem.tipo !== 'refaccion'" class="refinement-container">
-                            <div class="refinement-header">
-                                <div class="refinement-title-wrap">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="refine    ment-icon-svg">
-                                        <path d="M6 8l6-6 6 6M6 16l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                                        <path d="M6 8h12l-6 12L6 8z" fill="rgba(59,130,246,0.2)" stroke="currentColor" stroke-width="2"/>
-                                    </svg>
-                                    <div>
-                                        <h4>Busqueda de bienes</h4>
-                                        <p>Combina campos y valores como en un filtro profesional de inventario.</p>
-                                    </div>
-                                </div>
-                                <div class="refinement-status">
-                                    <span class="badge badge-success">Filtrados: {{ refinedInventory.length }}</span>
-                                </div>
-                            </div>
+                        <!-- Refinamiento inteligente reutilizable -->
+                        <InventoryRefinement
+                            v-if="belongsToHospital === true && newItem.tipo && !isEditingItem && !newItem.isBlank"
+                            :newItem="newItem"
+                            :belongsToHospital="belongsToHospital === true"
+                            :suggestions="suggestions"
+                            :equipoMedicoList="equipoMedicoList"
+                            :allInventoryList="allInventoryList"
+                            :isLoading="loadingInventory"
+                            @select-item="handleInventoryItemSelected"
+                            @refresh-inventory="forceRefreshInventory"
+                        />
 
-                            <div class="refinement-row">
-                                <label>
-                                    Campo
-                                    <select v-model="refinementField">
-                                        <option v-for="(label, key) in refinementFields" :key="key" :value="key">{{ label }}</option>
-                                    </select>
-                                </label>
-                                <label class="search-box-wrapper">
-                                    Valor
-                                    <input type="text" v-model="refinementValue" :placeholder="`Busca ${refinementFields[refinementField]}...`" @input="onStepValueInput" @keyup.enter="addRefinement" @focus="onRefinementFocus" @blur="onRefinementBlur" autocomplete="off" />
-                                    <ul v-if="refinementDropdownOpen && refinementSuggestions.length > 0" class="live-dropdown">
-                                        <li v-for="item in refinementSuggestions" :key="item.value" @mousedown.prevent="applyRefinementSuggestion(item.value)" tabindex="0">
-                                            <span>{{ item.value }}</span>
-                                            <small>({{ item.count }})</small>
-                                        </li>
-                                    </ul>
-                                </label>
-                                <div class="refinement-actions">
-                                    <button type="button" class="btn-primary btn-with-icon" @click="addRefinement"
-                                        :disabled="!canAddRefinement">
-                                        <span class="btn-icon-left">+</span> Agregar filtro
-                                    </button>
-                                    <button type="button" class="btn-clear-all-searchable-filters"
-                                        @click="clearRefinements"
-                                        :disabled="refinements.length === 0 && !refinementValue"
-                                        title="Limpiar todos los filtros">
-                                        Limpiar
-                                    </button>
-                                    <button type="button" class="btn-clear-all-searchable-filters btn-with-icon" 
-                                        @click="forceRefreshInventory" title="Forzar recarga de sugerencias de inventario">
-                                        <span class="btn-icon-left">🔄</span> Refrescar
-                                    </button>
-                                </div>
+                        <!-- Manual fallback for suggested items -->
+                        <Transition name="fade">
+                            <div v-if="newItem.tipo && !newItem.isBlank && belongsToHospital === true && !['mobiliario', 'refaccion'].includes(newItem.tipo) && !isEditingItem" class="manual-entry-hint">
+                                <p>¿No encuentras el bien que buscas? <button type="button" @click="newItem.isBlank = true" class="btn-manual-entry">Haz clic aquí para una captura manual completa</button></p>
                             </div>
-
-                            <div class="token-area" v-if="refinements.length > 0">
-                                <span v-for="(r, i) in refinements" :key="`${r.key}-${r.value}-${i}`" class="token-chip">
-                                    {{ refinementFields[r.key] }}: {{ r.value }}
-                                    <button type="button" @click="removeRefinement(i)">✕</button>
-                                </span>
-                            </div>
-
-                            <div class="summary-bar">
-                                <span>Items filtrados: {{ refinedInventory.length }}</span>
-                                <span v-if="refinedInventory.length === 1" class="exact-badge">Coincidencia única: {{ refinedInventory[0].nombre }}</span>
-                            </div>
-
-                            <div class="results-list">
-                                <div v-for="item in refinedInventory.slice(0, 10)" :key="item.id" class="result-item">
-                                    <div class="result-top">
-                                        <strong>{{ item.nombre || item.label || 'Sin nombre' }}</strong>
-                                        <small>{{ item.lote || '-' }} / {{ item.referencia || '-' }} / {{ item.serie || '-' }}</small>
-                                    </div>
-                                    <div class="result-data">
-                                        <div class="field-row"><span class="field-label">Marca:</span> <span>{{ item.marca || 'N/A' }}</span></div>
-                                        <div class="field-row"><span class="field-label">Modelo:</span> <span>{{ item.modelo || 'N/A' }}</span></div>
-                                        <div class="field-row"><span class="field-label">Lote:</span> <span>{{ item.lote || 'N/A' }}</span></div>
-                                        <div class="field-row"><span class="field-label">Serie:</span> <span>{{ item.serie || 'N/A' }}</span></div>
-                                        <div class="field-row"><span class="field-label">No. de Inventario:</span> <span>{{ item.noInventario || item.no_inventario || item['No. Inventario'] || item['No Inventario'] || item.N_DE_INVENTARIO || item['N_DE_INVENTARIO'] || 'N/A' }}</span></div>
-                                        <div class="field-row"><span class="field-label">Referencia:</span> <span>{{ item.referencia || 'N/A' }}</span></div>
-                                        <div v-if="newItem.tipo !== 'equipo-medico'" class="field-row"><span class="field-label">Clave:</span> <span>{{ item.claveHRAEI || 'N/A' }}</span></div>
-                                        <div v-if="['accesorio', 'consumible', 'refaccion'].includes(newItem.tipo)" class="field-row"><span class="field-label">Origen:</span> <span>{{ item.origenBien || 'N/A' }}</span></div>
-                                    </div>
-                                    <div class="result-extra-controls">
-                                        <label>
-                                            Cantidad
-                                            <div class="qty-control">
-                                                <button type="button" @click="localItemState[item._itemKey].cantidad = Math.max(1, localItemState[item._itemKey].cantidad - 1)">-</button>
-                                                <span>{{ localItemState[item._itemKey]?.cantidad || 1 }}</span>
-                                                <button type="button" @click="localItemState[item._itemKey].cantidad++">+</button>
-                                            </div>
-                                        </label>
-                                        <label v-if="newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
-                                            Estado
-                                            <select v-model="localItemState[item._itemKey].estado">
-                                                <option value="nuevo">Nuevo</option>
-                                                <option value="usado">Usado</option>
-                                            </select>
-                                        </label>
-                                        <label>
-                                            Ubicación
-                                            <input type="text" v-model="localItemState[item._itemKey].ubicacion" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 120px;" placeholder="Ej. UCIA" />
-                                        </label>
-                                        <label v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'">
-                                            Equipo Asociado
-                                            <input type="text" list="datalist-equipos-entrada" v-model="localItemState[item._itemKey].equipoAsociado" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 140px;" placeholder="Ej. Monitor SN123" />
-                                        </label>
-                                        <label v-if="newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion' || newItem.tipo === 'consumible'">
-                                            Origen del Bien
-                                            <input type="text" v-model="localItemState[item._itemKey].origenBien" class="form-input" style="padding: 4px 8px; font-size: 0.8rem; min-width: 140px;" placeholder="Compra, donación..." />
-                                        </label>
-                                        <div class="descuento-info" v-if="(newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion') && localItemState[item._itemKey]?.estado === 'nuevo'">
-                                            Descuento: Sí
-                                        </div>
-                                        <div class="descuento-info" v-else-if="newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
-                                            Descuento: No
-                                        </div>
-                                    </div>
-                                    <button type="button" class="btn-select-item" @click="selectInventoryRefinedItem(item)">Agregar este item</button>
-                                </div>
-                                <div v-if="!inventoryBase.length && refinements.length === 0" class="no-results">
-                                    <div>🔄 No hay datos de inventario cargados para sugerencias.</div>
-                                    <small>Ve al paso anterior o refresca la página para recargar inventario.</small>
-                                </div>
-                                <div v-else-if="refinedInventory.length === 0" class="no-results">No hay resultados que coincidan</div>
-                            </div>
-                            
-                            <!-- Datalist para equipos asociados (Autocompletado nativo y ligero) -->
-                            <datalist id="datalist-equipos-entrada">
-                                <option v-for="eq in equipoMedicoList" :key="eq.id || eq.serie" :value="eq.nombre || eq.label">
-                                    {{ eq.serie ? `Serie: ${eq.serie}` : (eq.noInventario ? `Inv: ${eq.noInventario}` : '') }}
-                                </option>
-                            </datalist>
-                        </div>
+                        </Transition>
 
                         <!-- Modal para seleccionar tipo de item en blanco -->
                         <Transition name="modal-fade">
@@ -593,129 +479,155 @@
                             </div>
                         </Transition>
 
-
-
                         <!-- ========== FLUJO 1: EDITAR BIEN INTERNO EXISTENTE ========== -->
                         <Transition name="slide-up">
                             <div v-if="isEditingItem && belongsToHospital === true && !newItem.isBlank && !['mobiliario', 'refaccion'].includes(newItem.tipo)" class="equipment-form internal-edit-form">
-                                <div class="form-header">
-                                    <div class="internal-edit-card premium-card" :class="{ 'is-success': cardSuccessState }">
-                                        <div class="card-glow"></div>
-                                        
-                                        <Transition name="fade">
-                                            <div v-if="cardSuccessState" class="success-overlay">
-                                                <div class="success-content">
-                                                    <div class="success-icon-wrap">
-                                                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                                                            <polyline points="20 6 9 17 4 12"></polyline>
-                                                        </svg>
-                                                    </div>
-                                                    <span>{{ editingItemIndex !== -1 ? '¡Actualizado!' : '¡Agregado!' }}</span>
+                                <div class="internal-edit-card premium-card" :class="{ 'is-success': cardSuccessState }">
+                                    <div class="card-glow"></div>
+                                    
+                                    <Transition name="fade">
+                                        <div v-if="cardSuccessState" class="success-overlay">
+                                            <div class="success-content">
+                                                <div class="success-icon-wrap">
+                                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                                        <polyline points="20 6 9 17 4 12"></polyline>
+                                                    </svg>
+                                                </div>
+                                                <span>{{ editingItemIndex !== -1 ? '¡Actualizado!' : '¡Agregado!' }}</span>
+                                            </div>
+                                        </div>
+                                    </Transition>
+
+                                    <div class="internal-card-header">
+                                        <div class="header-main">
+                                            <div class="edit-context-banner" :style="getBannerStyle(newItem)">
+                                                <div class="edit-icon-box" :style="{ background: getBannerStyle(newItem).color }">
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                                                </div>
+                                                <span class="edit-text">
+                                                    EDITANDO {{ getBannerText(newItem) }}
+                                                </span>
+                                            </div>
+                                            <h3 class="asset-name">{{ newItem.unidades[0]?.nombre || 'Sin nombre' }}</h3>
+                                            
+                                            <div class="technical-info-grid">
+                                                <div class="info-item">
+                                                    <span class="info-label">MARCA</span>
+                                                    <span class="info-value">{{ newItem.unidades[0]?.marca || '-' }}</span>
+                                                </div>
+                                                <div class="info-item">
+                                                    <span class="info-label">MODELO</span>
+                                                    <span class="info-value">{{ newItem.unidades[0]?.modelo || '-' }}</span>
+                                                </div>
+                                                <div class="info-item">
+                                                    <span class="info-label">SERIE</span>
+                                                    <span class="info-value">{{ newItem.unidades[0]?.serie || '-' }}</span>
+                                                </div>
+                                                <div class="info-item">
+                                                    <span class="info-label">CLAVE</span>
+                                                    <span class="info-value">{{ newItem.unidades[0]?.claveHRAEI || '-' }}</span>
+                                                </div>
+                                                <div class="info-item">
+                                                    <span class="info-label">LOTE</span>
+                                                    <span class="info-value">{{ newItem.unidades[0]?.lote || '-' }}</span>
+                                                </div>
+                                                <div class="info-item">
+                                                    <span class="info-label">REF</span>
+                                                    <span class="info-value">{{ newItem.unidades[0]?.referencia || '-' }}</span>
+                                                </div>
+                                                <div class="info-item">
+                                                    <span class="info-label">INV</span>
+                                                    <span class="info-value">{{ newItem.unidades[0]?.noInventario || '-' }}</span>
                                                 </div>
                                             </div>
-                                        </Transition>
-
-                                        <div class="internal-card-header">
-                                            <div class="header-main">
-                                                <div class="edit-context-banner" :style="getBannerStyle(newItem)">
-                                                    <div class="edit-icon-box" :style="{ background: getBannerStyle(newItem).color }">
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                                                    </div>
-                                                    <span class="edit-text">EDITANDO {{ getBannerText(newItem) }}</span>
-                                                    <button type="button" @click="openChangeCategoryModal" style="margin-left: auto; padding: 2px 6px; font-size: 0.65rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(0,0,0,0.2); color: white; cursor: pointer; display:flex; align-items:center; gap:4px;">
-                                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" /></svg>
-                                                        CAMBIAR
-                                                    </button>
-                                                </div>
-                                                <h3 class="asset-name">{{ newItem.unidades[0]?.nombre || 'Sin nombre' }}</h3>
-                                                <div class="technical-info-grid">
-                                                    <div class="info-item">
-                                                        <span class="info-label">MARCA</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.marca || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">MODELO</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.modelo || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">SERIE</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.serie || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">CLAVE</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.claveHRAEI || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">LOTE</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.lote || '-' }}</span>
-                                                    </div>
-                                                    <div class="info-item">
-                                                        <span class="info-label">REF</span>
-                                                        <span class="info-value">{{ newItem.unidades[0]?.referencia || '-' }}</span>
-                                                    </div>
-                                                </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="internal-edit-grid">
+                                        <div class="edit-field-group">
+                                            <label class="field-label">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8V21H3V8"/><path d="M1 3H23V8H1V3ZM10 12H14"/></svg>
+                                                Cantidad a ingresar
+                                            </label>
+                                            <div class="stepper-control">
+                                                <button type="button" @click="newItem.unidades[0].cantidad = Math.max(1, newItem.unidades[0].cantidad - 1)" :disabled="newItem.unidades[0].cantidad <= 1" class="step-btn">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                </button>
+                                                <input type="number" v-model.number="newItem.unidades[0].cantidad" min="1" class="step-input" />
+                                                <button type="button" @click="newItem.unidades[0].cantidad++" class="step-btn">
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                                </button>
                                             </div>
                                         </div>
                                         
-                                        <div class="internal-edit-grid">
-                                            <div class="edit-field-group">
-                                                <label class="field-label">Cantidad a ingresar</label>
-                                                <div class="stepper-control">
-                                                    <button type="button" @click="newItem.unidades[0].cantidad = Math.max(1, newItem.unidades[0].cantidad - 1)" :disabled="newItem.unidades[0].cantidad <= 1" class="step-btn">−</button>
-                                                    <input type="number" v-model.number="newItem.unidades[0].cantidad" min="1" class="step-input" />
-                                                    <button type="button" @click="newItem.unidades[0].cantidad++" class="step-btn">+</button>
-                                                </div>
-                                            </div>
-                                            <div class="edit-field-group">
-                                                <label class="field-label">Ubicación específica</label>
-                                                <SearchableInput v-model="newItem.unidades[0].ubicacion" :suggestions="currentSuggestions" field-name="ubicacion" placeholder="Donde se almacenará..." @select="(s) => handleSuggestionSelect(s, newItem.unidades[0], 'ubicacion')" />
-                                            </div>
-
-                                            <div v-if="isConsumibleLikeType(newItem.tipo)" class="edit-field-group full-width">
-                                                <label class="field-label">Equipo Médico Vinculado</label>
-                                                <SearchableInput v-model="newItem.unidades[0].equipoAsociado"
-                                                    :suggestions="suggestions" tipo="equipo-medico"
-                                                    field-name="nombre" placeholder="Buscar equipo principal..."
-                                                    @select="(s) => newItem.unidades[0].equipoAsociado = (s.nombre || s.label || '')" />
-                                            </div>
-
-                                            <div v-if="isConsumibleLikeType(newItem.tipo)" class="edit-field-group full-width">
-                                                <label class="field-label">Origen del Bien</label>
-                                                <input v-model.trim="newItem.unidades[0].origenBien" type="text" 
-                                                    class="form-input" placeholder="Compra, donación, comodato..." />
+                                        <div class="edit-field-group">
+                                            <label class="field-label">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                                                Ubicación específica
+                                            </label>
+                                            <div class="input-with-icon">
+                                                <SearchableInput v-model="newItem.unidades[0].ubicacion"
+                                                    :suggestions="currentSuggestions" field-name="ubicacion"
+                                                    placeholder="Donde se almacenará el bien..."
+                                                    @select="(s) => handleSuggestionSelect(s, newItem.unidades[0], 'ubicacion')" />
                                             </div>
                                         </div>
-
-                                        <div class="premium-card-actions">
-                                            <button type="button" class="btn-premium-clear" @click="resetNewItem">Limpiar</button>
-                                            <button type="button" class="btn-premium-add" @click="agregarItem" :disabled="!canAddItem || isVerifyingStatus || cardSuccessState" :class="{ 'is-loading': isVerifyingStatus }">
-                                                {{ editingItemIndex !== -1 ? 'Actualizar' : 'Confirmar' }}
-                                            </button>
+                                        
+                                        <div v-if="isConsumibleLikeType(newItem.tipo)" class="edit-field-group full-width">
+                                            <label class="field-label">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M 14.7 6.3 a 1 1 0 0 0 0 1.4 l 1.6 1.6 a 1 1 0 0 0 1.4 0 l 3.77 -3.77 a 6 6 0 0 1 -7.94 7.94 l -6.91 6.91 a 2.12 2.12 0 0 1 -3 -3 l 6.91 -6.91 a 6 6 0 0 1 7.94 -7.94 l -3.76 3.76 z"/></svg>
+                                                Equipo Médico Vinculado
+                                            </label>
+                                            <SearchableInput v-model="newItem.unidades[0].equipoAsociado"
+                                                :suggestions="currentSuggestions" tipo="equipo-medico"
+                                                field-name="nombre" placeholder="Buscar equipo principal..."
+                                                @select="(s) => newItem.unidades[0].equipoAsociado = (s.nombre || s.label || '')" />
                                         </div>
+
+                                        <div v-if="isConsumibleLikeType(newItem.tipo)" class="edit-field-group full-width">
+                                            <label class="field-label">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2z"/></svg>
+                                                Origen del Bien
+                                            </label>
+                                            <input v-model.trim="newItem.unidades[0].origenBien" type="text" 
+                                                class="form-input" placeholder="Compra, donación, comodato..." />
+                                        </div>
+                                    </div>
+
+                                    <div class="premium-card-actions">
+                                        <button type="button" class="btn-premium-clear" @click="resetNewItem">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+                                            Limpiar
+                                        </button>
+                                        <button type="button" class="btn-premium-add" @click="agregarItem" :disabled="!canAddItem || isVerifyingStatus || cardSuccessState" :class="{ 'is-loading': isVerifyingStatus }">
+                                            <span v-if="!isVerifyingStatus">
+                                                {{ editingItemIndex !== -1 ? 'Actualizar Cambios' : 'Confirmar Ingreso' }}
+                                            </span>
+                                            <span v-else class="loading-spinner-small"></span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </Transition>
 
-                        <!-- ========== FLUJO 2: AGREGAR BIEN EN BLANCO INTERNO ========== -->
+                        <!-- ========== FLUJO 2: AGREGAR BIEN EN BLANCO O EXTERNO ========== -->
                         <Transition name="slide-up">
-                            <div v-if="newItem.tipo && (newItem.isBlank || belongsToHospital === false || newItem.tipo === 'mobiliario' || newItem.tipo === 'refaccion')" class="equipment-form blank-item-form">
-                                <div class="blank-form-header">
-                                    <div class="blank-form-banner">
-                                        <div class="blank-form-icon">
-                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                                <line x1="12" y1="8" x2="12" y2="16" />
-                                                <line x1="8" y1="12" x2="16" y2="12" />
-                                            </svg>
+                            <div v-if="newItem.tipo && (newItem.isBlank || belongsToHospital === false || newItem.tipo === 'mobiliario' || newItem.tipo === 'refaccion' || (isEditingItem && belongsToHospital === false))" class="equipment-form blank-item-form">
+                                <div class="form-header">
+                                    <div class="blank-form-banner" :style="getBannerStyle(newItem)">
+                                        <div class="banner-icon">
+                                            <svg v-if="newItem.isBlank" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                                            <svg v-else-if="belongsToHospital === false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L22 22m-3 1l1 1m1-1l-1 1"/></svg>
+                                            <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                         </div>
-                                         <div class="blank-form-title">
-                                             <h3>Capturar Información del Bien</h3>
-                                             <p>El bien será registrado como comprobante. Solo administradores pueden agregarlo al inventario.</p>
-                                             <div class="required-fields-note">
-                                                 <small><strong>Campos requeridos:</strong> {{ getRequiredFieldsText() }}</small>
-                                             </div>
-                                         </div>
+                                        <div class="banner-content">
+                                            <span class="banner-label">{{ isEditingItem ? 'EDITANDO' : 'NUEVO REGISTRO' }}</span>
+                                            <span class="banner-title">{{ getBannerText(newItem) }}{{ belongsToHospital === false ? ' (EXTERNO)' : '' }}</span>
+                                        </div>
+                                        <div v-if="!isEditingItem" class="banner-requirement">
+                                            <span class="req-label">REQUERIDOS:</span>
+                                            <span class="req-value">{{ getRequiredFieldsText() }}</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -762,7 +674,7 @@
                                                     </div>
 
                                                     <div class="searchable-field">
-                                                        <label class="mini-label">Lote</label>
+                                                        <label class="mini-label">Lote (opcional)</label>
                                                         <input v-model.trim="unidad.lote" type="text" class="form-input"
                                                             placeholder="Ej. LT-2026" autocomplete="off" autocorrect="off"
                                                             autocapitalize="off" spellcheck="false" />
@@ -776,7 +688,7 @@
                                                     </div>
 
                                                     <div class="searchable-field">
-                                                        <label class="mini-label">Referencia del Accesorio / Consumible / Refacción</label>
+                                                        <label class="mini-label">Referencia</label>
                                                         <input v-model.trim="unidad.referencia" type="text" class="form-input"
                                                             placeholder="Ej. REF-001" autocomplete="off" autocorrect="off"
                                                             autocapitalize="off" spellcheck="false" />
@@ -840,35 +752,36 @@
                                                          <label class="mini-label">Nombre / Descripción</label>
                                                          <input v-model.trim="unidad.nombre" type="text" class="form-input"
                                                              :placeholder="getNombrePlaceholder()" autocomplete="off"
-                                                             autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                             autocorrect="off" autocapitalize="off" spellcheck="false"
+                                                             :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
                                                          <label class="mini-label">Marca</label>
                                                          <input v-model.trim="unidad.marca" type="text" class="form-input"
                                                              placeholder="Ej. Philips" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
                                                          <label class="mini-label">Modelo</label>
                                                          <input v-model.trim="unidad.modelo" type="text" class="form-input"
                                                              placeholder="Ej. MX40" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
-                                                         <label class="mini-label">Lote</label>
+                                                         <label class="mini-label">Lote (opcional)</label>
                                                          <input v-model.trim="unidad.lote" type="text" class="form-input"
                                                              placeholder="Ej. LT-2026" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
                                                          <label class="mini-label">No. Serie (opcional)</label>
                                                          <input v-model.trim="unidad.serie" type="text" class="form-input"
                                                              placeholder="Ej. SN123456" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
@@ -879,10 +792,24 @@
                                                      </div>
 
                                                      <div class="searchable-field">
-                                                         <label class="mini-label">Referencia de Equipo</label>
+                                                         <label class="mini-label">Referencia</label>
                                                          <input v-model.trim="unidad.referencia" type="text" class="form-input"
+                                                             placeholder="Ej. REF-001" autocomplete="off" autocorrect="off"
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
+                                                     </div>
+
+                                                     <div class="searchable-field">
+                                                         <label class="mini-label">Referencia de Equipo</label>
+                                                         <input v-model.trim="unidad.referenciaEquipo" type="text" class="form-input"
                                                              placeholder="Ej. REF-EQ-001" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
+                                                     </div>
+
+                                                     <div class="searchable-field">
+                                                         <label class="mini-label">Origen del Bien</label>
+                                                         <input v-model.trim="unidad.origenBien" type="text" class="form-input"
+                                                             placeholder="Compra, donación, comodato..." autocomplete="off"
+                                                             autocorrect="off" autocapitalize="off" spellcheck="false" />
                                                      </div>
 
                                                      <div class="quantity-field">
@@ -915,35 +842,36 @@
                                                          <label class="mini-label">Nombre / Descripción</label>
                                                          <input v-model.trim="unidad.nombre" type="text" class="form-input"
                                                              :placeholder="getNombrePlaceholder()" autocomplete="off"
-                                                             autocorrect="off" autocapitalize="off" spellcheck="false" />
+                                                             autocorrect="off" autocapitalize="off" spellcheck="false"
+                                                             :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
                                                          <label class="mini-label">Marca</label>
                                                          <input v-model.trim="unidad.marca" type="text" class="form-input"
                                                              placeholder="Ej. Philips" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
                                                          <label class="mini-label">Modelo</label>
                                                          <input v-model.trim="unidad.modelo" type="text" class="form-input"
                                                              placeholder="Ej. MX40" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
-                                                         <label class="mini-label">Lote</label>
+                                                         <label class="mini-label">Lote (opcional)</label>
                                                          <input v-model.trim="unidad.lote" type="text" class="form-input"
                                                              placeholder="Ej. LT-2026" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
                                                          <label class="mini-label">No. Serie (opcional)</label>
                                                          <input v-model.trim="unidad.serie" type="text" class="form-input"
                                                              placeholder="Ej. SN123456" autocomplete="off" autocorrect="off"
-                                                             autocapitalize="off" spellcheck="false" />
+                                                             autocapitalize="off" spellcheck="false" :disabled="isImmutable" />
                                                      </div>
 
                                                      <div class="searchable-field">
@@ -954,10 +882,17 @@
                                                      </div>
 
                                                      <div class="searchable-field">
-                                                         <label class="mini-label">Referencia del Mobiliario</label>
+                                                         <label class="mini-label">Referencia</label>
                                                          <input v-model.trim="unidad.referencia" type="text" class="form-input"
                                                              placeholder="Ej. REF-MOB-001" autocomplete="off" autocorrect="off"
                                                              autocapitalize="off" spellcheck="false" />
+                                                     </div>
+
+                                                     <div class="searchable-field">
+                                                         <label class="mini-label">Origen del Bien</label>
+                                                         <input v-model.trim="unidad.origenBien" type="text" class="form-input"
+                                                             placeholder="Compra, donación, comodato..." autocomplete="off"
+                                                             autocorrect="off" autocapitalize="off" spellcheck="false" />
                                                      </div>
 
 
@@ -1009,7 +944,7 @@
                                                     </div>
 
                                                     <div class="searchable-field">
-                                                        <label class="mini-label">Lote</label>
+                                                        <label class="mini-label">Lote (opcional)</label>
                                                         <input v-model.trim="unidad.lote" type="text" class="form-input"
                                                             placeholder="Ej. LT-2026" autocomplete="off" autocorrect="off"
                                                             autocapitalize="off" spellcheck="false" />
@@ -1104,7 +1039,7 @@
                                                     </div>
 
                                                     <div class="searchable-field">
-                                                        <label class="mini-label">Referencia del Equipo</label>
+                                                        <label class="mini-label">Referencia del {{ newItem.tipo === 'equipo-medico' ? 'Equipo' : 'Bien' }}</label>
                                                         <input v-model.trim="unidad.referencia" type="text" class="form-input"
                                                             placeholder="Ej. REF-001" autocomplete="off" autocorrect="off"
                                                             autocapitalize="off" spellcheck="false" />
@@ -1180,7 +1115,7 @@
                             <TransitionGroup name="equipment-item">
                                 <div v-for="(item, index) in form.equiposEntrada" :key="index" class="equipment-item">
                                     <div class="item-type-badge" :class="`type-${item.tipo}`">
-                                        {{ getTipoLabel(item.tipo) }}
+                                        {{ getTipoLabel(item.tipo) }}{{ item.paraEquipoMedico ? ' PARA EQUIPO MÉDICO' : '' }}
                                     </div>
                                     <div v-if="item.tipo === 'consumible' || item.tipo === 'accesorio' || item.tipo === 'refaccion'" class="consumible-state-badge"
                                         :class="(item.consumibleEstado || item.consumible_estado) === 'usado' ? 'is-usado' : 'is-nuevo'">
@@ -1370,18 +1305,8 @@
                 <LiveSummary :items="summaryItems" :equipment-count="form.equiposEntrada.length">
                     <template #actions>
                         <div class="pdf-actions-container">
-                            <label class="premium-toggle">
-                                <div class="toggle-info">
-                                    <span class="toggle-title">Forzar 1 Hoja</span>
-                                    <span class="toggle-desc">Ajusta el contenido a una página</span>
-                                </div>
-                                <div class="switch-wrapper">
-                                    <input type="checkbox" v-model="form.forceSinglePage" class="switch-input" />
-                                    <div class="switch-track">
-                                        <div class="switch-thumb"></div>
-                                    </div>
-                                </div>
-                            </label>
+                            <!-- Switch 'Forzar 1 Hoja' removido por petición del usuario -->
+
                             <button type="button" class="btn-preview-alt" @click="onPreviewPDF" :disabled="loadingPreview">
                                 <svg v-if="!loadingPreview" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -1489,6 +1414,7 @@ import LiveSummary from '@/components/operations/LiveSummary.vue'
 import FolioInput from '@/components/FolioInput.vue'
 import TimePicker from '@/components/TimePicker.vue'
 import SearchableInput from '@/components/SearchableInput.vue'
+import InventoryRefinement from '@/components/operations/InventoryRefinement.vue'
 
 // Icons
 import {
@@ -1584,13 +1510,14 @@ const {
     fetchAllInventorySuggestions,
     fetchEquipoMedicoSuggestions,
     fetchInsumosRefaccionesSuggestions,
+    forceRefreshAll,
     fillUnitFromSuggestion,
     equipoMedicoList,
     allInventoryList,
     filterSuggestions
 } = useInventorySuggestions({
     tipo: seccionActual,
-    onSelect: (item) => agregarItemALaOrden(item, seccionActual.value),
+    onSelect: (item) => handleInventoryItemSelected(item),
     noDedupeOnSearch: true
 })
 
@@ -1610,241 +1537,39 @@ const engineerSuggestions = computed(() => {
     return combined.sort().map(name => ({ id: name, nombre: name }))
 })
 
-// Refinamiento incremental para selección de items inventario
-const refinements = ref([])
-const refinementField = ref('serie')
-const refinementValue = ref('')
-const refinementDropdownOpen = ref(false)
-
-const refinementFields = {
-    nombre: 'Nombre / Descripción',
-    marca: 'Marca',
-    modelo: 'Modelo',
-    lote: 'Lote',
-    serie: 'Serie',
-    referencia: 'Referencia',
-    ubicacion: 'Ubicación',
-    claveHRAEI: 'Clave HRAEI',
-    noInventario: 'No. Inventario'
+// Inventory refinement logic is now handled by the InventoryRefinement component
+function handleInventoryItemSelected(chosenItem) {
+    // Reset state before adding
+    resetNewItem()
+    
+    // Determine the type
+    const selectedTipo = newItem.tipo || chosenItem.tipo || (seccionActual.value === 'equipo' ? 'equipo-medico' : 'accesorio')
+    
+    // Setup newItem for editing (FLUJO 1)
+    newItem.tipo = selectedTipo
+    newItem.cantidad = chosenItem.cantidad || 1
+    newItem.consumibleEstado = chosenItem.consumibleEstado || 'nuevo'
+    newItem.unidades = [{
+        ...createEmptyUnit(),
+        ...chosenItem,
+        nombre: chosenItem.nombre || chosenItem.descripcion || '',
+        descripcion: chosenItem.descripcion || chosenItem.nombre || ''
+    }]
+    newItem.isBlank = false
+    belongsToHospital.value = true
+    
+    // Set editing mode for the newly suggested item
+    editingItemIndex.value = -2 // Special value to indicate we are adding a suggested item but not yet saved
 }
 
-const inventoryBase = computed(() => {
-    const suggestionsList = Array.isArray(suggestions.value) ? suggestions.value : []
-    const equipoList = Array.isArray(equipoMedicoList.value) ? equipoMedicoList.value : []
-    const allList = Array.isArray(allInventoryList.value) ? allInventoryList.value : []
-    const tipoActual = newItem.tipo
-    
-    // Intentar determinar la mejor base según el tipo, pero permitir combinación si hay pocos resultados
-    let base = []
-    if (tipoActual === 'equipo-medico' || tipoActual === 'mobiliario') {
-        base = equipoList
-    } else if (['accesorio', 'consumible', 'refaccion'].includes(tipoActual)) {
-        base = suggestionsList
+async function forceRefreshInventory() {
+    notifier.info('Recargando catálogo completo de inventario...')
+    const success = await forceRefreshAll()
+    if (success) {
+        notifier.success('Inventario sincronizado correctamente')
     } else {
-        base = allList.length > 0 ? allList : [...equipoList, ...suggestionsList]
+        notifier.error('Error al sincronizar. Se mantendrán los datos actuales.')
     }
-
-    // "Sugerencias para todo" (Request 8): 
-    // Siempre combinar ambas listas si estamos buscando por un término que parece un ID
-    const combinedSet = new Set(base.map(i => i.id || i._id || i.noInventario || i.no_inventario || i.serie))
-    const backupList = allList.length > 0 ? allList : [...equipoList, ...suggestionsList]
-    
-    backupList.forEach(item => {
-        const key = item.id || item._id || item.noInventario || item.no_inventario || item.serie
-        if (key && !combinedSet.has(key)) {
-            base.push(item)
-            combinedSet.add(key)
-        }
-    })
-    
-    return base
-})
-
-function getRefinementFieldValue(item, key) {
-    if (!item || !key) return ''
-    const fallbacks = {
-        nombre: [item.nombre, item.label, item.descripcion, item.descripcionDelBien, item.DescripcionDelBien],
-        marca: [item.marca],
-        modelo: [item.modelo],
-        lote: [item.lote],
-        serie: [item.serie, item.n, item.numeroSerie, item.numeroDeSerie],
-        referencia: [item.referencia, item.Referencia],
-        ubicacion: [item.ubicacion, item.Ubicacion],
-        claveHRAEI: [item.claveHRAEI, item.claveCNIS],
-        noInventario: [item.noInventario, item.no_inventario, item['No. Inventario'], item['No Inventario'], item.N_DE_INVENTARIO, item['N_DE_INVENTARIO']]
-    }
-
-    const values = fallbacks[key] || [item[key]]
-    for (const val of values) {
-        if (val !== undefined && val !== null && String(val).trim() !== '') {
-            return String(val).trim().toLowerCase()
-        }
-    }
-    return ''
-}
-
-const refinedInventory = computed(() => {
-    const list = Array.isArray(inventoryBase.value) ? inventoryBase.value.slice() : []
-    const filtered = []
-
-    list.forEach(item => {
-        let match = true
-        for (const r of refinements.value) {
-            const q = String(r.value || '').trim().toLowerCase()
-            if (!q) continue
-            const fieldValue = getRefinementFieldValue(item, r.key)
-            if (!fieldValue.includes(q)) {
-                match = false
-                break
-            }
-        }
-        if (match) {
-            filtered.push(item)
-        }
-    })
-
-    // Initialize local item state for the filtered items
-    filtered.forEach(item => {
-        const key = item.id || item._id || item.serie || item.noInventario || item.nombre || Math.random().toString()
-        item._itemKey = key
-        if (!localItemState.value[key]) {
-            localItemState.value[key] = {
-                cantidad: 1,
-                estado: 'nuevo',
-                ubicacion: item.ubicacion || '',
-                equipoAsociado: item.equipoAsociado || '',
-                origenBien: item.origenBien || ''
-            }
-        }
-    })
-
-    return filtered
-})
-
-const refinementSuggestions = computed(() => {
-    const query = String(refinementValue.value || '').trim().toLowerCase()
-    const candidates = {}
-    let list = inventoryBase.value
-    if (refinements.value.length > 0) {
-        list = refinedInventory.value
-    }
-
-    // Limitar procesamiento para evitar bloqueo de UI con listas grandes
-    const maxItemsToProcess = Math.min(list.length, 500)
-    const itemsToProcess = list.slice(0, maxItemsToProcess)
-
-    itemsToProcess.forEach(item => {
-        let rawVal = String(item[refinementField.value] || '').trim()
-        if ((!rawVal || rawVal === '') && refinementField.value === 'noInventario') {
-            rawVal = String(item.noInventario || item.no_inventario || item['No. Inventario'] || item['No Inventario'] || item.N_DE_INVENTARIO || '')
-        }
-        const value = rawVal.trim()
-        if (!value) return
-        if (!query || value.toLowerCase().includes(query)) {
-            candidates[value] = (candidates[value] || 0) + 1
-        }
-    })
-
-    const sortedValues = Object.keys(candidates)
-        .sort((a, b) => candidates[b] - candidates[a])
-        .slice(0, 10)
-
-    return sortedValues.map(v => ({ value: v, count: candidates[v] }))
-})
-
-function dispatchClearSearchableFilters() {
-    try {
-        window.dispatchEvent(new Event('searchable-input:clear-filters'))
-    } catch (e) {
-        console.warn('[OpEntradaNew] Error dispatching clear filters event:', e.message)
-    }
-}
-
-const localItemState = ref({})
-
-const refinementBlurTimer = ref(null)
-
-const canAddRefinement = computed(() => String(refinementValue.value || '').trim().length > 0)
-
-let refinementDebounceTimer = null
-
-function onStepValueInput() {
-    // Debounce para evitar re-renderizados masivos
-    if (refinementDebounceTimer) clearTimeout(refinementDebounceTimer)
-    refinementDebounceTimer = setTimeout(() => {
-        refinementDropdownOpen.value = refinementSuggestions.value.length > 0
-    }, 150)
-}
-
-function onRefinementFocus() {
-    refinementDropdownOpen.value = refinementSuggestions.value.length > 0
-}
-
-function onRefinementBlur() {
-    if (refinementBlurTimer.value) clearTimeout(refinementBlurTimer.value)
-    refinementBlurTimer.value = setTimeout(() => {
-        refinementDropdownOpen.value = false
-        refinementBlurTimer.value = null
-    }, 180)
-}
-
-function addRefinement() {
-    const value = String(refinementValue.value || '').trim()
-    if (!value) return
-
-    const exists = refinements.value.some(r => r.key === refinementField.value && r.value.toLowerCase() === value.toLowerCase())
-    if (!exists) {
-        refinements.value.push({ key: refinementField.value, value })
-    }
-    refinementValue.value = ''
-    refinementDropdownOpen.value = false
-}
-
-function removeRefinement(index) {
-    refinements.value.splice(index, 1)
-}
-
-function clearRefinements() {
-    refinements.value = []
-    refinementValue.value = ''
-    refinementDropdownOpen.value = false
-    dispatchClearSearchableFilters()
-}
-
-function applyRefinementSuggestion(suggestion) {
-    refinementValue.value = suggestion
-    addRefinement()
-    refinementDropdownOpen.value = false
-}
-
-function selectInventoryRefinedItem(item) {
-    const selectedTipo = newItem.tipo || item.tipo || (seccionActual.value === 'equipo' ? 'equipo-medico' : 'accesorio')
-    const isConsumibleLike = selectedTipo === 'consumible' || selectedTipo === 'accesorio' || selectedTipo === 'refaccion'
-    const state = localItemState.value[item._itemKey] || {}
-
-    const chosenItem = {
-        ...item,
-        tipo: selectedTipo,
-        nombre: item.nombre || item.label || item.descripcion || item.descripcionDelBien || item.DescripcionDelBien || item['EQUIPO MEDICO'] || item['EQUIPO MÉDICO'] || '',
-        marca: item.marca || item.MARCA || item.FABRICANTE || item.fabricante || '',
-        modelo: item.modelo || item.MODELO || '',
-        lote: item.lote || item.LOTE || '',
-        serie: item.serie || item['No. de Serie'] || item['No de Serie'] || item['NUMERO DE SERIE'] || item['NÚMERO DE SERIE'] || '',
-        referencia: item.referencia || item.REFERENCIA || item['Codigo Ref'] || item['Código Ref'] || '',
-        ubicacion: state.ubicacion?.trim() || item.ubicacion || item.UBICACION || item['UBICACION ESPECIFICA'] || item['Ubicación específica'] || item.AREA || item.ÁREA || '',
-        equipoAsociado: state.equipoAsociado?.trim() || item.equipoAsociado || '',
-        claveHRAEI: item.claveHRAEI || item['Clave  HRAEI'] || item['CLAVE HRAEI'] || item.claveCNIS || '',
-        noInventario: item.noInventario || item.no_inventario || item['No. Inventario'] || item['No Inventario'] || item['NUMERO INVENTARIO'] || '',
-        cantidad: Number(state.cantidad) || 1,
-        consumibleEstado: isConsumibleLike ? (state.estado || 'nuevo') : null,
-        descuento: isConsumibleLike ? ((state.estado || 'nuevo') === 'nuevo') : false
-    }
-
-    if (!newItem.tipo && selectedTipo) {
-        newItem.tipo = selectedTipo
-    }
-
-    agregarItemALaOrden(chosenItem, seccionActual.value)
 }
 
 const getBannerStyle = (item) => {
@@ -1868,19 +1593,14 @@ const getBannerStyle = (item) => {
 };
 
 const getBannerText = (item) => {
-    const isLinked = !!item.unidades[0]?.equipoAsociado;
+    const isForMedicalEquipment = item.paraEquipoMedico || !!item.unidades[0]?.equipoAsociado;
     const type = item.tipo;
-    
     if (type === 'equipo') return 'EQUIPO MÉDICO';
     if (type === 'mobiliario') return 'MOBILIARIO';
-    
-    let base = '';
-    if (type === 'accesorio') base = 'ACCESORIO';
-    else if (type === 'consumible') base = 'CONSUMIBLE';
-    else if (type === 'refaccion') base = 'REFACCIÓN';
-    else base = (type || 'ACTIVO').toUpperCase();
-    
-    return isLinked ? `${base} PARA EQUIPO MÉDICO` : base;
+    if (type === 'accesorio') return isForMedicalEquipment ? 'ACCESORIO PARA EQUIPO MÉDICO' : 'ACCESORIO';
+    if (type === 'consumible') return isForMedicalEquipment ? 'CONSUMIBLE PARA EQUIPO MÉDICO' : 'CONSUMIBLE';
+    if (type === 'refaccion') return isForMedicalEquipment ? 'REFACCIÓN PARA EQUIPO MÉDICO' : 'REFACCIÓN';
+    return 'BIEN / ARTÍCULO';
 };
 
 function agregarItemALaOrden(item, seccion) {
@@ -2001,6 +1721,7 @@ function applyCategoryChange(newType, isAcr) {
 // Edit item state
 const editingItemIndex = ref(-1)
 const isEditingItem = computed(() => editingItemIndex.value !== -1)
+const isImmutable = computed(() => editingItemIndex.value !== -1 && !newItem.isBlank && belongsToHospital.value === true)
 
 function openKardex(item) {
     const it = item || {}
@@ -2065,13 +1786,6 @@ const newItem = reactive({
     tipo: '',
     cantidad: 1,
     consumibleEstado: 'nuevo',
-    descripcion: '',
-    marca: '',
-    modelo: '',
-    serie: '',
-    ubicacion: '',
-    claveHRAEI: '',
-    noInventario: '',
     unidades: [],
     isBlank: false
 })
@@ -2215,48 +1929,17 @@ function isInternalMedicalEquipmentType(tipo) {
 }
 
 function isUnitValidForCurrentContext(unit = {}) {
+    // Si es item en blanco o sugerido/manual, solo exigimos el nombre (o descripción como fallback)
     if (newItem.isBlank) {
         return hasText(unit.nombre) || hasText(unit.descripcion)
     }
 
+    // El nombre es lo único estrictamente obligatorio para permitir el ingreso
     if (!hasText(unit.nombre)) return false
 
-    if (isCurrentItemExternal) {
-        if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-            return hasText(unit.marca) &&
-                hasText(unit.modelo) &&
-                hasText(unit.ubicacion) &&
-                hasText(unit.referencia)
-        }
-        // External refaccion, accesorio, consumible
-        return hasText(unit.marca) &&
-            hasText(unit.modelo) &&
-            hasText(unit.lote) &&
-            hasText(unit.serie) &&
-            hasText(unit.ubicacion) &&
-            hasText(unit.equipoAsociado) &&
-            hasText(unit.referencia)
-    }
-
-    if (isInternalAcrType(newItem.tipo)) {
-        return hasText(unit.marca) &&
-            hasText(unit.modelo) &&
-            hasText(unit.lote) &&
-            hasText(unit.serie) &&
-            hasText(unit.referencia) &&
-            hasText(unit.ubicacion) &&
-            hasText(unit.equipoAsociado) &&
-            hasText(unit.claveHRAEI) &&
-            hasText(unit.origenBien)
-    }
-
-    if (isInternalMedicalEquipmentType(newItem.tipo)) {
-        return hasText(unit.marca) &&
-            hasText(unit.modelo) &&
-            hasText(unit.lote) &&
-            hasText(unit.ubicacion) &&
-            hasText(unit.referencia)
-    }
+    // NOTA: Se eliminan las validaciones estrictas de marca, modelo, ubicación, etc.
+    // para cumplir con la petición de agilizar el flujo de captura manual/sugerida.
+    // Los campos pueden ser llenados o no sin condicionar el ingreso del bien.
 
     return true
 }
@@ -2283,6 +1966,8 @@ const displayEndTime = computed(() => {
 const currentSuggestions = computed(() => {
     // Para bienes externos NO se usa ningún tipo de sugerencia de inventario
     if (belongsToHospital.value === false) return []
+    // Si estamos editando un item ya agregado, no mostrar sugerencias masivas de inventario en campos internos
+    if (isEditingItem.value) return []
     if (!newItem.tipo) return []
     if (newItem.isBlank) return []
     if (newItem.tipo === 'mobiliario' || newItem.tipo === 'refaccion') return []
@@ -2427,27 +2112,14 @@ function buildSubmitItem(item) {
         cantidad: quantityTotal,
         descripcion: item?.descripcion || firstUnit.descripcion || firstUnit.nombre || '',
         nombre: item?.nombre || firstUnit.nombre || item?.descripcion || '',
+        paraEquipoMedico: item?.paraEquipoMedico || !!firstUnit.equipoAsociado || false,
         unidades: normalizedUnits
     }
 }
 
 function getRequiredFieldsText() {
     if (!newItem.tipo) return 'Selecciona un tipo de bien primero.'
-    if (newItem.isBlank) {
-        return 'Para item en blanco: captura al menos Nombre/Descripción. El resto de campos es opcional.'
-    }
-    if (belongsToHospital.value === false) {
-        if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-            return 'Nombre, Marca, Modelo, Ubicación, Referencia del mobiliario.'
-        } else {
-            return 'Nombre, Marca, Modelo, Lote, Serie, Ubicación, Equipo asociado, Referencia.'
-        }
-    } else {
-        if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-            return 'Nombre, Marca, Modelo, Lote, Ubicación, Referencia del mobiliario.'
-        }
-    }
-    return 'Nombre, Marca, Modelo, Ubicación.'
+    return 'Captura al menos el Nombre o Descripción. El resto de campos (Marca, Modelo, Serie, etc.) son opcionales.'
 }
 
 function getNombrePlaceholder() {
@@ -2482,25 +2154,92 @@ function createEmptyUnit() {
 
 // Quantity controls
 function incNew() {
-    // Para equipos internos: agregar unidad vacía para mantener sincronización
-    // Para equipos externos: NO agregar unidades (solo se maneja cantidad)
-    if (!isCurrentItemExternal.value) {
+    // Para equipos internos (Hospital): agregar unidad vacía para mantener sincronización (series distintas)
+    // Para Insumos/Consumibles o Equipos Externos: NO agregar unidades (solo se maneja cantidad)
+    const isConsumible = isConsumibleLikeType(newItem.tipo)
+    if (!isCurrentItemExternal.value && !isConsumible) {
         newItem.cantidad++
         newItem.unidades.push(createEmptyUnit())
     } else {
         newItem.cantidad++
+        // Asegurar sincronización con la primera unidad (usada en refinement)
+        if (newItem.unidades.length === 0) {
+            newItem.unidades.push(createEmptyUnit())
+        }
+        // Limitar a 1 unidad y sincronizar su cantidad
+        if (newItem.unidades.length > 1) {
+            newItem.unidades.splice(1)
+        }
+        newItem.unidades[0].cantidad = newItem.cantidad
     }
 }
 
 function decNew() {
     if (newItem.cantidad > 1) {
         newItem.cantidad--
+        const isConsumible = isConsumibleLikeType(newItem.tipo)
         // Para equipos internos: remover unidades extras
-        if (!isCurrentItemExternal.value) {
-            newItem.unidades.pop()
+        if (!isCurrentItemExternal.value && !isConsumible) {
+            while (newItem.unidades.length > newItem.cantidad) {
+                newItem.unidades.pop()
+            }
+        } else {
+            // Sincronizar cantidad en la única unidad permitida
+            if (newItem.unidades.length > 1) {
+                newItem.unidades.splice(1)
+            }
+            if (newItem.unidades.length > 0) {
+                newItem.unidades[0].cantidad = newItem.cantidad
+            }
         }
     }
 }
+
+// Watchers para mantener la sincronización de unidades según cantidad y tipo
+watch(() => newItem.cantidad, (newVal) => {
+    if (newVal < 1) return
+    const isConsumible = isConsumibleLikeType(newItem.tipo)
+    if (isCurrentItemExternal.value || isConsumible) {
+        // Consolidado: asegurar 1 sola unidad con la cantidad total
+        if (newItem.unidades.length === 0) {
+            newItem.unidades.push(createEmptyUnit())
+        } else if (newItem.unidades.length > 1) {
+            newItem.unidades.splice(1)
+        }
+        newItem.unidades[0].cantidad = newVal
+    } else {
+        // Expandido: series distintas (solo para bienes internos no consumibles)
+        while (newItem.unidades.length < newVal) {
+            newItem.unidades.push(createEmptyUnit())
+        }
+        while (newItem.unidades.length > newVal) {
+            newItem.unidades.pop()
+        }
+    }
+})
+
+watch(() => newItem.tipo, (newVal) => {
+    if (!newVal) return
+    const isConsumible = isConsumibleLikeType(newVal)
+    if (isCurrentItemExternal.value || isConsumible) {
+        // Al cambiar a tipo consolidado, colapsar unidades a 1
+        if (newItem.unidades.length > 1) {
+            newItem.unidades.splice(1)
+        }
+        if (newItem.unidades.length === 1) {
+            newItem.unidades[0].cantidad = newItem.cantidad
+        } else if (newItem.unidades.length === 0) {
+            const u = createEmptyUnit()
+            u.cantidad = newItem.cantidad
+            newItem.unidades.push(u)
+        }
+    } else {
+        // Al cambiar a tipo expandido (Equipo Médico Hospital), expandir unidades
+        while (newItem.unidades.length < newItem.cantidad) {
+            newItem.unidades.push(createEmptyUnit())
+        }
+    }
+})
 
 function removeUnit(idx) {
     if (newItem.unidades.length > 1) {
@@ -2520,9 +2259,14 @@ function editarItem(index) {
     newItem.tipo = item.tipo
     newItem.consumibleEstado = item.consumibleEstado || 'nuevo'
     newItem.cantidad = getItemQuantity(item)
-    newItem.unidades = JSON.parse(JSON.stringify(item.unidades || [item]))
+    
+    // Ensure we have a valid units array
+    const sourceUnits = Array.isArray(item.unidades) && item.unidades.length > 0 ? item.unidades : [item]
+    newItem.unidades = JSON.parse(JSON.stringify(sourceUnits))
+    
     belongsToHospital.value = !item.isExternal
     acrFlowActive.value = !!item.paraEquipoMedico
+    newItem.isBlank = !!item.isBlank
 }
 
 // Add equipment
@@ -2531,52 +2275,114 @@ function isConsumibleLikeType(type) {
 }
 
 function agregarItemsSinWarning() {
+    const generatedItems = []
     const firstUnit = (newItem.unidades && newItem.unidades[0]) || {}
 
     const unidadesLooksLikeExpanded = (Array.isArray(newItem.unidades) && newItem.unidades.length === (newItem.cantidad || 0)
         && newItem.unidades.length > 1 && newItem.unidades.every(u => ((u.nombre || '').trim() === '' && (u.cantidad || 1) === 1)))
 
-    const treatAsExternal = isCurrentItemExternal.value || unidadesLooksLikeExpanded
+    const isConsumible = isConsumibleLikeType(newItem.tipo)
+    const treatAsExternal = isCurrentItemExternal.value || unidadesLooksLikeExpanded || isConsumible
 
-    const equipmentToAdd = {
-        tipo: newItem.tipo,
-        consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
-        cantidad: treatAsExternal ? (firstUnit.cantidad || newItem.cantidad || 1) : (newItem.unidades || []).reduce((s, u) => s + (Number(u && u.cantidad) || 1), 0),
-        isExternal: treatAsExternal,
-        unidades: treatAsExternal ? [ { ...firstUnit, cantidad: firstUnit.cantidad || newItem.cantidad || 1 } ] : newItem.unidades.map(u => ({ ...u, cantidad: u.cantidad || 1 })),
-        paraEquipoMedico: acrFlowActive.value,
-        descripcion: firstUnit.descripcion || firstUnit.nombre || '',
-        marca: firstUnit.marca || '',
-        modelo: firstUnit.modelo || '',
-        serie: firstUnit.serie || '',
-        lote: firstUnit.lote || '',
-        referencia: firstUnit.referencia || '',
-        referenciaEquipo: firstUnit.referenciaEquipo || '',
-        ubicacion: firstUnit.ubicacion || '',
-        origenBien: firstUnit.origenBien || '',
-        claveHRAEI: firstUnit.claveHRAEI || firstUnit.claveHraei || '',
-        noInventario: firstUnit.noInventario || ''
-    }
-
-    if (isEditingItem.value) {
-        form.equiposEntrada[editingItemIndex.value] = equipmentToAdd
-        notifier.success('Equipo actualizado')
+    if (treatAsExternal) {
+        // Tratar como un solo item con cantidad agregada
+        // PRIORIDAD: Si hay una unidad específica con cantidad, usamos esa. 
+        // Si no, usamos newItem.cantidad (que viene del refinement o es el default 1).
+        // Si es unidadesLooksLikeExpanded, newItem.cantidad es el total confiable.
+        const qtyToUse = unidadesLooksLikeExpanded 
+            ? Math.max(1, Number(newItem.cantidad) || 1)
+            : Math.max(1, Number(firstUnit.cantidad) || Number(newItem.cantidad) || 1)
+        
+        generatedItems.push({
+            tipo: newItem.tipo,
+            consumibleEstado: isConsumible ? newItem.consumibleEstado : null,
+            cantidad: qtyToUse,
+            isExternal: isCurrentItemExternal.value || isConsumible || unidadesLooksLikeExpanded,
+            unidades: [{ ...firstUnit, cantidad: qtyToUse }],
+            paraEquipoMedico: acrFlowActive.value,
+            descripcion: firstUnit.descripcion || firstUnit.nombre || '',
+            nombre: firstUnit.nombre || firstUnit.descripcion || '',
+            marca: firstUnit.marca || '',
+            modelo: firstUnit.modelo || '',
+            lote: firstUnit.lote || '',
+            serie: firstUnit.serie || '',
+            referencia: firstUnit.referencia || '',
+            referenciaEquipo: firstUnit.referenciaEquipo || '',
+            ubicacion: firstUnit.ubicacion || '',
+            origenBien: firstUnit.origenBien || '',
+            claveHRAEI: firstUnit.claveHRAEI || firstUnit.claveHraei || '',
+            noInventario: firstUnit.noInventario || '',
+            isBlank: !!newItem.isBlank,
+            paraEquipoMedico: acrFlowActive.value || !!firstUnit.equipoAsociado
+        })
     } else {
-        form.equiposEntrada.push(equipmentToAdd)
-        notifier.success('Equipo(s) agregado(s)')
+        // Tratar como múltiples items (uno por cada unidad con serie/etc)
+        for (const unidad of newItem.unidades) {
+            generatedItems.push({
+                tipo: newItem.tipo,
+                consumibleEstado: isConsumible ? newItem.consumibleEstado : null,
+                cantidad: Math.max(1, Number(unidad.cantidad) || 1),
+                isExternal: false,
+                unidades: [{ ...unidad, cantidad: Math.max(1, Number(unidad.cantidad) || 1) }],
+                paraEquipoMedico: acrFlowActive.value,
+                descripcion: unidad.descripcion || unidad.nombre || '',
+                nombre: unidad.nombre || unidad.descripcion || '',
+                marca: unidad.marca || '',
+                modelo: unidad.modelo || '',
+                lote: unidad.lote || '',
+                serie: unidad.serie || '',
+                referencia: unidad.referencia || '',
+                referenciaEquipo: unidad.referenciaEquipo || '',
+                ubicacion: unidad.ubicacion || '',
+                origenBien: unidad.origenBien || '',
+                claveHRAEI: unidad.claveHRAEI || unidad.claveHraei || '',
+                noInventario: unidad.noInventario || '',
+                isBlank: !!newItem.isBlank,
+                paraEquipoMedico: acrFlowActive.value || !!unidad.equipoAsociado
+            })
+        }
     }
-    
-    // Si es un bien interno, mostramos feedback en la card antes de resetear
-    if (belongsToHospital.value === true) {
-        cardSuccessState.value = true
-        setTimeout(() => {
-            cardSuccessState.value = false
+
+    if (generatedItems.length > 0) {
+        const totalAdded = generatedItems.reduce((acc, it) => acc + getItemQuantity(it), 0)
+        const summaryMsg = `${totalAdded} unidad(es) agregada(s) en ${generatedItems.length} registro(s)`
+        
+        console.log('[OpEntradaNew] agregarItemsSinWarning:', {
+            totalAdded,
+            recordCount: generatedItems.length,
+            generatedItems: JSON.parse(JSON.stringify(generatedItems))
+        })
+
+        if (editingItemIndex.value === -2) {
+            form.equiposEntrada.push(...generatedItems)
+            notifier.success(summaryMsg)
+        } else if (isEditingItem.value) {
+            form.equiposEntrada.splice(editingItemIndex.value, 1, ...generatedItems)
+            notifier.success('Item actualizado')
+        } else {
+            form.equiposEntrada.push(...generatedItems)
+            notifier.success(summaryMsg)
+        }
+        
+        console.log('[OpEntradaNew] Items procesados:', {
+            flow: editingItemIndex.value === -2 ? 'suggested' : (isEditingItem.value ? 'edit' : 'new'),
+            count: generatedItems.length,
+            totalQty: totalAdded,
+            items: generatedItems
+        })
+        
+        // Feedback visual
+        if (belongsToHospital.value === true) {
+            cardSuccessState.value = true
+            setTimeout(() => {
+                cardSuccessState.value = false
+                acrFlowActive.value = false
+                resetNewItem()
+            }, 1500)
+        } else {
             acrFlowActive.value = false
             resetNewItem()
-        }, 1500)
-    } else {
-        acrFlowActive.value = false
-        resetNewItem()
+        }
     }
 }
 
@@ -2615,17 +2421,21 @@ async function agregarItem() {
                 const highSeverityWarnings = warnings.filter(w => w.severity === 'high' && w.allowOverride)
                 
                 if (highSeverityWarnings.length > 0) {
-                    const itemsToAdd = isCurrentItemExternal.value
+                    const isConsumible = isConsumibleLikeType(newItem.tipo)
+                    const treatAsExternal = isCurrentItemExternal.value || isConsumible
+                    
+                    const itemsToAdd = treatAsExternal
                         ? newItem.unidades
                             .filter(u => (u.nombre || u.descripcion)?.trim())
                             .slice(0, 1)
                             .map(u => {
-                                const finalQty = u.cantidad || newItem.cantidad || 1
+                                const finalQty = Math.max(1, newItem.cantidad || u.cantidad || 1)
                                 return {
                                     tipo: newItem.tipo,
-                                    consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                                    consumibleEstado: isConsumible ? newItem.consumibleEstado : null,
                                     cantidad: finalQty,
                                     unidades: [{ ...u, cantidad: finalQty }],
+                                    paraEquipoMedico: acrFlowActive.value,
                                     nombre: u.nombre || u.descripcion || '',
                                     descripcion: u.descripcion || u.nombre || '',
                                     marca: u.marca || '',
@@ -2640,16 +2450,18 @@ async function agregarItem() {
                                     origenBien: u.origenBien || '',
                                     claveHRAEI: u.claveHRAEI || u.claveHraei || '',
                                     noInventario: u.noInventario || '',
-                                    isExternal: true
+                                    isExternal: isCurrentItemExternal.value,
+                                    isBlank: !!newItem.isBlank
                                 }
                             })
                         : newItem.unidades
                             .filter(u => (u.nombre || u.descripcion)?.trim())
                             .map(u => ({
                                 tipo: newItem.tipo,
-                                consumibleEstado: isConsumibleLikeType(newItem.tipo) ? newItem.consumibleEstado : null,
+                                consumibleEstado: isConsumible ? newItem.consumibleEstado : null,
                                 cantidad: Math.max(1, Number(u.cantidad) || 1),
                                 unidades: [{ ...u, cantidad: Math.max(1, Number(u.cantidad) || 1) }],
+                                paraEquipoMedico: acrFlowActive.value,
                                 nombre: u.nombre || u.descripcion || '',
                                 descripcion: u.descripcion || u.nombre || '',
                                 marca: u.marca || '',
@@ -2664,7 +2476,8 @@ async function agregarItem() {
                                 origenBien: u.origenBien || '',
                                 claveHRAEI: u.claveHRAEI || u.claveHraei || '',
                                 noInventario: u.noInventario || '',
-                                isExternal: false
+                                isExternal: false,
+                                isBlank: !!newItem.isBlank
                             }))
                     
                     pendingEquipment.value = { items: itemsToAdd, isMultiple: true }
@@ -2689,10 +2502,11 @@ async function agregarItem() {
 // Confirmar añadir equipo con advertencias
 function confirmAddWithWarnings() {
     if (pendingEquipment.value) {
+        const items = pendingEquipment.value.items || [pendingEquipment.value]
         if (isEditingItem.value) {
-            form.equiposEntrada[editingItemIndex.value] = pendingEquipment.value
+            form.equiposEntrada.splice(editingItemIndex.value, 1, ...items)
         } else {
-            form.equiposEntrada.push(pendingEquipment.value)
+            items.forEach(item => form.equiposEntrada.push(item))
         }
         acrFlowActive.value = false
         notifier.success('Equipo(s) agregado(s) pese a las advertencias')
@@ -2725,17 +2539,11 @@ function resetNewItem() {
     newItem.tipo = ''
     newItem.cantidad = 1
     newItem.consumibleEstado = 'nuevo'
-    newItem.descripcion = ''
-    newItem.marca = ''
-    newItem.modelo = ''
-    newItem.serie = ''
-    newItem.ubicacion = ''
-    newItem.claveHRAEI = ''
-    newItem.noInventario = ''
     newItem.unidades = []
     newItem.isBlank = false
     belongsToHospital.value = null
     isVerifyingStatus.value = false
+    acrFlowActive.value = false
 }
 
 function buildBlankItemForType(tipo) {
@@ -3131,8 +2939,11 @@ function checkMobileView() {
 
 // Auto-assign date only (hora inicio is manual, hora termino is live timer)
 function initializeDateAndTime() {
+    const now = new Date()
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+
     if (fechaAutomatica.value) {
-        const now = new Date()
         const year = now.getFullYear()
         const month = String(now.getMonth() + 1).padStart(2, '0')
         const day = String(now.getDate()).padStart(2, '0')
@@ -3140,8 +2951,9 @@ function initializeDateAndTime() {
         form.fecha = `${day}/${month}/${year}`
     }
 
-    // horaInicio is NOT auto-assigned - user must enter it
-    // horaTermino will be set by the live timer
+    if (!form.horaInicio) {
+        form.horaInicio = `${hours}:${minutes}`
+    }
 }
 
 function onFechaAutoChange() {
@@ -3208,25 +3020,6 @@ async function ensureInventorySuggestionsForCurrentType(tipo) {
     await fetchInsumosRefaccionesSuggestions()
 }
 
-const forceRefreshInventory = async () => {
-    try {
-        if (loadingInventory.value) return
-        notifier.info('Sincronizando inventario...')
-        
-        if (newItem.tipo === 'equipo-medico' || newItem.tipo === 'mobiliario') {
-            await refreshBiomedicalEquipmentCatalog()
-            await fetchEquipoMedicoSuggestions()
-        } else {
-            await fetchAllInventorySuggestions()
-            await fetchInsumosRefaccionesSuggestions()
-        }
-        
-        notifier.success('Inventario actualizado correctamente')
-    } catch (err) {
-        notifier.error('Error al sincronizar inventario')
-        console.error(err)
-    }
-}
 
 // Lifecycle
 onMounted(async () => {
@@ -3320,6 +3113,7 @@ onMounted(async () => {
         }
     }
     try { window.addEventListener('restore:applyDrafts', handleRestoreApplyDrafts) } catch {}
+    try { window.addEventListener('inventory:refresh', forceRefreshInventory) } catch {}
     window.__opEntrada_restoreHandler = handleRestoreApplyDrafts
     try { handleRestoreApplyDrafts() } catch (e) { console.warn('[OpEntradaNew] initial restore attempt failed', e) }
 })
@@ -3368,6 +3162,7 @@ onBeforeUnmount(() => {
         URL.revokeObjectURL(pdfPreviewUrl.value)
     }
     try { if (window.__opEntrada_restoreHandler) { window.removeEventListener('restore:applyDrafts', window.__opEntrada_restoreHandler); delete window.__opEntrada_restoreHandler } } catch {}
+    try { window.removeEventListener('inventory:refresh', forceRefreshInventory) } catch {}
     try { if (window.__opEntrada_flushHandler) { window.removeEventListener('wizard:draft:flush', window.__opEntrada_flushHandler); delete window.__opEntrada_flushHandler } } catch {}
 })
 
@@ -7122,6 +6917,36 @@ input:checked + .simple-slider:before {
     background: rgba(15, 23, 42, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
+}
+
+.manual-entry-hint {
+    margin-top: 16px;
+    padding: 14px 20px;
+    background: rgba(139, 92, 246, 0.05);
+    border: 1px dashed rgba(139, 92, 246, 0.3);
+    border-radius: 14px;
+    text-align: center;
+    animation: fadeIn 0.4s ease-out;
+}
+.manual-entry-hint p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #cbd5e1;
+}
+.btn-manual-entry {
+    background: transparent;
+    border: none;
+    color: #a78bfa;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: all 0.2s ease;
+}
+.btn-manual-entry:hover {
+    color: #c4b5fd;
+    text-shadow: 0 0 10px rgba(167, 139, 250, 0.4);
 }
 
 /* Transiciones mejoradas entre formularios */

@@ -439,7 +439,7 @@ function buildStrictFieldFallbackResults(text, filters = null) {
         })
     }
 
-    const wrapped = matched.slice(0, 60).map((item) => ({
+    const wrapped = matched.slice(0, 500).map((item) => ({
         item,
         score: 0,
         relevance: 100,
@@ -482,7 +482,7 @@ const showInitial = ref(false)
 const groupedResults = computed(() => {
     const f = hasActiveFilters.value ? activeFiltersObj.value : null
     if (!query.value || query.value.trim().length < 1) {
-        if (showInitial.value) return getInitialItems(40, f)
+        if (showInitial.value) return getInitialItems(2000, f)
         return []
     }
     const grouped = searchGroupedFiltered(query.value, f)

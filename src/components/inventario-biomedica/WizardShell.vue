@@ -317,6 +317,28 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
 }
 .wz-mode-intake .wz-orb-1 { background: #10b981; }
 
+.wz-mode-delete-catalog {
+  --accent: #fb7185; --accent-dim: rgba(251,113,133,.15);
+}
+.wz-mode-delete-catalog .wz-orb-1 { background: #e11d48; }
+.wz-mode-delete-catalog .wz-orb-2 { background: #9f1239; }
+.wz-mode-delete-catalog .wz-btn-next {
+  background: rgba(251,113,133,.12);
+  color: #fb7185;
+  border-color: rgba(251,113,133,.25);
+}
+.wz-mode-delete-catalog .wz-btn-next:hover:not(:disabled) {
+  background: rgba(251,113,133,.2);
+  box-shadow: 0 0 16px rgba(251,113,133,.15);
+}
+.wz-mode-delete-catalog .wz-btn-finish {
+  background: linear-gradient(135deg, #e11d48, #be123c);
+  box-shadow: 0 4px 16px rgba(225,29,72,.25);
+}
+.wz-mode-delete-catalog .wz-btn-finish:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(225,29,72,.35);
+}
+
 /* --- Responsive --- */
 @media (max-width: 700px) {
   .wz-container { max-width: 100%; border-radius: 18px; }

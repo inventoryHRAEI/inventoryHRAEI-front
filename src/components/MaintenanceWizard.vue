@@ -105,6 +105,12 @@
                             </div>
 
                             <div class="form-group">
+                                <label>Horas de Mantenimiento</label>
+                                <input type="number" v-model="finishForm.maintenance_hours" class="form-input"
+                                    placeholder="Ej: 1.5" step="0.5" min="0" />
+                            </div>
+
+                            <div class="form-group">
                                 <label>Ubicación de Retorno</label>
                                 <input type="text" v-model="finishForm.return_location" class="form-input"
                                     placeholder="Ej: Biomedica, Emergencias, etc." />
@@ -113,6 +119,24 @@
                                 <label>Área Final (si difiere)</label>
                                 <input type="text" v-model="finishForm.final_area" class="form-input"
                                     placeholder="Ej: Biomedica sección A" />
+                            </div>
+
+                            <div class="form-group">
+                                <label>Pruebas y Verificaciones Realizadas</label>
+                                <div class="tech-checks">
+                                    <label class="check-option">
+                                        <input type="checkbox" v-model="finishForm.routine_preventive" />
+                                        <span>Mantenimiento Rutinario</span>
+                                    </label>
+                                    <label class="check-option">
+                                        <input type="checkbox" v-model="finishForm.simulator_tests" />
+                                        <span>Pruebas con Simulador</span>
+                                    </label>
+                                    <label class="check-option">
+                                        <input type="checkbox" v-model="finishForm.analyzer_tests" />
+                                        <span>Pruebas con Analizador</span>
+                                    </label>
+                                </div>
                             </div>
 
                             <!-- Resumen antes de finalizar -->
@@ -214,6 +238,11 @@
                             <div class="form-group">
                                 <label>Fecha del Mantenimiento</label>
                                 <input type="date" v-model="form.fecha" class="form-input" :max="today" />
+                            </div>
+
+                            <div class="form-group">
+                                <label>Iniciado por (Usuario)</label>
+                                <input type="text" v-model="form.started_by" class="form-input" placeholder="Nombre del usuario que inicia" />
                             </div>
 
                             <h4 class="step-title">Información de Garantía y Contrato</h4>
@@ -441,6 +470,22 @@ import { registerMaintenance, startMaintenance, finishMaintenance, getMaintenanc
 import VueIcon from '@kalimahapps/vue-icons/VueIcon'
 import Swal from 'sweetalert2'
 
+// Helper to get current user from localStorage
+function getCurrentUserName() {
+    try {
+        const raw = localStorage.getItem('user')
+        if (raw) {
+            const parsed = JSON.parse(raw)
+            const name = parsed.nombre || parsed.email || ''
+            const role = parsed.rol || parsed.role || ''
+            return role ? `${name} (${role})` : name
+        }
+    } catch (e) {
+        console.warn('[MaintenanceWizard] Error getting current user:', e)
+    }
+    return ''
+}
+
 const props = defineProps({
     visible: {
         type: Boolean,
@@ -516,14 +561,15 @@ const form = ref({
     internal_department: '',     // departamento/área (solo si es interno)
     has_warranty: null,          // null, true, or false
     warranty_end_date: '',       // fecha fin de garantía
-    maintenance_contract: null   // null, true (preventive), false (corrective)
+    maintenance_contract: null,  // null, true (preventive), false (corrective)
+    started_by: getCurrentUserName()
 })
 
 // Formulario para iniciar mantenimiento
 const startForm = ref({
     maintenance_type: 'MP',
     notes: '',
-    started_by: ''
+    started_by: getCurrentUserName()
 })
 
 // Formulario para terminar mantenimiento
@@ -532,11 +578,15 @@ const finishForm = ref({
     diagnostico: '',
     causa: '',
     observaciones: '',
-    finished_by: '',
+    finished_by: getCurrentUserName(),
     started_at: '',
     finished_at: '',
     return_location: '',
-    final_area: ''        // new field for area where equipo queda
+    final_area: '',
+    maintenance_hours: 0,
+    routine_preventive: false,
+    simulator_tests: false,
+    analyzer_tests: false
 })
 
 // Modo del wizard: 'new' | 'start' | 'finish'
@@ -703,9 +753,16 @@ async function handleStartMaintenance() {
     saving.value = true
     try {
         const result = await startMaintenance(props.inventoryNo, {
-            maintenance_type: startForm.value.maintenance_type,
-            notes: startForm.value.notes,
-            started_by: startForm.value.started_by
+            maintenance_type: form.value.maintenance_type,
+            notes: form.value.notes || form.value.observaciones || '',
+            started_by: form.value.started_by || getCurrentUserName(),
+            maintenance_responsible: form.value.maintenance_responsible,
+            provider_type: form.value.provider_type,
+            provider_company: form.value.provider_company,
+            internal_department: form.value.internal_department,
+            has_warranty: form.value.has_warranty,
+            warranty_end_date: form.value.warranty_end_date,
+            maintenance_contract: form.value.maintenance_contract
         })
 
         await loadFlowStatus()
@@ -748,7 +805,11 @@ async function handleFinishMaintenance() {
             observaciones: finishForm.value.observaciones,
             finished_by: finishForm.value.finished_by,
             return_location: finishForm.value.return_location,
-            final_area: finishForm.value.final_area
+            final_area: finishForm.value.final_area,
+            routine_preventive: finishForm.value.routine_preventive,
+            simulator_tests: finishForm.value.simulator_tests,
+            analyzer_tests: finishForm.value.analyzer_tests,
+            maintenance_hours: finishForm.value.maintenance_hours
         })
 
         await loadFlowStatus()
@@ -813,7 +874,13 @@ async function submitMaintenance() {
             internal_department: form.value.internal_department,
             has_warranty: form.value.has_warranty,
             warranty_end_date: form.value.warranty_end_date || null,
-            maintenance_contract: form.value.maintenance_contract
+            maintenance_contract: form.value.maintenance_contract,
+            started_by: form.value.started_by || getCurrentUserName(),
+            finished_by: finishForm.value.finished_by || getCurrentUserName(),
+            routine_preventive: finishForm.value.routine_preventive,
+            simulator_tests: finishForm.value.simulator_tests,
+            analyzer_tests: finishForm.value.analyzer_tests,
+            maintenance_hours: finishForm.value.maintenance_hours
         }
         if (form.value.mode === 'completed') {
             if (finishForm.value.started_at) payload.started_at = finishForm.value.started_at
@@ -1707,5 +1774,37 @@ async function submitMaintenance() {
 
 .summary-value.contract-none {
     color: #6b7280;
+}
+
+/* Tech Checks Styles */
+.tech-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 8px;
+}
+
+.check-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    color: #f1f5f9;
+    font-size: 0.95rem;
+}
+
+.check-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #3b82f6;
+    cursor: pointer;
+}
+
+.check-option:hover span {
+    color: #3b82f6;
 }
 </style>

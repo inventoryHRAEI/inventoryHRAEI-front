@@ -44,8 +44,16 @@
           <span class="btn-icon-left">+</span> Agregar filtro
         </button>
         <button type="button" class="btn-secondary" @click="clearAllRefinementFilters" :disabled="refinements.length === 0 && !refinementValue">Limpiar</button>
-        <button type="button" class="btn-secondary btn-with-icon" @click="$emit('refresh-inventory')" title="Forzar recarga de sugerencias de inventario">
-          <span class="btn-icon-left">🔄</span> Refrescar
+        <button 
+          type="button" 
+          class="btn-secondary btn-with-icon" 
+          @click="handleRefreshCatalog" 
+          :disabled="isLoading"
+          title="Forzar recarga profunda de todo el catálogo de inventario"
+        >
+          <span v-if="isLoading" class="spinner-small"></span>
+          <span v-else class="btn-icon-left">🔄</span>
+          {{ isLoading ? 'Recargando...' : 'Refrescar' }}
         </button>
       </div>
     </div>
@@ -64,7 +72,7 @@
 
     <div class="results-list">
       <div class="results-panel">
-        <div v-for="item in refinedInventory.slice(0, 50)" :key="item.id || item._id || item.nombre" class="result-item">
+        <div v-for="item in refinedInventory.slice(0, 100)" :key="item.id || item._id || item.nombre + item.lote + item.serie" class="result-item">
           <div class="result-top">
             <strong>{{ item.nombre || item.label || item.descripcion || 'Sin nombre' }}</strong>
             <small>{{ item.lote || '-' }} / {{ item.referencia || '-' }} / {{ item.serie || '-' }}</small>
@@ -83,9 +91,9 @@
             <label>
               Cantidad
               <div class="qty-control">
-                <button type="button" @click="localItemState[item._itemKey].cantidad = Math.max(1, localItemState[item._itemKey].cantidad - 1)">-</button>
-                <span>{{ localItemState[item._itemKey]?.cantidad || 1 }}</span>
-                <button type="button" @click="localItemState[item._itemKey].cantidad++">+</button>
+                <button type="button" @click="localItemState[item._itemKey].cantidad = Math.max(1, (Number(localItemState[item._itemKey].cantidad) || 1) - 1)">-</button>
+                <input type="number" v-model.number="localItemState[item._itemKey].cantidad" min="1" class="qty-input-mini" />
+                <button type="button" @click="localItemState[item._itemKey].cantidad = (Number(localItemState[item._itemKey].cantidad) || 0) + 1">+</button>
               </div>
             </label>
             <label v-if="newItem.tipo === 'consumible' || newItem.tipo === 'accesorio' || newItem.tipo === 'refaccion'">
@@ -136,11 +144,25 @@ const props = defineProps({
   newItem: { type: Object, required: true },
   belongsToHospital: { type: Boolean, required: true },
   suggestions: { type: Array, default: () => [] },
-  equipoMedicoList: { type: Array, default: () => [] },
+  equipoMedicoList: {
+    type: Array,
+    default: () => []
+  },
+  allInventoryList: {
+    type: Array,
+    default: () => []
+  },
+  isLoading: {
+    type: Boolean,
+    default: false
+  },
   onlyInventario: { type: Boolean, default: false }
 })
 
-const emit = defineEmits(['select-item'])
+const emit = defineEmits({
+  'select-item': (item) => !!item,
+  'refresh-inventory': null
+})
 
 const blockedTypes = ['mobiliario', 'refaccion']
 
@@ -174,23 +196,74 @@ let refinementBlurTimer = null
 const inventoryBase = computed(() => {
   const suggestionsList = Array.isArray(props.suggestions) ? props.suggestions : []
   const equipoList = Array.isArray(props.equipoMedicoList) ? props.equipoMedicoList : []
+  const allInvList = Array.isArray(props.allInventoryList) ? props.allInventoryList : []
   
-  // Merge both lists for "universal search" (Request 8)
+  // Determinamos la categoría del item que estamos editando/creando
+  const isTargetingEquipment = props.newItem?.tipo === 'equipo-medico' || props.newItem?.tipo === 'mobiliario'
+  const isTargetingInsumo = ['accesorio', 'consumible', 'refaccion'].includes(props.newItem?.tipo)
+
+  // Merge both lists for "universal search"
   const combined = new Map()
   
-  // Add suggestions (supplies/ACR)
+  // 1. Agregar sugerencias activas
   suggestionsList.forEach(item => {
-    const key = item.id || item._id || `acr-${item.nombre || ''}-${item.serie || ''}-${item.noInventario || ''}`
+    const typePrefix = (item.tipo === 'equipo-medico' || item.tipo === 'equipo') ? 'eq-' : 'acr-'
+    const uniqueHash = [
+      item.id || item._id,
+      item.claveHRAEI,
+      item.noInventario,
+      item.nombre,
+      item.lote,
+      item.serie,
+      item.referencia
+    ].filter(Boolean).join('|')
+    const key = `${typePrefix}${uniqueHash}`
     combined.set(key, item)
   })
   
-  // Add equipment (Medical/Furniture)
+  // 2. Agregar Catálogo de Equipos
   equipoList.forEach(item => {
-    const key = item.id || item._id || `eq-${item.nombre || ''}-${item.serie || ''}-${item.noInventario || ''}`
+    const uniqueHash = [
+      item.id || item._id,
+      item.noInventario,
+      item.nombre,
+      item.serie,
+      item.modelo
+    ].filter(Boolean).join('|')
+    const key = `eq-${uniqueHash}`
+    if (!combined.has(key)) combined.set(key, item)
+  })
+
+  // 3. Agregar Catálogo de Insumos/Accesorios (Fix para Salidas)
+  allInvList.forEach(item => {
+    const uniqueHash = [
+      item.id || item._id,
+      item.claveHRAEI,
+      item.noInventario,
+      item.nombre,
+      item.lote,
+      item.referencia
+    ].filter(Boolean).join('|')
+    const key = `acr-${uniqueHash}`
     if (!combined.has(key)) combined.set(key, item)
   })
   
-  return Array.from(combined.values())
+  const allItems = Array.from(combined.values())
+
+  if (isTargetingEquipment) {
+    return allItems.filter(i => {
+      const type = i.tipo || ''
+      return type === 'equipo-medico' || type === 'equipo' || type === 'mobiliario' || (i.noInventario && !i.claveHRAEI)
+    })
+  } else if (isTargetingInsumo) {
+    return allItems.filter(i => {
+      const type = i.tipo || ''
+      // En Salidas, queremos que aparezcan los que NO son equipos
+      return type !== 'equipo-medico' && type !== 'equipo' && type !== 'mobiliario'
+    })
+  }
+  
+  return allItems
 })
 
 function getRefinementFieldValue(item, key) {
@@ -285,6 +358,10 @@ function onRefinementBlur() { if (refinementBlurTimer) clearTimeout(refinementBl
 function addRefinement() { const value = String(refinementValue.value || '').trim(); if (!value) return; const exists = refinements.value.some(r => r.key === refinementField.value && r.value.toLowerCase() === value.toLowerCase()); if (!exists) refinements.value.push({ key: refinementField.value, value }); refinementValue.value = ''; refinementDropdownOpen.value = false }
 function removeRefinement(i) { refinements.value.splice(i,1) }
 function applyRefinementSuggestion(suggestion) { refinementValue.value = suggestion; addRefinement(); refinementDropdownOpen.value = false }
+
+function handleRefreshCatalog() {
+  emit('refresh-inventory')
+}
 
 function selectInventoryRefinedItem(item) {
   const selectedTipo = props.newItem?.tipo || item.tipo || (props.newItem && (props.newItem.tipo === 'equipo-medico' ? 'equipo-medico' : 'accesorio'))
@@ -417,10 +494,45 @@ onBeforeUnmount(()=>{ if (refinementDebounceTimer) clearTimeout(refinementDeboun
 .refinement-container .live-dropdown li:hover { background:rgba(148,163,184,0.15); }
 .refinement-container .form-input { padding:8px 12px; font-size:0.875rem; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:#fff; transition:all 0.2s; }
 .refinement-container .form-input:focus { background:rgba(255,255,255,0.08); border-color:rgba(59,130,246,0.5); outline:none; }
+.qty-input-mini {
+  width: 50px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(148,163,184,0.2);
+  border-right: 1px solid rgba(148,163,184,0.2);
+  color: #fff;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0;
+  height: 28px;
+  outline: none;
+}
+.qty-input-mini::-webkit-inner-spin-button, 
+.qty-input-mini::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
 
 /* Ajustes para que los items sean compactos y las etiquetas/chips claras */
 .result-item{padding:12px;border-radius:10px;background:rgba(6,10,16,0.6);border:1px solid rgba(148,163,184,0.06)}
 .result-data{gap:8px 10px}
 .result-data .field-row{gap:8px}
 .result-data .field-row span{padding:4px 8px;border-radius:999px;background:rgba(15,23,42,0.7);border:1px solid rgba(148,163,184,0.08);color:#e6eef6}
+
+.spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #3b82f6;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
 </style>

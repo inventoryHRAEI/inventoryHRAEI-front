@@ -337,7 +337,7 @@ const getItemStockOficina = (item) => getItemStockByAliases(item, [' Almacén IB
 
 const getItemMetaParts = (item) => {
   return [
-    { key: 'serie', label: 'Serie', value: getItemSerie(item) },
+    { key: 'serie', label: 'N', value: getItemSerie(item) },
     { key: 'inventario', label: 'Inventario', value: getItemNoInventario(item) },
     { key: 'ubicacion', label: 'Ubicación', value: getItemUbicacion(item) },
     { key: 'marca', label: 'Marca', value: getItemMarca(item) },

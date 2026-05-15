@@ -166,12 +166,18 @@ function measureAsync(importer, name) {
 }
 
 // Lazy load heavy components (measured)
-const BarcodeModal = measureAsync(() => import('@/components/BarcodeModal.vue'), 'BarcodeModal')
-const UpdateItemPanel = measureAsync(() => import('@/components/UpdateItemPanel_v2.vue'), 'UpdateItemPanel')
-const MaintenanceScannerModal = measureAsync(() => import('@/components/MaintenanceScannerModal.vue'), 'MaintenanceScannerModal')
-const EquipmentHistoryPanel = measureAsync(() => import('@/components/EquipmentHistoryPanel.vue'), 'EquipmentHistoryPanel')
-const CardsSection = measureAsync(() => import('@/views/operations/biomedical/CardsSection.vue'), 'CardsSection')
-const CardsVirtual = measureAsync(() => import('@/views/operations/biomedical/CardsVirtual.vue'), 'CardsVirtual')
+import BarcodeModal from '@/components/BarcodeModal.vue'
+
+import UpdateItemPanel from '@/components/UpdateItemPanel_v2.vue'
+
+import MaintenanceScannerModal from '@/components/MaintenanceScannerModal.vue'
+
+import EquipmentHistoryPanel from '@/components/EquipmentHistoryPanel.vue'
+
+import CardsSection from '@/views/operations/biomedical/CardsSection.vue'
+
+import CardsVirtual from '@/views/operations/biomedical/CardsVirtual.vue'
+
 
 // Lazy load QRCode only when needed
 let QRCode = null
@@ -489,7 +495,14 @@ function getFirstExistingValue(item, candidates = []) {
 }
 
 function getInventoryNo(item) {
-    return getFirstExistingValue(item, ['No. DE INVENTARIO', 'No DE INVENTARIO', 'N_DE_INVENTARIO', 'noInventario'])
+    // Intentar todas las variantes conocidas del campo de inventario
+    const inv = getFirstExistingValue(item, [
+        'No. DE INVENTARIO', 'No DE INVENTARIO', 'N_DE_INVENTARIO',
+        'noInventario', 'inventario', 'CODIGO', 'codigo'
+    ])
+    if (inv) return inv
+    // Último recurso: número de serie
+    return getFirstExistingValue(item, ['NUMERO DE SERIE', 'NÚMERO DE SERIE', 'Serie', 'serie'])
 }
 
 function getSerialNo(item) {

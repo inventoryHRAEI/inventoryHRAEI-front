@@ -15,7 +15,7 @@
           </div>
         </div>
 
-        <iframe v-if="blobUrl && embedMode === 'iframe'" :src="blobUrl" title="PDF embebido" style="width:100%; height:100%; border:0;"></iframe>
+        <iframe v-if="blobUrl && embedMode === 'iframe'" :src="blobUrl" title="PDF embebido" style="width:100%; height:100%; border:0; display:block;"></iframe>
         <object v-else-if="blobUrl" :data="blobUrl" type="application/pdf" width="100%" height="100%">
           <p>Tu navegador no puede mostrar PDFs embebidos. Usa el botón azul para abrir el PDF.</p>
         </object>
@@ -147,13 +147,15 @@ function initFromBlobInput(b) {
     lastStatus.value = null
     lastContentType.value = b && b.type ? b.type : 'application/pdf'
     lastBytes.value = b && b.size ? b.size : 0
+    console.log('[BlobPdfViewer] Initializing from blob:', { size: b?.size, type: b?.type });
     // coerce type if missing
-    const coerced = (b && !b.type) ? new Blob([b], { type: 'application/pdf' }) : b
-    if (blobUrl.value) try { URL.revokeObjectURL(blobUrl.value) } catch(e){}
-    blobUrl.value = URL.createObjectURL(coerced)
+    const coerced = (b && !b.type) ? new Blob([b], { type: 'application/pdf' }) : b;
+    if (blobUrl.value) try { window.URL.revokeObjectURL(blobUrl.value) } catch(e){}
+    blobUrl.value = window.URL.createObjectURL(coerced);
+    console.log('[BlobPdfViewer] Created Blob URL:', blobUrl.value);
   } catch (e) {
-    console.error('Error initializing BlobPdfViewer from blob prop', e)
-    error.value = 'Error procesando PDF binario'
+    console.error('[BlobPdfViewer] Error initializing from blob prop', e);
+    error.value = 'Error procesando PDF binario';
   }
 }
 

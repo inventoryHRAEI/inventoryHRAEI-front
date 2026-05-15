@@ -123,31 +123,6 @@
                             </div>
                             <div class="form-group">
                                 <label>
-                                    <VueIcon name="fa-image" class="label-icon" />
-                                    Imágenes (opcional)
-                                </label>
-                                <input type="file" class="form-input" multiple
-                                    @change="handleImageUpload($event, 'finish')" />
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <VueIcon name="fa-map-marker-alt" class="label-icon" />
-                                    Ubicación de Retorno
-                                </label>
-                                <input v-model="finishForm.return_location" type="text" class="form-input"
-                                    placeholder="Ej: Biomedica, Emergencias, Cardiología" />
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <VueIcon name="fa-calendar-check" class="label-icon" />
-                                    Fecha de Finalización
-                                </label>
-                                <input v-model="finishForm.finished_at" type="date" class="form-input" :max="today" />
-                            </div>
-                            <div class="form-group">
-                                <label>
                                     <VueIcon name="fa-clock" class="label-icon" />
                                     Horas Invertidas
                                 </label>
@@ -210,7 +185,7 @@
 
                             <div class="form-group">
                                 <label>Fecha del Mantenimiento</label>
-                                <input v-model="startForm.started_at" type="date" class="form-input" :max="today" />
+                                <input v-model="startForm.started_at" type="date" class="form-input" />
                             </div>
 
                             <div class="form-group">
@@ -351,7 +326,7 @@ const emit = defineEmits(['update:visible', 'close', 'saved', 'maintenance-start
 
 const visible = ref(props.visible)
 const saving = ref(false)
-const today = new Date().toISOString().split('T')[0]
+const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local format
 
 const maintenanceTypes = [
     { value: 'preventive', label: 'Preventivo (MP)', icon: 'fa-shield-alt' },
@@ -393,30 +368,51 @@ const finishForm = ref({
 
 watch(() => props.visible, async (val) => {
     visible.value = val
-    if (val && props.inventoryNo) {
-        // Recargar el estado actual desde el servidor para asegurar que la info es correcta
-        try {
-            console.log('[MaintenanceWizardV2] Loading fresh maintenance status for', props.inventoryNo);
-            const freshStatus = await getMaintenanceFlowStatus(props.inventoryNo);
-            // Validar que si hay "in_progress", REALMENTE tiene started_at
-            if (freshStatus?.in_progress && freshStatus.in_progress.started_at) {
-                currentMaintenanceStatus.value = {
-                    state: 'in_progress',
-                    ...freshStatus.in_progress
-                };
-                console.log('[MaintenanceWizardV2] In-progress maintenance found, showing finish form');
-            } else {
-                // No hay mantenimiento válido en progreso
-                currentMaintenanceStatus.value = {
-                    state: 'idle'
-                };
-                console.log('[MaintenanceWizardV2] No valid in-progress maintenance, showing start form');
+    if (val) {
+        console.log('[MaintenanceWizardV2] Opening for:', props.inventoryNo);
+        // Reset forms to defaults
+        startForm.value = {
+            maintenance_type: 'preventive',
+            provider_type: 'internal',
+            started_by: '',
+            started_at: today,
+            observaciones: '',
+            images: [],
+            has_warranty: null,
+            warranty_end_date: '',
+            maintenance_contract: null
+        };
+        finishForm.value = {
+            result_status: 'functional',
+            observaciones: '',
+            return_location: '',
+            finished_at: today,
+            finished_by: '',
+            images: [],
+            hours: null,
+            routine_preventive: false,
+            simulator_tests: false,
+            analyzer_tests: false,
+            tests: [],
+            folio_inicio: ''
+        };
+
+        if (props.inventoryNo) {
+            // Recargar el estado actual desde el servidor para asegurar que la info es correcta
+            try {
+                const freshStatus = await getMaintenanceFlowStatus(props.inventoryNo);
+                if (freshStatus?.in_progress && freshStatus.in_progress.started_at) {
+                    currentMaintenanceStatus.value = {
+                        state: 'in_progress',
+                        ...freshStatus.in_progress
+                    };
+                } else {
+                    currentMaintenanceStatus.value = { state: 'idle' };
+                }
+            } catch (e) {
+                console.error('[MaintenanceWizardV2] Error loading status:', e);
+                currentMaintenanceStatus.value = { state: 'idle' };
             }
-        } catch (e) {
-            console.error('[MaintenanceWizardV2] Error loading maintenance status:', e);
-            currentMaintenanceStatus.value = {
-                state: 'idle'
-            };
         }
     }
 })
@@ -519,6 +515,7 @@ async function handleStartMaintenance() {
         const data = await startMaintenance(props.inventoryNo, {
             maintenance_type: maintenanceType,
             started_by: startedBy,
+            started_at: startForm.value.started_at,
             notes: startForm.value.observaciones,
             images: startForm.value.images || [],
             routine_preventive: startForm.value.routine_preventive,
@@ -527,7 +524,11 @@ async function handleStartMaintenance() {
             folio_inicio: startForm.value.folio_inicio,
             has_warranty: startForm.value.has_warranty,
             warranty_end_date: startForm.value.warranty_end_date || null,
-            maintenance_contract: startForm.value.maintenance_contract
+            maintenance_contract: startForm.value.maintenance_contract,
+            provider_type: startForm.value.provider_type,
+            provider_company: startForm.value.provider_type === 'external' ? startForm.value.started_by : null,
+            internal_department: startForm.value.provider_type === 'internal' ? 'Biomédica' : null,
+            maintenance_responsible: startForm.value.provider_type === 'internal' ? 'Personal de Biomédica' : startForm.value.started_by
         })
 
         // 1️⃣ Disparar evento global para actualizar banner en el panel
@@ -606,6 +607,7 @@ async function handleFinishMaintenance() {
             folio_inicio: finishForm.value.folio_inicio,
             maintenance_hours: finishForm.value.hours,
             technician_name: finishForm.value.finished_by || '',
+            maintenance_responsible: finishForm.value.finished_by || '',
             tests: finishForm.value.tests || []
         })
 
@@ -656,13 +658,12 @@ async function handleFinishMaintenance() {
 .wizard-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
-    /* must sit above equipment panel overlay (z-index 99999) */
-    z-index: 100001;
+    z-index: 250000;
 }
 
 .wizard-modal {

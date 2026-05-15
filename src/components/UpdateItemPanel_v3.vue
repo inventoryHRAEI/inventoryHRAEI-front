@@ -208,7 +208,7 @@
 
               <div class="form-row-2">
                 <div class="form-group">
-                  <label for="update-voltaje" class="form-label">Voltaje</label>
+                    <label for="update-voltaje" class="form-label">Voltaje</label>
                   <input
                     id="update-voltaje"
                     v-model="formData.voltaje"

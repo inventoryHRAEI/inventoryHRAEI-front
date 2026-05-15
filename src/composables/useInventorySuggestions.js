@@ -1,15 +1,15 @@
 import { ref, watch } from 'vue'
 import { authedFetch } from '@/utils/api.js'
-import { ensureBiomedicalEquipmentCatalogLoaded, getBiomedicalEquipmentCatalogState } from '@/services/biomedicalEquipmentCatalog.js'
+import * as biomedicalCatalog from '@/services/biomedicalEquipmentCatalog.js'
 
 export function useInventorySuggestions(options = {}) {
   const {
     tipo = null, // 'equipo', 'accesorio', 'consumible', 'refaccion', o null para todos
-    onSelect = () => {},
+    onSelect = () => { },
     debounceMs = 300
     ,
     // Si true, solicita al endpoint remoto los datos "full" (sin dedupe) para búsquedas.
-    noDedupeOnSearch = false
+    noDedupeOnSearch = true
   } = options
 
   // Estado reactivo
@@ -17,6 +17,7 @@ export function useInventorySuggestions(options = {}) {
   const suggestions = ref([])
   const isLoading = ref(false)
   const error = ref(null)
+  let lastFetchId = 0
 
   const equipoMedicoList = ref([])
   const insumosRefaccionesList = ref([])
@@ -24,7 +25,7 @@ export function useInventorySuggestions(options = {}) {
 
   let debounceTimer = null
 
-  const { rows: biomedicalEquipmentRows } = getBiomedicalEquipmentCatalogState()
+  const { rows: biomedicalEquipmentRows } = biomedicalCatalog.getBiomedicalEquipmentCatalogState()
 
   const resolveTipo = () => {
     if (tipo && typeof tipo === 'object' && Object.prototype.hasOwnProperty.call(tipo, 'value')) {
@@ -83,8 +84,8 @@ export function useInventorySuggestions(options = {}) {
   const inferItemType = (item, nombre = '') => {
     const haystack = `${getTypeHint(item)} ${normalizeString(nombre)}`.toLowerCase()
     if (!haystack) return 'unknown'
-    if (/\b(equipo|mobiliario|instrumento|dispositivo)\b/.test(haystack)) return 'equipo'
     if (/\b(accesorio|accesorios|consumible|consumibles|refaccion|refacción|refacciones|insumo|insumos)\b/.test(haystack)) return 'insumo'
+    if (/\b(equipo|mobiliario|instrumento|dispositivo)\b/.test(haystack)) return 'equipo'
     return 'unknown'
   }
 
@@ -104,7 +105,16 @@ export function useInventorySuggestions(options = {}) {
     const lote = pickFirstValue(item, ['Lote', 'LOTE'])
     const referencia = pickFirstValue(item, ['REFERENCIA', 'Referencia', 'Codigo Ref', 'Código Ref', 'CODIGO REF', 'CÓDIGO REF'])
     const claveHRAEI = pickFirstValue(item, ['Clave  HRAEI', 'CLAVE HRAEI', 'Clave HRAEI', 'CLAVE  HRAEI'])
+
     const tipoInferido = inferItemType(item, nombre)
+    // Prioridad: tipo explícito > inferido (si no es unknown) > default por contexto
+    let resolvedTipo = item.tipo
+    if (!resolvedTipo && tipoInferido !== 'unknown') {
+      resolvedTipo = tipoInferido
+    }
+    if (!resolvedTipo) {
+      resolvedTipo = (resolveTipo() === 'equipo' || resolveTipo() === 'equipo-medico') ? 'equipo-medico' : 'insumo'
+    }
 
     const lowerHint = `${nombre || ''} ${claveHRAEI || ''} ${marca || ''}`.toLowerCase()
     const isExternal = /comodato|donaci.n|donación|externo|prestamo|préstamo|comodatos|donaciones/.test(lowerHint)
@@ -120,8 +130,8 @@ export function useInventorySuggestions(options = {}) {
       claveHRAEI,
       tipo: tipoInferido,
       isExternal,
-      noInventario: pickFirstValue(item, ['No. Inventario', 'No Inventario', 'NUMERO INVENTARIO', 'NÚMERO INVENTARIO', 'noInventario']),
-      claveCNIS: pickFirstValue(item, ['CLAVE CNIS', 'Clave CNIS', 'claveCNIS']),
+      noInventario: pickFirstValue(item, ['No. Inventario', 'No Inventario', 'NUMERO INVENTARIO', 'NÚMERO INVENTARIO', 'noInventario', 'no_inventario', 'N_DE_INVENTARIO', 'n', 'N']),
+      claveCNIS: pickFirstValue(item, ['CLAVE CNIS', 'Clave CNIS', 'claveCNIS', 'CLAVE_CNIS', 'CNIS']),
       label: `${nombre || 'Sin descripción'} - ${marca || 'Sin marca'} (${ubicacion || 'N/A'})`
     }
 
@@ -132,19 +142,46 @@ export function useInventorySuggestions(options = {}) {
     try {
       isLoading.value = true
       error.value = null
-      const stockUrl = noDedupeOnSearch ? '/api/ops/stock-biomedica?noDedupe=1' : '/api/ops/stock-biomedica'
+      const stockUrl = '/api/ops/stock-biomedica?noDedupe=1'
       const res = await authedFetch(stockUrl)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       if (data.ok && Array.isArray(data.data)) {
         allInventoryList.value = data.data.map(mapInventoryItem)
-      } else {
-        allInventoryList.value = []
+        syncSuggestionsWithLoadedLists()
       }
     } catch (err) {
       console.error('[fetchAllInventorySuggestions] Error:', err)
       error.value = err.message || 'Error al cargar inventario'
-      allInventoryList.value = []
+      // No limpiamos allInventoryList para evitar que desaparezcan las sugerencias previas (Regla de "nunca desaparezcan")
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  /**
+   * Método de recarga agresiva: intenta refrescar tanto equipos como insumos
+   * ignorando cachés y garantizando la repoblación de las listas.
+   */
+  async function forceRefreshAll() {
+    isLoading.value = true
+    error.value = null
+    try {
+      // 1. Refrescar Catálogo de Equipos Médicos (Singleton)
+      await biomedicalCatalog.refreshBiomedicalEquipmentCatalog()
+      // 2. Refrescar Stock de Insumos/Accesorios
+      await fetchAllInventorySuggestions()
+      // 3. Forzar sincronización
+      await fetchEquipoMedicoSuggestions()
+      await fetchInsumosRefaccionesSuggestions()
+      syncSuggestionsWithLoadedLists()
+      return true
+    } catch (err) {
+      console.error('[forceRefreshAll] Error crítico:', err)
+      error.value = 'No se pudieron sincronizar las sugerencias. Reintentando...'
+      // Reintento automático silencioso tras 2 segundos si falló
+      setTimeout(() => fetchAllInventorySuggestions(), 2000)
+      return false
     } finally {
       isLoading.value = false
     }
@@ -156,7 +193,7 @@ export function useInventorySuggestions(options = {}) {
       error.value = null
 
       // Cargar una sola vez (global) y reusar en toda la app
-      await ensureBiomedicalEquipmentCatalogLoaded()
+      await biomedicalCatalog.ensureBiomedicalEquipmentCatalogLoaded()
       const srcRows = biomedicalEquipmentRows.value || []
 
       equipoMedicoList.value = srcRows.map((row) => {
@@ -175,8 +212,8 @@ export function useInventorySuggestions(options = {}) {
         const lote = pickFirstValue(row, ['LOTE', 'Lote'])
         const referencia = pickFirstValue(row, ['REFERENCIA', 'Referencia', 'CODIGO REF', 'CÓDIGO REF', 'Codigo Ref', 'Código Ref'])
         const claveHRAEI = pickFirstValue(row, ['CLAVE HRAEI', 'Clave HRAEI', 'Clave  HRAEI', 'CLAVE  HRAEI'])
-        const claveCNIS = pickFirstValue(row, ['CLAVE CNIS', 'Clave CNIS', 'CLAVE_CNIS', 'claveCNIS'])
-        const noInventario = pickFirstValue(row, ['NO_INVENTARIO', 'No. Inventario', 'No Inventario', 'NUMERO INVENTARIO', 'NÚMERO INVENTARIO', 'noInventario'])
+        const noInventario = pickFirstValue(row, ['NO_INVENTARIO', 'No. Inventario', 'No Inventario', 'NUMERO INVENTARIO', 'NÚMERO INVENTARIO', 'noInventario', 'no_inventario', 'N_DE_INVENTARIO', 'n', 'N'])
+        const claveCNIS = pickFirstValue(row, ['CLAVE CNIS', 'Clave CNIS', 'CLAVE_CNIS', 'claveCNIS', 'CNIS'])
 
         return {
           nombre,
@@ -189,9 +226,11 @@ export function useInventorySuggestions(options = {}) {
           claveHRAEI,
           claveCNIS,
           noInventario,
+          tipo: 'equipo-medico',
           label: `${nombre || 'Sin descripción'} - ${marca || 'Sin marca'} (${ubicacion || 'N/A'})`
         }
       })
+      syncSuggestionsWithLoadedLists()
     } catch (err) {
       console.error('[fetchEquipoMedicoSuggestions] Error:', err)
       error.value = err.message || 'Error al obtener equipos médicos'
@@ -209,6 +248,7 @@ export function useInventorySuggestions(options = {}) {
       ...item,
       tipo: item.tipo || inferItemType(item, item.nombre)
     }))
+    syncSuggestionsWithLoadedLists()
   }
 
   // Mantener `suggestions` sincronizado con las listas cargadas cuando
@@ -341,21 +381,33 @@ export function useInventorySuggestions(options = {}) {
   }
 
   // Búsqueda remota (debounced)
-  const fetchSuggestions = async () => {
-    const term = searchTerm.value?.trim()
-    if (!term || term.length < 2) {
-      suggestions.value = []
-      return
+  async function fetchSuggestions(term = searchTerm.value?.trim()) {
+    if (!term || term.length < 2) return
+
+    // MEDIDA DRÁSTICA: Si ya tenemos el catálogo completo cargado (allInventoryList),
+    // NO llamamos al servidor. Filtramos localmente para evitar latencia y truncamiento del API.
+    if (allInventoryList.value.length > 500) {
+      console.log('[fetchSuggestions] Usando búsqueda local en memoria para:', term);
+      const filtered = getDynamicSuggestions(resolveTipo(), term);
+      suggestions.value = filtered;
+      return;
     }
 
+    const currentFetchId = ++lastFetchId
     isLoading.value = true
     error.value = null
+
+    // Si el término cambió significativamente, limpiar sugerencias actuales para evitar "stickiness"
+    if (term.length > 2) {
+      suggestions.value = []
+    }
 
     try {
       const resolvedTipo = resolveTipo()
       const paramsObj = {
         search: term,
-        limit: '10',
+        limit: '5000',
+        noDedupe: '1',
         ...(resolvedTipo && resolvedTipo !== 'todos' ? { tipo: resolvedTipo } : {})
       }
       // For mobiliario and refaccion, no suggestions
@@ -400,11 +452,11 @@ export function useInventorySuggestions(options = {}) {
             ...item,
             exactMatch: ['lote', 'referencia', 'claveHRAEI', 'noInventario', 'n'].some(field => normalizeItem(item[field]) === normalizedQuery)
           }))
-          .sort((a, b) => {
-            const aExact = a.exactMatch ? 1 : 0
-            const bExact = b.exactMatch ? 1 : 0
-            return bExact - aExact
-          })
+            .sort((a, b) => {
+              const aExact = a.exactMatch ? 1 : 0
+              const bExact = b.exactMatch ? 1 : 0
+              return bExact - aExact
+            })
 
           if (remoteSuggestions.length === 0) {
             // Si la búsqueda remota no devuelve resultados, intentar fallback local usando el inventario prefetched
@@ -414,6 +466,7 @@ export function useInventorySuggestions(options = {}) {
               exactMatch: ['lote', 'referencia', 'claveHRAEI', 'noInventario', 'n'].some(field => normalizeItem(item[field]) === normalizedQuery)
             }))
           } else {
+            if (currentFetchId !== lastFetchId) return
             suggestions.value = remoteSuggestions
           }
         } else {
@@ -468,7 +521,11 @@ export function useInventorySuggestions(options = {}) {
 
   watch(searchTerm, () => { debouncedSearch() })
   watch(() => resolveTipo(), () => {
-    if (searchTerm.value?.trim()?.length >= 2) fetchSuggestions()
+    if (searchTerm.value?.trim()?.length >= 2) {
+      fetchSuggestions()
+    } else {
+      syncSuggestionsWithLoadedLists()
+    }
   })
 
   return {
@@ -485,6 +542,7 @@ export function useInventorySuggestions(options = {}) {
     clearSuggestions,
     // Búsqueda manual (útil para recargar)
     search: fetchSuggestions,
+    forceRefreshAll,
     // Métodos legacy / utilitarios
     fetchAllInventorySuggestions,
     fetchEquipoMedicoSuggestions,

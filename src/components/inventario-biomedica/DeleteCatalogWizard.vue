@@ -8,53 +8,66 @@
     :can-next="canNext"
     :can-finish="canFinish"
     :loading="submitting"
-    mode-class="wz-mode-decommission"
+    mode-class="wz-mode-delete-catalog"
     @close="close"
     @back="goBack"
     @next="goNext"
     @submit="submit"
   >
     <!-- Step 0: Motivo y Responsable -->
-    <div v-if="step === 0" class="dc-step fade-in">
-      <p class="dc-hint">Completa la información de la baja antes de seleccionar los artículos</p>
+    <div v-if="step === 0" class="dc-step dc-step-alt fade-in">
+      <div class="dc-danger-banner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="banner-icon">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+        <span><strong>ATENCIÓN; LEER ANTES DE CONTINUAR:</strong> Esta función eliminará de manera permanentemente el bien del catalogo.</span>
+      </div>
 
-      <div class="dc-form">
-        <div class="dc-form-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="dc-icon-big">
-            <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
-            <line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
-          </svg>
+      <div class="dc-layout-split">
+        <div class="dc-form-visual">
+          <div class="dc-form-icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="dc-icon-huge">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </div>
+          <h3>Autorización Requerida</h3>
+          <p>Se requiere justificación administrativa para proceder con la eliminación absoluta.</p>
         </div>
 
-        <label class="dc-field">
-          <span>Responsable *</span>
-          <input v-model="meta.responsable" class="dc-input" placeholder="Nombre completo del responsable" />
-        </label>
+        <div class="dc-form-fields">
+          <label class="dc-field">
+            <span>Responsable del Movimiento *</span>
+            <input v-model="meta.responsable" class="dc-input dc-input-glow" placeholder="Nombre completo..." />
+          </label>
 
-        <label class="dc-field">
-          <span>Motivo de la baja *</span>
-          <select v-model="meta.motivo" class="dc-input">
-            <option value="">— Seleccionar motivo —</option>
-            <option value="Caducidad / Vencimiento">Caducidad / Vencimiento</option>
-            <option value="Daño irreparable">Daño irreparable</option>
-            <option value="Obsolescencia">Obsolescencia</option>
-            <option value="Contaminación">Contaminación</option>
-            <option value="Merma / Pérdida">Merma / Pérdida</option>
-            <option value="Retiro del fabricante">Retiro del fabricante</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </label>
+          <label class="dc-field">
+            <span>Motivo de eliminación absoluta *</span>
+            <select v-model="meta.motivo" class="dc-input dc-input-glow">
+              <option value="">— Seleccionar motivo —</option>
+              <option value="Caducidad / Vencimiento">Caducidad / Vencimiento</option>
+              <option value="Daño irreparable">Daño irreparable</option>
+              <option value="Obsolescencia">Obsolescencia</option>
+              <option value="Contaminación">Contaminación</option>
+              <option value="Merma / Pérdida">Merma / Pérdida</option>
+              <option value="Retiro del fabricante">Retiro del fabricante</option>
+              <option value="Otro">Otro</option>
+            </select>
+          </label>
 
-        <label v-if="meta.motivo === 'Otro'" class="dc-field">
-          <span>Especifica el motivo *</span>
-          <input v-model="meta.motivoOtro" class="dc-input" placeholder="Describe el motivo…" />
-        </label>
+          <label v-if="meta.motivo === 'Otro'" class="dc-field">
+            <span>Especificar detalle *</span>
+            <input v-model="meta.motivoOtro" class="dc-input dc-input-glow" placeholder="Explique la razón..." />
+          </label>
 
-        <label class="dc-field">
-          <span>Notas adicionales</span>
-          <textarea v-model="meta.notas" class="dc-input dc-textarea" rows="2" placeholder="Observaciones opcionales…"></textarea>
-        </label>
+          <label class="dc-field">
+            <span>Observaciones del movimiento</span>
+            <textarea v-model="meta.notas" class="dc-input dc-input-glow dc-textarea" rows="3" placeholder="Anotaciones para el historial..."></textarea>
+          </label>
+        </div>
       </div>
     </div>
     <!-- ========== Step 1: Selección de artículos (checkbox) ========== -->
@@ -75,8 +88,9 @@
       <div class="dc-stats">
         <span><strong>{{ filteredItems.length }}</strong> encontrados</span>
         <span class="dc-stats-sep">·</span>
-        <span class="dc-stats-accent"><strong>{{ selectedCount }}</strong> marcados para baja</span>
+        <span class="dc-stats-accent"><strong>{{ selectedCount }}</strong> marcado para eliminación</span>
       </div>
+      <p v-if="selectedCount > 1" style="color: #ef4444; margin-top: 10px; font-size: 14px;">Solo puedes eliminar un artículo a la vez desde este panel.</p>
       <!-- Item List -->
       <ItemListVirtual
         :items="filteredItems"
@@ -96,15 +110,14 @@
     <div v-if="step === 2" class="dc-step fade-in">
       <div class="dc-confirm">
         <div class="dc-confirm-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="dc-warn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" stroke-linecap="round" class="dc-warn-icon">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
             <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
         </div>
-        <h2>Confirma la Baja Total</h2>
+        <h2>Confirma la Eliminación</h2>
         <p class="dc-confirm-sub">
-          Se darán de baja las cantidades indicadas por artículo.
-          Si la cantidad es igual al total, el artículo se <strong>elimina permanentemente</strong>.
+          Se eliminará el artículo del catálogo de forma <strong>permanente</strong> junto con todo su stock actual.
           Esta acción no se puede deshacer.
         </p>
 
@@ -118,11 +131,11 @@
             <span class="dc-cg-value">{{ meta.responsable || '—' }}</span>
           </div>
           <div class="dc-cg-card">
-            <span class="dc-cg-label">Artículos</span>
-            <span class="dc-cg-value">{{ selectedCount }}</span>
+            <span class="dc-cg-label">Artículo seleccionado</span>
+            <span class="dc-cg-value">{{ selectedList.length > 0 ? selectedList[0].clave : 'Ninguno' }}</span>
           </div>
           <div class="dc-cg-card">
-            <span class="dc-cg-label">Stock a eliminar</span>
+            <span class="dc-cg-label">Stock que se perderá</span>
             <span class="dc-cg-value accent">{{ totalStockToRemove }}</span>
           </div>
         </div>
@@ -136,8 +149,7 @@
             <div class="dc-cl-info">
               <strong>{{ s.nombre }}</strong>
               <span>
-                <template v-if="s.isTotal">Baja total ({{ s.stock }} uds) · {{ s.clave }}</template>
-                <template v-else>{{ s.bajaQty }} de {{ s.stock }} uds · {{ s.clave }}</template>
+                Eliminación total del catálogo ({{ s.stock }} uds en stock) · {{ s.clave }}
               </span>
             </div>
           </div>
@@ -620,13 +632,13 @@ const totalUnits = computed(() =>
 
 /* Computed titles */
 const title = computed(() => {
-  if (step.value === 0) return 'Motivo de la Baja';
-  if (step.value === 1) return 'Selecciona Artículos';
+  if (step.value === 0) return 'Motivo de Eliminación';
+  if (step.value === 1) return 'Selecciona Artículo';
   return 'Autorización';
 });
 const subtitle = computed(() => {
   if (step.value === 0) return 'Indica la razón y el responsable';
-  if (step.value === 1) return 'Marca los artículos y ajusta la cantidad a dar de baja';
+  if (step.value === 1) return 'Selecciona el artículo único a eliminar permanentemente';
   return 'Verifica los datos e ingresa con tu cuenta de administrador';
 });
 
@@ -665,11 +677,11 @@ const metaValid = computed(() => {
 /* Navigation guards */
 const canNext = computed(() => {
   if (step.value === 0) return metaValid.value;
-  if (step.value === 1) return selectedCount.value > 0;
+  if (step.value === 1) return selectedCount.value === 1; // Solo se permite eliminar 1 a la vez
   return true;
 });
 const canFinish = computed(() =>
-  selectedCount.value > 0 && metaValid.value && !!adminSession.value
+  selectedCount.value === 1 && metaValid.value && !!adminSession.value
 );
 
 /* Load items */
@@ -731,32 +743,29 @@ const submit = async () => {
   authError.value = '';
   submitting.value = true;
   try {
-    if (!selectedCount.value) throw new Error('Selecciona artículos');
+    if (selectedCount.value !== 1) throw new Error('Selecciona exactamente un artículo para eliminar');
     if (!adminSession.value || !adminToken.value) throw new Error('Debes iniciar sesión como administrador');
 
     const motivo = meta.value.motivo === 'Otro' ? meta.value.motivoOtro : meta.value.motivo;
+    const itemKey = Object.keys(quantities.value).find(k => Number(quantities.value[k]) > 0);
+    const itemObj = items.value.find(i => getItemId(i) === itemKey);
+    const [clave, serie, modelo, marca] = itemKey.split('|');
+    const itemN = itemObj ? pickValue(itemObj, ['N', 'n'], '') : serie;
 
     const body = {
-      items: Object.entries(quantities.value)
-        .filter(([, q]) => q > 0)
-        .map(([itemId, qty]) => {
-          const [clave, serie, modelo, marca] = itemId.split('|');
-          return {
-            claveHRAEI: clave,
-            serie: serie || undefined,
-            modelo: modelo || undefined,
-            marca: marca || undefined,
-            cantidad: qty,
-            itemId: itemId,
-          };
-        }),
+      item: {
+        claveHRAEI: clave,
+        itemN: itemN || undefined,
+        modelo: modelo || undefined,
+        marca: marca || undefined
+      },
       motivo,
       responsable: meta.value.responsable,
       notas: meta.value.notas,
     };
 
-    const res = await fetch('/api/ops/inventory/decommission', {
-      method: 'POST',
+    const res = await fetch('/api/ops/inventory/accessory', {
+      method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${adminToken.value}`,
@@ -766,7 +775,7 @@ const submit = async () => {
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok || data.ok === false) {
-      const msg = data.msg || data.error || 'La baja falló';
+      const msg = data.msg || data.error || 'La eliminación falló';
       if (data.needsLogin) {
         adminSession.value = null;
         adminToken.value = '';
@@ -777,59 +786,33 @@ const submit = async () => {
     }
 
     const d = data.data || {};
-    const countItems = d.totalOperaciones || selectedCount.value;
-    const countUnits = d.totalUnidadesBaja || totalStockToRemove.value;
     const adminEmail = adminSession.value?.email || '';
-
-    let itemsHtml = '';
-    if (d.detalles && d.detalles.length > 0) {
-      itemsHtml = '<ul style="text-align: left; max-height: 150px; overflow-y: auto; font-size: 0.85em; padding-left: 20px; color: #ccc; margin: 10px 0;">';
-      d.detalles.forEach(item => {
-        const desc = item.descripcion || item.claveHRAEI;
-        const existian = item.anteriores ? item.anteriores.total : '?';
-        const descontados = item.cantidad || '?';
-        itemsHtml += `<li style="margin-bottom: 5px;">Del artículo <b>${desc}</b> (había ${existian}) se descontaron <b>${descontados}</b>.</li>`;
-      });
-      itemsHtml += '</ul>';
-    }
-
-    const successMsgHtml = `
-      <div style="font-size: 1.1em; margin-bottom: 10px;">
-        Se ha registrado la baja de <b>${countUnits}</b> unidad${countUnits === 1 ? '' : 'es'} exitosamente.
-      </div>
-      ${itemsHtml}
-      <div style="font-size: 0.9em; color: #888;">
-        Artículos afectados: <b>${countItems}</b><br>
-        Autorizado por: <b>${adminEmail}</b>
-      </div>
-    `;
+    const successMsg = `El artículo ha sido eliminado permanentemente del catálogo y se ha retirado su stock (${d.stockEliminado || 0} unidades). Autorizado por ${adminEmail}.`;
 
     await Swal.fire({
-      title: '¡Baja Completada!',
-      html: successMsgHtml,
+      title: 'Eliminación completada',
+      text: successMsg,
       icon: 'success',
       ...darkSwal
     });
 
-    emit('success', { message: successMsg, type: 'success', action: 'decommission' });
+    emit('success', { message: successMsg, type: 'success', action: 'deleteCatalog' });
     close();
   } catch (err) {
-    console.error('[DecommissionWizard] Submit error:', err);
+    console.error('[DeleteCatalogWizard] Submit error:', err);
     const raw = String(err?.message || '');
-    let userMsg = 'No se pudo completar la baja de inventario.';
+    let userMsg = 'No se pudo completar la eliminación.';
     if (raw.includes('administrador') || raw.includes('sesión')) userMsg = raw;
-    else if (raw.includes('stock') || raw.includes('existencias')) userMsg = 'Las existencias actuales son menores a la cantidad solicitada para baja.';
-    else if (raw.includes('Selecciona')) userMsg = 'Debes seleccionar al menos un artículo para dar de baja.';
-    else if (raw.includes('falló') || raw.includes('failed')) userMsg = 'El servidor no pudo procesar la baja. Verifica tu conexión e intenta de nuevo.';
-    else if (raw) userMsg = raw;
-    if (!authError.value) {
-      await Swal.fire({
-        title: 'Baja no completada',
-        text: userMsg,
-        icon: 'error',
-        ...darkSwal
-      });
-    }
+    else if (raw.includes('Selecciona')) userMsg = 'Debes seleccionar exactamente un artículo.';
+    else userMsg = raw;
+
+    Swal.fire({
+      title: 'No se pudo eliminar',
+      text: userMsg,
+      icon: 'error',
+      ...darkSwal
+    });
+    authError.value = userMsg;
   } finally {
     submitting.value = false;
   }
@@ -1075,7 +1058,7 @@ select.dc-input option {
   background: rgba(255,255,255,.02);
   border-radius: 10px;
 }
-.dc-cl-icon { width: 20px; height: 20px; color: #f87171; flex-shrink: 0; }
+.dc-cl-icon { width: 20px; height: 20px; color: #fb7185; flex-shrink: 0; }
 .dc-cl-info { display: flex; flex-direction: column; }
 .dc-cl-info strong { font-size: 13px; color: rgba(255,255,255,.85); }
 .dc-cl-info span { font-size: 11px; color: rgba(255,255,255,.35); }
@@ -1083,8 +1066,8 @@ select.dc-input option {
 /* --- Auth block --- */
 .dc-auth {
   width: 100%;
-  background: rgba(239,68,68,.04);
-  border: 1px solid rgba(239,68,68,.15);
+  background: rgba(225,29,72,.04);
+  border: 1px solid rgba(225,29,72,.15);
   border-radius: 16px;
   padding: 20px;
   display: flex; flex-direction: column; gap: 14px;
@@ -1097,9 +1080,9 @@ select.dc-input option {
   border-radius: 12px;
   padding: 12px;
 }
-.dc-auth-icon { width: 24px; height: 24px; color: #f87171; flex-shrink: 0; margin-top: 2px; }
+.dc-auth-icon { width: 24px; height: 24px; color: #fb7185; flex-shrink: 0; margin-top: 2px; }
 .dc-auth-icon-ok { color: #34d399; }
-.dc-auth-header strong { font-size: 14px; color: #fecaca; display: block; }
+.dc-auth-header strong { font-size: 14px; color: #fecdd3; display: block; }
 .dc-auth-ok strong { color: #a7f3d0; }
 .dc-auth-header p { margin: 2px 0 0; font-size: 12px; color: rgba(255,255,255,.35); }
 
@@ -1112,7 +1095,7 @@ select.dc-input option {
   transition: border-color .2s, box-shadow .2s;
 }
 .dc-auth-input-wrap:focus-within {
-  border-color: #f87171;
+  border-color: #fb7185;
   box-shadow: 0 0 0 3px rgba(239,68,68,.1);
 }
 .dc-auth-input {
@@ -1133,7 +1116,7 @@ select.dc-input option {
 .dc-login-btn {
   width: 100%;
   padding: 12px; border: none; border-radius: 10px;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: linear-gradient(135deg, #e11d48, #be123c);
   color: #fff; font-weight: 700; font-size: 14px;
   cursor: pointer; font-family: inherit;
   display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -1147,7 +1130,7 @@ select.dc-input option {
 
 .dc-auth-error {
   display: flex; align-items: center; gap: 8px;
-  font-size: 13px; color: #f87171; font-weight: 600;
+  font-size: 13px; color: #fb7185; font-weight: 600;
   margin: 0;
   animation: dcShake .4s ease;
 }
@@ -1163,5 +1146,72 @@ select.dc-input option {
 
 @media (max-width: 700px) {
   .dc-confirm-grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* --- Deletion Variant Styles --- */
+.dc-step-alt {
+  padding-top: 10px;
+}
+.dc-danger-banner {
+  background: rgba(225, 29, 72, 0.15);
+  border: 1px dashed rgba(225, 29, 72, 0.4);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fb7185;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+.banner-icon { width: 20px; height: 20px; flex-shrink: 0; }
+
+.dc-layout-split {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+.dc-form-visual {
+  flex: 0 0 240px;
+  text-align: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.dc-form-icon-circle {
+  width: 80px; height: 80px;
+  background: rgba(225, 29, 72, 0.1);
+  border: 2px solid rgba(225, 29, 72, 0.2);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  color: #fb7185;
+}
+.dc-icon-huge { width: 40px; height: 40px; }
+.dc-form-visual h3 { font-size: 16px; margin: 0 0 8px; color: #fff; }
+.dc-form-visual p { font-size: 12px; color: rgba(255, 255, 255, 0.4); margin: 0; line-height: 1.5; }
+
+.dc-form-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.dc-input-glow:focus {
+  border-color: #fb7185 !important;
+  box-shadow: 0 0 0 4px rgba(225, 29, 72, 0.15) !important;
+}
+
+@media (max-width: 850px) {
+  .dc-layout-split { flex-direction: column; gap: 24px; }
+  .dc-form-visual { flex: none; width: 100%; display: flex; align-items: center; text-align: left; gap: 20px; padding: 16px; }
+  .dc-form-icon-circle { margin: 0; width: 50px; height: 50px; }
+  .dc-icon-huge { width: 24px; height: 24px; }
+  .dc-form-visual div { flex: 1; }
+}
+.wz-danger-shell {
+  border: 1px solid rgba(225, 29, 72, 0.3) !important;
+  box-shadow: 0 32px 80px rgba(225, 29, 72, 0.15) !important;
 }
 </style>

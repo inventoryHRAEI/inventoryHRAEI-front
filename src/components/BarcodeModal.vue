@@ -1,1015 +1,264 @@
 <template>
-    <Teleport to="body">
-        <Transition name="barcode-fade">
-            <div v-if="visible" class="barcode-modal-overlay" @click.self="close">
-                <div class="barcode-modal" tabindex="0" role="dialog" aria-modal="true">
-                    <button class="barcode-modal-close-icon" @click="close" aria-label="Cerrar">✕</button>
-                    <div class="barcode-modal-header">
-                        <div class="barcode-modal-title">Código de Barras</div>
-                        <div class="barcode-modal-subtitle">Inventario: <span>{{ displayCode }}</span></div>
-                    </div>
-                    <div class="barcode-info">
-                        <div class="info-row"><span>Equipo:</span> {{ item?.['EQUIPO MEDICO'] || 'N/A' }}</div>
-                        <div class="info-row"><span>Marca:</span> {{ item?.['MARCA'] || 'N/A' }}</div>
-                        <div class="info-row"><span>Modelo:</span> {{ item?.['MODELO'] || 'N/A' }}</div>
-                        <div class="info-row"><span>No. Serie:</span> {{ item?.['NUMERO DE SERIE'] || 'N/A' }}</div>
-                    </div>
-                    <!-- preview-panel: barcode only -->
-                    <div class="preview-panel">
-                        <div class="preview-toggle">
-                            <button class="active">Barcode</button>
-                        </div>
-                    </div>
-
-                    <div class="barcode-svg-wrapper">
-                        <div v-if="loading" :class="['barcode-skeleton', { 'skeleton-error': previewError }]">
-                            <div v-if="previewError" class="skeleton-error-icon">✕</div>
-                        </div>
-
-                        <!-- Barcode canvas/SVG preview -->
-                        <svg v-show="!loading && !bwipActive" ref="barcodeSvg" class="barcode-svg"></svg>
-                        <canvas v-show="!loading && bwipActive" ref="barcodeCanvas" class="barcode-canvas"></canvas>
-
-
-                        <div v-if="!displayCode" class="barcode-empty">Sin código disponible</div>
-                    </div>
-
-                    <div class="barcode-caption">Código para: {{ equipmentLabel }}</div>
-                    <div class="barcode-modal-actions">
-                        <button class="barcode-modal-download" @click="downloadBarcodePng" :disabled="!displayCode"
-                            aria-label="Descargar código de barras como PNG">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Descargar Barcode
-                        </button>
-
-                        <!-- Nuevo: marcar como functional manualmente -->
-                        <button v-if="displayCode && isAuthed" class="barcode-modal-mark-functional" @click="markFunctional" title="Marcar equipo como funcional">
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>
-                          Marcar funcional
-                        </button>
-
-                        <button class="barcode-modal-close" @click="close">Cerrar</button>
-                    </div>
-                </div>
+  <Teleport to="body">
+    <Transition name="fade">
+      <div v-if="visible" class="barcode-overlay" @click.self="close">
+        
+        <div class="barcode-card" role="dialog" aria-modal="true">
+          <div class="barcode-header">
+            <div class="header-main">
+              <h2 class="title">Ficha Técnica de Identificación</h2>
+              <p class="subtitle">Etiqueta equilibrada de alta precisión</p>
             </div>
-        </Transition>
-    </Teleport>
+            <button class="btn-close" @click="close">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div class="barcode-body">
+            <div class="info-section">
+              <div class="info-row">
+                <div class="info-item">
+                  <label>Equipo Detectado</label>
+                  <p class="highlight multiline">{{ eqName }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Previsualización de la Etiqueta Equilibrada -->
+            <div class="tag-preview-box">
+              <div class="tag-label-white industrial-shadow">
+                <canvas ref="barcodeCanvas" class="industrial-barcode-canvas"></canvas>
+              </div>
+            </div>
+
+            <div class="ux-hint">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              Lectura optimizada con altura moderada
+            </div>
+          </div>
+
+          <div class="barcode-footer">
+            <button v-if="isAuthed" class="btn btn-success" @click="markFunctional">
+              Registrar Operativo
+            </button>
+            <button class="btn btn-primary" @click="downloadPng">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Descargar Etiqueta
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue';
-import JsBarcode from 'jsbarcode';
-// QR generation removed
+import { ref, watch, computed, nextTick } from 'vue';
+import bwipjs from 'bwip-js';
 import Swal from 'sweetalert2';
+import { normalizeEquipment } from '@/utils/equipmentNormalizer.js';
 import { markStatusManual } from '@/services/equipmentStatusService.js';
 
 const props = defineProps({
-    modelValue: Boolean,
-    code: {
-        type: String,
-        required: true
-    },
-    item: {
-        type: Object,
-        default: null
-    }
+  modelValue: Boolean,
+  code: { type: String, default: '' },
+  item: { type: Object, default: null }
 });
-const emit = defineEmits(['update:modelValue', 'requestStartMaintenance']);
+
+const emit = defineEmits(['update:modelValue']);
 
 const visible = ref(props.modelValue);
-const barcodeSvg = ref(null);
-const loading = ref(false);
-const previewError = ref(false); // indicates failure rendering barcode preview
-const lineWidth = ref(4); // default to 'Grueso'
-const bwipActive = ref(false);
 const barcodeCanvas = ref(null);
-// QR-related state removed (qrDataUrl no longer used)
-const exportScale = 3; // high-res export scale for crisp printing
 
-const displayCode = computed(() => String(props.code || '').trim());
+const normalized = computed(() => normalizeEquipment(props.item)?._normalized || {});
+const eqName = computed(() => (normalized.value.name || 'SIN NOMBRE').toUpperCase());
+const eqBrand = computed(() => (normalized.value.brand || 'N/A').toUpperCase());
+const eqSerial = computed(() => (normalized.value.serialNo || 'S/N').toUpperCase());
 
-const equipmentLabel = computed(() => {
-    const code = displayCode.value || '';
-    const equipo = (props.item && (props.item['EQUIPO MEDICO'] || props.item['EQUIPO'] || '')) || '';
-    const marca = (props.item && (props.item['MARCA'] || props.item['BRAND'] || '')) || '';
-    const right = [equipo, marca].filter(Boolean).join(' ').trim();
-    const parts = [];
-    if (code) parts.push(code);
-    if (right) parts.push(right);
-    let label = parts.join(' — ');
-    if (!label) label = 'Equipo desconocido';
-    // Truncate to reasonable length to avoid overflow in canvas/SVG
-    if (label.length > 64) label = label.slice(0, 61) + '...';
-    return label;
+const displayInventory = computed(() => {
+  const inv = String(props.code || normalized.value.inventoryNo || '').trim();
+  if (inv && inv !== 'undefined' && inv !== 'null') return inv;
+  return eqSerial.value !== 'S/N' ? eqSerial.value : 'ID-TEMP';
 });
 
-// Split label into up to two lines intelligently (preserve words)
-function wrapLabelLines(text, maxChars = 36, maxLines = 2) {
-    if (!text) return [''];
-    const words = String(text).split(/\s+/);
-    const lines = [''];
-    for (const w of words) {
-        const cur = lines[lines.length - 1];
-        if ((cur + ' ' + w).trim().length <= maxChars) {
-            lines[lines.length - 1] = (cur + ' ' + w).trim();
-        } else if (lines.length < maxLines) {
-            lines.push(w);
-        } else {
-            // append to last line truncated if necessary
-            lines[lines.length - 1] = (lines[lines.length - 1] + ' ' + w).trim();
-        }
-    }
-    return lines.map(l => l.trim());
-}
+const isAuthed = computed(() => typeof window !== 'undefined' && !!localStorage.getItem('token'));
 
-// Build lines preferring first line as inventory code, then wrap the rest (equipo + marca)
-function buildLabelLines(maxChars = 36, maxLines = 3) {
-    const full = equipmentLabel.value || '';
-    const parts = full.split('—');
-    const first = (parts[0] || '').trim();
-    const rest = parts.slice(1).join('—').trim();
-    const lines = [];
-    if (first) lines.push(first);
-    if (rest && lines.length < maxLines) {
-        const remain = maxLines - lines.length;
-        const restLines = wrapLabelLines(rest, maxChars, remain);
-        lines.push(...restLines);
-    }
-    return lines.filter(Boolean);
-}
-
-watch(() => props.modelValue, (val) => {
-    visible.value = val;
-});
-
-watch(() => props.code, (val) => {
-    if (visible.value) {
-        // Re-render current preview when code changes
-        renderBarcode();
-    }
-});
-
+watch(() => props.modelValue, (val) => { visible.value = val; });
 watch(visible, (val) => {
-    emit('update:modelValue', val);
-    if (val) {
-        renderBarcode();
-    }
+  emit('update:modelValue', val);
+  if (val) {
+    nextTick(() => nextTick(() => renderBalancedTag()));
+  }
 });
 
-const isAuthed = computed(() => !!(typeof window !== 'undefined' && localStorage.getItem('token')))
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  let lines = [];
+  for (let n = 0; n < words.length; n++) {
+    let testLine = line + words[n] + ' ';
+    if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+      lines.push(line);
+      line = words[n] + ' ';
+    } else { line = testLine; }
+  }
+  lines.push(line);
+  for (let k = 0; k < lines.length; k++) {
+    ctx.fillText(lines[k], x, y + (k * lineHeight));
+  }
+  return lines.length;
+}
 
-async function close() {
-    const result = await Swal.fire({
-        title: '¿Cerrar visualización?',
-        text: '¿Estás seguro de que quieres cerrar la visualización del código?',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonText: 'Sí, cerrar',
-        cancelButtonText: 'Cancelar',
-        background: 'rgba(13, 20, 35, 0.98)',
-        color: 'rgba(255, 255, 255, 0.95)',
-        backdrop: 'rgba(2, 8, 18, 0.7)',
-        confirmButtonColor: '#ff6b6b',
-        cancelButtonColor: 'rgba(255, 255, 255, 0.08)',
-        customClass: {
-            container: 'swal-high-z-index'
-        }
-    })
+/**
+ * Render de Etiqueta Equilibrada: Barras optimizadas y espaciado corregido
+ */
+function renderBalancedTag() {
+  if (!barcodeCanvas.value || !displayInventory.value) return;
 
-    if (result.isConfirmed) {
-        visible.value = false;
-    }
+  try {
+    // 1. Generamos el código con altura moderada (25 es el punto dulce)
+    bwipjs.toCanvas(barcodeCanvas.value, {
+      bcid: 'code128',
+      text: displayInventory.value,
+      scale: 4,        
+      height: 25,       // MODERADO: Suficientemente alto pero no excesivo
+      includetext: true,
+      textxalign: 'center',
+      textsize: 10,
+      textfont: 'Arial',
+      backgroundcolor: 'ffffff',
+      paddingwidth: 30, 
+      paddingheight: 15
+    });
+
+    const canvas = barcodeCanvas.value;
+    const ctx = canvas.getContext('2d');
+    const barcodeData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Altura extra mejor calculada para evitar encimamientos
+    const textSectionHeight = 160; 
+    const oldWidth = canvas.width;
+    const oldHeight = canvas.height;
+    
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = oldWidth;
+    tempCanvas.height = oldHeight + textSectionHeight;
+    const tCtx = tempCanvas.getContext('2d');
+    
+    tCtx.fillStyle = '#ffffff';
+    tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    tCtx.putImageData(barcodeData, 0, 0);
+    
+    tCtx.fillStyle = '#000000';
+    tCtx.textAlign = 'center';
+
+    // Línea de separación limpia
+    tCtx.strokeStyle = '#000000';
+    tCtx.lineWidth = 1.5;
+    tCtx.beginPath();
+    tCtx.moveTo(40, oldHeight + 5); // Un poco de aire después del ID
+    tCtx.lineTo(oldWidth - 40, oldHeight + 5);
+    tCtx.stroke();
+
+    // Nombre del Equipo (Ajustado)
+    tCtx.font = 'bold 22px Arial, sans-serif';
+    const lines = wrapText(tCtx, eqName.value, oldWidth / 2, oldHeight + 45, oldWidth - 60, 28);
+    
+    // Marca y Serie (Damos un buen salto para que no se encime)
+    let currentY = oldHeight + 45 + (lines * 28) + 10;
+    tCtx.font = 'bold 18px Arial, sans-serif';
+    tCtx.fillText(`MARCA: ${eqBrand.value}   |   S/N: ${eqSerial.value}`, oldWidth / 2, currentY);
+
+    // Pie de etiqueta (Al final de todo con margen de seguridad)
+    tCtx.font = 'bold 12px Arial, sans-serif';
+    tCtx.fillStyle = '#666666';
+    tCtx.fillText('PROPIEDAD GUBERNAMENTAL - HRAEI BIOMÉDICA', oldWidth / 2, tempCanvas.height - 25);
+
+    canvas.width = tempCanvas.width;
+    canvas.height = tempCanvas.height;
+    ctx.drawImage(tempCanvas, 0, 0);
+
+  } catch (err) {
+    console.error('[BarcodeModal] Balanced render error:', err);
+  }
+}
+
+async function downloadPng() {
+  const canvas = barcodeCanvas.value;
+  if (!canvas) return;
+  const link = document.createElement('a');
+  link.download = `etiqueta-hraei-${displayInventory.value}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 
 async function markFunctional() {
-    if (!displayCode.value) return
-    const inventory = displayCode.value
-    const { value: notes } = await Swal.fire({
-        title: 'Marcar equipo como functional',
-        input: 'textarea',
-        inputLabel: 'Observaciones (obligatorio)',
-        inputPlaceholder: 'Describe la verificación realizada...',
-        inputAttributes: { 'aria-label': 'Observaciones' },
-        showCancelButton: true,
-        confirmButtonText: 'Confirmar',
-        cancelButtonText: 'Cancelar',
-        preConfirm: (v) => { if (!v || !String(v).trim()) { Swal.showValidationMessage('La observación es obligatoria') } else return v }
-    })
-
-    if (!notes) return
-
+  const { value: notes } = await Swal.fire({
+    title: 'Confirmar Operatividad',
+    input: 'textarea',
+    inputPlaceholder: 'Notas...',
+    background: '#1f2937',
+    color: '#fff',
+    confirmButtonColor: '#10b981',
+    confirmButtonText: 'OK',
+    showCancelButton: true
+  });
+  if (notes) {
     try {
-        Swal.fire({ title: 'Guardando...', didOpen: () => Swal.showLoading(), allowOutsideClick: false, allowEscapeKey: false })
-        await markStatusManual(inventory, { status: 'functional', maintenance_type: 'manual_update', notes: String(notes).trim() })
-        Swal.close()
-        await Swal.fire({ icon: 'success', title: 'Equipo marcado como functional', text: 'Se registró el cambio en el historial.' })
-        // Notificar al resto de la app para refrescar vistas relacionadas
-        try { window.dispatchEvent(new CustomEvent('equipment:status-updated', { detail: { inventoryNo: inventory } })) } catch (e) {}
-    } catch (e) {
-        console.error('markFunctional error:', e)
-        Swal.fire({ icon: 'error', title: 'Error', text: e && e.message ? e.message : 'No se pudo guardar el estado' })
-    }
+      await markStatusManual(displayInventory.value, { status: 'functional', notes });
+      Swal.fire({ icon: 'success', title: 'Completado', background: '#1f2937', color: '#fff' });
+      close();
+    } catch (e) { Swal.fire('Error', e.message, 'error'); }
+  }
 }
 
-function renderBarcode() {
-    const code = displayCode.value;
-    previewError.value = false;
-    if (barcodeSvg.value && code) {
-        loading.value = true;
-        // Try bwip-js first for a crisp bitmap; fall back to JsBarcode SVG if unavailable
-        renderBarcodeWithBwip().then((canvas) => {
-            if (!canvas) {
-                // bwip failed -> ensure SVG is visible
-                bwipActive.value = false;
-
-                // Render SVG via JsBarcode
-                try {
-                    JsBarcode(barcodeSvg.value, code, {
-                        format: 'CODE128',
-                        lineColor: '#222',
-                        width: Number(lineWidth.value) || 4,
-                        height: 110,
-                        displayValue: true,
-                        fontSize: 16,
-                        textMargin: 4,
-                        margin: 12
-                    });
-                    if (barcodeSvg.value && barcodeSvg.value.setAttribute) {
-                        barcodeSvg.value.setAttribute('shape-rendering', 'crispEdges');
-                        barcodeSvg.value.style.imageRendering = 'pixelated';
-                    }
-                    // Add equipment label into the SVG below the barcode so exported raster includes it
-                    try {
-                        const svgEl = barcodeSvg.value;
-                        const baseH = parseInt(svgEl.getAttribute('height')) || 110;
-                        // Create wrapped lines: first line code, then wrap rest
-                        const lines = buildLabelLines(34, 3);
-                        const xmlns = 'http://www.w3.org/2000/svg';
-                        // Measure and fit font using an offscreen canvas for accuracy
-                        const measureCanvas = document.createElement('canvas');
-                        const mctx = measureCanvas.getContext('2d');
-                        const paddingX = Math.max(12, Math.round((parseInt(svgEl.getAttribute('width') || '360')) * 0.03));
-                        const svgWidth = parseInt(svgEl.getAttribute('width')) || 360;
-                        const maxTextWidth = svgWidth - paddingX * 2;
-                        let fontSize = 16;
-                        const minFont = 10;
-                        if (mctx) {
-                            while (fontSize >= minFont) {
-                                mctx.font = `bold ${fontSize}px monospace`;
-                                const tooWide = lines.some(l => mctx.measureText(l).width > maxTextWidth);
-                                if (!tooWide) break;
-                                fontSize -= 1;
-                            }
-                        }
-                        const lineHeight = Math.round(fontSize * 1.15);
-                        const extra = lineHeight * lines.length + 10;
-                        const newH = baseH + extra;
-                        svgEl.setAttribute('height', String(newH));
-                        // Remove previous caption(s) if present
-                        const prevs = svgEl.querySelectorAll('.barcode-caption-svg');
-                        prevs.forEach(n => n.remove());
-                        for (let i = 0; i < lines.length; i++) {
-                            const text = document.createElementNS(xmlns, 'text');
-                            text.setAttribute('class', 'barcode-caption-svg');
-                            text.setAttribute('x', '50%');
-                            const y = baseH + (i + 1) * lineHeight;
-                            text.setAttribute('y', String(y));
-                            text.setAttribute('text-anchor', 'middle');
-                            text.setAttribute('fill', '#111111');
-                            text.setAttribute('font-size', String(fontSize));
-                            text.setAttribute('font-family', 'monospace');
-                            text.textContent = lines[i];
-                            svgEl.appendChild(text);
-                        }
-                    } catch (e) { /* ignore svg caption errors */ }
-                } catch (e) {
-                    previewError.value = true;
-                }
-            }
-            setTimeout(() => { loading.value = false; }, 250);
-        }).catch(() => { loading.value = false; previewError.value = true; });
-    }
-}
-
-function downloadBarcodePng() {
-    // If bwip rendered canvas is active, export that canvas directly
-    if (bwipActive.value && barcodeCanvas.value) {
-        try {
-            const canvas = barcodeCanvas.value;
-            // create a high-res export canvas
-            const out = document.createElement('canvas');
-            out.width = Math.max(1, canvas.width * exportScale);
-            out.height = Math.max(1, canvas.height * exportScale);
-            const octx = out.getContext('2d');
-            if (octx) {
-                octx.fillStyle = '#ffffff';
-                octx.fillRect(0, 0, out.width, out.height);
-                octx.imageSmoothingEnabled = false;
-                octx.drawImage(canvas, 0, 0, out.width, out.height);
-            }
-            const pngUrl = out.toDataURL('image/png');
-            const link = document.createElement('a');
-            link.href = pngUrl;
-            link.download = `barcode-${displayCode.value}.png`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            return;
-        } catch (e) {
-            console.warn('Could not export bwip canvas', e && e.message);
-            // fallback to SVG export below
-        }
-    }
-
-    const svgEl = barcodeSvg.value;
-    if (!svgEl) return;
-    const serializer = new XMLSerializer();
-    let svgString = serializer.serializeToString(svgEl);
-    if (!svgString.includes('xmlns=')) {
-        svgString = svgString.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-    }
-    // Ensure the SVG has explicit width/height so rasterization works reliably
-    if (!/width=/.test(svgString)) svgString = svgString.replace('<svg', '<svg width="360"');
-    if (!/height=/.test(svgString)) svgString = svgString.replace('<svg', '<svg height="110"');
-    const svgDataUrl = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
-    const img = new Image();
-    img.onload = () => {
-        // Increase exported PNG resolution to improve camera scanning on low-quality cameras
-        const scale = exportScale; // high-res
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.width * scale));
-        canvas.height = Math.max(1, Math.round(img.height * scale));
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.imageSmoothingEnabled = false;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const pngUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = pngUrl;
-        link.download = `barcode-${displayCode.value}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-    img.src = svgDataUrl;
-}
-
-// New: render with bwip-js onto canvas for higher-quality bitmaps (fallback to JsBarcode if missing)
-async function renderBarcodeWithBwip() {
-    const canvas = document.createElement('canvas');
-    const code = displayCode.value;
-    if (!code) return null;
-    try {
-        // Load bwip-js dynamically from CDN if not available to avoid Vite import resolution issues
-        let bwip = null;
-        if (typeof window !== 'undefined' && (window.bwipjs || window.BWIPJS)) {
-            bwip = window.bwipjs || window.BWIPJS;
-        } else {
-            // Inject CDN script for browser bundle
-            const scriptUrl = 'https://cdn.jsdelivr.net/npm/bwip-js/dist/bwip-js-min.js';
-            bwip = await new Promise((resolve) => {
-                const existing = document.querySelector(`script[src="${scriptUrl}"]`);
-                if (existing) {
-                    existing.addEventListener('load', () => resolve(window.bwipjs || window.BWIPJS || null));
-                    existing.addEventListener('error', () => resolve(null));
-                    return;
-                }
-                const s = document.createElement('script');
-                s.src = scriptUrl;
-                s.onload = () => resolve(window.bwipjs || window.BWIPJS || null);
-                s.onerror = () => resolve(null);
-                document.head.appendChild(s);
-            });
-        }
-        if (!bwip || !bwip.toCanvas) {
-            // Not available in this environment
-            return null;
-        }
-
-        // Render with bwip-js to canvas
-        // Use the Vue-controlled canvas element to avoid manual DOM manipulation
-        const targetCanvas = barcodeCanvas.value || canvas;
-        await bwip.toCanvas(targetCanvas, {
-            bcid: 'code128',
-            text: code,
-            scale: Number(lineWidth.value) || 4, // use default 'grueso' mapping
-            height: 36,
-            includetext: false,
-            paddingwidth: 12,
-            paddingheight: 12,
-            backgroundcolor: 'FFFFFF',
-            barcolor: '000000'
-        });
-        // If we have an equipment label, compose it into the bitmap by extending canvas height
-        const label = equipmentLabel.value || '';
-        if (label) {
-            try {
-                const src = targetCanvas;
-                const srcW = src.width;
-                const srcH = src.height;
-                // Determine wrapped lines (up to 3): first line is inventory, next lines wrap equipo+marca
-                const approxChars = Math.max(24, Math.floor(srcW / 11));
-                const lines = buildLabelLines(approxChars, 3);
-                // Choose font size so that lines fit within canvas width with padding
-                const baseFont = Math.max(13, Math.round(srcW * 0.045));
-                const minFont = 10;
-                const paddingX = Math.max(12, Math.round(srcW * 0.03));
-                const maxTextWidth = srcW - paddingX * 2;
-                let fontSize = baseFont;
-                const composed = document.createElement('canvas');
-                const ctx = composed.getContext('2d');
-                // Pre-calc line height after choosing font that fits
-                if (ctx) {
-                    while (fontSize >= minFont) {
-                        ctx.font = `bold ${fontSize}px monospace`;
-                        const tooWide = lines.some(l => ctx.measureText(l).width > maxTextWidth);
-                        if (!tooWide) break;
-                        fontSize -= 1;
-                    }
-                    const lineHeight = Math.round(fontSize * 1.2);
-                    const extraH = Math.max((lineHeight * lines.length) + 12, Math.round(srcH * 0.22));
-                    composed.width = srcW;
-                    composed.height = srcH + extraH;
-
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, composed.width, composed.height);
-                    ctx.drawImage(src, 0, 0);
-                    ctx.fillStyle = '#111111';
-                    ctx.textAlign = 'center';
-                    ctx.font = `bold ${fontSize}px monospace`;
-                    // Draw each wrapped line centered, leaving some padding from the barcode
-                    const topOffset = srcH + Math.round((extraH - (lineHeight * lines.length)) / 2) + Math.round(lineHeight * 0.2);
-                    for (let i = 0; i < lines.length; i++) {
-                        const ln = lines[i];
-                        const y = topOffset + i * lineHeight + Math.round(lineHeight * 0.75);
-                        ctx.fillText(ln, composed.width / 2, y);
-                    }
-                }
-                // Copy composed back into the targetCanvas (this may be the DOM canvas)
-                targetCanvas.width = composed.width;
-                targetCanvas.height = composed.height;
-                const outCtx = targetCanvas.getContext('2d');
-                if (outCtx) outCtx.drawImage(composed, 0, 0);
-            } catch (e) {
-                console.warn('Could not compose label into canvas', e && e.message);
-            }
-        }
-        // Mark bwip canvas as active so template shows it instead of the SVG
-        bwipActive.value = true;
-        return targetCanvas;
-    } catch (e) {
-        console.warn('bwip-js render failed, falling back to JsBarcode', e && e.message);
-        return null;
-    }
-}
-
-function setLineWidth(w) {
-    lineWidth.value = Number(w) || 3;
-    // Re-render barcode with new thickness
-    renderBarcode();
-}
-
-async function copyCodeToClipboard() {
-    try {
-        await navigator.clipboard.writeText(displayCode.value || '');
-        // brief visual feedback could be added later
-    } catch (_) { }
-}
-
-function printBarcode() {
-    try {
-        let dataUrl = '';
-        if (bwipActive.value && barcodeCanvas.value) {
-            const src = barcodeCanvas.value;
-            const out = document.createElement('canvas');
-            out.width = Math.max(1, src.width * exportScale);
-            out.height = Math.max(1, src.height * exportScale);
-            const octx = out.getContext('2d');
-            if (octx) {
-                octx.fillStyle = '#ffffff';
-                octx.fillRect(0, 0, out.width, out.height);
-                octx.imageSmoothingEnabled = false;
-                octx.drawImage(src, 0, 0, out.width, out.height);
-            }
-            dataUrl = out.toDataURL('image/png');
-        } else if (barcodeSvg.value) {
-            const serializer = new XMLSerializer();
-            let svgString = serializer.serializeToString(barcodeSvg.value);
-            if (!svgString.includes('xmlns=')) {
-                svgString = svgString.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-            }
-            if (!/width=/.test(svgString)) svgString = svgString.replace('<svg', '<svg width="360"');
-            if (!/height=/.test(svgString)) svgString = svgString.replace('<svg', '<svg height="110"');
-            const img = new Image();
-            img.onload = () => {
-                const scale = exportScale;
-                const c = document.createElement('canvas');
-                c.width = Math.max(1, Math.round(img.width * scale));
-                c.height = Math.max(1, Math.round(img.height * scale));
-                const ctx = c.getContext('2d');
-                if (!ctx) return;
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, c.width, c.height);
-                ctx.imageSmoothingEnabled = false;
-                ctx.drawImage(img, 0, 0, c.width, c.height);
-                const url = c.toDataURL('image/png');
-                openPrintWindow(url);
-            };
-            img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
-            return;
-        }
-        if (dataUrl) openPrintWindow(dataUrl);
-    } catch (e) { /* ignore */ }
-}
-
-function openPrintWindow(pngUrl) {
-    const win = window.open('', '_blank');
-    if (!win) return;
-    const html = `<!doctype html><html><head><title>Imprimir etiqueta</title>
-    <meta charset="utf-8" />
-    <style>
-      body{margin:0; padding:20px; background:#fff}
-      img{max-width:100%; display:block; margin:0 auto}
-      @media print { body{padding:0} }
-    </style>
-  </head><body>
-    <img src="${pngUrl}" alt="Etiqueta" />
-  </body></html>`;
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    setTimeout(() => { try { win.focus(); win.print(); } catch (_) { } }, 100);
-}
-
-function requestStartMaintenance() {
-    emit('request-start-maintenance', { code: displayCode.value, item: props.item })
-}
-
-onMounted(() => {
-    watch(
-        () => visible.value,
-        (val) => {
-            if (val) {
-                setTimeout(() => renderBarcode(), 50);
-            }
-        },
-        { immediate: true }
-    );
-});
-
-// Manage body scroll lock and Escape key handling
-let escHandler = (e) => { if (e.key === 'Escape' && visible.value) close(); };
-watch(visible, (val) => {
-    try {
-        if (val) {
-            document.body.style.overflow = 'hidden';
-            window.addEventListener('keydown', escHandler);
-            // focus modal for immediate keyboard interaction
-            setTimeout(() => { try { const el = document.querySelector('.barcode-modal'); el && el.focus && el.focus(); } catch (_) { } }, 0);
-        } else {
-            document.body.style.overflow = '';
-            window.removeEventListener('keydown', escHandler);
-        }
-    } catch (_) { }
-});
-
+function close() { visible.value = false; }
 </script>
 
 <style scoped>
-.barcode-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: radial-gradient(1200px 600px at 20% 10%, rgba(24, 48, 96, 0.65), rgba(3, 8, 20, 0.65));
-    z-index: 10000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(8px) saturate(1.1);
-    overflow: auto;
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+.barcode-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(8px);
+  z-index: 200000; display: flex; align-items: center; justify-content: center; padding: 20px;
 }
 
-.barcode-modal {
-    background: linear-gradient(180deg, rgba(10, 20, 40, 0.85), rgba(6, 14, 28, 0.88));
-    border: 1px solid rgba(99, 160, 255, 0.35);
-    border-radius: 20px;
-    padding: 28px 28px 22px 28px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(99, 160, 255, 0.18) inset;
-    min-width: 440px;
-    max-width: 92vw;
-    max-height: 82vh;
-    overflow: auto;
-    text-align: center;
-    position: relative;
-    animation: modal-pop 0.32s cubic-bezier(.22, 1, .36, 1);
+.barcode-card {
+  background: #111827; width: 100%; max-width: 650px;
+  border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  display: flex; flex-direction: column; overflow: hidden;
 }
 
-.barcode-modal::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: inherit;
-    background: radial-gradient(800px 300px at 10% 0%, rgba(99, 160, 255, 0.18), transparent 40%),
-        radial-gradient(800px 300px at 90% 100%, rgba(99, 160, 255, 0.14), transparent 40%);
-    pointer-events: none;
-}
+.barcode-header { padding: 24px 32px; display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.title { color: white; font-size: 1.25rem; font-weight: 700; margin: 0; }
+.subtitle { color: #9ca3af; font-size: 0.875rem; margin: 4px 0 0; }
+.btn-close { background: transparent; border: none; color: #6b7280; cursor: pointer; }
 
-.barcode-info {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 14px;
-    margin: 12px 0 6px 0;
-    text-align: left;
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 0.9rem;
-}
+.barcode-body { padding: 32px; overflow-y: auto; flex: 1; max-height: 85vh; }
 
-.info-row span {
-    color: rgba(125, 211, 252, 0.9);
-    font-weight: 600;
-    margin-right: 4px;
-}
+.info-section { margin-bottom: 24px; }
+.info-item label { font-size: 0.7rem; color: #6b7280; font-weight: 700; text-transform: uppercase; display: block; }
+.info-item p.highlight { color: white; font-size: 1.1rem; font-weight: 700; line-height: 1.3; }
 
-.barcode-modal-header {
-    margin-bottom: 16px;
-}
+.tag-preview-box { background: rgba(0, 0, 0, 0.3); border-radius: 16px; padding: 24px; display: flex; justify-content: center; margin-bottom: 20px; }
+.tag-label-white { background: white; border-radius: 4px; overflow: hidden; }
+.industrial-shadow { box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); }
+.industrial-barcode-canvas { max-width: 100%; height: auto !important; }
 
-.barcode-modal-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #e5f0ff;
-    letter-spacing: 0.4px;
-}
+.ux-hint { display: flex; align-items: center; justify-content: center; gap: 8px; color: #9ca3af; font-size: 0.8rem; font-weight: 600; }
 
-.barcode-modal-subtitle {
-    margin-top: 6px;
-    font-size: 0.95rem;
-    color: rgba(255, 255, 255, 0.75);
-}
-
-.barcode-modal-subtitle span {
-    color: #7dd3fc;
-    font-weight: 600;
-}
-
-.barcode-modal-close-icon {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    background: rgba(239, 68, 68, 0.12);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.35);
-    border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    cursor: pointer;
-    font-size: 1rem;
-    line-height: 1;
-    transition: transform .12s ease, box-shadow .12s ease;
-}
-
-.barcode-modal-close-icon:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(239, 68, 68, 0.25);
-}
-
-/* Tiny viewport: scale modal for very small phones */
-@media (max-width: 350px) and (max-height: 600px) {
-    .barcode-modal {
-        transform: scale(0.9);
-        transform-origin: top center;
-        min-width: 300px;
-        max-width: 96vw;
-        padding: 18px;
-    }
-    .barcode-modal-overlay {
-        padding: 8px 6px;
-        align-items: flex-start;
-    }
-    .barcode-svg, .barcode-canvas {
-        width: 320px;
-        height: 120px;
-        max-width: 92vw;
-    }
-}
-
-.barcode-svg-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin: 18px 0 10px 0;
-    min-height: 140px;
-    background: rgba(255, 255, 255, 0.04);
-    border-radius: 12px;
-    padding: 14px;
-    border: 1px dashed rgba(125, 211, 252, 0.35);
-}
-
-.barcode-svg {
-    width: 520px;
-    height: 160px;
-    max-width: 86vw;
-    background: #f8fafc;
-    border-radius: 8px;
-    shape-rendering: crispEdges;
-    image-rendering: pixelated;
-}
-
-.barcode-canvas {
-    width: 520px;
-    height: 160px;
-    max-width: 86vw;
-    background: #f8fafc;
-    border-radius: 8px;
-    image-rendering: pixelated;
-}
-
-.barcode-svg-wrapper svg,
-.barcode-svg-wrapper canvas {
-    display: block
-}
-
-.barcode-skeleton {
-    width: 520px;
-    height: 160px;
-    max-width: 86vw;
-    border-radius: 8px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.06));
-    background-size: 200% 100%;
-    animation: shimmer 1.2s infinite;
-}
-
-.barcode-modal-download {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background: rgba(34, 197, 94, 0.12);
-    color: #22c55e;
-    border: 1px solid rgba(34, 197, 94, 0.5);
-    border-radius: 10px;
-    padding: 8px 16px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-right: 10px;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.barcode-modal-mark-functional {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-    color: #e6fff0;
-    border: 1px solid rgba(4, 120, 87, 0.6);
-    border-radius: 10px;
-    padding: 8px 14px;
-    font-size: 0.95rem;
-    font-weight: 700;
-    cursor: pointer;
-    margin-right: 6px;
-    transition: all 0.18s ease;
-}
-
-.barcode-modal-mark-functional:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(6, 182, 140, 0.18); }
-
-.barcode-modal-download:hover:not(:disabled) {
-    background: rgba(34, 197, 94, 0.25);
-    border-color: rgba(34, 197, 94, 0.8);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
-}
-
-.barcode-modal-download svg {
-    flex-shrink: 0;
-}
-
-.barcode-modal-download:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-}
-
-.barcode-modal-secondary {
-    background: rgba(59, 130, 246, 0.12);
-    color: #60a5fa;
-    border: 1px solid rgba(59, 130, 246, 0.45);
-    border-radius: 10px;
-    padding: 8px 18px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-right: 10px;
-}
-
-.barcode-modal-secondary:disabled {
-    opacity: .4;
-    cursor: not-allowed
-}
-
-.barcode-empty {
-    position: absolute;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.95rem;
-}
-
-.barcode-modal-actions {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-}
-
-.barcode-modal-close {
-    background: linear-gradient(135deg, #2563eb, #1d4ed8);
-    color: #fff;
-    border: 1px solid rgba(59, 130, 246, 0.6);
-    border-radius: 10px;
-    padding: 8px 20px;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    margin-left: auto;
-}
-
-.barcode-modal-close:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-}
-
-@keyframes modal-pop {
-    0% {
-        transform: scale(0.85) translateY(40px);
-        opacity: 0;
-    }
-
-    100% {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: 200% 0;
-    }
-
-    100% {
-        background-position: -200% 0;
-    }
-}
-
-.barcode-fade-enter-active,
-.barcode-fade-leave-active {
-    transition: opacity 0.25s;
-}
-
-.barcode-fade-enter-from,
-.barcode-fade-leave-to {
-    opacity: 0;
-}
-
-.barcode-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-top: 8px;
-}
-
-.barcode-thickness-label {
-    color: rgba(255, 255, 255, 0.75);
-    font-weight: 600
-}
-
-.barcode-thickness-options {
-    display: flex;
-    gap: 8px
-}
-
-.thick-btn {
-    background: rgba(255, 255, 255, 0.04);
-    color: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    padding: 6px 10px;
-    border-radius: 8px;
-    cursor: pointer
-}
-
-.thick-btn.active {
-    background: linear-gradient(135deg, #60a5fa, #3b82f6);
-    color: #fff;
-    border-color: rgba(59, 130, 246, 0.6)
-}
-
-/* Preview toggle */
-.preview-toggle {
-    display: flex;
-    gap: 8px;
-    justify-content: center;
-    margin-bottom: 8px
-}
-
-.preview-toggle button {
-    padding: 6px 12px;
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.03);
-    color: rgba(255, 255, 255, 0.9);
-    border: 1px solid rgba(255, 255, 255, 0.04);
-    cursor: pointer
-}
-
-.preview-toggle button.active {
-    background: linear-gradient(135deg, #60a5fa, #3b82f6);
-    color: #fff;
-    border-color: rgba(59, 130, 246, 0.6)
-}
-
-.qr-preview {
-    width: 200px;
-    height: 200px;
-    object-fit: contain;
-    background: #fff;
-    border-radius: 8px;
-}
-
-.barcode-caption {
-    color: rgba(255, 255, 255, 0.85);
-    font-weight: 600;
-    margin-top: 8px
-}
-
-.skeleton-error {
-    position: relative;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
-}
-
-.skeleton-error-icon {
-    position: absolute;
-    right: 8px;
-    top: 8px;
-    background: rgba(239, 68, 68, 0.12);
-    color: #f87171;
-    border-radius: 50%;
-    width: 26px;
-    height: 26px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 700
-}
-
-@media (max-width: 560px) {
-    .barcode-modal {
-        min-width: auto;
-        width: 96vw;
-        max-height: 88vh;
-    }
-
-    .barcode-info {
-        grid-template-columns: 1fr;
-    }
-
-    .barcode-modal-actions {
-        flex-direction: column;
-        gap: 8px;
-        width: 100%;
-    }
-
-    .barcode-modal-download,
-    .barcode-modal-close {
-        width: 100%;
-        margin-right: 0;
-        margin-left: 0;
-    }
-
-    .barcode-modal-download span {
-        display: none;
-    }
-
-    .barcode-modal-download {
-        padding: 8px 12px;
-    }
-
-    .qr-preview {
-        width: 240px;
-        height: 240px;
-    }
-}
-
-/* SweetAlert2 high z-index override */
-:global(.swal-high-z-index) {
-    z-index: 200000 !important;
-}
+.barcode-footer { padding: 24px 32px; display: flex; gap: 16px; background: rgba(0, 0, 0, 0.15); border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.btn { flex: 1; height: 50px; border: none; border-radius: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; transition: 0.2s; }
+.btn-success { background: #10b981; color: white; }
+.btn-primary { background: #3b82f6; color: white; }
 </style>

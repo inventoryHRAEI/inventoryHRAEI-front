@@ -115,7 +115,7 @@ import { authedFetch } from '@/utils/api'
 import { logout } from '@/utils/auth'
 import { saveSessionState, peekSessionState, peekWizardState, peekPanelState, clearSessionState, backupWizardDrafts } from '@/utils/sessionRestore'
 import { warmupBiomedicalEquipmentCatalog } from '@/services/biomedicalEquipmentCatalog.js'
-import logoImg from './images/HRAEI.jpg'
+import logoImg from './images/logo_login.jpg'
 
 const router = useRouter()
 const route = useRoute()
