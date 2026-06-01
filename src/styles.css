@@ -926,31 +926,30 @@ input[type="date"] {
 
 .avatar-status {
   position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 8px;
-  height: 8px;
-  background: #00ff6a;
-  border: 2px solid rgba(255, 255, 255, 0.9);
+  bottom: -2px;
+  right: -2px;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border: 2px solid #0f172a;
   border-radius: 50%;
-  box-shadow: 0 0 6px rgba(0, 255, 106, 0.6), inset 0 0 2px rgba(0, 255, 106, 0.8);
-  animation: pulse-status 2s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+  z-index: 10;
 }
 
-.avatar-status.status-admin {
-  background: #64c8ff;
-  box-shadow: 0 0 8px rgba(100, 200, 255, 0.8), inset 0 0 2px rgba(100, 200, 255, 1);
+.avatar-status::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: #22c55e;
+  opacity: 0.6;
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-@keyframes pulse-status {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
 
 .welcome-text {

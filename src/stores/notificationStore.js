@@ -137,12 +137,13 @@ export default {
     requestNotificationPermission()
   },
 
-  addNotification(title, message, type = 'info', metadata = {}) {
+  addNotification(title, message, type = 'info', metadata = {}, category = 'alert') {
     const notification = {
       id: `notif_${Date.now()}_${Math.random()}`,
       title,
       message,
       type, // 'info', 'success', 'warning', 'error', 'critical'
+      category, // 'alert', 'activity', 'system'
       timestamp: new Date(),
       read: false,
       metadata,
@@ -208,7 +209,7 @@ export default {
       orderType: type,
       folio,
       nombreSolicitante,
-    })
+    }, 'activity')
 
     // Enviar notificación del SO
     sendSystemNotification(title, {
@@ -247,9 +248,14 @@ export default {
     return notif
   },
 
+  // Notificación de actividad del usuario
+  notifyActivity(title, message, success = true) {
+    return this.addNotification(title, message, success ? 'info' : 'warning', {}, 'activity')
+  },
+
   // Notificación de error
   notifyError(title, message) {
-    return this.addNotification(title, message, 'error')
+    return this.addNotification(title, message, 'error', {}, 'alert')
   },
 
   // Notificación de mantenimiento
@@ -274,7 +280,7 @@ export default {
       orderType: type, 
       folio,
       usuario
-    })
+    }, 'activity')
     sendSystemNotification(title, { body: message, tag: `order-updated-${folio}` })
     return notif
   },

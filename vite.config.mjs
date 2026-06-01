@@ -11,8 +11,13 @@ function VueIconsWrapper() {
     enforce: base.enforce,
     transform(code, id) {
       // Skip processing files that contain problematic JavaScript code
-      if (id && (id.endsWith('EquipmentHistoryPanel.vue') || id.includes('UserSettings.vue'))) {
-        return null;
+      if (id) {
+        const normalizedId = id.replace(/\\/g, '/');
+        if (normalizedId.endsWith('EquipmentHistoryPanel.vue') || 
+            normalizedId.includes('UserSettings.vue') || 
+            normalizedId.includes('ItemListVirtual.vue')) {
+          return null;
+        }
       }
       return base.transform(code, id);
     }
@@ -22,7 +27,16 @@ import fs from 'fs'
 import os from 'os'
 
 export default defineConfig({
-  plugins: [vue(), VueIconsWrapper()],
+  plugins: [
+    vue({
+      template: {
+        compilerOptions: {
+          isCustomElement: (tag) => tag.includes('lottie-player')
+        }
+      }
+    }), 
+    VueIconsWrapper()
+  ],
   // Keep Vite cache off OneDrive to avoid slow FS sync overhead on Windows.
   cacheDir: path.join(os.tmpdir(), 'inventoryHRAEI-front-vite-cache'),
   resolve: {

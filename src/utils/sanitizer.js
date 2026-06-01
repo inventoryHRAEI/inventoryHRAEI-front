@@ -49,7 +49,10 @@ export function sanitizeObject(value) {
     for (const key of Object.keys(value)) {
       const v = value[key]
       if (typeof v === 'string') {
-        if (/pass(word)?|pwd/i.test(key)) {
+        if (/foto|avatar|image|img|base64|blob/i.test(key)) {
+          // SKIP sanitization for images/binaries
+          out[key] = v
+        } else if (/pass(word)?|pwd/i.test(key)) {
           out[key] = sanitizePassword(v)
         } else if (/email|correo/i.test(key)) {
           // leave emails intact

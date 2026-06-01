@@ -327,14 +327,25 @@
             <Transition name="modal-fade">
                 <div v-if="showWizardModal" class="wizard-modal-overlay" @click.self="requestCloseWizard">
                     <div class="wizard-modal-container">
-                        <button class="wizard-modal-close" @click="requestCloseWizard" aria-label="Cerrar">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="18" y1="6" x2="6" y2="18"></line>
-                                <line x1="6" y1="6" x2="18" y2="18"></line>
-                            </svg>
-                        </button>
+                        <div class="wizard-modal-actions">
+                            <button class="wizard-modal-close" @click="requestCloseWizard" aria-label="Cerrar">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                            <button type="button" class="wizard-modal-refresh" :class="{ 'is-refreshing': isWizardRefreshing }"
+                                @click="handleWizardRefresh" title="Refrescar componente" aria-label="Refrescar componente">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="23 4 23 10 17 10"></polyline>
+                                    <polyline points="1 20 1 14 7 14"></polyline>
+                                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36"></path>
+                                </svg>
+                            </button>
+                        </div>
                         <div class="wizard-modal-content">
-                            <OpResguardo v-if="showWizardModal" @created="onWizardCreated" @cancel="closeWizardImmediately" />
+                            <OpResguardo v-if="showWizardModal" :key="`wizard-${wizardRefreshKey}`" ref="wizardResguardoRef"
+                                @created="onWizardCreated" @cancel="closeWizardImmediately" />
                         </div>
                     </div>
                 </div>
@@ -837,11 +848,27 @@ async function refreshApprovedEditOrders() {
 }
 
 const handleRequestEdit = async (order) => {
+  const result = await Swal.fire({
+    title: 'Solicitar edición',
+    text: '¿Deseas enviar solicitud para editar esta orden?',
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonText: 'Sí, enviar',
+    cancelButtonText: 'No, cancelar',
+    ...darkThemeConfig
+  })
+
+  if (!result.isConfirmed) return // Usuario canceló o dijo No
+
   try {
     const res = await authedFetch(`/api/edit-requests`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ operation_type: 'resguardo', operation_id: order.folio })
+      body: JSON.stringify({ 
+        operation_type: 'resguardo', 
+        operation_id: order.folio,
+        reason: 'Solicitud de edición enviada por el usuario'
+      })
     })
 
     if (res.ok) {
@@ -940,6 +967,9 @@ const route = useRoute()
 // Estado y helpers para modal de edición (offsets ajustables desde acciones)
 const showWizardModal = ref(false)
 const wizardType = ref('resguardo')
+const wizardRefreshKey = ref(0)
+const wizardResguardoRef = ref(null)
+const isWizardRefreshing = ref(false)
 
 watch([showWizardModal, wizardType], ([open, type]) => {
     try {
@@ -2077,6 +2107,22 @@ function requestCloseWizard() {
         discardCurrentWizardDraft()
         showWizardModal.value = false
     })
+}
+
+async function handleWizardRefresh() {
+    if (isWizardRefreshing.value) return
+    isWizardRefreshing.value = true
+    try {
+        const target = wizardResguardoRef.value
+        if (target && typeof target.refreshComponent === 'function') {
+            await target.refreshComponent()
+            return
+        }
+        wizardRefreshKey.value += 1
+        try { notifier.success('Componente refrescado correctamente') } catch (e) {}
+    } finally {
+        isWizardRefreshing.value = false
+    }
 }
 
 function closeWizardImmediately() {
@@ -6188,11 +6234,18 @@ onMounted(() => {
     }
 }
 
-.wizard-modal-close {
+.wizard-modal-actions {
     position: absolute;
     top: 12px;
     right: 12px;
-    z-index: 10;
+    z-index: 12;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.wizard-modal-close {
     width: 36px;
     height: 36px;
     display: flex;
@@ -6211,6 +6264,41 @@ onMounted(() => {
 
 .wizard-modal-close svg {
     stroke: rgba(239, 68, 68, 0.9);
+}
+
+.wizard-modal-refresh {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.16);
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    color: rgba(226, 232, 240, 0.95);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wizard-modal-refresh:hover {
+    background: rgba(59, 130, 246, 0.28);
+    border-color: rgba(59, 130, 246, 0.7);
+    color: #fff;
+}
+
+.wizard-modal-refresh svg {
+    opacity: 0.9;
+}
+
+.wizard-modal-refresh.is-refreshing svg {
+    animation: wizardSpin 0.8s linear infinite;
+}
+
+@keyframes wizardSpin {
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .wizard-modal-content {

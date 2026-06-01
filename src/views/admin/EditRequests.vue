@@ -115,46 +115,57 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="req in filteredRequests" :key="req.id">
-                    <td class="user-cell">
-                      <div class="user-info">
-                        <div class="user-avatar">{{ getInitials(req.user_name || 'U') }}</div>
-                        <div class="user-details">
-                          <span class="user-name">{{ req.user_name || `Usuario ID: ${req.user_id}` }}</span>
-                          <span class="req-id">Req #{{ req.id }}</span>
+                  <template v-for="req in filteredRequests" :key="req.id">
+                    <tr>
+                      <td class="user-cell">
+                        <div class="user-info">
+                          <div class="user-avatar">{{ getInitials(req.user_name || 'U') }}</div>
+                          <div class="user-details">
+                            <span class="user-name">{{ req.user_name || `Usuario ID: ${req.user_id}` }}</span>
+                            <span class="req-id">Req #{{ req.id }}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="badge" :class="'badge-' + (req.operation_type || 'default')">
-                        <span class="pulse-dot"></span>
-                        {{ formatOperationType(req.operation_type) }}
-                      </span>
-                    </td>
-                    <td class="ref-cell"><span class="font-mono">{{ req.operation_id }}</span></td>
-                    <td class="date-cell">{{ formatDate(req.created_at) }}</td>
-                    <td class="actions">
-                      <button 
-                        class="btn-action btn-approve" 
-                        @click="updateStatus(req.id, 'approved')" 
-                        :disabled="actionLoading === req.id"
-                        title="Aprobar Edición"
-                      >
-                        <svg v-if="actionLoading === req.id" class="btn-spinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                        <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-                        <span class="btn-text">Autorizar</span>
-                      </button>
-                      <button 
-                        class="btn-action btn-reject" 
-                        @click="updateStatus(req.id, 'rejected')" 
-                        :disabled="actionLoading === req.id"
-                        title="Rechazar Edición"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                        <span class="btn-text">Denegar</span>
-                      </button>
-                    </td>
-                  </tr>
+                      </td>
+                      <td>
+                        <span class="badge" :class="'badge-' + (req.operation_type || 'default')">
+                          <span class="pulse-dot"></span>
+                          {{ formatOperationType(req.operation_type) }}
+                        </span>
+                      </td>
+                      <td class="ref-cell"><span class="font-mono">{{ req.operation_id }}</span></td>
+                      <td class="date-cell">{{ formatDate(req.created_at) }}</td>
+                      <td class="actions">
+                        <button 
+                          class="btn-action btn-approve" 
+                          @click="updateStatus(req.id, 'approved')" 
+                          :disabled="actionLoading === req.id"
+                          title="Aprobar Edición"
+                        >
+                          <svg v-if="actionLoading === req.id" class="btn-spinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                          <span class="btn-text">Autorizar</span>
+                        </button>
+                        <button 
+                          class="btn-action btn-reject" 
+                          @click="updateStatus(req.id, 'rejected')" 
+                          :disabled="actionLoading === req.id"
+                          title="Rechazar Edición"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                          <span class="btn-text">Denegar</span>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr v-if="req.reason" class="reason-row">
+                      <td colspan="5">
+                        <div class="reason-content">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                          <span class="reason-label">Motivo:</span>
+                          <span class="reason-text">{{ req.reason }}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </template>
                 </tbody>
               </table>
             </div>
@@ -170,6 +181,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authedFetch } from '@/utils/api'
 import notifier from '@/utils/notifier'
+import notificationStore from '@/stores/notificationStore'
 
 const router = useRouter()
 const requests = ref([])
@@ -233,6 +245,14 @@ const updateStatus = async (id, status) => {
 
     if (res.ok) {
       notifier.success(`Solicitud ${status === 'approved' ? 'aprobada' : 'rechazada'} exitosamente`)
+      const req = requests.value.find(r => r.id === id)
+      if (req) {
+        notificationStore.notifyActivity(
+          `Solicitud de Edición ${status === 'approved' ? 'Aprobada' : 'Rechazada'}`,
+          `La solicitud #${id} de ${req.user_name || 'usuario'} para ${req.operation_type} #${req.operation_id} fue ${status === 'approved' ? 'autorizada' : 'denegada'}`,
+          status === 'approved'
+        )
+      }
       requests.value = requests.value.filter(r => r.id !== id)
     } else {
       notifier.error('Error al procesar la solicitud')
@@ -872,6 +892,48 @@ onMounted(() => {
 
 .btn-spinner {
   animation: spin 1s linear infinite;
+}
+
+.reason-row td {
+  padding: 0 1.5rem 1.25rem 1.5rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.reason-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  background: rgba(59, 130, 246, 0.06);
+  border-left: 3px solid rgba(59, 130, 246, 0.4);
+  border-radius: 4px 8px 8px 4px;
+  font-size: 0.9rem;
+  color: rgba(226, 232, 240, 0.9);
+  line-height: 1.5;
+}
+
+.reason-content svg {
+  margin-top: 0.15rem;
+  color: #60a5fa;
+  flex-shrink: 0;
+}
+
+.reason-label {
+  font-weight: 700;
+  color: #60a5fa;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  margin-right: 0.25rem;
+}
+
+.reason-text {
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.requests-table tbody tr:has(+ .reason-row) td {
+  border-bottom: none !important;
 }
 
 @keyframes spin {

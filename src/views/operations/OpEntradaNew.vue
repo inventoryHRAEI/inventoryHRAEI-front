@@ -2,7 +2,19 @@
     <div class="op-entrada-new" :class="{ 'is-submitting': loading }">
         <OperationWizard type="entrada" :title="wizardTitle" :folio="form.folio" :steps="wizardSteps"
             :can-proceed="canProceedToNext" :can-submit="isValid" :is-submitting="loading" :submit-label="submitLabel"
-            :show-sidebar="!isMobileView" @back="onBack" @submit="onSubmit" @step-change="onStepChange" ref="wizardRef">
+            :show-sidebar="!isMobileView" @back="onBack" @submit="onSubmit" @step-change="onStepChange" ref="wizardRef"
+            :key="wizardRenderKey" :initial-step="currentStep">
+            <template #header-actions>
+                <button type="button" class="wizard-refresh-inline" :class="{ 'is-refreshing': isRefreshing }"
+                    @click="refreshComponent" title="Refrescar componente">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36M20.49 15a9 9 0 0 1-14.85 3.36" />
+                    </svg>
+                    <span>Refrescar componente</span>
+                </button>
+            </template>
             <!-- ========== STEP 0: Solicitante ========== -->
             <template #step-0>
                 <div class="wizard-step">
@@ -1635,6 +1647,8 @@ function agregarItemALaOrden(item, seccion) {
 
 // Refs
 const wizardRef = ref(null)
+const wizardRenderKey = ref(0)
+const isRefreshing = ref(false)
 const currentStep = ref(0)
 const loading = ref(false)
 const isMobileView = ref(false)
@@ -2311,6 +2325,7 @@ function agregarItemsSinWarning() {
             ubicacion: firstUnit.ubicacion || '',
             origenBien: firstUnit.origenBien || '',
             claveHRAEI: firstUnit.claveHRAEI || firstUnit.claveHraei || '',
+            N: firstUnit.N || newItem.unidades[0]?.N,
             noInventario: firstUnit.noInventario || '',
             isBlank: !!newItem.isBlank,
             paraEquipoMedico: acrFlowActive.value || !!firstUnit.equipoAsociado
@@ -2336,6 +2351,7 @@ function agregarItemsSinWarning() {
                 ubicacion: unidad.ubicacion || '',
                 origenBien: unidad.origenBien || '',
                 claveHRAEI: unidad.claveHRAEI || unidad.claveHraei || '',
+                N: unidad.N,
                 noInventario: unidad.noInventario || '',
                 isBlank: !!newItem.isBlank,
                 paraEquipoMedico: acrFlowActive.value || !!unidad.equipoAsociado
@@ -3007,6 +3023,26 @@ function ensureAutoFields() {
     if (!timerInterval) startLiveTimer()
 }
 
+async function refreshComponent() {
+    if (isRefreshing.value) return
+    isRefreshing.value = true
+    try {
+        if (props.modo !== 'editar') {
+            folioRequested = false
+            await generateFolioAutomatically()
+        }
+        if (!form.fecha || !form.fechaISO) {
+            try { initializeDateAndTime() } catch (e) {}
+        }
+        wizardRenderKey.value += 1
+        await nextTick()
+        try { wizardRef.value?.goToStep(currentStep.value) } catch (e) {}
+        try { notifier.success('Componente refrescado correctamente') } catch (e) {}
+    } finally {
+        isRefreshing.value = false
+    }
+}
+
 async function ensureInventorySuggestionsForCurrentType(tipo) {
     if (belongsToHospital.value !== true) return
     if (!tipo) return
@@ -3224,11 +3260,43 @@ function mapSnakeToCamel(obj) {
     }
     return result
 }
+
+defineExpose({ refreshComponent })
 </script>
 
 <style scoped>
 .op-entrada-new {
     background: #0a0f1a;
+}
+
+.wizard-refresh-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.12);
+    color: rgba(226, 232, 240, 0.95);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wizard-refresh-inline:hover {
+    background: rgba(59, 130, 246, 0.24);
+    border-color: rgba(59, 130, 246, 0.6);
+    color: #fff;
+}
+
+.wizard-refresh-inline svg {
+    width: 16px;
+    height: 16px;
+}
+
+.wizard-refresh-inline.is-refreshing svg {
+    animation: spin 0.9s linear infinite;
 }
 
 /* Wizard Step Layouts */

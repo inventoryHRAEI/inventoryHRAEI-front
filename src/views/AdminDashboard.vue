@@ -4,7 +4,10 @@
       <div class="greeting-bar">
         <div class="greeting-left">
           <div :class="['avatar-ring', { 'admin-avatar': isAdmin }]">
-            <ShieldCheckIcon class="avatar-icon-admin" />
+            <template v-if="user?.foto && !avatarHasError">
+              <img :src="user.foto" class="avatar-img-dash" alt="avatar" @error="handleAvatarError" />
+            </template>
+            <span v-else class="avatar-letter">{{ userInitials }}</span>
             <span class="avatar-status-dot"></span>
           </div>
           <div class="greeting-text">
@@ -228,6 +231,62 @@ const getCurrentRole = () => {
 const userRole = computed(getCurrentRole)
 const isAdmin = computed(() => ['admin', 'sub_admin'].includes(userRole.value))
 
+const user = ref(null)
+const avatarHasError = ref(false)
+
+const syncUser = (updatedData = null) => {
+  try {
+    if (updatedData) {
+      const su = { ...updatedData }
+      if (su.foto) su.foto = processPhotoUrl(su.foto)
+      user.value = su
+      return
+    }
+    const raw = localStorage.getItem('user')
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      if (parsed.foto) parsed.foto = processPhotoUrl(parsed.foto)
+      user.value = parsed
+    }
+  } catch (e) {
+    console.error('[Dashboard] Error syncUser', e)
+  }
+}
+
+const userInitials = computed(() => {
+  const name = user.value?.nombre || ''
+  if (!name) return 'U'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+})
+
+// Normaliza distintos formatos de foto de usuario a un src utilizable
+function processPhotoUrl(foto) {
+  try {
+    if (!foto) return null
+    if (typeof foto === 'string') {
+      if (foto.startsWith('data:')) return foto
+      if (foto.startsWith('http')) return foto
+      if (foto.startsWith('/')) return foto
+      if (foto.toLowerCase().startsWith('base64,')) return `data:image/jpeg;base64,${foto.slice(7)}`
+      return `/api/uploads/${foto}`
+    }
+    if (typeof foto === 'object' && foto.type === 'Buffer' && Array.isArray(foto.data)) {
+      const b64 = btoa(String.fromCharCode(...foto.data))
+      return `data:image/jpeg;base64,${b64}`
+    }
+    return null
+  } catch (e) {
+    console.error('[Dashboard] processPhotoUrl error', e)
+    return null
+  }
+}
+
+const handleAvatarError = () => {
+  avatarHasError.value = true
+}
+
 const greeting = computed(() => {
   const h = new Date().getHours()
   if (h >= 5 && h < 12) return 'Buenos días'
@@ -281,6 +340,10 @@ function handleCardClick(routeName) {
 }
 
 onMounted(() => {
+  syncUser()
+  const onSessionUpdate = (e) => syncUser(e.detail)
+  window.addEventListener('session:updated', onSessionUpdate)
+
   // Live clock
   clockInterval = setInterval(() => {
     currentTime.value = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())
@@ -324,6 +387,7 @@ onMounted(() => {
     if (loadingTimeout) clearTimeout(loadingTimeout)
     if (clockInterval)  clearInterval(clockInterval)
     if (carouselTimer)  clearInterval(carouselTimer)
+    window.removeEventListener('session:updated', onSessionUpdate)
     window.removeEventListener('app:force-recreate', onRecreate)
   })
 })
@@ -375,8 +439,13 @@ onMounted(() => {
 }
 
 .avatar-letter {
-  color: #fff; font-weight: 800; font-size: 1.3rem; text-transform: uppercase;
-  text-shadow: 0 1px 3px rgba(0,0,0,.3);
+  color: #fff; font-weight: 800; font-size: 1.5rem; text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0,0,0,.3);
+  z-index: 2;
+}
+.avatar-img-dash {
+  width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+  z-index: 1;
 }
 .avatar-icon-admin {
   width: 28px; height: 28px; color: #fff;

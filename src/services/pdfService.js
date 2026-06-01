@@ -33,11 +33,9 @@ export async function generateEquipmentPDF(equipment) {
         return { pdfUrl, blob };
     } catch (error) {
         clearTimeout(timeoutId);
-        console.warn('PDF Engine Timeout/Error. Triggering Clinical Fallback...', error);
-        
-        // El "Si o Sí" se entrega: Usar el generador simple del cliente
-        generateSimplePDF(equipment);
-        return { fallback: true };
+        console.error('PDF Engine Error:', error);
+        // Ya no abrimos ventana extra automáticamente. Devolvemos el error para que el componente lo maneje.
+        return { error: error.message || 'Error en el motor de PDF' };
     }
 }
 
@@ -399,22 +397,22 @@ function buildEquipmentHTML(item) {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>No. Inventario</td>
-                <td><strong>${item.inventoryNo}</strong></td>
-              </tr>
-              <tr>
-                <td>Nombre del Equipo</td>
-                <td>${item.name}</td>
-              </tr>
-              <tr>
-                <td>Área</td>
-                <td>${item.area || '—'}</td>
-              </tr>
-              <tr>
-                <td>Estado</td>
-                <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status}</span></td>
-              </tr>
+               <tr>
+                 <td>No. Inventario</td>
+                 <td><strong>${item.inventoryNo || item['No DE INVENTARIO'] || item['No. DE INVENTARIO'] || '—'}</strong></td>
+               </tr>
+               <tr>
+                 <td>Nombre del Equipo</td>
+                 <td>${item.name || item['EQUIPO MEDICO'] || item['EQUIPO MÃ‰DICO'] || '—'}</td>
+               </tr>
+               <tr>
+                 <td>Área</td>
+                 <td>${item.area || item['UBICACION ESPECIFICA'] || '—'}</td>
+               </tr>
+               <tr>
+                 <td>Estado</td>
+                 <td><span class="badge ${getStatusBadgeClass(item.status || item['ESTATUS'])}">${item.status || item['ESTATUS'] || '—'}</span></td>
+               </tr>
             </tbody>
           </table>
         </div>

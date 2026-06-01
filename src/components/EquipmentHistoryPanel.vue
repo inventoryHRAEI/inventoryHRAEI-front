@@ -986,14 +986,20 @@ async function previewPdf() {
   }, 300);
 
   try {
-    const result = await generateEquipmentPDF(props.item);
+    // Asegurarnos de tener datos válidos antes de llamar al servicio
+    const equipmentToGenerate = props.item || normalizedItem.value;
+    const invNo = normalizedItem.value.inventoryNo || normalizedItem.value.serialNo;
+
+    if (!invNo && !equipmentToGenerate) {
+      throw new Error('No se pudo identificar el equipo para el PDF');
+    }
+
+    const result = await generateEquipmentPDF(equipmentToGenerate);
     clearInterval(progressInterval);
     pdfProgress.value = 100;
 
-    if (result && result.fallback) {
-      // El documento se abrió en otra pestaña como fallback simple (silencioso por petición de usuario)
-      pdfPreviewVisible.value = false;
-      return;
+    if (result && result.error) {
+      throw new Error(result.error);
     }
 
     if (result && result.pdfUrl) {
@@ -1005,26 +1011,48 @@ async function previewPdf() {
   } catch (e) { 
     console.error('[EHP] PDF Preview Error:', e);
     clearInterval(progressInterval);
-    pdfPreviewVisible.value = false; 
+    pdfPreviewVisible.value = false;
+    Swal.fire('Error', e.message || 'No se pudo generar la vista previa', 'error');
   }
-}
-
-function downloadPdf() {
-  generateEquipmentPDF(props.item).then(result => {
-    if (result && result.blob) {
-      const a = document.createElement('a');
-      a.href = window.URL.createObjectURL(result.blob);
-      a.download = `EXPEDIENTE-${normalizedItem.value.inventoryNo}.pdf`;
-      a.click();
-    }
-  }).catch(e => {
-    console.error('[EHP] PDF Download Error:', e);
-  });
 }
 
 function openMaintenanceWizard() { wizardVisible.value = true; }
 function onMaintenanceSaved() { loadData(); wizardVisible.value = false; }
 function closePanel() { emit('close'); }
+
+/**
+ * Descarga el PDF del expediente completo
+ */
+function downloadTechnicalSheet() {
+  downloadPdf();
+}
+
+function downloadPdf() {
+  Swal.fire({
+    title: 'Generando Expediente',
+    text: 'Por favor espere mientras compilamos el historial y las imágenes...',
+    allowOutsideClick: false,
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  generateEquipmentPDF(props.item).then(result => {
+    Swal.close();
+    if (result && result.error) {
+      throw new Error(result.error);
+    }
+    if (result && result.blob) {
+      const a = document.createElement('a');
+      a.href = window.URL.createObjectURL(result.blob);
+      a.download = `EXPEDIENTE-${normalizedItem.value.inventoryNo || 'EQUIPO'}.pdf`;
+      a.click();
+    }
+  }).catch(e => {
+    Swal.close();
+    console.error('[EHP] PDF Download Error:', e);
+    Swal.fire('Error', 'No se pudo generar el PDF. Por favor intente más tarde.', 'error');
+  });
+}
+
 function closePdfPreview() { 
   pdfPreviewVisible.value = false; 
   pdfDataUrl.value = null;

@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { authedFetch } from '@/utils/api'
 import notifier from '@/utils/notifier'
+import notificationStore from '@/stores/notificationStore'
 
 export function useEditRequest() {
   const editRequestStatus = ref(null) // null, 'pending', 'approved', 'rejected', 'consumed'
@@ -47,6 +48,14 @@ export function useEditRequest() {
       if (response.ok) {
         notifier.success('Permiso solicitado correctamente')
         editRequestStatus.value = 'pending'
+        // Categorized as 'alert' because it requires admin attention
+        notificationStore.addNotification(
+          'Solicitud de Edición', 
+          `Se solicitó permiso para editar ${operationType} #${operationId}`, 
+          'warning', 
+          { operationType, operationId }, 
+          'alert'
+        )
       } else {
         const err = await response.json()
         notifier.error(err.error || 'Error al solicitar permiso')

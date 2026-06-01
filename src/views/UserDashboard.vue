@@ -4,7 +4,10 @@
       <div class="greeting-bar">
         <div class="greeting-left">
           <div class="avatar-ring">
-            <span class="avatar-letter">{{ avatarLetter }}</span>
+            <template v-if="userObj?.foto && !avatarHasError">
+              <img :src="userObj.foto" class="avatar-img-dash" alt="avatar" @error="handleAvatarError" />
+            </template>
+            <span v-else class="avatar-letter">{{ initials }}</span>
             <span class="avatar-status-dot"></span>
           </div>
           <div class="greeting-text">
@@ -209,12 +212,41 @@ const loading = ref(true)
 let loadingTimeout = null
 let clockInterval = null
 
-const user = JSON.parse(localStorage.getItem('user') || 'null') || { nombre: localStorage.getItem('nombre') }
-const userName = computed(() => user?.nombre || 'Usuario')
-const avatarLetter = computed(() => (userName.value || 'U')[0].toUpperCase())
+const userObj = ref(null)
+const avatarHasError = ref(false)
+
+const syncUser = (data = null) => {
+  try {
+    const raw = data || JSON.parse(localStorage.getItem('user') || 'null')
+    if (raw) {
+      // Normalizar foto
+      if (raw.foto && typeof raw.foto === 'string' && !raw.foto.startsWith('data:') && !raw.foto.startsWith('http')) {
+        raw.foto = `/api/uploads/${raw.foto}`
+      }
+      userObj.value = raw
+      avatarHasError.value = false
+    }
+  } catch (e) {
+    console.error('[UserDash] Error syncUser', e)
+  }
+}
+
+const userName = computed(() => userObj.value?.nombre || 'Usuario')
+const initials = computed(() => {
+  const name = userName.value
+  if (!name || name === 'Usuario') return 'U'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+})
+
+const handleAvatarError = () => {
+  avatarHasError.value = true
+}
+
 const ROLE_LABELS = { user: 'Usuario con acceso', admin: 'Administrador', privileged: 'Usuario con acceso', usuario: 'Usuario con acceso', administrador: 'Administrador' }
 const userRole = computed(() => {
-  const r = (user?.role || localStorage.getItem('role') || 'user').toLowerCase()
+  const r = (userObj.value?.role || localStorage.getItem('role') || 'user').toLowerCase()
   return ROLE_LABELS[r] || r.charAt(0).toUpperCase() + r.slice(1)
 })
 
@@ -269,6 +301,10 @@ function handleCardClick(routeName) {
 }
 
 onMounted(() => {
+  syncUser()
+  const onSessionUpdate = (e) => syncUser(e.detail)
+  window.addEventListener('session:updated', onSessionUpdate)
+
   // Live clock
   clockInterval = setInterval(() => {
     currentTime.value = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date())
@@ -309,6 +345,7 @@ onMounted(() => {
   const onRecreate = () => {}
   window.addEventListener('app:force-recreate', onRecreate)
   onBeforeUnmount(() => {
+    window.removeEventListener('session:updated', onSessionUpdate)
     if (loadingTimeout) clearTimeout(loadingTimeout)
     if (clockInterval)  clearInterval(clockInterval)
     if (carouselTimer)  clearInterval(carouselTimer)
@@ -341,8 +378,13 @@ onMounted(() => {
   100% { box-shadow: 0 0 0 3px rgba(139,92,246,.3), 0 0 0 6px rgba(139,92,246,.12), 0 8px 30px rgba(139,92,246,.45); }
 }
 .avatar-letter {
-  color: #fff; font-weight: 800; font-size: 1.3rem; text-transform: uppercase;
-  text-shadow: 0 1px 3px rgba(0,0,0,.3);
+  color: #fff; font-weight: 800; font-size: 1.5rem; text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0,0,0,.3);
+  z-index: 2;
+}
+.avatar-img-dash {
+  width: 100%; height: 100%; object-fit: cover; border-radius: 50%;
+  z-index: 1;
 }
 .avatar-status-dot {
   position: absolute; bottom: 2px; right: 2px;

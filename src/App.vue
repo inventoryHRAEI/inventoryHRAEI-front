@@ -34,8 +34,13 @@
               <NotificationBell class="notif-bell-integrated" @click.stop />
               <div class="user-menu" @click.stop>
                 <button class="user-btn" :class="userBtnClasses" @click="toggleUserMenu">
-                  <img v-if="user?.foto" :src="user.foto" class="avatar top-avatar" alt="avatar" />
-                  <span v-else class="avatar placeholder">{{ initials }}</span>
+                  <div class="avatar-container">
+                    <template v-if="user?.foto && !avatarHasError">
+                      <img :src="user.foto" class="avatar top-avatar" alt="avatar" @error="handleAvatarError" />
+                    </template>
+                    <span v-else class="avatar placeholder">{{ userInitials }}</span>
+                    <span class="avatar-status"></span>
+                  </div>
                   <span class="welcome-text">Hola, {{ user?.nombre || 'Usuario' }}</span>
                   <span v-if="isAdmin" class="admin-badge">Admin</span>
                   <span class="chev"></span>
@@ -121,6 +126,7 @@ const router = useRouter()
 const route = useRoute()
 
 const user = ref(null)
+const avatarHasError = ref(false)
 const authCheckTrigger = ref(0) // Para forzar re-renders cuando cambia la autenticación
 const menuOpen = ref(false)
 const componentRenderKey = ref(0)
@@ -152,16 +158,20 @@ const isAdmin = computed(() => {
   return role === 'admin'
 })
 
+const userInitials = computed(() => {
+  const name = user.value?.nombre || ''
+  if (!name) return 'U'
+  const parts = name.trim().split(/\s+/)
+  if (parts.length === 1) return parts[0].charAt(0).toUpperCase()
+  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase()
+})
+
 const roleLabel = computed(() => {
   const role = (user.value?.role || 'user').toString()
   return role === 'admin' ? 'Administrador' : 'Usuario'
 })
 
-const initials = computed(() => {
-  const name = user.value?.nombre || ''
-  if (!name) return 'U'
-  return name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase()
-})
+
 
 const userBtnClasses = computed(() => ({
   'user-btn-admin': isAdmin.value,
@@ -256,6 +266,11 @@ function syncUserFromStorage() {
      user.value = null
    }
  }
+
+function handleAvatarError() {
+  console.warn('[App] Avatar image failed to load, falling back to initials')
+  avatarHasError.value = true
+}
 
 async function toggleUserMenu() {
   const willOpen = !menuOpen.value
@@ -642,6 +657,44 @@ watch(() => user.value, (newUser) => {
 @keyframes fadeIn {
   from { opacity: 0.8; }
   to { opacity: 1; }
+}
+
+.avatar-container {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.avatar-status {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 10px;
+  height: 10px;
+  background: #2edd5a;
+  border-radius: 50%;
+  border: 2px solid #0f172a;
+  z-index: 5;
+}
+
+.avatar-status::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.4;
+  animation: pulse-online 2s infinite;
+}
+
+@keyframes pulse-online {
+  0% { transform: scale(1); opacity: 0.6; }
+  100% { transform: scale(2.5); opacity: 0; }
 }
 
 /* When an operation route is active, let the operation component control its own card

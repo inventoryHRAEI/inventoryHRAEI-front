@@ -125,63 +125,69 @@
     </div>
 
     <div
-      v-else-if="visible.length > 0"
+      v-else-if="filtered.length > 0"
       ref="listRef"
       class="il-list"
       @scroll.passive="onScroll"
     >
-      <div
-        v-for="item in visible"
-        :key="getItemId(item)"
-        class="il-row"
-        :class="{ active: getQty(item) > 0 }"
-      >
-        <div class="il-info">
-          <span class="il-name">{{ getItemName(item) }}</span>
-          <div class="il-tags">
-            <span class="il-tag-code">Clave: {{ getItemClave(item) }}</span>
-            <span class="il-tag-stock">Total: {{ getItemStock(item) }}</span>
-            <span v-if="getItemStockSubceye(item) !== null" class="il-tag-warehouse">SUBCEYE: {{ getItemStockSubceye(item) }}</span>
-            <span v-if="getItemStockOficina(item) !== null" class="il-tag-warehouse">OFICINA: {{ getItemStockOficina(item) }}</span>
+      <!-- Spacer to define total height -->
+      <div :style="{ height: `${totalHeight}px`, position: 'relative' }">
+        <div
+          v-for="(item, index) in visibleItems"
+          :key="getItemId(item)"
+          class="il-row"
+          :class="{ active: getQty(item) > 0 }"
+          :style="{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: `${ITEM_HEIGHT}px`,
+            transform: `translateY(${(startIndex + index) * (ITEM_HEIGHT + GAP)}px)`
+          }"
+        >
+          <div class="il-info">
+            <span class="il-name">{{ getItemName(item) }}</span>
+            <div class="il-tags">
+              <span class="il-tag-code">Clave: {{ getItemClave(item) }}</span>
+              <span class="il-tag-stock">Total: {{ getItemStock(item) }}</span>
+              <span v-if="getItemStockSubceye(item) !== null" class="il-tag-warehouse">SUBCEYE: {{ getItemStockSubceye(item) }}</span>
+              <span v-if="getItemStockOficina(item) !== null" class="il-tag-warehouse">OFICINA: {{ getItemStockOficina(item) }}</span>
+            </div>
+            <div class="il-details">
+              <span
+                v-for="detail in getItemMetaParts(item)"
+                :key="`${getItemId(item)}-${detail.key}`"
+                class="il-detail-pill"
+              >
+                <strong>{{ detail.label }}:</strong> {{ detail.value }}
+              </span>
+            </div>
           </div>
-          <div class="il-details">
-            <span
-              v-for="detail in getItemMetaParts(item)"
-              :key="`${getItemId(item)}-${detail.key}`"
-              class="il-detail-pill"
-            >
-              <strong>{{ detail.label }}:</strong> {{ detail.value }}
-            </span>
+          <div class="il-qty">
+            <button
+              v-if="allowFastStep"
+              class="il-btn il-btn-fast"
+              @click="step(item, -fastAmount)"
+            >{{ fastLabel('-') }}</button>
+            <button class="il-btn" @click="step(item, -1)">−</button>
+            <input
+              class="il-qty-input"
+              type="text"
+              inputmode="numeric"
+              :value="getQty(item)"
+              @input="onInput(item, $event)"
+              @blur="onBlur(item, $event)"
+              @keydown.enter="$event.target.blur()"
+            />
+            <button class="il-btn" @click="step(item, 1)">+</button>
+            <button
+              v-if="allowFastStep"
+              class="il-btn il-btn-fast"
+              @click="step(item, fastAmount)"
+            >{{ fastLabel('+') }}</button>
           </div>
         </div>
-        <div class="il-qty">
-          <button
-            v-if="allowFastStep"
-            class="il-btn il-btn-fast"
-            @click="step(item, -fastAmount)"
-          >{{ fastLabel('-') }}</button>
-          <button class="il-btn" @click="step(item, -1)">−</button>
-          <input
-            class="il-qty-input"
-            type="text"
-            inputmode="numeric"
-            :value="getQty(item)"
-            @input="onInput(item, $event)"
-            @blur="onBlur(item, $event)"
-            @keydown.enter="$event.target.blur()"
-          />
-          <button class="il-btn" @click="step(item, 1)">+</button>
-          <button
-            v-if="allowFastStep"
-            class="il-btn il-btn-fast"
-            @click="step(item, fastAmount)"
-          >{{ fastLabel('+') }}</button>
-        </div>
-      </div>
-
-      <!-- Sentinel for infinite scroll -->
-      <div v-if="visible.length < filtered.length" class="il-more">
-        Mostrando {{ visible.length }} de {{ filtered.length }}…
       </div>
     </div>
 
@@ -195,7 +201,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onMounted } from 'vue';
 
 const props = defineProps({
   items:         { type: Array,   default: () => [] },
@@ -215,9 +221,14 @@ const emit = defineEmits(['update:quantities']);
 const CHUNK = 40;
 const DEBOUNCE_MS = 180;
 
+const ITEM_HEIGHT = 120;
+const GAP = 6;
+const BUFFER = 5;
+
 const localQuery   = ref('');
 const debouncedQ   = ref('');
-const visibleCount = ref(CHUNK);
+const scrollTop    = ref(0);
+const viewportHeight = ref(600); // Valor inicial razonable
 const searchFocused = ref(false);
 const listRef      = ref(null);
 const inputRef     = ref(null);
@@ -626,18 +637,6 @@ const getItemStock = (item) => {
   return Number.isFinite(num) ? num : 0;
 };
 
-/* Debounce búsqueda */
-let _timer = null;
-watch(localQuery, (v) => {
-  clearTimeout(_timer);
-  _timer = setTimeout(() => {
-    debouncedQ.value = v.trim();
-    visibleCount.value = CHUNK;
-    // scroll to top on new search
-    nextTick(() => { if (listRef.value) listRef.value.scrollTop = 0; });
-  }, DEBOUNCE_MS);
-});
-
 /* Filtro + orden */
 const filtered = computed(() => {
   // Partimos del dataset ya filtrado por búsqueda, stock y TODOS los filtros de columna aplicados
@@ -647,7 +646,22 @@ const filtered = computed(() => {
   return [...r].sort((a, b) => (b.id || b.N || 0) - (a.id || a.N || 0));
 });
 
-const visible = computed(() => filtered.value.slice(0, visibleCount.value));
+const totalHeight = computed(() => filtered.value.length * (ITEM_HEIGHT + GAP));
+
+const startIndex = computed(() => {
+  return Math.max(0, Math.floor(scrollTop.value / (ITEM_HEIGHT + GAP)) - BUFFER);
+});
+
+const endIndex = computed(() => {
+  return Math.min(
+    filtered.value.length,
+    Math.ceil((scrollTop.value + viewportHeight.value) / (ITEM_HEIGHT + GAP)) + BUFFER
+  );
+});
+
+const visibleItems = computed(() => {
+  return filtered.value.slice(startIndex.value, endIndex.value);
+});
 
 /* Stats */
 const selectedCount = computed(() =>
@@ -714,15 +728,32 @@ const onBlur = (item, e) => {
 
 const fastLabel = (prefix) => `${prefix}${props.fastAmount}`;
 
-/* Infinite scroll */
+/* Debounce búsqueda */
+let searchDebounceTimer = null;
+watch(localQuery, (v) => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    debouncedQ.value = v.trim();
+    // scroll to top on new search
+    nextTick(() => { if (listRef.value) listRef.value.scrollTop = 0; });
+  }, DEBOUNCE_MS);
+});
+
+/* Virtual scroll handler */
 const onScroll = (e) => {
-  const el = e.target;
-  if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-    if (visibleCount.value < filtered.value.length) {
-      visibleCount.value += CHUNK;
-    }
-  }
+  scrollTop.value = e.target.scrollTop;
 };
+
+/* Resize observer for viewport height */
+onMounted(() => {
+  if (listRef.value) {
+    viewportHeight.value = listRef.value.clientHeight;
+    const observer = new ResizeObserver(entries => {
+      if (entries[0]) viewportHeight.value = entries[0].contentRect.height;
+    });
+    observer.observe(listRef.value);
+  }
+});
 
 /* Focus search con Ctrl+F dentro del wizard */
 const focusSearch = () => inputRef.value?.focus();
@@ -1023,13 +1054,12 @@ defineExpose({ focusSearch });
 .il-list {
   flex: 1; min-height: 0;
   overflow-y: auto;
-  display: flex; flex-direction: column; gap: 6px;
+  position: relative; /* Required for absolute items */
   padding-right: 4px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,.06) transparent;
-  /* GPU acceleration for scroll */
   will-change: scroll-position;
-  contain: layout style;
+  contain: size layout style;
 }
 .il-list::-webkit-scrollbar { width: 4px; }
 .il-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 9px; }
@@ -1042,7 +1072,9 @@ defineExpose({ focusSearch });
   border: 1px solid rgba(255,255,255,.04);
   border-radius: 14px;
   transition: background .15s, border-color .15s;
-  contain: layout style;
+  contain: strict;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .il-row:hover {
   background: rgba(255,255,255,.05);

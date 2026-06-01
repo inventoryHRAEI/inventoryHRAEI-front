@@ -289,6 +289,11 @@ defineExpose({ currentStep, goToStep, nextStep, prevStep })
   min-width: 0;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
 .wizard-type-badge {
   display: inline-flex;
   align-items: center;

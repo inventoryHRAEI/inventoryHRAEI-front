@@ -196,6 +196,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import notificationStore from '@/stores/notificationStore'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -316,6 +317,7 @@ async function importFile() {
     result.value = data
     
     if (data.ok) {
+      notificationStore.notifyActivity('Importación de Inventario', `Se importaron ${data.resultado?.total || 0} equipos desde ${selectedFile.value.name}`)
       await loadEquipos()
     }
   } catch (e) {
@@ -337,6 +339,7 @@ async function deleteAll() {
     })
     
     const data = await res.json()
+    notificationStore.notifyActivity('Limpieza de Inventario', 'Se eliminaron todos los equipos importados', true)
     alert(data.msg)
     await loadEquipos()
   } catch (e) {

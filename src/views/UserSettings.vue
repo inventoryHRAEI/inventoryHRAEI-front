@@ -365,6 +365,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import LoadingSkeleton from '@/components/LoadingSkeleton.vue'
 import Breadcrumbs from '@/components/Breadcrumbs.vue'
+import notificationStore from '@/stores/notificationStore'
 import InactivitySettingsWizard from '@/components/InactivitySettingsWizard.vue'
 import {
   User as UserIcon,
@@ -728,13 +729,7 @@ const handleSave = async () => {
     formData.value.newPassword = ''
     formData.value.confirmNewPassword = ''
 
-    // Notificar éxito
-    const event = new CustomEvent('notification', {
-      detail: { type: 'success', message: 'Cambios guardados correctamente' }
-    })
-    window.dispatchEvent(event)
-
-    // (El evento session:updated ya fue despachado con payload arriba)
+    notificationStore.notifyActivity('Perfil Actualizado', 'Has actualizado tu información de perfil con éxito')
 
     await new Promise(resolve => setTimeout(resolve, 1500))
     await router.push({ name: 'dashboard' })
