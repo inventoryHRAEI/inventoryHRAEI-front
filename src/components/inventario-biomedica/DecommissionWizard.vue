@@ -57,6 +57,7 @@
         </label>
       </div>
     </div>
+
     <!-- ========== Step 1: Selección de artículos (checkbox) ========== -->
     <div v-if="step === 1" class="dc-step fade-in">
       <!-- Advanced Search Bar -->
@@ -66,7 +67,7 @@
           subtitle="Ubica bienes por clave, serie, marca, modelo, referencia o lote. Selecciona parámetros para filtrar."
           :filters="itemSearchFilters"
           :count-label="`Bienes encontrados: ${filteredItems.length}`"
-          :suggestions-by-field="itemSearchFilters.suggestionsByField"
+          :suggestions-by-field="suggestionsByField"
           :field-options="ITEM_FIELD_OPTIONS"
         />
       </div>
@@ -77,19 +78,95 @@
         <span class="dc-stats-sep">·</span>
         <span class="dc-stats-accent"><strong>{{ selectedCount }}</strong> marcados para baja</span>
       </div>
-      <!-- Item List -->
-      <ItemListVirtual
-        :items="filteredItems"
-        :quantities="quantities"
-        :loading="loadingItems"
-        placeholder="Resultados filtrados..."
-        :showSimpleSearch="false"
-        :search-scopes="['all', 'clave', 'descripcion', 'marca', 'modelo', 'referencia', 'lote', 'n']"
-        :stock-filters="['all', 'with-stock', 'zero-stock']"
-        :allow-fast-step="true"
-        :fast-amount="5"
-        @update:quantities="quantities = $event"
-      />
+
+      <!-- Item List con checkboxes nativos (RESPALDO SIEMPRE VISIBLE) -->
+      <div class="dc-list" ref="listRef">
+        <!-- Loading shimmer -->
+        <div v-if="loadingItems" class="dc-loading">
+          <div v-for="n in 5" :key="n" class="dc-shimmer"></div>
+        </div>
+
+        <!-- Empty state -->
+        <div v-else-if="filteredItems.length === 0 && items.length > 0" class="dc-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dc-empty-icon">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>
+          </svg>
+          <p>Ningún artículo coincide con los filtros</p>
+          <button class="dc-clear-filters-btn" @click="clearAllFilters">Limpiar filtros</button>
+        </div>
+
+        <!-- Item rows -->
+        <template v-else>
+          <div
+            v-for="item in visibleItems"
+            :key="getItemId(item)"
+            class="dc-item"
+            :class="{ selected: (quantities[getItemId(item)] || 0) > 0 }"
+          >
+            <input
+              type="checkbox"
+              class="dc-checkbox"
+              :checked="(quantities[getItemId(item)] || 0) > 0"
+              @change="toggleItem(item, $event)"
+            />
+
+            <div class="dc-item-info">
+              <div class="dc-item-name" :title="getItemName(item)">
+                {{ getItemName(item) }}
+              </div>
+              <div class="dc-item-tags">
+                <span class="dc-item-code">{{ getItemClave(item) || 'Sin clave' }}</span>
+                <span v-if="getItemNoInventario(item)" class="dc-item-code">Inv: {{ getItemNoInventario(item) }}</span>
+                <span v-if="getItemLote(item)" class="dc-item-code">Lote: {{ getItemLote(item) }}</span>
+                <span v-if="getItemSerie(item)" class="dc-item-code">Serie: {{ getItemSerie(item) }}</span>
+              </div>
+            </div>
+
+            <div class="dc-item-stock">
+              Stock: {{ getItemStock(item) }}
+            </div>
+
+            <!-- Quantity stepper (visible solo si está seleccionado) -->
+            <div v-if="(quantities[getItemId(item)] || 0) > 0" class="dc-qty">
+              <button
+                class="dc-qty-btn"
+                @click="adjustQty(getItemId(item), -1)"
+                :disabled="quantities[getItemId(item)] <= 1"
+              >−</button>
+              <input
+                type="number"
+                class="dc-qty-input"
+                :value="quantities[getItemId(item)]"
+                @input="setQty(getItemId(item), $event)"
+                min="1"
+                :max="getItemStock(item)"
+              />
+              <button
+                class="dc-qty-btn"
+                @click="adjustQty(getItemId(item), 1)"
+                :disabled="quantities[getItemId(item)] >= getItemStock(item)"
+              >+</button>
+              <span class="dc-qty-max">/{{ getItemStock(item) }}</span>
+            </div>
+          </div>
+
+          <!-- Load more -->
+          <div v-if="visibleItems.length < filteredItems.length" class="dc-more">
+            <button class="dc-load-more-btn" @click="visibleCount += 40">
+              Mostrar más ({{ visibleItems.length }} de {{ filteredItems.length }})
+            </button>
+          </div>
+        </template>
+
+        <!-- No items loaded at all -->
+        <div v-if="!loadingItems && items.length === 0 && !filterClave && !filterDescripcion" class="dc-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="dc-empty-icon">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+          <p>No se pudieron cargar los artículos</p>
+          <button class="dc-clear-filters-btn" @click="loadItems">Reintentar carga</button>
+        </div>
+      </div>
     </div>
 
     <!-- ========== Step 2: Confirmación + Contraseña ========== -->
@@ -145,7 +222,6 @@
 
         <!-- Verificación de sesión admin -->
         <div class="dc-auth">
-          <!-- Ya autenticado como admin -->
           <template v-if="adminSession">
             <div class="dc-auth-header dc-auth-ok">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="dc-auth-icon dc-auth-icon-ok">
@@ -158,7 +234,6 @@
             </div>
           </template>
 
-          <!-- Necesita login de admin -->
           <template v-else>
             <div class="dc-auth-header">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="dc-auth-icon">
@@ -217,7 +292,6 @@ import { ref, computed, watch, nextTick, reactive } from 'vue';
 import Swal from 'sweetalert2';
 import WizardShell from './WizardShell.vue';
 import OrderFilterBar from '@/components/OrderFilterBar.vue';
-import ItemListVirtual from './ItemListVirtual.vue';
 import { getStoredToken, saveToken, validateSession } from '@/utils/auth.js';
 
 const props = defineProps({ open: Boolean });
@@ -227,12 +301,11 @@ const stepLabels = ['Motivo', 'Artículos', 'Autorización'];
 
 const step         = ref(0);
 const items        = ref([]);
-const quantities   = ref({});   // Replaces bajaQuantities
+const quantities   = ref({});
 const loadingItems = ref(false);
 const submitting   = ref(false);
 const showPassword = ref(false);
 const authError    = ref('');
-const searchFocused = ref(false);
 const visibleCount = ref(40);
 const listRef      = ref(null);
 
@@ -337,6 +410,7 @@ function clearAllFilters() {
   filterUbicacion.value = ''
   filterStockMin.value = null
   filterStockMax.value = null
+  visibleCount.value = 40
 }
 
 const normalizeText = (value) => String(value || '')
@@ -414,13 +488,9 @@ const buildItemSearchText = (item) => {
   ].join(' '))
 }
 
-/* suggestionsByField moved after filteredItems to enable context-aware refinement */
-
-/* itemSearchFilters moved after suggestionsByField */
-
 /* Admin session state */
-const adminSession = ref(null);     // { id, email, role, nombre } or null
-const adminToken   = ref('');       // JWT token for the admin
+const adminSession = ref(null);
+const adminToken   = ref('');
 const loginEmail   = ref('');
 const loginPassword = ref('');
 const loggingIn    = ref(false);
@@ -441,7 +511,6 @@ const checkExistingSession = async () => {
     if (result.valid && result.user && result.user.role === 'admin') {
       adminSession.value = result.user;
       adminToken.value = token;
-      // Auto-fill responsable with admin name
       if (!meta.value.responsable && result.user.nombre) {
         meta.value.responsable = result.user.nombre;
       }
@@ -470,18 +539,15 @@ const tryAdminLogin = async () => {
     if (data.role !== 'admin') {
       throw new Error('Esta cuenta no tiene permisos de administrador');
     }
-    // Save token + session
     saveToken(data.token);
     adminToken.value = data.token;
     adminSession.value = { id: data.id, email: data.email || loginEmail.value, role: data.role, nombre: data.nombre };
-    // Persist role/user data so global app state stays in sync
     try {
       localStorage.setItem('role', data.role);
       localStorage.setItem('nombre', data.nombre || '');
       localStorage.setItem('email', data.email || loginEmail.value);
       localStorage.setItem('user', JSON.stringify({ id: data.id, nombre: data.nombre, email: data.email, role: data.role }));
     } catch {}
-    // Update responsable if empty
     if (!meta.value.responsable && data.nombre) {
       meta.value.responsable = data.nombre;
     }
@@ -493,13 +559,15 @@ const tryAdminLogin = async () => {
   }
 };
 
-// Debounced search logic removed, now using direct computed filtering from OrderFilterBar
+// Reset visibleCount cuando cambian los filtros
 watch([filterClave, filterDescripcion, filterMarca, filterModelo, filterReferencia, filterLote, filterN, filterNoInventario, filterUbicacion, filterStockMin, filterStockMax], () => {
   visibleCount.value = 40;
   nextTick(() => { if (listRef.value) listRef.value.scrollTop = 0; });
 });
 
-/* Filtered items */
+/* ================================================================
+   FILTERED ITEMS - CORREGIDO
+   ================================================================ */
 const filteredItems = computed(() => {
   let r = Array.isArray(items.value) ? items.value.slice() : []
   
@@ -510,9 +578,8 @@ const filteredItems = computed(() => {
   if (filterDescripcion.value) {
     const s = normalizeText(filterDescripcion.value)
     r = r.filter(it => {
-      const descriptor = normalizeText(buildItemDescriptor(it))
       const searchable = buildItemSearchText(it)
-      return descriptor.includes(s) || searchable.includes(s)
+      return searchable.includes(s)
     })
   }
   if (filterMarca.value) {
@@ -554,10 +621,13 @@ const filteredItems = computed(() => {
   return r
 });
 
+/* ================================================================
+   SUGGESTIONS - CORREGIDO (basado en filteredItems, no en items)
+   ================================================================ */
 const suggestionsByField = computed(() => {
   const buckets = {}
   const list = Array.isArray(filteredItems.value) ? filteredItems.value : []
-  const addBucket = (key, values, limit = 5000) => {
+  const addBucket = (key, values, limit = 1000) => {
     const map = new Map()
     for (const raw of values) {
       const value = String(raw || '').trim()
@@ -568,7 +638,9 @@ const suggestionsByField = computed(() => {
       if (existing) existing.count += 1
       else map.set(normalized, { value, label: value, count: 1 })
     }
-    buckets[key] = Array.from(map.values()).sort((a, b) => b.count - a.count || a.value.localeCompare(b.value)).slice(0, limit)
+    buckets[key] = Array.from(map.values())
+      .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
+      .slice(0, limit)
   }
 
   addBucket('clave', list.map(i => getItemClave(i)))
@@ -608,6 +680,46 @@ const itemSearchFilters = reactive({
 
 const visibleItems = computed(() => filteredItems.value.slice(0, visibleCount.value));
 
+/* ================================================================
+   TOGGLE & QTY HELPERS - CORREGIDOS
+   ================================================================ */
+function toggleItem(item, event) {
+  const id = getItemId(item)
+  const checked = event.target.checked
+  if (checked) {
+    quantities.value[id] = 1
+  } else {
+    delete quantities.value[id]
+  }
+  // Forzar reactividad
+  quantities.value = { ...quantities.value }
+}
+
+function adjustQty(itemId, delta) {
+  const current = quantities.value[itemId] || 0
+  const item = items.value.find(i => getItemId(i) === itemId)
+  const max = item ? getItemStock(item) : 999
+  const newVal = Math.max(0, Math.min(max, current + delta))
+  if (newVal <= 0) {
+    delete quantities.value[itemId]
+  } else {
+    quantities.value[itemId] = newVal
+  }
+  quantities.value = { ...quantities.value }
+}
+
+function setQty(itemId, event) {
+  const raw = parseInt(event.target.value, 10)
+  const item = items.value.find(i => getItemId(i) === itemId)
+  const max = item ? getItemStock(item) : 999
+  if (isNaN(raw) || raw <= 0) {
+    delete quantities.value[itemId]
+  } else {
+    quantities.value[itemId] = Math.min(raw, max)
+  }
+  quantities.value = { ...quantities.value }
+}
+
 /* Selection helpers */
 const selectedCount = computed(() =>
   Object.values(quantities.value).filter(q => Number(q) > 0).length
@@ -615,8 +727,6 @@ const selectedCount = computed(() =>
 const totalUnits = computed(() =>
   Object.values(quantities.value).reduce((s, q) => s + (Number(q) || 0), 0)
 );
-
-/* Infinite scroll logic removed, handled by ItemListVirtual */
 
 /* Computed titles */
 const title = computed(() => {
@@ -643,7 +753,7 @@ const selectedList = computed(() => {
     .map(([itemId, qty]) => {
       const item = items.value.find(i => getItemId(i) === itemId);
       const [clave] = itemId.split('|');
-      const stock = parseInt(item?.['TOTAL EXISTENCIAS'] || 0);
+      const stock = item ? getItemStock(item) : 0;
       return {
         clave: clave || itemId,
         nombre: item ? getItemName(item) : itemId,
@@ -711,7 +821,6 @@ const resetState = () => {
   submitting.value = false;
   showPassword.value = false;
   authError.value = '';
-  searchFocused.value = false;
   visibleCount.value = 40;
   clearAllFilters();
   loginEmail.value = '';
@@ -793,25 +902,14 @@ const submit = async () => {
       itemsHtml += '</ul>';
     }
 
-    const successMsgHtml = `
-      <div style="font-size: 1.1em; margin-bottom: 10px;">
-        Se ha registrado la baja de <b>${countUnits}</b> unidad${countUnits === 1 ? '' : 'es'} exitosamente.
-      </div>
-      ${itemsHtml}
-      <div style="font-size: 0.9em; color: #888;">
-        Artículos afectados: <b>${countItems}</b><br>
-        Autorizado por: <b>${adminEmail}</b>
-      </div>
-    `;
-
     await Swal.fire({
       title: '¡Baja Completada!',
-      html: successMsgHtml,
+      html: itemsHtml || `Se ha registrado la baja de <b>${countUnits}</b> unidad${countUnits === 1 ? '' : 'es'} exitosamente.<br><br>Artículos afectados: <b>${countItems}</b><br>Autorizado por: <b>${adminEmail}</b>`,
       icon: 'success',
       ...darkSwal
     });
 
-    emit('success', { message: successMsg, type: 'success', action: 'decommission' });
+    emit('success', { message: 'Baja completada exitosamente', type: 'success', action: 'decommission' });
     close();
   } catch (err) {
     console.error('[DecommissionWizard] Submit error:', err);
@@ -900,7 +998,6 @@ select.dc-input option {
   margin-bottom: 12px;
   flex-shrink: 0;
 }
-/* Estilo heredado del componente OrderFilterBar */
 
 .dc-stats {
   display: flex; align-items: center; gap: 8px;
@@ -912,6 +1009,9 @@ select.dc-input option {
 .dc-stats-accent strong { color: #f87171; }
 .dc-stats-sep { color: rgba(255,255,255,.12); }
 
+/* ================================================================
+   LISTA DE ITEMS - ESTILOS CORREGIDOS
+   ================================================================ */
 .dc-list {
   flex: 1; min-height: 0;
   overflow-y: auto;
@@ -919,7 +1019,6 @@ select.dc-input option {
   padding: 8px 4px 0 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,.06) transparent;
-  contain: layout style;
 }
 .dc-list::-webkit-scrollbar { width: 4px; }
 .dc-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 9px; }
@@ -932,7 +1031,7 @@ select.dc-input option {
   border-radius: 14px;
   cursor: pointer;
   transition: background .15s, border-color .15s;
-  contain: layout style;
+  flex-wrap: wrap;
 }
 .dc-item:hover {
   background: rgba(255,255,255,.05);
@@ -961,7 +1060,11 @@ select.dc-input option {
   background: rgba(255,255,255,.04); border-radius: 5px;
   color: rgba(255,255,255,.4);
 }
-.dc-item-stock { font-size: 11px; color: #f87171; font-weight: 500; }
+.dc-item-stock {
+  font-size: 11px; color: #f87171; font-weight: 500;
+  flex-shrink: 0;
+  margin-left: auto;
+}
 
 /* --- Quantity stepper --- */
 .dc-qty {
@@ -972,6 +1075,8 @@ select.dc-input option {
   gap: 2px;
   border: 1px solid rgba(239,68,68,.2);
   flex-shrink: 0;
+  width: 100%;
+  margin-top: 8px;
 }
 .dc-qty-btn {
   width: 28px; height: 28px;
@@ -983,7 +1088,8 @@ select.dc-input option {
   display: flex; align-items: center; justify-content: center;
   font-family: inherit;
 }
-.dc-qty-btn:hover { background: rgba(239,68,68,.15); }
+.dc-qty-btn:hover:not(:disabled) { background: rgba(239,68,68,.15); }
+.dc-qty-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 .dc-qty-input {
   width: 72px; height: 28px;
   background: none; border: none; outline: none;
@@ -1002,16 +1108,48 @@ select.dc-input option {
 
 .dc-more {
   text-align: center; padding: 12px; font-size: 12px;
-  color: rgba(255,255,255,.25);
+}
+.dc-load-more-btn {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.5);
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  transition: background .15s;
+}
+.dc-load-more-btn:hover {
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.8);
+}
+
+.dc-clear-filters-btn {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  color: rgba(255,255,255,.5);
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  margin-top: 8px;
+  transition: background .15s;
+}
+.dc-clear-filters-btn:hover {
+  background: rgba(255,255,255,.1);
+  color: rgba(255,255,255,.8);
 }
 
 .dc-empty {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: 10px;
   color: rgba(255,255,255,.3);
+  padding: 40px 20px;
 }
 .dc-empty-icon { width: 40px; height: 40px; }
-.dc-empty p { font-size: 13px; }
+.dc-empty p { font-size: 13px; margin: 0; }
 
 .dc-loading {
   flex: 1; display: flex; flex-direction: column; gap: 8px; padding-top: 12px;
@@ -1163,5 +1301,8 @@ select.dc-input option {
 
 @media (max-width: 700px) {
   .dc-confirm-grid { grid-template-columns: 1fr 1fr; }
+  .dc-item { flex-wrap: wrap; }
+  .dc-item-stock { margin-left: 0; width: 100%; text-align: right; }
+  .dc-qty { width: 100%; }
 }
 </style>
