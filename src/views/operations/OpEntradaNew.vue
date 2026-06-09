@@ -456,7 +456,7 @@
 
                         <!-- Manual fallback for suggested items -->
                         <Transition name="fade">
-                            <div v-if="newItem.tipo && !newItem.isBlank && belongsToHospital === true && !['mobiliario', 'refaccion'].includes(newItem.tipo) && !isEditingItem" class="manual-entry-hint">
+                            <div v-if="newItem.tipo && !newItem.isBlank && belongsToHospital === true && !['mobiliario'].includes(newItem.tipo) && !isEditingItem" class="manual-entry-hint">
                                 <p>¿No encuentras el bien que buscas? <button type="button" @click="newItem.isBlank = true" class="btn-manual-entry">Haz clic aquí para una captura manual completa</button></p>
                             </div>
                         </Transition>
@@ -493,7 +493,7 @@
 
                         <!-- ========== FLUJO 1: EDITAR BIEN INTERNO EXISTENTE ========== -->
                         <Transition name="slide-up">
-                            <div v-if="isEditingItem && belongsToHospital === true && !newItem.isBlank && !['mobiliario', 'refaccion'].includes(newItem.tipo)" class="equipment-form internal-edit-form">
+                            <div v-if="isEditingItem && belongsToHospital === true && !newItem.isBlank && !['mobiliario'].includes(newItem.tipo)" class="equipment-form internal-edit-form">
                                 <div class="internal-edit-card premium-card" :class="{ 'is-success': cardSuccessState }">
                                     <div class="card-glow"></div>
                                     
@@ -624,7 +624,7 @@
 
                         <!-- ========== FLUJO 2: AGREGAR BIEN EN BLANCO O EXTERNO ========== -->
                         <Transition name="slide-up">
-                            <div v-if="newItem.tipo && (newItem.isBlank || belongsToHospital === false || newItem.tipo === 'mobiliario' || newItem.tipo === 'refaccion' || (isEditingItem && belongsToHospital === false))" class="equipment-form blank-item-form">
+                            <div v-if="newItem.tipo && (newItem.isBlank || belongsToHospital === false || newItem.tipo === 'mobiliario' || (isEditingItem && belongsToHospital === false))" class="equipment-form blank-item-form">
                                 <div class="form-header">
                                     <div class="blank-form-banner" :style="getBannerStyle(newItem)">
                                         <div class="banner-icon">
@@ -1551,12 +1551,10 @@ const engineerSuggestions = computed(() => {
 
 // Inventory refinement logic is now handled by the InventoryRefinement component
 function handleInventoryItemSelected(chosenItem) {
+    const selectedTipo = newItem.tipo || chosenItem.tipo || (seccionActual.value === 'equipo' ? 'equipo-medico' : 'accesorio')
     // Reset state before adding
     resetNewItem()
-    
-    // Determine the type
-    const selectedTipo = newItem.tipo || chosenItem.tipo || (seccionActual.value === 'equipo' ? 'equipo-medico' : 'accesorio')
-    
+
     // Setup newItem for editing (FLUJO 1)
     newItem.tipo = selectedTipo
     newItem.cantidad = chosenItem.cantidad || 1
@@ -2277,9 +2275,10 @@ function editarItem(index) {
     // Ensure we have a valid units array
     const sourceUnits = Array.isArray(item.unidades) && item.unidades.length > 0 ? item.unidades : [item]
     newItem.unidades = JSON.parse(JSON.stringify(sourceUnits))
-    
-    belongsToHospital.value = !item.isExternal
-    acrFlowActive.value = !!item.paraEquipoMedico
+    const firstUnit = newItem.unidades[0] || {}
+    const isExternal = item.isExternal ?? item.is_external ?? (item.belongsToHospital === false || item.perteneceAlHospital === false || item.pertenece_al_hospital === false)
+    belongsToHospital.value = !isExternal
+    acrFlowActive.value = !!(item.paraEquipoMedico || item.equipoAsociado || firstUnit.equipoAsociado)
     newItem.isBlank = !!item.isBlank
 }
 
@@ -2322,6 +2321,8 @@ function agregarItemsSinWarning() {
             serie: firstUnit.serie || '',
             referencia: firstUnit.referencia || '',
             referenciaEquipo: firstUnit.referenciaEquipo || '',
+            equipoAsociado: firstUnit.equipoAsociado || '',
+            serieEquipoAsociado: firstUnit.serieEquipoAsociado || '',
             ubicacion: firstUnit.ubicacion || '',
             origenBien: firstUnit.origenBien || '',
             claveHRAEI: firstUnit.claveHRAEI || firstUnit.claveHraei || '',
@@ -2348,6 +2349,8 @@ function agregarItemsSinWarning() {
                 serie: unidad.serie || '',
                 referencia: unidad.referencia || '',
                 referenciaEquipo: unidad.referenciaEquipo || '',
+                equipoAsociado: unidad.equipoAsociado || '',
+                serieEquipoAsociado: unidad.serieEquipoAsociado || '',
                 ubicacion: unidad.ubicacion || '',
                 origenBien: unidad.origenBien || '',
                 claveHRAEI: unidad.claveHRAEI || unidad.claveHraei || '',

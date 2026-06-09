@@ -164,7 +164,7 @@ const emit = defineEmits({
   'refresh-inventory': null
 })
 
-const blockedTypes = ['mobiliario', 'refaccion']
+const blockedTypes = ['mobiliario']
 
 const showRefinement = computed(() => {
   const tipo = String(props.newItem?.tipo || '').trim()
