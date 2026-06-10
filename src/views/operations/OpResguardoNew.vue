@@ -2519,7 +2519,6 @@ function agregarItemBlancoConTipo(tipo) {
     showBlankItemModal.value = false
     notifier.info('Formulario listo para llenar item en blanco')
 }
-
 function eliminarItem(item) {
     const idx = form.equiposEntrada.indexOf(item)
     if (idx > -1) {
@@ -2530,6 +2529,24 @@ function eliminarItem(item) {
             editingItemIndex.value--
         }
     }
+}
+
+// Observaciones image helpers
+const onObservacionesImgChange = (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+        const dataUrl = String(reader.result || '')
+        const match = dataUrl.match(/^data:image\/(\w+);base64,/) || []
+        const ext = match[1] || (file.name.split('.').pop() || 'png')
+        form.observacionesImg = { name: file.name, dataUrl, extension: ext }
+    }
+    reader.readAsDataURL(file)
+}
+
+const removeObservacionesImg = () => {
+    form.observacionesImg = null
 }
 
 function closePdfPreview() {
